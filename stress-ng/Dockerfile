@@ -12,4 +12,11 @@ RUN make
 # Builing final container that consists of workloads only.
 FROM centos:7
 
+RUN yum install -y epel-release
+RUN yum makecache
+RUN yum install -y python34-pip
+RUN pip3 install prometheus_client
+RUN useradd -M stress-ng
+ADD wrapper.py /wrapper.py
+USER stress-ng
 COPY --from=stress-ng /stress-ng-0.09.28/stress-ng /usr/bin/stress-ng
