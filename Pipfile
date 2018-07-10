@@ -1,0 +1,22 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+gym = "*"
+"ruamel.yaml" = "*"
+logging-tree = "*"
+colorlog = "*"
+dataclasses = "*"
+
+[dev-packages]
+pytest = "*"
+pytest-cov = "*"
+flake8 = "*"
+ipython = "*"
+pdbpp = "*"
+ipdb = "*"
+
+[requires]
+python_version = "3.6"
