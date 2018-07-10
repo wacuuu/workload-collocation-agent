@@ -1,0 +1,6 @@
+dc1: !DCExample
+  x: 5
+dc2: !DCExample
+  x: 1
+  y: newble
+  z: [3,4,5]

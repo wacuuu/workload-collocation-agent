@@ -1,0 +1,23 @@
+nc: &nc !NewClass
+  x: 4
+  y: 7
+
+foo: &foo !Foo
+  s: some_string
+  f: 2.5
+
+foo_with_defaults: !Foo
+  s: other_string
+
+empty_boo: !Boo 124
+
+boo: !Boo
+  foo: *foo
+  items:
+  - !Item
+    name: a
+  - !Item
+    name: b
+
+nc1: *nc
+nc2: *nc

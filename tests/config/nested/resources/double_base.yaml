@@ -1,0 +1,3 @@
+xyz: true
+second_key: 'qwerty'
+nested_doc: !file base.yaml
