@@ -1,0 +1,4 @@
+runner: !DetectionRunner
+  action_delay: 1.
+  detection: !DummyAnomalyDetection
+
