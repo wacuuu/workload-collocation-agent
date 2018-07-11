@@ -1,8 +1,8 @@
 from dataclasses import dataclass, field
-import requests
+from typing import Dict
 import urllib.parse
 
-from typing import Dict
+import requests
 
 # Mesos tasks id
 TaskId = str
@@ -15,17 +15,16 @@ CGROUP_DEFAULT_SUBSYSTEM = 'cpu'
 @dataclass
 class MesosTask:
     name: str
-    workload_id: str
 
-    executor_pid: id
-    container_id: str
-    task_id: str
+    executor_pid: int
+    container_id: str  # Mesos containerizer identifier "ID used to uniquely identify a container"
+    task_id: TaskId  # Mesos-level task identifier
 
     # for debugging purposes
     executor_id: str
     agent_id: str
 
-    # infered
+    # inferred
     cgroup_path: str
     labels: Dict[str, str] = field(default_factory=dict)
 
@@ -56,9 +55,9 @@ class MesosNode:
         state = r.json()
         tasks = []
 
-        # Fast return path if there is no any lauched tasks.
+        # Fast return path if there is no any launched tasks.
         if 'launched_tasks' not in state['get_state']['get_tasks']:
-            return tasks
+            return []
 
         for launched_task in state['get_state']['get_tasks']['launched_tasks']:
             statuses = launched_task['statuses']
@@ -71,17 +70,9 @@ class MesosNode:
 
             labels = {label['key']: label['value'] for label in launched_task['labels']['labels']}
 
-            for key, value in labels.items():
-                if key.endswith('workload_id'):
-                    workload_id = value
-                    break
-            else:
-                workload_id = None
-
             tasks.append(
                 MesosTask(
                     name=launched_task['name'],
-                    workload_id=workload_id,
                     executor_pid=executor_pid,
                     cgroup_path=cgroup_path,
                     container_id=last_status['container_status']['container_id']['value'],
