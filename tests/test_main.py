@@ -29,8 +29,9 @@ mesos_tasks_mocks = [
 @mock.patch('rmi.config.open', mock.mock_open(read_data=yaml_config))
 @mock.patch('rmi.mesos.MesosNode.get_tasks', return_value=mesos_tasks_mocks)
 @mock.patch('rmi.resctrl.ResGroup.sync')
+@mock.patch('rmi.containers.PerfCounters')
 @mock.patch('rmi.runner.DetectionRunner.wait_or_finish', return_value=False)
-def test_main(os_rmdir_mock, get_tasks_mock, resgroup_sync_mock, runner_wait_or_finish):
+def test_main(*mocks):
     main.main()
     # restore 'silent' logging level
     init_logging('critical', 'rmi')

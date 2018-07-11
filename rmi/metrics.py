@@ -6,7 +6,7 @@ from typing import Dict, Union
 class MetricName(str, Enum):
     INSTRUCTIONS = 'instructions'
     CYCLES = 'cycles'
-    LLC_MISSES = 'cache_misses'
+    LLC_MISSES = 'cache-misses'
     CPU_USAGE = 'cpu_usage'  # cpuacct.usage (total kernel and user space) in [ns]
     MEM_BW = 'memory_bandwidth'  # counter like [bytes]
 

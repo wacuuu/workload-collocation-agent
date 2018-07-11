@@ -3,10 +3,10 @@ from typing import List
 from rmi.resctrl import ResGroup
 from rmi.cgroups import Cgroup
 from rmi.perf import PerfCounters
-from rmi.metrics import Measurements
+from rmi.metrics import Measurements, MetricName
 
 
-DEFAULT_EVENTS = ('instructions', 'cycles', 'cache_misses')
+DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.LLC_MISSES)
 
 
 def flatten_measurements(measurements: List[Measurements]):
@@ -24,7 +24,7 @@ class Container:
     def __init__(self, cgroup_path):
         self.cgroup = Cgroup(cgroup_path)
         self.resgroup = ResGroup(cgroup_path)
-        self.perf_counters = PerfCounters(cgroup_path, events=DEFAULT_EVENTS)
+        self.perf_counters = PerfCounters(cgroup_path, event_names=DEFAULT_EVENTS)
 
     def sync(self):
         self.resgroup.sync()
