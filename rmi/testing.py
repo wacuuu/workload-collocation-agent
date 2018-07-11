@@ -1,4 +1,4 @@
-"""Module for independt simple helper functions."""
+"""Module for independent simple helper functions."""
 
 import os
 

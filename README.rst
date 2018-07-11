@@ -19,8 +19,8 @@ Development installation & running tests.
    git clone https://github.intel.com/serenity/rmi
    cd rmi
 
-Using pipenv (recommended)
---------------------------
+Using pipenv for creating developer's environment
+-------------------------------------------------
 
 .. code:: shell-session
 
@@ -34,3 +34,10 @@ Using tox
 .. code:: shell-session
 
    tox
+
+
+Configuration
+-------------
+
+..  TODO:  <11-07-18, pawel.palucki> describe idea of config as dependency injection framework
+            including features as passing parameters and include for other files

@@ -1,20 +1,14 @@
 """
-Module is responsbile for creating and initialization related software components
+Module is responsible for creating and initialization related software components
 using yaml based configuration file.
 
-It is a simple depedency injection framework that only take cares of initialization
-phase of lifecycle of objects (not full IoC container).
+It is a simple dependency injection framework that only take cares of initialization
+phase of life cycle of objects (not full IoC container).
 
-
-It is connected which plays a role of registry of all components.
-
-Module exposes two public methods:
-
-- register(class) which is used to mark given class as possible to decalre with yaml tag.
-- load_
+It is connected with 'components' module which plays a role of registry of all components.
 
 One additionally feature is builtin support for including other yaml files
-using special tag called !file (check _file_loader_constructor docs for detailed descripton).
+using special tag called !file (check _file_loader_constructor docs for detailed descriptor).
 """
 import inspect
 import json
@@ -41,10 +35,10 @@ class ValidationError(Exception):
     pass
 
 
-def _constructor(loader, node, cls):
+def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
     """Create instance of registered class ('cls" from closure) in recursive manner.
-    First create "blank" uninitilized instance, then validate provided data,
-    and then when whole hierarchy was processed initilize them in reverse order.
+    First create "blank" uninitialized instance, then validate provided data,
+    and then when whole hierarchy was processed initialize them in reverse order.
     Creation happens from top.
     Initialization happens from bottom.
     """
@@ -57,7 +51,7 @@ def _constructor(loader, node, cls):
     # in order to allow create empty instances.
     # TODO: consider using first flat parameter as "args"
     if isinstance(node, yaml.ScalarNode):
-        if node.value is not None:
+        if node.value is not None and node.value != '':
             log.warning('Value %r for class %r ignored!' % (node.value, cls.__name__))
         state = {}
     else:
@@ -73,7 +67,10 @@ def _constructor(loader, node, cls):
 
         assert parameter.kind in (
             inspect.Parameter.KEYWORD_ONLY,
-            inspect.Parameter.POSITIONAL_OR_KEYWORD), 'YAML constructor only support named ' \
+            inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            inspect.Parameter.VAR_POSITIONAL,
+            inspect.Parameter.VAR_KEYWORD,
+        ), 'YAML constructor only support named ' \
             'keyword arguments got parameter %r for %r' % (parameter, cls)
 
         expected_type = parameter.annotation
@@ -190,7 +187,7 @@ def _file_loader_constructor(loader, node):
         elif filename.endswith(('.yaml', '.yml')):
             content = yaml.load(f)
         else:
-            raise RuntimeError('Unsupported file type (use: JSON or YAML)!')
+            raise RuntimeError('Unsupported file %r type (use: JSON or YAML)!' % full_filename)
 
     return content
 

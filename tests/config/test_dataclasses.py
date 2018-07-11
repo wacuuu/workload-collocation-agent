@@ -36,5 +36,5 @@ def test_invalid_dataclass():
     with pytest.raises(config.ValidationError) as e:
         config.load_config(test_config_path)
 
-    v = e.value.args[0]
-    assert "Value 'asdf' for field 'x' in class 'DCExample' " in v
+    message = e.value.args[0]
+    assert "Value 'asdf' for field 'x' in class 'DCExample' " in message
