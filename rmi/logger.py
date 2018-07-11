@@ -9,7 +9,7 @@ TRACE = 9
 log = logging.getLogger(__name__)
 
 
-def init_logging(level: str, modules=['rmi']):
+def init_logging(level: str, package_name: str):
     level = level.upper()
     logging.captureWarnings(True)
     logging.addLevelName(TRACE, 'TRACE')
@@ -22,55 +22,66 @@ def init_logging(level: str, modules=['rmi']):
             ' %(cyan)s{%(threadName)s} %(blue)s[%(name)s]%(reset)s %(message)s',
     )
 
-    for module in modules:
+    package_logger = logging.getLogger(package_name)
 
-        somelogger = logging.getLogger(module)
+    if not package_logger.handlers:
+        # do not attache the same handler twice
 
-        if not somelogger.handlers:
-            # do not attache the same handler twice
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(formatter)
 
-            handler = logging.StreamHandler(sys.stdout)
-            handler.setFormatter(formatter)
+        # Module scoped loggers add formatter handler and disable propagation.
+        package_logger.addHandler(handler)
+        package_logger.propagate = False  # Because we have own handler.
+        package_logger.setLevel(level)
 
-            # s3 scoped log add formatter handler and disable propagete
-            somelogger.addHandler(handler)
-            somelogger.propagate = False
+    # Inform about tracing level (because of number of metrics).
+    package_logger.log(TRACE, 'Package logger trace messages enabled.')
 
-        # main log
-        main = logging.getLogger('%s.main' % module)
-
-        if level is not None:
-            logging.getLogger(module).setLevel(level)
-
-        somelogger.log(TRACE, 'trace enabled!')
-        main.debug('level=%s', logging.getLevelName(main.getEffectiveLevel()))
+    # Prepare main log to be used by main entrypoint module
+    # (because you cannot create logger before initialization).
+    log.debug('level=%s', logging.getLevelName(log.getEffectiveLevel()))
 
     if level == 'TRACE':
-        rl = logging.getLogger()
-        rl.setLevel(TRACE)
-        rl.handlers.clear()
-        rl.addHandler(handler)
-        rl.log(TRACE, 'root trace message enabled!')
+        log.warning('Trace level logging enabled!')
+        root_logger = logging.getLogger()
+        root_logger.setLevel(TRACE)
+        root_logger.handlers.clear()
+        root_logger.addHandler(handler)
+        root_logger.log(TRACE, 'Root logger trace messages enabled.')
 
-        try:
-            print('------------------------------------ Logging tree ---------------------')
-            import logging_tree
-            logging_tree.printout()
-            print('------------------------------------ Logging tree END------------------')
-        except ImportError:
-            log.warning('cannot dump logger hierarchy! pip install logging_tree')
-            pass
-
-    return main
+        print('------------------------------------ Logging tree ---------------------')
+        import logging_tree
+        logging_tree.printout()
+        print('------------------------------------ Logging tree END------------------')
 
 
 def trace(log):
+    """Decorator to trace calling of given function reporting all arguments, returned value
+    and time of executions.
+
+    Example usage:
+
+    # rmi/some_module.py
+    log = logging.getLogger(__name__)
+
+    @trace(log)
+    def some_function(x):
+        return x+1
+
+    some_function(1)
+
+    output in logs (when trace is enabled!)
+    [TRACE] rmi.some_module: -> some_function(args=(1,), kw={})
+    [TRACE] rmi.some_module: <- some_function(...) = 2 (time=1.5s)
+
+    """
     def _trace(func):
         def __trace(*args, **kw):
             s = time.time()
             log.log(TRACE, '-> %s(args=%r, kw=%r)', func.__name__, args, kw)
             rv = func(*args, **kw)
-            log.log(TRACE, '<- %s() = %r (time=%.2fs)', func.__name__, rv, time.time() - s)
+            log.log(TRACE, '<- %s(...) = %r (time=%.2fs)', func.__name__, rv, time.time() - s)
             return rv
         return __trace
     return _trace
