@@ -3,8 +3,8 @@ from setuptools import setup, find_packages
 setup(
     name='rmi',
     version='0.0.1',
-    author='Intel SSDG',
-    description='Resource Mesos integrator',
+    author='Intel',
+    description='Resource Mesos Integrator',
     classifiers = [
         'Development Status :: 2 - Pre-Alpha',
         'Environment :: Console',

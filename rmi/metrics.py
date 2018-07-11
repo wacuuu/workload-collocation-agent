@@ -1,9 +1,9 @@
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, Union
 
 
-class MetricName(Enum, str):
+class MetricName(str, Enum):
     INSTRUCTIONS = 'instructions'
     CYCLES = 'cycles'
     LLC_MISSES = 'cache_misses'
@@ -11,7 +11,7 @@ class MetricName(Enum, str):
     MEM_BW = 'memory_bandwidth'  # counter like [bytes]
 
 
-class MetricType(Enum, str):
+class MetricType(str, Enum):
     GAUGE = 'gauge'      # arbitrary value (can go up and down)
     COUNTER = 'counter'  # monotonically increasing counter
 
@@ -23,7 +23,7 @@ MetricValue = Union[float, int]
 class Metric:
     name: Union[str, MetricName]
     value: MetricValue
-    labels: Dict[str, str]
+    labels: Dict[str, str] = field(default_factory=dict)
     type: MetricType = None
     help: str = None
 

@@ -1,4 +1,6 @@
 runner: !DetectionRunner
+  node: !MesosNode
   action_delay: 1.
-  detection: !DummyAnomalyDetection
+  storage: !LogStorage
+  detector: !NOPAnomalyDectector
 

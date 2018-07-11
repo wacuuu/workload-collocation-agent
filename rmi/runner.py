@@ -1,13 +1,14 @@
-import logging
-
 from dataclasses import dataclass
+from typing import List
+import logging
+import time
 
 from rmi import mesos
 from rmi import storage
 from rmi import containers
 from rmi import platforms
 from rmi import detectors
-from rmi import base
+from rmi.metrics import Metric, MetricValues
 
 log = logging.getLogger(__name__)
 
@@ -27,17 +28,15 @@ class DetectionRunner:
     """Watch over tasks running on this cluster on this node, collect observation
     and report externally (using storage) detected anomalies.
     """
-    node = mesos.MesosNode()
-    storage: storage.Storage = storage.LogStorge()
+    node: mesos.MesosNode
+    storage: storage.Storage
+    detector: detectors.AnomalyDectector
     action_delay: float = 0.  # [s]
-    detection: base.AnomalyDectector = detectors.NOPAnomalyDetector
 
     def __post_init__(self):
         self.node = self.node or mesos.MesosNode()
 
     def run(self):
-
-        platform = base.Platform()
 
         while True:
 
@@ -45,28 +44,40 @@ class DetectionRunner:
             tasks = self.node.get_tasks()
 
             # Convert tasks to containers and collect all metrics.
-            containers = [containers.Container(task.cgroup_path) for task in tasks]
+            containers_ = [containers.Container(task.cgroup_path) for task in tasks]
+
+            # Sync state of containers TODO: don't create them every time
+            [container.sync() for container in containers_]
 
             # Platform information
-            platform = platform.collect_platform_information()
             platform, platform_metrics, common_labels = platforms.collect_platform_information()
 
-            # Build labeleds tasks_metrics and task_metrics_values.
-            tasks_metrics = []
-            for container, task in zip(containers, tasks):
-                task_metrics = container.get_metrics()
-                for metric in task_metrics.values():
+            # Build labeled tasks_metrics and task_metrics_values.
+            tasks_metrics: List[Metric] = []
+            for container, task in zip(containers_, tasks):
+                task_metric_values: MetricValues = container.get_metrics()
+                task_metrics: List[Metric] = []
+                for metric_name, metric_value in task_metric_values.items():
+
+                    metric = Metric(
+                        name=metric_name,
+                        value=metric_value,
+                        # TODO: help & type
+                    )
+
                     metric.labels.update(dict(
-                        job_id=task.job_id,  # TODO: add all neseseary labels
+                        task_id=task.task_id,  # TODO: add all necessary labels
                     ))
-                    metric.lables.update(common_labels)
+                    metric.labels.update(common_labels)
                 tasks_metrics += task_metrics
 
-            storage.store(platform_metrics + tasks_metrics)
+            self.storage.store(platform_metrics + tasks_metrics)
 
             # Wrap tasks with metrics
-            tasks_metric_values = []
-            anomalies, metrics = self.detection.detect(platform, tasks_metric_values)
+            tasks_metric_values = extract_tasks_value_metrics(task_metrics)
+            anomalies, extra_metrics = self.detector.detect(platform, tasks_metric_values)
 
             anomaly_metrics = convert_anomalies_to_metrics(anomalies)
-            storage.store(anomaly_metrics + metrics)
+            self.storage.store(anomaly_metrics + extra_metrics)
+
+            time.sleep(self.action_delay)
