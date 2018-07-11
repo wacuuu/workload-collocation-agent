@@ -15,10 +15,9 @@ class ResGroup:
         """Copy all the tasks from all cgroups to resctrl tasks file
         """
         tasks = ''
-        for cgroup in self.cgroups:
-            cgroup_fullpath = os.path.join(BASE_SUBSYSTEM_PATH, cgroup, TASKS_FILENAME)
-            with open(cgroup_fullpath) as f:
-                tasks += f.read()
+        cgroup_fullpath = os.path.join(BASE_SUBSYSTEM_PATH, self.cgroup_path, TASKS_FILENAME)
+        with open(cgroup_fullpath) as f:
+            tasks += f.read()
 
         resctrl_fullpath = os.path.join(BASE_RESCTRL_PATH, self.resctrl_path, TASKS_FILENAME)
 

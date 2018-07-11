@@ -1,12 +1,12 @@
-from typing import Dict
+from dataclasses import dataclass
 
 from rmi.metrics import MetricValues
 
 
+@dataclass
 class Cgroup:
 
-    def __init__(self, cgroup_path):
-        self.cgroup_path = cgroup_path
+    cgroup_path: str
 
     def get_metrics(self) -> MetricValues:
         # TODO: implement me

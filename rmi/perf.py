@@ -14,3 +14,6 @@ class PerfCounters:
 
     def cleanup(self):
         pass
+
+    def get_metrics(self):
+        return {}
