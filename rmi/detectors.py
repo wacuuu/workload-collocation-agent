@@ -1,15 +1,15 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
-from abc import ABC, abstractmethod
-from typing import List, Dict, Union
+from typing import List, Dict
 
-from rmi.metrics import Metric, MetricName
+from rmi.metrics import Metric, MetricName, MetricValue
 from rmi.mesos import TaskId
 from rmi.platforms import Platform
 
 
 # Mapping from metric type to specific value (unit depends on metric type)
-TaskMetricValues = Dict[MetricName, Union[float, int]]
+TaskMetricValues = Dict[MetricName, MetricValue]
 TasksMetricValues = Dict[TaskId, TaskMetricValues]
 
 
