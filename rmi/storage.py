@@ -5,7 +5,8 @@ in durable external storage.
 import abc
 import logging
 from typing import List
-from rmi.base import Metric
+
+from rmi.metrics import Metric
 
 log = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ class Storage(abc.ABC):
         ...
 
 
-class LogStroage(Storage):
+class LogStorage(Storage):
+
     def store(self, metrics):
         log.debug(metrics)
