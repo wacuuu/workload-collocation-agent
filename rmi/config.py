@@ -86,7 +86,7 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
             if not isinstance(value, expected_type):
                 raise ValidationError(
                     'Value %r for field %r in class %r '
-                    'has inproper type (got=%r expected=%r)!' %
+                    'has improper type (got=%r expected=%r)!' %
                     (value, name, cls.__name__, type(value), expected_type))
 
     # Continue with initialization.
@@ -94,14 +94,14 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
     try:
         instance.__init__(**state)
     except TypeError as e:
-        raise TypeError('Cannot instatiate %r with kw=%r (constructor signature is: %s)' % (
+        raise TypeError('Cannot instantiate %r with kw=%r (constructor signature is: %s)' % (
             cls.__name__, state, signature)) from e
     log.log(logger.TRACE, '%s(0x%x)=%r', cls.__name__, id(instance), vars(instance))
 
 
 def register(cls):
     """Register constructor from yaml for a given class.
-    The class can be then initialized during yaml processing if approriate tags is found.
+    The class can be then initialized during yaml processing if appropriate tags is found.
 
     E.g. if we have Foo class then you can use '!Foo' in yaml file.
 
@@ -114,10 +114,10 @@ def register(cls):
             "foo": <Foo: instance...>
         }
 
-    To initilize the class, constructor will simply call __init__, with
+    To initialize the class, constructor will simply call __init__, with
     already preprocessed body of deeper yaml nodes. In above example:
 
-        foo = Foo.__new__(Foo)  # construct unintialized (blank) instance of given class
+        foo = Foo.__new__(Foo)  # construct uninitialized (blank) instance of given class
         foo.__init__(x=1) # initialize instance
 
     """

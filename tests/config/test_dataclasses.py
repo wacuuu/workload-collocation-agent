@@ -1,10 +1,10 @@
 from typing import List
-
-import pytest
 from dataclasses import dataclass, field
 
+import pytest
+
 from rmi import config
-from rmi import util
+from rmi import testing
 
 
 @config.register
@@ -16,7 +16,7 @@ class DCExample:
 
 
 def test_dataclass():
-    test_config_path = util.relative_module_path(__file__, 'test_dataclasses.yaml')
+    test_config_path = testing.relative_module_path(__file__, 'test_dataclasses.yaml')
     data = config.load_config(test_config_path)
 
     dc1 = data['dc1']
@@ -31,7 +31,7 @@ def test_dataclass():
 
 
 def test_invalid_dataclass():
-    test_config_path = util.relative_module_path(__file__, 'test_dataclasses_invalid.yaml')
+    test_config_path = testing.relative_module_path(__file__, 'test_dataclasses_invalid.yaml')
 
     with pytest.raises(config.ValidationError) as e:
         config.load_config(test_config_path)

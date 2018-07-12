@@ -1,10 +1,10 @@
+from typing import List
+
 from rmi import config
 from rmi import detectors
 from rmi import mesos
 from rmi import runner
 from rmi import storage
-
-from typing import List
 
 
 def register_components(extra_components: List[str]):
@@ -14,5 +14,5 @@ def register_components(extra_components: List[str]):
     config.register(detectors.NOPAnomalyDectector)
 
     for component in extra_components:
-        cls = __import__(component)  # TODO: proper resolution use pkg_resourse resoleving
+        cls = __import__(component)  # TODO: proper resolution use pkg_resource resolution
         config.register(cls)

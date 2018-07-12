@@ -25,11 +25,14 @@ class MesosTask:
     agent_id: str
 
     # inferred
-    cgroup_path: str
+    cgroup_path: str  # Starts with leading "/"
     labels: Dict[str, str] = field(default_factory=dict)
 
 
 def find_cgroup(pid):
+    """ Returns cgroup_path relative to 'cpu' subsystem based on /proc/{pid}/cgroup
+    with leading '/'"""
+
     with open(f'/proc/{pid}/cgroup') as f:
         for line in f:
             _, subsystems, path = line.strip().split(':')

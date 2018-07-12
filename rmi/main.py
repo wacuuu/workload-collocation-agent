@@ -1,7 +1,7 @@
 """
 Main entrypoint.
 
-Responsbile for configuration and prepare components
+Responsible for configuration and prepare components
 and start main loop from Runner.
 """
 import argparse
@@ -29,14 +29,14 @@ parser.add_argument(
 def main():
     args = parser.parse_args()
 
-    # Initalize logging subsystem.
+    # Intialize logging subsystem.
     logger.init_logging(args.log_level, package_name='rmi')
     log.debug('started PID=%r', os.getpid())
 
     # Register internal & external components.
     components.register_components(extra_components=args.components)
 
-    # Initnialize all nessesary objects.
+    # Initialize all necessary objects.
     configuration = config.load_config(args.config)
 
     # Extract main loop component.

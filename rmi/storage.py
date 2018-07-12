@@ -1,5 +1,5 @@
 """
-Module is responsible for exposing  functionallity of storing labeled metrics
+Module is responsible for exposing  functionality of storing labeled metrics
 in durable external storage.
 """
 import abc

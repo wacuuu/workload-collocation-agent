@@ -1,11 +1,12 @@
 import os
 
-from rmi import config
-from rmi import util
-
 import pytest
 
-ROOT_PATH = util.relative_module_path(__file__, 'resources')
+from rmi import config
+from rmi import testing
+
+
+ROOT_PATH = testing.relative_module_path(__file__, 'resources')
 
 
 def test_is_exception_raised_for_missing_filenameimport():

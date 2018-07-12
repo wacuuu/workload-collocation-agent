@@ -33,7 +33,8 @@ def check_cbm_bits(mask, info_path='/sys/fs/resctrl/info/L3'):
 
 def get_min_cbm_bits(info_path):
     min_cbm_bits_path = os.path.join(info_path, 'min_cbm_bits')
-    min_cbm_bits = open(min_cbm_bits_path, 'r').read()
+    with open(min_cbm_bits_path, 'r') as f:
+        min_cbm_bits = f.read()
     return int(min_cbm_bits)
 
 

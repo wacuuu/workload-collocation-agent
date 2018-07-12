@@ -10,4 +10,4 @@ class Cgroup:
 
     def get_metrics(self) -> MetricValues:
         # TODO: implement me
-        return {}
+        return {'cpu_usage': 17}

@@ -1,5 +1,5 @@
 from rmi import config
-from rmi import util
+from rmi import testing
 
 
 class OldClass:
@@ -38,7 +38,7 @@ def test_config_with_simple_classes():
     # Another method for registering items (other than using decorator).
     config.register(Item)
 
-    test_config_path = util.relative_module_path(__file__, 'test_config.yaml')
+    test_config_path = testing.relative_module_path(__file__, 'test_config.yaml')
 
     data = config.load_config(test_config_path)
 

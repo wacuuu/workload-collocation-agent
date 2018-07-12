@@ -13,8 +13,8 @@ def flatten_metrics(metrics: List[MetricValues]):
     all_metrics_flat = dict()
 
     for metric_values in metrics:
-        assert not set(metric_values.keys()) & set(all_metrics_flat).keys(), \
-            'When flatinng metrics the keys should not overlap!'
+        assert not set(metric_values.keys()) & set(all_metrics_flat.keys()), \
+            'When flatting metrics the keys should not overlap!'
         all_metrics_flat.update(metric_values)
     return all_metrics_flat
 
@@ -27,7 +27,7 @@ class Container:
         self.perf_counters = PerfCounters(cgroup_path, events=DEFAULT_EVENTS)
 
     def sync(self):
-        self.resctrl.sync()
+        self.resgroup.sync()
 
     def get_metrics(self) -> Dict[str, Union[float, int]]:
         return flatten_metrics([
@@ -35,3 +35,7 @@ class Container:
             self.resgroup.get_metrics(),
             self.perf_counters.get_metrics(),
         ])
+
+    def cleanup(self):
+        self.resgroup.cleanup()
+        self.perf_counters.cleanup()
