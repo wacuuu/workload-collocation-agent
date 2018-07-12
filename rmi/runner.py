@@ -3,12 +3,12 @@ from typing import List
 import logging
 import time
 
-from rmi import mesos
-from rmi import logger
-from rmi import storage
 from rmi import containers
-from rmi import platforms
 from rmi import detectors
+from rmi import logger
+from rmi import mesos
+from rmi import platforms
+from rmi import storage
 from rmi.metrics import Metric, MetricValues
 
 log = logging.getLogger(__name__)

@@ -14,19 +14,21 @@ from rmi import logger
 
 log = logging.getLogger(__name__)
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    '-c', '--config',
-    help="Configuration", default=None, required=True)
-parser.add_argument(
-    '-l', '--log-level',
-    help="log levels:  CRITICAL,ERROR,WARNING,INFO,DEBUG,TRACE", default='INFO')
-parser.add_argument(
-    '-r', '--register', action='append', dest='components',
-    help="Register additional components in config", default=[])
 
 
 def main():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-c', '--config',
+        help="Configuration", default=None, required=True)
+    parser.add_argument(
+        '-l', '--log-level',
+        help="log levels:  CRITICAL,ERROR,WARNING,INFO,DEBUG,TRACE", default='INFO')
+    parser.add_argument(
+        '-r', '--register', action='append', dest='components',
+        help="Register additional components in config", default=[])
+
     args = parser.parse_args()
 
     # Intialize logging subsystem.

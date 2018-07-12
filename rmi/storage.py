@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 
 class Storage(abc.ABC):
 
+    @abstractmethod
     def store(self, metrics: List[Metric]):
         """store metrics """
         ...
