@@ -1,6 +1,7 @@
 from unittest import mock
 from rmi import main
 from rmi.mesos import MesosTask
+from rmi.logger import init_logging
 
 
 yaml_config = '''
@@ -31,3 +32,7 @@ mesos_tasks_mocks = [
 @mock.patch('rmi.runner.DetectionRunner.wait_or_finish', return_value=False)
 def test_main(os_rmdir_mock, get_tasks_mock, resgroup_sync_mock, runner_wait_or_finish):
     main.main()
+    # restore 'silent' logging level
+    init_logging('critical', 'rmi')
+
+

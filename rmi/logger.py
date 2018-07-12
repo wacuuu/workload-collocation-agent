@@ -23,17 +23,16 @@ def init_logging(level: str, package_name: str):
     )
 
     package_logger = logging.getLogger(package_name)
+    package_logger.handlers.clear()
 
-    if not package_logger.handlers:
-        # do not attache the same handler twice
+    # do not attache the same handler twice
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
 
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setFormatter(formatter)
-
-        # Module scoped loggers add formatter handler and disable propagation.
-        package_logger.addHandler(handler)
-        package_logger.propagate = False  # Because we have own handler.
-        package_logger.setLevel(level)
+    # Module scoped loggers add formatter handler and disable propagation.
+    package_logger.addHandler(handler)
+    package_logger.propagate = False  # Because we have own handler.
+    package_logger.setLevel(level)
 
     # Inform about tracing level (because of number of metrics).
     package_logger.log(TRACE, 'Package logger trace messages enabled.')

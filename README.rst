@@ -26,6 +26,8 @@ Using pipenv for creating developer's environment
 
    pipenv install --dev
    pipenv run python setup.py test
+   # or 
+   PYTHONPATH=. pytest tests
 
 
 Using tox
@@ -39,5 +41,14 @@ Using tox
 Configuration
 -------------
 
-..  TODO:  <11-07-18, pawel.palucki> describe idea of config as dependency injection framework
-            including features as passing parameters and include for other files
+Available features: 
+
+- Create complex and configure python objects using `YAML tags`_ e.g. Runner, MesosNode, Storage
+- Passing arguments and simple parameters type check
+- Including other yaml or json files
+- Register any external class with ``-r`` or by using ``rmi.config.register`` API 
+
+.. _`YAML tags`: http://yaml.org/spec/1.2/spec.html#id2764295
+
+TODO: configuration: better description & more examples
+

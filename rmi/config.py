@@ -41,6 +41,14 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
     and then when whole hierarchy was processed initialize them in reverse order.
     Creation happens from top.
     Initialization happens from bottom.
+
+    To split creation from initialization we relay on internal ruamel implementation
+    that uses generators to allow lazy object initialization. If constructor is generator
+    (contain 'yield' keyword) constructor will be called by next() at least twice (if deep=False)
+    or many times until exhaustion (deep=True)).
+    Our own constructor is just really thin wrapper over default "construct_mapping" and we
+    use "generator lazy initialization" feature - to use created mapping
+    as arguments for cls.__init__.
     """
     # Create "blank" uninitialized instance of cls.
     instance = object.__new__(cls)
@@ -53,13 +61,17 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
     if isinstance(node, yaml.ScalarNode):
         if node.value is not None and node.value != '':
             log.warning('Value %r for class %r ignored!' % (node.value, cls.__name__))
-        state = {}
+        arguments = {}
     else:
-        state = loader.construct_mapping(node, deep=True)
+        # construct_mapping: deep is used to first create underlying objects, deep=True is
+        # always used for mapping type.
+        arguments = loader.construct_mapping(node, deep=True)
+
     # End the creation step.
     yield instance
 
-    # Use annotated constructor to verify parameters simple types.
+    # Constructor arguments simple type validation.
+    # Use annotated constructor (arguments type annotations) to validate provided arguments.
     signature = inspect.signature(cls.__init__)
     for name, parameter in signature.parameters.items():
         if name == 'self':
@@ -70,19 +82,19 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
             inspect.Parameter.POSITIONAL_OR_KEYWORD,
             inspect.Parameter.VAR_POSITIONAL,
             inspect.Parameter.VAR_KEYWORD,
-        ), 'YAML constructor only support named ' \
-            'keyword arguments got parameter %r for %r' % (parameter, cls)
+        ), 'YAML constructor only supports named ' \
+            'keyword arguments got parameter %r(%r) for %r' % (parameter, parameter.kind, cls)
 
         expected_type = parameter.annotation
 
-        # Ignore type check for generic types because or there is no annotation:
+        # Ignore type check if there is no type annotation or for generic types because:
         # "Parameterized generics cannot be used with class or instance checks" limitation.
         if expected_type == inspect._empty or isinstance(expected_type, typing.GenericMeta):
             continue
 
         # Only validate provided values (ignore defaults).
-        if name in state:
-            value = state[name]
+        if name in arguments:
+            value = arguments[name]
             if not isinstance(value, expected_type):
                 raise ValidationError(
                     'Value %r for field %r in class %r '
@@ -90,12 +102,13 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
                     (value, name, cls.__name__, type(value), expected_type))
 
     # Continue with initialization.
-    log.log(logger.TRACE, 'init %s(id=0x%x) with state=%r ', cls.__name__, id(instance), state)
+    log.log(logger.TRACE, 'constructed object init %s(id=0x%x) with state=%r ',
+            cls.__name__, id(instance), arguments)
     try:
-        instance.__init__(**state)
+        instance.__init__(**arguments)
     except TypeError as e:
         raise TypeError('Cannot instantiate %r with kw=%r (constructor signature is: %s)' % (
-            cls.__name__, state, signature)) from e
+            cls.__name__, arguments, signature)) from e
     log.log(logger.TRACE, '%s(0x%x)=%r', cls.__name__, id(instance), vars(instance))
 
 
@@ -128,22 +141,18 @@ def register(cls):
     return cls
 
 
-def load_config(filename):
-    """
-    Reads config from base file
-    (which can contain nested config file)
+def load_config(filename: str):
+    """Reads config from base file (which can contain nested config file).
 
     :param filename: The base config file
-    :param root_path: Root path for all referenced files
-    :returns a dict containing the actual configuration
+    :returns deserialized objects from yaml
     """
     with open(filename) as f:
         return yaml.load(f)
 
-
-def _file_loader_constructor(loader, node):
-    """
-    This function is called, when a yaml node
+ 
+def _file_loader_constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node):
+    """This function is called, when a yaml node
     is tagged as 'file'. It loads the yaml file
     passed as the tag argument and places it under
     the current node.
