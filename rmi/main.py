@@ -15,7 +15,6 @@ from rmi import logger
 log = logging.getLogger(__name__)
 
 
-
 def main():
 
     parser = argparse.ArgumentParser()

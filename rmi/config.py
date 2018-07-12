@@ -114,7 +114,7 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
 
 def register(cls):
     """Register constructor from yaml for a given class.
-    The class can be then initialized during yaml processing if appropriate tags is found.
+    The class can be then initialized during yaml processing if appropriate tag is found.
 
     E.g. if we have Foo class then you can use '!Foo' in yaml file.
 
@@ -150,7 +150,7 @@ def load_config(filename: str):
     with open(filename) as f:
         return yaml.load(f)
 
- 
+
 def _file_loader_constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node):
     """This function is called, when a yaml node
     is tagged as 'file'. It loads the yaml file
