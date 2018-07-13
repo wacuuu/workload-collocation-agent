@@ -10,12 +10,11 @@ It is connected with 'components' module which plays a role of registry of all c
 One additionally feature is builtin support for including other yaml files
 using special tag called !file (check _file_loader_constructor docs for detailed descriptor).
 """
+import functools
 import inspect
-import json
 import logging
 import os
 import typing
-import functools
 import warnings
 
 from ruamel import yaml
@@ -191,13 +190,9 @@ def _file_loader_constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node):
     full_filename = os.path.join(os.path.dirname(loader.name), filename)
 
     with open(full_filename) as f:
-        if filename.endswith('.json'):
-            content = json.load(f)
-        elif filename.endswith(('.yaml', '.yml')):
-            content = yaml.load(f)
-        else:
-            raise RuntimeError('Unsupported file %r type (use: JSON or YAML)!' % full_filename)
-
+        if not filename.endswith(('.yaml', '.yml')):
+            raise RuntimeError('Unsupported file %r type (use: YAML)!' % full_filename)
+        content = yaml.load(f)
     return content
 
 

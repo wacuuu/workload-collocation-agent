@@ -53,15 +53,3 @@ def test_is_double_nested_file_imported_correctly_with_root_path():
     actual_cfg = config.load_config(os.path.join(ROOT_PATH, 'double_base.yaml'))
     assert expected_cfg == actual_cfg
 
-
-def test_is_nested_json_loaded_correctly():
-    expected_cfg = {
-        'key1': 'value1',
-        'key2': 1.2,
-        'key3': {
-            'nested_json_key': 'nested_json_value'
-        }
-    }
-
-    actual_cfg = config.load_config(os.path.join(ROOT_PATH, 'base_with_json.yaml'))
-    assert expected_cfg == actual_cfg

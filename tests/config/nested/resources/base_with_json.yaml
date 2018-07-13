@@ -1,3 +1,0 @@
-key1: 'value1'
-key2: 1.2
-key3: !file sub/nested.json

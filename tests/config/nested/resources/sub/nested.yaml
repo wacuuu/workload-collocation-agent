@@ -1,2 +1,2 @@
 nested_key: 'nested_value'
-x: !file subsub/x.json
+x: !file subsub/x.yaml
