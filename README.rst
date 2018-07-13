@@ -19,19 +19,41 @@ Development installation & running tests.
    git clone https://github.intel.com/serenity/rmi
    cd rmi
 
+
 Using pipenv for creating developer's environment
 -------------------------------------------------
+
+
+Install ``pipenv`` using "user installation" scheme:
+
+.. code:: shell-session
+
+    pip install --user pipenv
+
+In case of any troubles check `pragmatic installation of pipenv.`_
+
+.. _`pragmatic installation of pipenv.`: https://docs.pipenv.org/install/#pragmatic-installation-of-pipenv
+
+Then prepare virtual environment for rmi project.
 
 .. code:: shell-session
 
    pipenv install --dev
    pipenv run python setup.py test
-   # or 
-   PYTHONPATH=. pytest tests
 
+   # or from virtualenv
+   pipenv shell
+   PYTHONPATH=. pytest tests
+   tox
+   
+Tip, you can use virtualenv created by pipenv in your favorite IDE.
 
 Using tox
 ---------
+
+You can use tox to run unittests and check code style with flake8.
+Notice that after using pipenv install you have already tox in your virtual environment.
+
 
 .. code:: shell-session
 
