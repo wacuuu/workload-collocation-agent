@@ -38,7 +38,11 @@ def main():
     components.register_components(extra_components=args.components)
 
     # Initialize all necessary objects.
-    configuration = config.load_config(args.config)
+    try:
+        configuration = config.load_config(args.config)
+    except FileNotFoundError as e:
+        log.error('Error: Cannot find configuration file: %r', args.config)
+        exit(1)
 
     # Extract main loop component.
     runner = configuration['runner']

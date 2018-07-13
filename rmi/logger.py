@@ -37,7 +37,7 @@ def init_logging(level: str, package_name: str):
     # Inform about tracing level (because of number of metrics).
     package_logger.log(TRACE, 'Package logger trace messages enabled.')
 
-    # Prepare main log to be used by main entrypoint module
+    # Prepare main log to be used by main entry point module
     # (because you cannot create logger before initialization).
     log.debug('level=%s', logging.getLevelName(log.getEffectiveLevel()))
 
