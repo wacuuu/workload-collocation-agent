@@ -1,0 +1,7 @@
+runner: !DetectionRunner
+  node: !MesosNode
+  action_delay: 1.
+  storage: !LogStorage
+  detector: !ExampleDetector
+    task_id: 'some_task_id'
+

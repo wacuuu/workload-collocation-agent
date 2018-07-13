@@ -75,17 +75,29 @@ Available features:
 TODO: configuration: better description & more examples
 
 
-Full external detector example
+External detector example
 ------------------------------
 
 
+Before you run the example you need to: 
+
+- Have Mesos cluster set up
+- Mesos operator API available at http://127.0.0.1:5051
+- Install the project:
+
+
+.. code:: shell
+   
+    pip install -e .
+
+
 Assuming that external implementation of detector is provided as
-``external_package`` in ``external_module`` called ``ExampleDetector`` defined as:
+``external_package`` in ``example`` module and called ``ExampleDetector`` defined as:
 
 
 .. code:: python
 
-    #example_package/example_module.py
+    #example/external_package.py
 
     from rmi import detectors
     from rmi import mesos
@@ -117,7 +129,7 @@ Assuming that external implementation of detector is provided as
             return anomalies, debugging_metrics
 
 
-when given config ``external_detector_example.yaml`` is used:
+when given config ``example.yaml`` is used:
 
 .. code:: yaml
 
@@ -134,7 +146,7 @@ you can run Resource Mesos Integration in following way:
 
 .. code:: shell-session
 
-    # rmi -c external_detector_example.yaml -r external_package.external_module:ExampleDetector -l debug
+    # rmi -c example.yaml -r example.external_package:ExampleDetector -l debug
 
 you will receive output:
 
