@@ -182,4 +182,4 @@ then you can run integration by just providing config file:
 
 .. code:: shell-session
 
-    # rmi -c external_detector_example.yaml -l debug
+    # rmi -c example.yaml -l debug
