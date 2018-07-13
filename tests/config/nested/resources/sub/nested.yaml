@@ -1,0 +1,2 @@
+nested_key: 'nested_value'
+x: !file subsub/x.yaml

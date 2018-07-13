@@ -1,0 +1,6 @@
+dc1: !DCExample
+  x: 'asdf'
+dc2: !DCExample
+  x: 1
+  y: newble
+  z: [1,2,3]

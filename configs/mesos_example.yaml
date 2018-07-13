@@ -1,0 +1,6 @@
+runner: !DetectionRunner
+  node: !MesosNode
+  action_delay: 1.
+  storage: !LogStorage
+  detector: !NOPAnomalyDectector
+
