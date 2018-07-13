@@ -10,7 +10,7 @@ from rmi import mesos
 from rmi import platforms
 from rmi import storage
 from rmi.detectors import TasksMeasurements, Anomaly
-from rmi.metrics import Metric
+from rmi.metrics import Metric, MetricType
 
 log = logging.getLogger(__name__)
 
@@ -39,9 +39,23 @@ def convert_anomalies_to_metrics(anomalies: List[Anomaly]) -> List[Metric]:
     anomaly(task_id="task1", resource="cache", uuid="1234") 1
     anomaly(task_id="task2", resource="cache", uuid="1234") 1
     """
+    metrics = []
+    for anomaly in anomalies:
+        for task_id in anomaly.task_ids:
+            metrics.append(
+                Metric(
+                    name='anomaly',
+                    value=1,
+                    type=MetricType.COUNTER,
+                    labels=dict(
+                        task_id=task_id,
+                        resource=anomaly.resource,
+                        uuid=anomaly.uuid,
+                    )
+                )
+            )
 
-    #  TODO: implement me
-    return []
+    return metrics
 
 
 @dataclass

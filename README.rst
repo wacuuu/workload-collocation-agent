@@ -68,9 +68,79 @@ Available features:
 - Create complex and configure python objects using `YAML tags`_ e.g. Runner, MesosNode, Storage
 - Passing arguments and simple parameters type check
 - Including other yaml or json files
-- Register any external class with ``-r`` or by using ``rmi.config.register`` API 
+- Register any external class with ``-r`` or by using ``rmi.config.register`` decorator API 
 
 .. _`YAML tags`: http://yaml.org/spec/1.2/spec.html#id2764295
 
 TODO: configuration: better description & more examples
 
+
+Full external detector example
+------------------------------
+
+
+Assuming that external implementation of detector is provided as
+``external_package`` in ``external_module`` called ExampleDetector defined as:
+
+
+.. code:: python
+
+    #example_package/example_module.py
+
+    from rmi import detectors
+    from rmi import mesos
+    from rmi import metrics
+
+
+    class ExampleDetector(detectors.AnomalyDectector):
+        """Always return anomaly for given task."""
+
+        def __init__(self, task_id: mesos.TaskId):
+            self.task_id = task_id
+
+        def detect(self, platform, task_measurements):
+            anomalies = [
+                detectors.Anomaly(
+                    task_ids=['task_id'], 
+                    resource=detectors.ContendedResource.CPUS
+                )
+            ]
+            debugging_metrics = [
+                metrics.Metric(
+                    name='some_debug',
+                    value=2,
+                    labels=dict(
+                        version=2,
+                    )
+                )
+            ]
+            return anomalies, debugging_metrics
+
+
+when given config ``external_detector_example.yaml`` is used:
+
+.. code:: yaml
+
+    runner: !DetectionRunner
+      node: !MesosNode
+      action_delay: 1.
+      storage: !LogStorage
+      detector: !ExampleDetector
+        task_id: 'some_task_id'
+
+
+you can run Resource Mesos Integration in following way:
+
+
+.. code:: shell-session
+
+    # rmi -c external_detector_example.yaml -r external_package.external_module:ExampleDetector -l debug
+
+you will receive output:
+
+.. code:: shell-session
+
+    2018-07-13 14:51:32,829 DEBUG    {MainThread} [rmi.logger] level=DEBUG
+    2018-07-13 14:51:32,829 DEBUG    {MainThread} [rmi.main] started PID=30048
+    2018-07-13 14:51:32,913 DEBUG    {MainThread} [rmi.storage] [Metric(name='platform_dummy', value=1, labels={}, type=None, help=None)]
+    2018-07-13 14:51:32,913 DEBUG    {MainThread} [rmi.storage] [Metric(name='anomaly', value=1, labels={'task_id': 'task_id', 'resource': <ContendedResource.CPUS: 'cpus'>, 'uuid': <bound method Anomaly.uuid of Anomaly(task_ids=['task_id'], resource=<ContendedResource.CPUS: 'cpus'>)>}, type=<MetricType.COUNTER: 'counter'>, help=None), Metric(name='some_debug', value=2, labels={'version': 2}, type=None, help=None)]

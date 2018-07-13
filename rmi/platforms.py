@@ -39,4 +39,4 @@ def collect_platform_information() -> (Platform, List[Metric], Dict[str, str]):
 
     """
     # TODO: implement me
-    return Platform(0, 0, 0, {}, 0), [], {"host": "localhost"}
+    return Platform(1, 2, 4, {}, 0), [Metric(name='platform_dummy', value=1)], {"host": "localhost"}

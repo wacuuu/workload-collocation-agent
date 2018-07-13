@@ -25,6 +25,10 @@ class Anomaly:
     task_ids: List[TaskId]
     resource: ContendedResource
 
+    def uuid(self):
+        # TODO: uniq combintation of tasks ids as uuid
+        return 'foo-uuid'
+
 
 class AnomalyDectector(ABC):
 

@@ -1,4 +1,5 @@
 from typing import List
+import pkg_resources
 
 from rmi import config
 from rmi import detectors
@@ -14,5 +15,7 @@ def register_components(extra_components: List[str]):
     config.register(detectors.NOPAnomalyDectector)
 
     for component in extra_components:
-        cls = __import__(component)  # TODO: proper resolution use pkg_resource resolution
+        # Load external class ignored its requirments.
+        ep = pkg_resources.EntryPoint.parse('external_cls=%s' % component)
+        cls = ep.load(require=False)
         config.register(cls)

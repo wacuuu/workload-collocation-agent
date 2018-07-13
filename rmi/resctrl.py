@@ -1,3 +1,4 @@
+import logging
 import os
 
 from rmi.metrics import Measurements
@@ -5,6 +6,9 @@ from rmi.metrics import Measurements
 BASE_SUBSYSTEM_PATH = '/sys/fs/cgroup/cpu'
 BASE_RESCTRL_PATH = '/sys/fs/resctrl'
 TASKS_FILENAME = 'tasks'
+
+
+log = logging.getLogger(__name__)
 
 
 class ResGroup:
@@ -22,6 +26,10 @@ class ResGroup:
     def sync(self):
         """Copy all the tasks from all cgroups to resctrl tasks file
         """
+        if not os.path.exists('/sys/fs/resctrl'):
+            log.warning('Resctrl not mounted, ignore sync!')
+            return
+
         tasks = ''
         with open(self.cgroup_fullpath) as f:
             tasks += f.read()
@@ -33,7 +41,9 @@ class ResGroup:
                 f.flush()
 
     def get_measurements(self) -> Measurements:
-        # TODO: implement me
+        if not os.path.exists('/sys/fs/resctrl'):
+            log.warning('Resctrl not mounted, returning empty measurements!')
+            return {}
         return dict(cache_usage=50)
 
     def cleanup(self):
