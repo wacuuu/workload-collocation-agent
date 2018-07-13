@@ -1,22 +1,22 @@
-from typing import List, Dict, Union
+from typing import List
 
 from rmi.resctrl import ResGroup
 from rmi.cgroups import Cgroup
 from rmi.perf import PerfCounters
-from rmi.metrics import MetricValues
+from rmi.metrics import Measurements
 
 
 DEFAULT_EVENTS = ('instructions', 'cycles', 'cache_misses')
 
 
-def flatten_metrics(metrics: List[MetricValues]):
-    all_metrics_flat = dict()
+def flatten_measurements(measurements: List[Measurements]):
+    all_measurements_flat = dict()
 
-    for metric_values in metrics:
-        assert not set(metric_values.keys()) & set(all_metrics_flat.keys()), \
-            'When flatting metrics the keys should not overlap!'
-        all_metrics_flat.update(metric_values)
-    return all_metrics_flat
+    for measurement in measurements:
+        assert not set(measurement.keys()) & set(all_measurements_flat.keys()), \
+            'When flatting measurments the keys should not overlap!'
+        all_measurements_flat.update(measurement)
+    return all_measurements_flat
 
 
 class Container:
@@ -29,11 +29,11 @@ class Container:
     def sync(self):
         self.resgroup.sync()
 
-    def get_metrics(self) -> Dict[str, Union[float, int]]:
-        return flatten_metrics([
-            self.cgroup.get_metrics(),
-            self.resgroup.get_metrics(),
-            self.perf_counters.get_metrics(),
+    def get_mesurements(self) -> Measurements:
+        return flatten_measurements([
+            self.cgroup.get_measurements(),
+            self.resgroup.get_measurements(),
+            self.perf_counters.get_measurements(),
         ])
 
     def cleanup(self):

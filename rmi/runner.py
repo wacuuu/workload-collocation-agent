@@ -9,14 +9,10 @@ from rmi import logger
 from rmi import mesos
 from rmi import platforms
 from rmi import storage
-from rmi.metrics import Metric, MetricValues
+from rmi.detectors import TasksMeasurements
+from rmi.metrics import Metric
 
 log = logging.getLogger(__name__)
-
-
-def extract_tasks_value_metrics(task_metrics):
-    #  TODO: implement me
-    return {}
 
 
 def convert_anomalies_to_metrics(anomalies):
@@ -64,29 +60,30 @@ class DetectionRunner:
             platform, platform_metrics, common_labels = platforms.collect_platform_information()
 
             # Build labeled tasks_metrics and task_metrics_values.
+            tasks_measurements: TasksMeasurements = {}
             tasks_metrics: List[Metric] = []
             for container, task in zip(self.containers, tasks):
-                task_metric_values: MetricValues = container.get_metrics()
-                task_metrics: List[Metric] = []
-                for metric_name, metric_value in task_metric_values.items():
+                task_measurements = container.get_mesurements()
+                tasks_measurements[task.task_id] = task_measurements
 
+                task_metrics = []
+                for metric_name, metric_value in task_measurements.items():
                     metric = Metric(
                         name=metric_name,
                         value=metric_value,
                         # TODO: help & type
                     )
-
                     metric.labels.update(dict(
                         task_id=task.task_id,  # TODO: add all necessary labels
                     ))
                     metric.labels.update(common_labels)
+
                 tasks_metrics += task_metrics
 
             self.storage.store(platform_metrics + tasks_metrics)
 
             # Wrap tasks with metrics
-            tasks_metric_values = extract_tasks_value_metrics(task_metrics)
-            anomalies, extra_metrics = self.detector.detect(platform, tasks_metric_values)
+            anomalies, extra_metrics = self.detector.detect(platform, tasks_measurements)
 
             anomaly_metrics = convert_anomalies_to_metrics(anomalies)
             self.storage.store(anomaly_metrics + extra_metrics)

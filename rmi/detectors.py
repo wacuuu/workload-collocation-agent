@@ -3,14 +3,13 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Dict
 
-from rmi.metrics import Metric, MetricName, MetricValue
+from rmi.metrics import Metric, Measurements
 from rmi.mesos import TaskId
 from rmi.platforms import Platform
 
 
-# Mapping from metric type to specific value (unit depends on metric type)
-TaskMetricValues = Dict[MetricName, MetricValue]
-TasksMetricValues = Dict[TaskId, TaskMetricValues]
+# Mapping from task to its measurments.
+TasksMeasurements = Dict[TaskId, Measurements]
 
 
 class ContendedResource(Enum):
@@ -33,11 +32,11 @@ class AnomalyDectector(ABC):
     def detect(
             self,
             platform: Platform,
-            tasks_metric_values: TasksMetricValues) -> (List[Anomaly], List[Metric]):
+            tasks_measurements: TasksMeasurements) -> (List[Anomaly], List[Metric]):
         ...
 
 
 class NOPAnomalyDectector(AnomalyDectector):
 
-    def detect(self, platform, tasks_metric_values):
+    def detect(self, platform, tasks_measurements):
         return [], []

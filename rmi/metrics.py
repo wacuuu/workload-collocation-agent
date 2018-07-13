@@ -28,4 +28,4 @@ class Metric:
     help: str = None
 
 
-MetricValues = Dict[MetricName, MetricValue]
+Measurements = Dict[MetricName, MetricValue]

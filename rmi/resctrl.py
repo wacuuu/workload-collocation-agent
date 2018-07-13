@@ -1,5 +1,7 @@
 import os
 
+from rmi.metrics import Measurements
+
 BASE_SUBSYSTEM_PATH = '/sys/fs/cgroup/cpu'
 BASE_RESCTRL_PATH = '/sys/fs/resctrl'
 TASKS_FILENAME = 'tasks'
@@ -30,7 +32,7 @@ class ResGroup:
                 f.write(task)
                 f.flush()
 
-    def get_metrics(self):
+    def get_measurements(self) -> Measurements:
         # TODO: implement me
         return dict(cache_usage=50)
 
