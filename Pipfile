@@ -18,6 +18,7 @@ ipython = "*"
 pdbpp = "*"
 ipdb = "*"
 tox = "*"
+pex = "*"
 
 [requires]
 python_version = "3.6"

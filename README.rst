@@ -60,6 +60,17 @@ Notice that after using pipenv install you have already tox in your virtual envi
    tox
 
 
+Building executable binary (distribution)
+-----------------------------------------
+
+.. code:: shell-session
+
+   tox -e package
+
+
+Results in single distributable and executable binary in ``dist/rmi.pex``.
+
+
 Configuration
 -------------
 
