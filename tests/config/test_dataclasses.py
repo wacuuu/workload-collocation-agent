@@ -33,8 +33,9 @@ def test_dataclass():
 def test_invalid_dataclass():
     test_config_path = testing.relative_module_path(__file__, 'test_dataclasses_invalid.yaml')
 
-    with pytest.raises(config.ValidationError) as e:
+    with pytest.raises(config.ConfigLoadError) as e:
         config.load_config(test_config_path)
+        assert 'has imporper type' in str(e)
 
     message = e.value.args[0]
-    assert "Value 'asdf' for field 'x' in class 'DCExample' " in message
+    assert "has improper type" in message
