@@ -40,8 +40,8 @@ def main():
     # Initialize all necessary objects.
     try:
         configuration = config.load_config(args.config)
-    except FileNotFoundError as e:
-        log.error('Error: Cannot find configuration file: %r', args.config)
+    except config.ConfigLoadError as e:
+        log.error('Error: Cannot load config file %r: %s', args.config, e)
         exit(1)
 
     # Extract main loop component.

@@ -10,8 +10,10 @@ It is connected with 'components' module which plays a role of registry of all c
 One additionally feature is builtin support for including other yaml files
 using special tag called !file (check _file_loader_constructor docs for detailed descriptor).
 """
+from typing import Any
 import functools
 import inspect
+import io
 import logging
 import os
 import typing
@@ -29,8 +31,11 @@ log = logging.getLogger(__name__)
 
 ROOT_PATH = ''
 
+_registered_tags = set()
 
-class ValidationError(Exception):
+
+class ConfigLoadError(Exception):
+    """Error raised for any of improper config file. """
     pass
 
 
@@ -66,9 +71,6 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
         # always used for mapping type.
         arguments = loader.construct_mapping(node, deep=True)
 
-    # End the creation step.
-    yield instance
-
     # Constructor arguments simple type validation.
     # Use annotated constructor (arguments type annotations) to validate provided arguments.
     signature = inspect.signature(cls.__init__)
@@ -95,10 +97,13 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
         if name in arguments:
             value = arguments[name]
             if not isinstance(value, expected_type):
-                raise ValidationError(
-                    'Value %r for field %r in class %r '
+                raise ConfigLoadError(
+                    'Value %r%s for field %r in class %r '
                     'has improper type (got=%r expected=%r)!' %
-                    (value, name, cls.__name__, type(value), expected_type))
+                    (value, node.start_mark, name, cls.__name__, type(value), expected_type))
+
+    # End the creation step.
+    yield instance
 
     # Continue with initialization.
     log.log(logger.TRACE, 'constructed object init %s(id=0x%x) with state=%r ',
@@ -106,8 +111,9 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
     try:
         instance.__init__(**arguments)
     except TypeError as e:
-        raise TypeError('Cannot instantiate %r with kw=%r (constructor signature is: %s)' % (
-            cls.__name__, arguments, signature)) from e
+        raise ConfigLoadError(
+            'Cannot instantiate %r%s with arguments=%r (constructor signature is: %s)' % (
+                cls.__name__, node.start_mark, arguments, signature))
     log.log(logger.TRACE, '%s(0x%x)=%r', cls.__name__, id(instance), vars(instance))
 
 
@@ -137,17 +143,32 @@ def register(cls):
     # Just simply register new constructor for given cls.
     log.log(logger.TRACE, 'registered class %r' % (cls.__name__))
     yaml.add_constructor('!%s' % cls.__name__, functools.partial(_constructor, cls=cls))
+    _registered_tags.add(cls.__name__)
     return cls
 
 
-def load_config(filename: str):
+def _parse(yaml_body: io.StringIO) -> Any:
+    """Parses configuration from given yaml body and returns initialized object."""
+    try:
+        return yaml.load(yaml_body)
+    except yaml.constructor.ConstructorError as e:
+        raise ConfigLoadError(
+            '%s %s. ' % (e.problem, e.problem_mark) +
+            'Available tags are: %s' % (', '.join(_registered_tags))
+        )
+
+
+def load_config(filename: str) -> Any:
     """Reads config from base file (which can contain nested config file).
 
     :param filename: The base config file
     :returns deserialized objects from yaml
     """
-    with open(filename) as f:
-        return yaml.load(f)
+    try:
+        with open(filename) as f:
+            return _parse(f)
+    except FileNotFoundError as e:
+        raise ConfigLoadError('Cannot find configuration file: %r' % filename)
 
 
 def _file_loader_constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node):
@@ -185,13 +206,14 @@ def _file_loader_constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node):
     filename = loader.construct_scalar(node)
     log.debug('loading from file: %s', filename)
     if filename == '':
-        raise RuntimeError('For a !file node a filename must be provided!')
+        raise ConfigLoadError('For a !file node a filename must be provided!%s', node.start_mark)
 
     full_filename = os.path.join(os.path.dirname(loader.name), filename)
 
     with open(full_filename) as f:
         if not filename.endswith(('.yaml', '.yml')):
-            raise RuntimeError('Unsupported file %r type (use: YAML)!' % full_filename)
+            raise ConfigLoadError('Unsupported file %r%stype (use: YAML)!' % (
+                full_filename, node.start_mark))
         content = yaml.load(f)
     return content
 

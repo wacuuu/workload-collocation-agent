@@ -4,13 +4,13 @@ import pytest
 
 from rmi import config
 from rmi import testing
-
+from rmi.config import ConfigLoadError
 
 ROOT_PATH = testing.relative_module_path(__file__, 'resources')
 
 
 def test_is_exception_raised_for_missing_filenameimport():
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(ConfigLoadError):
         config.load_config(
             'missing_filename.yaml',
         )
