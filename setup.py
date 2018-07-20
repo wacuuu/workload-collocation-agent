@@ -20,9 +20,6 @@ setup(
           'logging-tree==1.7',
           'dataclasses==0.6',
     ],
-    setup_requires=[
-        'pytest-runner',
-    ],
     tests_require=[
           'pytest',
           'pytest-cov',
