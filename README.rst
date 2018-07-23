@@ -39,25 +39,21 @@ Then prepare virtual environment for rmi project.
 .. code:: shell-session
 
    pipenv install --dev
-   pipenv run python setup.py test
-
-   # or from virtualenv
    pipenv shell
+
+Then you can run tests manually:
+
+.. code:: shell-session
+
    PYTHONPATH=. pytest tests
-   tox
-   
-Tip, you can use virtualenv created by pipenv in your favorite IDE.
 
-Using tox
----------
-
-You can use tox to run unittests and check code style with flake8.
-Notice that after using pipenv install you have already tox in your virtual environment.
-
+Or using tox (flake8 will be run too):
 
 .. code:: shell-session
 
    tox
+   
+Tip, you can use virtualenv created by pipenv in your favorite IDE.
 
 
 Building executable binary (distribution)
