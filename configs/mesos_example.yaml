@@ -3,4 +3,4 @@ runner: !DetectionRunner
   action_delay: 1.
   storage: !LogStorage
   detector: !NOPAnomalyDectector
-
+  rdt_enabled: True

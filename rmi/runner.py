@@ -11,6 +11,7 @@ from rmi import platforms
 from rmi import storage
 from rmi.detectors import TasksMeasurements, Anomaly
 from rmi.metrics import Metric, MetricType
+from rmi.resctrl import check_resctrl
 
 log = logging.getLogger(__name__)
 
@@ -67,6 +68,7 @@ class DetectionRunner:
     storage: storage.Storage
     detector: detectors.AnomalyDectector
     action_delay: float = 0.  # [s]
+    rdt_enabled: bool = True
 
     def __post_init__(self):
         self.containers = []
@@ -80,6 +82,11 @@ class DetectionRunner:
 
     @logger.trace(log)
     def run(self):
+        if self.rdt_enabled and not check_resctrl():
+            return
+        elif not self.rdt_enabled:
+            log.warning('Rdt disabled. Skipping collecting measurements '
+                        'and resctrl synchronization')
 
         while True:
 

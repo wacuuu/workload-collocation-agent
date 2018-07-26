@@ -7,12 +7,43 @@ BASE_SUBSYSTEM_PATH = '/sys/fs/cgroup/cpu'
 BASE_RESCTRL_PATH = '/sys/fs/resctrl'
 TASKS_FILENAME = 'tasks'
 CPUS_FILENAME = 'cpus'
+SCHEMATA = 'schemata'
+INFO = 'info'
 MON_DATA = 'mon_data'
 MBM_TOTAL = 'mbm_total_bytes'
 CPU_USAGE = 'cpuacct.usage'
 
 
 log = logging.getLogger(__name__)
+
+
+def check_resctrl():
+    """
+    :return: True if resctrl is mounted and has required file
+             False if resctrl is not mounted or required file is missing
+    """
+    run_anyway_text = 'If you wish to run script anyway,' \
+                      'please set rdt_enabled to False in configuration file.'
+
+    try:
+        with open(BASE_RESCTRL_PATH):
+            pass
+    except IOError as e:
+        log.debug('Error: Failed to open %s: %s', BASE_RESCTRL_PATH, e)
+        log.critical('Resctrl not mounted. ' + run_anyway_text)
+        return False
+
+    try:
+        mon_dir = os.path.join(BASE_RESCTRL_PATH, MON_DATA)
+        with open(mon_dir):
+            pass
+    except IOError as e:
+        log.debug('Error: Failed to open %s: %s', mon_dir, e)
+        log.critical('Resctrl does not support Memory Bandwidth Monitoring.' +
+                     run_anyway_text)
+        return False
+
+    return True
 
 
 class ResGroup:

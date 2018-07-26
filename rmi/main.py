@@ -30,7 +30,7 @@ def main():
 
     args = parser.parse_args()
 
-    # Intialize logging subsystem.
+    # Initialize logging subsystem.
     logger.init_logging(args.log_level, package_name='rmi')
     log.debug('started PID=%r', os.getpid())
 
