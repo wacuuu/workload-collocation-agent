@@ -1,0 +1,7 @@
+runner: !DetectionRunner
+  node: !MesosNode
+  action_delay: 1.
+  storage: !KafkaStorage
+    max_timeout_in_seconds: 5.
+  detector: !NOPAnomalyDectector
+  rdt_enabled: False

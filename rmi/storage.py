@@ -117,6 +117,10 @@ class KafkaStorage(Storage):
         the message (metrics) are delivered to the kafka;
 
         """
+        if not metrics:
+            log.warning('Empty list of metrics, store is skipped!')
+            return
+
         msg = convert_to_prometheus_exposition_format(metrics)
         self.producer.produce(self.topic, msg.encode('utf-8'),
                               callback=self.callback_on_delivery)
@@ -141,5 +145,7 @@ class KafkaStorage(Storage):
             raise FailedDeliveryException(
                 "Message has failed to be writen to kafka. API error message: {}."
                 .format(error_from_callback__original_ref))
+
+        log.debug('message size=%i stored in kafka topic=%r', len(msg), self.topic)
 
         return  # the message has been send to kafka
