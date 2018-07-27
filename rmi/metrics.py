@@ -9,6 +9,7 @@ class MetricName(str, Enum):
     LLC_MISSES = 'cache-misses'
     CPU_USAGE = 'cpu_usage'  # cpuacct.usage (total kernel and user space) in [ns]
     MEM_BW = 'memory_bandwidth'  # counter like [bytes]
+    MEM_USAGE = 'memory_usage'
 
 
 class MetricType(str, Enum):
