@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+confluent-kafka = "==0.11.4"
+
+[dev-packages]
+pytest = "*"
+pytest-cov = "*"
+flake8 = "*"
+ipython = "*"
+pdbpp = "*"
+ipdb = "*"
+tox = "*"
+pex = "*"
+
+[requires]
+python_version = "3.6"
