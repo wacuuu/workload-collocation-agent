@@ -28,5 +28,4 @@ setup(
     ],
     packages=find_packages(),
     python_requires=">=3.6",
-    scripts=['bin/rmi']
 )

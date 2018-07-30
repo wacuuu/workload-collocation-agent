@@ -90,12 +90,6 @@ Before you run the example you need to:
 
 - Have Mesos cluster set up
 - Mesos operator API available at http://127.0.0.1:5051
-- Install the project:
-
-
-.. code:: shell
-   
-    pip install -e .
 
 
 Assuming that external implementation of detector is provided as
@@ -153,7 +147,7 @@ you can run Resource Mesos Integration in following way:
 
 .. code:: shell-session
 
-    # rmi -c example.yaml -r example.external_package:ExampleDetector -l debug
+    # dist/rmi.pex -c example.yaml -r example.external_package:ExampleDetector -l debug
 
 you will receive output:
 
@@ -189,4 +183,4 @@ then you can run integration by just providing config file:
 
 .. code:: shell-session
 
-    # rmi -c example.yaml -l debug
+    # dist/rmi.pex -c example.yaml -l debug
