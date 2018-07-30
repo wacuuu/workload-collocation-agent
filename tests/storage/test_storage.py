@@ -32,7 +32,18 @@ def sample_metrics_with_float_value():
     """for testing for proper float representation"""
     return [
         Metric(name='average_latency_miliseconds', value=8.223,
-               labels={'user': 'felidadae', 'node': 'slave_1'},  # quoted
+               labels={'user': 'felidadae', 'node': 'slave_1'},
+               type=MetricType.COUNTER, help='latency measured in miliseconds'),
+    ]
+
+
+# PEC <- prometheus exposition format
+@pytest.fixture
+def sample_metrics_unconvertable_to_PEF():
+    """for testing for proper float representation"""
+    return [
+        Metric(name='latency-miliseconds', value=8.223,
+               labels={'user': 'felidadae', 'node': 'slave_1'},
                type=MetricType.COUNTER, help='latency measured in miliseconds'),
     ]
 
@@ -81,3 +92,15 @@ def test_when_brocker_unavailable(mock_producer, sample_metrics):
     with pytest.raises(storage.FailedDeliveryException, match="Maximum timeout"):
         kafka_storage.store(sample_metrics)
     kafka_storage.producer.flush.assert_called_once()
+
+
+def test_convert_to_prometheus_exposition_format(
+        sample_metrics,
+        sample_metrics_with_float_value,
+        sample_metrics_unconvertable_to_PEF):
+    metric_nPEF = sample_metrics_unconvertable_to_PEF
+    is_convertable = storage.is_convertable_to_prometheus_exposition_format
+
+    assert (True, "")  == is_convertable(sample_metrics)
+    assert (True, "")  == is_convertable(sample_metrics_with_float_value)
+    assert (False, "Wrong metric name latency-miliseconds.") == is_convertable(metric_nPEF)
