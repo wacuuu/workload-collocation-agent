@@ -94,7 +94,7 @@ def test_when_brocker_unavailable(mock_producer, sample_metrics):
     kafka_storage.producer.flush.assert_called_once()
 
 
-def test_convert_to_prometheus_exposition_format(
+def test_is_convertable_to_prometheus_exposition_format(
         sample_metrics,
         sample_metrics_with_float_value,
         sample_metrics_unconvertable_to_PEF):

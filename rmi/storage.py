@@ -41,6 +41,8 @@ def get_current_time() -> str:
     return str(int(time.time()) * 1000)
 
 
+# Comes from prometheus python client:
+# https://github.com/prometheus/client_python/blob/master/prometheus_client/core.py#L25
 _METRIC_NAME_RE = re.compile(r'^[a-zA-Z_:][a-zA-Z0-9_:]*$')
 _METRIC_LABEL_NAME_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
 _RESERVED_METRIC_LABEL_NAME_RE = re.compile(r'^__.*$')
@@ -77,7 +79,8 @@ def is_convertable_to_prometheus_exposition_format(metrics: List[Metric]) -> (bo
         #   goes here.
         if metric.type is not None and (metric.type != MetricType.GAUGE and
                                         metric.type != MetricType.COUNTER):
-            return (False, "Wrong metric type.")
+            return (False, "Wrong metric type (used type {})."
+                           .format(metric.type))
 
     return (True, "")
 
