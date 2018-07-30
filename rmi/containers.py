@@ -1,5 +1,7 @@
 from typing import List
 
+from dataclasses import dataclass
+
 from rmi.resctrl import ResGroup
 from rmi.cgroups import Cgroup
 from rmi.perf import PerfCounters
@@ -14,28 +16,34 @@ def flatten_measurements(measurements: List[Measurements]):
 
     for measurement in measurements:
         assert not set(measurement.keys()) & set(all_measurements_flat.keys()), \
-            'When flatting measurments the keys should not overlap!'
+            'When flatting measurements the keys should not overlap!'
         all_measurements_flat.update(measurement)
     return all_measurements_flat
 
 
+@dataclass
 class Container:
 
-    def __init__(self, cgroup_path):
-        self.cgroup = Cgroup(cgroup_path)
-        self.resgroup = ResGroup(cgroup_path)
-        self.perf_counters = PerfCounters(cgroup_path, event_names=DEFAULT_EVENTS)
+    cgroup_path: str
+    rdt_enabled: bool = True
+
+    def __post_init__(self):
+        self.cgroup = Cgroup(self.cgroup_path)
+        self.perf_counters = PerfCounters(self.cgroup_path, event_names=DEFAULT_EVENTS)
+        self.resgroup = ResGroup(self.cgroup_path) if self.rdt_enabled else None
 
     def sync(self):
-        self.resgroup.sync()
+        if self.rdt_enabled:
+            self.resgroup.sync()
 
-    def get_mesurements(self) -> Measurements:
+    def get_measurements(self) -> Measurements:
         return flatten_measurements([
             self.cgroup.get_measurements(),
-            self.resgroup.get_measurements(),
+            self.resgroup.get_measurements() if self.rdt_enabled else {},
             self.perf_counters.get_measurements(),
         ])
 
     def cleanup(self):
-        self.resgroup.cleanup()
+        if self.rdt_enabled:
+            self.resgroup.cleanup()
         self.perf_counters.cleanup()

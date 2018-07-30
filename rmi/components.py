@@ -12,6 +12,7 @@ def register_components(extra_components: List[str]):
     config.register(runner.DetectionRunner)
     config.register(mesos.MesosNode)
     config.register(storage.LogStorage)
+    config.register(storage.KafkaStorage)
     config.register(detectors.NOPAnomalyDectector)
 
     for component in extra_components:

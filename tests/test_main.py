@@ -24,6 +24,7 @@ mesos_tasks_mocks = [
     )
 ]
 
+
 @mock.patch('sys.argv', ['rmi', '-c', 'configs/no_existing_file.yaml', '-l', 'trace'])
 @mock.patch('os.rmdir')
 @mock.patch('rmi.config.open', mock.mock_open(read_data=yaml_config))
@@ -35,5 +36,3 @@ def test_main(*mocks):
     main.main()
     # restore 'silent' logging level
     init_logging('critical', 'rmi')
-
-

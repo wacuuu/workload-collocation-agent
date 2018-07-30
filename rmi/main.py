@@ -1,5 +1,5 @@
 """
-Main entrypoint.
+Main entry point.
 
 Responsible for configuration and prepare components
 and start main loop from Runner.

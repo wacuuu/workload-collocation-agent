@@ -1,10 +1,12 @@
 from dataclasses import dataclass, field
-from typing import Dict
+from typing import Dict, List
 import urllib.parse
 
 import requests
 
 # Mesos tasks id
+from rmi.metrics import Measurements, Metric
+
 TaskId = str
 
 
@@ -27,6 +29,12 @@ class MesosTask:
     # inferred
     cgroup_path: str  # Starts with leading "/"
     labels: Dict[str, str] = field(default_factory=dict)
+
+    def __hash__(self):
+        """Every instance of mesos task is uniqully identified by cgroup_path.
+        Assumption here is that every mesos task is represented by one main cgroup.
+        """
+        return id(self.cgroup_path)
 
 
 def find_cgroup(pid):
@@ -87,3 +95,28 @@ class MesosNode:
             )
 
         return tasks
+
+
+def create_metrics(
+        task: MesosTask,
+        task_measurements: Measurements,
+        common_labels: Dict[str, str]) -> List[Metric]:
+    """Prepare a list of metrics for a mesos tasks based on provided measurements
+    applying common_labels.
+    :param task: use information from MesosTask to decorate metrics with labels
+    :param task_measurements: use values of measurements to create metrics
+    :param common_labels: apply those labels to every created metric
+    """
+    metrics = []
+    for metric_name, metric_value in task_measurements.items():
+        metric = Metric(
+            name=metric_name,
+            value=metric_value,
+            # TODO: help & type - use some predefined constants from metrics
+        )
+        metric.labels.update(dict(
+            task_id=task.task_id,  # TODO: add all necessary labels like mesos job ids
+        ))
+        metric.labels.update(common_labels)
+        metrics.append(metric)
+    return metrics
