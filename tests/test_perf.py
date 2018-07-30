@@ -246,3 +246,44 @@ def test_read_events_zero_values_one_cpu(_open_mock, _get_cgroup_fd_mock):
     # File descriptor mock for single cpu
     prf._group_event_leaders = {0: Mock()}
     assert prf._read_events() == {}
+
+
+@patch('rmi.perf._read_paranoid')
+@patch('rmi.perf.LIBC.capget', return_value=-1)
+def test_privileges_failed_capget(capget, read_paranoid):
+    with pytest.raises(perf.GettingCapabilitiesFailed):
+        perf.are_privileges_sufficient()
+
+
+def no_cap_sys_admin(header, data):
+    # https://github.com/python/cpython/blob/v3.6.6/Modules/_ctypes/callproc.c#L521
+    # Do not even ask how I managed to find it ;)
+    data._obj.effective = 20 # 20 & 21 != 21
+    return 0
+
+
+def cap_sys_admin(header, data):
+    # https://github.com/python/cpython/blob/v3.6.6/Modules/_ctypes/callproc.c#L521
+    data._obj.effective = 21 # 21 & 21 = 21
+    return 0
+
+
+@patch('os.geteuid', return_value=0)
+@patch('rmi.perf._read_paranoid', return_value=2)
+@patch('rmi.perf.LIBC.capget', side_effect=no_cap_sys_admin)
+def test_privileges_root(capget, read_paranoid, geteuid):
+    assert perf.are_privileges_sufficient()
+
+
+@patch('os.geteuid', return_value=1000)
+@patch('rmi.perf._read_paranoid', return_value=2)
+@patch('rmi.perf.LIBC.capget', side_effect=cap_sys_admin)
+def test_privileges_capabilities(capget, read_paranoid, geteuid):
+    assert perf.are_privileges_sufficient()
+
+
+@patch('os.geteuid', return_value=1000)
+@patch('rmi.perf._read_paranoid', return_value=0)
+@patch('rmi.perf.LIBC.capget', side_effect=no_cap_sys_admin)
+def test_privileges_paranoid(capget, read_paranoid, geteuid):
+    assert perf.are_privileges_sufficient()

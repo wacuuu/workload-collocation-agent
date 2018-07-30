@@ -12,6 +12,7 @@ from rmi import storage
 from rmi.detectors import TasksMeasurements, Anomaly
 from rmi.metrics import Metric, MetricType
 from rmi.resctrl import check_resctrl
+from rmi.perf import are_privileges_sufficient
 
 log = logging.getLogger(__name__)
 
@@ -87,6 +88,12 @@ class DetectionRunner:
         elif not self.rdt_enabled:
             log.warning('Rdt disabled. Skipping collecting measurements '
                         'and resctrl synchronization')
+
+        if not are_privileges_sufficient():
+            log.critical("Impossible to use perf_event_open. You need to: be root; or adjust "
+                         "/proc/sys/kernel/perf_event_paranoid; or has CAP_SYS_ADMIN capability"
+                         " set. See man 2 perf_event_open for details.")
+            return
 
         while True:
 
