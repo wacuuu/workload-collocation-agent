@@ -1,4 +1,5 @@
 import ctypes
+from rmi.metrics import MetricName
 
 # x86 specific, from arch/x86/include/generated/uapi/asm/unistd_64.h
 PERF_EVENT_OPEN_NR = 298
@@ -72,16 +73,11 @@ class EventTypeConfig:
     PERF_COUNT_HW_REF_CPU_CYCLES = 9
 
 
-HardwareEventNameMap = {'cycles': EventTypeConfig.PERF_COUNT_HW_CPU_CYCLES,
-                        'cpu-cycles': EventTypeConfig.PERF_COUNT_HW_CPU_CYCLES,
-                        'branches': EventTypeConfig.PERF_COUNT_HW_BRANCH_INSTRUCTIONS,
-                        'branch-instructions': EventTypeConfig.PERF_COUNT_HW_BRANCH_INSTRUCTIONS,
-                        'branch-misses': EventTypeConfig.PERF_COUNT_HW_BRANCH_MISSES,
-                        'instructions': EventTypeConfig.PERF_COUNT_HW_INSTRUCTIONS,
-                        'bus-cycles': EventTypeConfig.PERF_COUNT_HW_BUS_CYCLES,
-                        'cache-misses': EventTypeConfig.PERF_COUNT_HW_CACHE_MISSES,
-                        'cache-references': EventTypeConfig.PERF_COUNT_HW_CACHE_REFERENCES,
-                        'ref-cycles': EventTypeConfig.PERF_COUNT_HW_REF_CPU_CYCLES}
+HardwareEventNameMap = {
+    MetricName.CYCLES: EventTypeConfig.PERF_COUNT_HW_CPU_CYCLES,
+    MetricName.INSTRUCTIONS: EventTypeConfig.PERF_COUNT_HW_INSTRUCTIONS,
+    MetricName.CACHE_MISSES: EventTypeConfig.PERF_COUNT_HW_CACHE_MISSES,
+}
 
 
 class PerfType:

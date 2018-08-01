@@ -68,18 +68,18 @@ def test_parse_online_cpus_string(raw_string, expected):
              b"\x01\x00\x00\x00\xa6\x6e\x1a\x9d\x08\x00\x00\x00\x1d\x17\x00\x00\x00\x00\x00\x00"
              b"\xc8\xfd\x08\x88\x04\x00\x00\x00\x1e\x17\x00\x00\x00\x00\x00\x00\x18\xc8\x43\x00"
              b"\x00\x00\x00\x00\x1f\x17\x00\x00\x00\x00\x00\x00"),
-     [metrics.MetricName.INSTRUCTIONS, metrics.MetricName.CYCLES, metrics.MetricName.LLC_MISSES],
+     [metrics.MetricName.INSTRUCTIONS, metrics.MetricName.CYCLES, metrics.MetricName.CACHE_MISSES],
      {metrics.MetricName.INSTRUCTIONS: 36995493542, metrics.MetricName.CYCLES: 19462159816,
-      metrics.MetricName.LLC_MISSES: 4442136}
+      metrics.MetricName.CACHE_MISSES: 4442136}
      ),
     # case with 50% scaling factor
     (BytesIO(b"\x03\x00\x00\x00\x00\x00\x00\x00\xb2\xef\xff\x29\x01\x00\x00\x00\x07\x13\x08\x95"
              b"\x00\x00\x00\x00\x86\xb2\xf1\x4b\x04\x00\x00\x00\x5d\x19\x00\x00\x00\x00\x00\x00"
              b"\xbe\x74\x5f\x43\x02\x00\x00\x00\x5e\x19\x00\x00\x00\x00\x00\x00\xf0\xa5\x15\x00"
              b"\x00\x00\x00\x00\x5f\x19\x00\x00\x00\x00\x00\x00"),
-     [metrics.MetricName.INSTRUCTIONS, metrics.MetricName.CYCLES, metrics.MetricName.LLC_MISSES],
+     [metrics.MetricName.INSTRUCTIONS, metrics.MetricName.CYCLES, metrics.MetricName.CACHE_MISSES],
      {metrics.MetricName.INSTRUCTIONS: 36900158682, metrics.MetricName.CYCLES: 19436397211,
-      metrics.MetricName.LLC_MISSES: 2836869}
+      metrics.MetricName.CACHE_MISSES: 2836869}
      )
 ])
 def test_parse_event_groups(file, event_names, expected):

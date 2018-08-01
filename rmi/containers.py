@@ -8,7 +8,7 @@ from rmi.perf import PerfCounters
 from rmi.metrics import Measurements, MetricName
 
 
-DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.LLC_MISSES)
+DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.CACHE_MISSES)
 
 
 def flatten_measurements(measurements: List[Measurements]):
