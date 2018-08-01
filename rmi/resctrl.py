@@ -1,18 +1,16 @@
 import logging
 import os
 
+from rmi.cgroups import BASE_SUBSYSTEM_PATH
 from rmi.metrics import Measurements
 
-BASE_SUBSYSTEM_PATH = '/sys/fs/cgroup/cpu'
 BASE_RESCTRL_PATH = '/sys/fs/resctrl'
 TASKS_FILENAME = 'tasks'
-CPUS_FILENAME = 'cpus'
 SCHEMATA = 'schemata'
 INFO = 'info'
 MON_DATA = 'mon_data'
 MON_L3_00 = 'mon_L3_00'
 MBM_TOTAL = 'mbm_total_bytes'
-CPU_USAGE = 'cpuacct.usage'
 
 
 log = logging.getLogger(__name__)
@@ -93,11 +91,7 @@ class ResGroup:
                                    mon_dir, MBM_TOTAL)) as mbm_total_file:
                 mbm_total += int(mbm_total_file.read())
 
-        with open(os.path.join(self.cgroup_fullpath, CPU_USAGE)) as \
-                cpu_usage_file:
-            cpu_usage = int(cpu_usage_file.read())
-
-        return dict(memory_bandwidth=mbm_total, cpu_usage=cpu_usage)
+        return dict(memory_bandwidth=mbm_total)
 
     def cleanup(self):
         os.rmdir(self.resgroup_dir)
