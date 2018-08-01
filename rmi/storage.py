@@ -11,8 +11,8 @@ import re
 import confluent_kafka
 from dataclasses import dataclass, field
 
-from rmi import logger
 from rmi.metrics import Metric, MetricType
+from rmi import logger
 
 log = logging.getLogger(__name__)
 
@@ -143,7 +143,7 @@ class KafkaStorage(Storage):
         Triggered by poll() or flush()."""
         if err is not None:
             self.error_from_callback = err
-            log.log(logger.ERROR,
+            log.error(
                     'KafkaStorage failed to send message; error message: {}'
                     .format(err))
         else:
@@ -170,10 +170,9 @@ class KafkaStorage(Storage):
 
         is_convertable, error_message = is_convertable_to_prometheus_exposition_format(metrics)
         if not is_convertable:
-            log.log(logger.ERROR,
-                    'KafkaStorage failed to convert metrics into'
-                    'prometheus exposition format; error: "{}"'
-                    .format(error_message))
+            log.error('KafkaStorage failed to convert metrics into'
+                      'prometheus exposition format; error: "{}"'
+                      .format(error_message))
             raise UnconvertableToPrometheusExpositionFormat(error_message)
 
         msg = convert_to_prometheus_exposition_format(metrics)
