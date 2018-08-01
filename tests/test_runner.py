@@ -25,21 +25,22 @@ def metric(name):
 @pytest.mark.parametrize(
     'discovered_tasks,containers,expected_new_tasks,expected_containers_to_delete', (
         # scenario when two task are created and them first one is removed,
-            ([task('/t1')], [],  # one new task, just arrived
-             [task('/t1')], []),  # should created one container
-            ([task('/t1')], [container('/t1')],  # after one iteration, our state is converged
-             [], []),  # no actions
-            ([task('/t1'), task('/t2')], [container('/t1'), ],  # another task arrived,
-             [task('/t2')], []),  # let's create another container,
-            ([task('/t1'), task('/t2')], [container('/t1'), container('/t2')],  # 2on2 converged
-             [], []),  # nothing to do,
-            ([task('/t2')], [container('/t1'), container('/t2')],  # first task just disappeared
-             [], [container('/t1')]),  # remove the first container
-            # some other cases
-            ([task('/t1'), task('/t2')], [],  # the new task, just appeared
-             [task('/t1'), task('/t2')], []),
-            ([task('/t1'), task('/t3')], [container('/t1'), container('/t2')],  # t2 replaced with t3
-             [task('/t3')], [container('/t2')]),  # nothing to do,
+        ([task('/t1')], [],  # one new task, just arrived
+         [task('/t1')], []),  # should created one container
+        ([task('/t1')], [container('/t1')],  # after one iteration, our state is converged
+         [], []),  # no actions
+        ([task('/t1'), task('/t2')], [container('/t1'), ],  # another task arrived,
+         [task('/t2')], []),  # let's create another container,
+        ([task('/t1'), task('/t2')], [container('/t1'), container('/t2')],  # 2on2 converged
+         [], []),  # nothing to do,
+        ([task('/t2')], [container('/t1'), container('/t2')],  # first task just disappeared
+         [], [container('/t1')]),  # remove the first container
+        # some other cases
+        ([task('/t1'), task('/t2')], [],  # the new task, just appeared
+         [task('/t1'), task('/t2')], []),
+        ([task('/t1'), task('/t3')], [container('/t1'),
+                                      container('/t2')],  # t2 replaced with t3
+         [task('/t3')], [container('/t2')]),  # nothing to do,
     ))
 def test_calculate_desired_state(
         discovered_tasks,
@@ -98,10 +99,12 @@ def test_sync_containers_state(cleanup_mock, sync_mock, PerfCoutners_mock, ResGr
 
 
 # We are mocking objects used by containers.
+@patch('rmi.runner.are_privileges_sufficient', return_value=True)
 @patch('rmi.containers.ResGroup')
 @patch('rmi.containers.PerfCounters')
 @patch('rmi.containers.Cgroup.get_measurements', return_value=dict(cpu_usage=23))
-def test_runner_containers_state(get_measurements_mock, PerfCounters_mock, ResGroup_mock):
+def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
+                                 ResGroup_mock, are_privileges_sufficient_mock):
     """Tests proper interaction between runner instance and functions for
     creating anomalies and calculating the desired state.
     """
@@ -149,4 +152,3 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock, ResGr
     assert runner.containers == {task('/t1'): container('/t1')}
 
     runner.wait_or_finish.assert_called_once()
-
