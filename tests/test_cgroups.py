@@ -8,4 +8,4 @@ from rmi.metrics import MetricName
 def test_get_measurements():
     cgroup = Cgroup('/some/foo1')
     measurements = cgroup.get_measurements()
-    assert measurements == {MetricName.CPU_USAGE: 100}
+    assert measurements == {MetricName.CPU_USAGE_PER_TASK: 100}

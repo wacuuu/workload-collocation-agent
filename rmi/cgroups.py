@@ -25,4 +25,4 @@ class Cgroup:
                 cpu_usage_file:
             cpu_usage = int(cpu_usage_file.read())
 
-        return {MetricName.CPU_USAGE: cpu_usage}
+        return {MetricName.CPU_USAGE_PER_TASK: cpu_usage}

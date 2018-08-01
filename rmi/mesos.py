@@ -109,11 +109,7 @@ def create_metrics(
     """
     metrics = []
     for metric_name, metric_value in task_measurements.items():
-        metric = Metric(
-            name=metric_name,
-            value=metric_value,
-            # TODO: help & type - use some predefined constants from metrics
-        )
+        metric = Metric.create_metric_with_metadata(name=metric_name, value=metric_value)
         metric.labels.update(dict(
             task_id=task.task_id,  # TODO: add all necessary labels like mesos job ids
         ))

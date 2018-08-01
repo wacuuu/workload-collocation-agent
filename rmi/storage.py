@@ -3,9 +3,10 @@ Module is responsible for exposing functionality of storing labeled metrics
 in durable external storage.
 """
 import abc
+import itertools
 import time
 import logging
-from typing import List
+from typing import List, Tuple
 import re
 
 import confluent_kafka
@@ -85,31 +86,78 @@ def is_convertable_to_prometheus_exposition_format(metrics: List[Metric]) -> (bo
     return (True, "")
 
 
+def group_metrics_by_name(metrics: List[Metric]) -> \
+        List[Tuple[str, List[Metric]]]:
+    """Group metrics with the same name to expose meta information only once."""
+
+    def name_key(metric):
+        return metric.name
+
+    def labels_conversion_with_natural_sort(labels):
+        """Convert labels to tuples of str and ints to allow natural string sorting."""
+        return sorted((k, int(v) if v.isdigit() else v) for k, v in labels.items())
+
+    def sorting_key_for_metrics(metric):
+        """by labels with natural sort"""
+        return labels_conversion_with_natural_sort(metric.labels)
+
+    # sort by metrics first
+    metrics = sorted(metrics, key=name_key)
+
+    # and then group by just metadata
+    grouped = []
+
+    for metric_name, grouped_metrics in itertools.groupby(metrics, key=name_key):
+        # sort metrics by labels for the same metadata.
+        grouped_metrics = sorted(grouped_metrics, key=sorting_key_for_metrics)
+        grouped.append((
+            metric_name,
+            grouped_metrics,
+        ))
+    return grouped
+
+
 def convert_to_prometheus_exposition_format(metrics: List[Metric]) -> str:
     """Convert metrics to the prometheus format."""
     output = []
     curr_time_str = get_current_time()  # adds current timestamp
-    for metric in metrics:
-        if metric.help is not None:
-            output.append('# HELP {0} {1}'.format(
-                metric.name, metric.help.replace('\\', r'\\').replace('\n', r'\n')))
 
-        if metric.type is not None:
-            output.append('\n# TYPE {0} {1}\n'.format(metric.name, metric.type))
+    grouped_metrics = group_metrics_by_name(metrics)
 
-        label_str = '{{{0}}}'.format(','.join(
-            ['{0}="{1}"'.format(
-             k, v.replace('\\', r'\\').replace('\n', r'\n').replace('"', r'\"'))
-             for k, v in sorted(metric.labels.items())]))
+    for metric_name, metrics in grouped_metrics:
+        first_metric = metrics[0]
+        if first_metric.help:
+            output.append('# HELP {0} {1}\n'.format(
+                first_metric.name, first_metric.help.replace('\\', r'\\').replace('\n', r'\n')))
 
-        # https://afterthoughtsoftware.com/posts/python-str-or-repr-on-a-float
-        if type(metric.value) == float:
-            value_str = repr(float(metric.value))  # here we use repr instead of str
-        else:
-            value_str = str(metric.value)
+        if first_metric.type:
+            output.append('# TYPE {0} {1}\n'.format(first_metric.name, first_metric.type))
 
-        output.append('{0}{1} {2} {3}\n'.format(metric.name, label_str,
-                                                value_str, curr_time_str))
+        # Assert that all metrics with the same name have the same metadata.
+        assert {metric.type for metric in metrics} == {first_metric.type}
+        assert {metric.help for metric in metrics} == {first_metric.help}
+
+        for metric in metrics:
+
+            label_str = '{{{0}}}'.format(','.join(
+                ['{0}="{1}"'.format(
+                 k, v.replace('\\', r'\\').replace('\n', r'\n').replace('"', r'\"'))
+                 for k, v in sorted(metric.labels.items())]))
+
+            # Do not send empty labels.
+            if label_str == '{}':
+                label_str = ''
+
+            # https://afterthoughtsoftware.com/posts/python-str-or-repr-on-a-float
+            if type(metric.value) == float:
+                value_str = repr(float(metric.value))  # here we use repr instead of str
+            else:
+                value_str = str(metric.value)
+
+            output.append('{0}{1} {2} {3}\n'.format(metric.name, label_str,
+                                                    value_str, curr_time_str))
+        output.append('\n')
+
     return ''.join(output)
 
 

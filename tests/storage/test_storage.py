@@ -1,7 +1,7 @@
 import pytest
 from unittest import mock
 
-from rmi.metrics import Metric, MetricType
+from rmi.metrics import Metric, MetricType, MetricMetadata
 import rmi.storage as storage
 
 
@@ -58,9 +58,11 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
             '# HELP average_latency_miliseconds latency measured in miliseconds\n'
             '# TYPE average_latency_miliseconds counter\n'
             'average_latency_miliseconds{node="slave_1",user="felidadae"} 8 1531729598000\n'
+            '\n'
             '# HELP percentile_99th_miliseconds 99th percentile in miliseconds\n'
             '# TYPE percentile_99th_miliseconds counter\n'
             'percentile_99th_miliseconds{node="slave_1",user="felidadae"} 89 1531729598000\n'
+            '\n'
         )
     )
 
@@ -71,6 +73,7 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
             '# TYPE average_latency_miliseconds counter\n'
             'average_latency_miliseconds'  # next string the same line
             '{node="slave_1 called \\"brave heart\\"",user="felidadae"} 8 1531729598000\n'
+            '\n'
         )
     )
 
@@ -81,6 +84,7 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
             '# TYPE average_latency_miliseconds counter\n'
             'average_latency_miliseconds'  # next string the same line
             '{node="slave_1",user="felidadae"} 8.223 1531729598000\n'
+            '\n'
         )
     )
 
@@ -104,3 +108,58 @@ def test_is_convertable_to_prometheus_exposition_format(
     assert (True, "")  == is_convertable(sample_metrics)
     assert (True, "")  == is_convertable(sample_metrics_with_float_value)
     assert (False, "Wrong metric name latency-miliseconds.") == is_convertable(metric_nPEF)
+
+
+@pytest.fixture
+def sample_metrics_mixed():
+    return [
+        Metric(name='bar', value=89, type=None, help='bar-help'),
+        Metric(name='foo', value=1, labels=dict(a='3'),
+               type=MetricType.COUNTER, help='foo-help'),
+        Metric(name='foo', value=1, labels=dict(a='20'),
+               type=MetricType.COUNTER, help='foo-help'),
+        Metric(name='foo', value=1, labels=dict(a='1'),
+               type=MetricType.COUNTER, help='foo-help'),
+        Metric(name='bar2', value=89),
+    ]
+
+
+def test_grouping_metrics_by_metadata(sample_metrics_mixed):
+
+    got_grouped = storage.group_metrics_by_name(sample_metrics_mixed)
+
+    expected_grouped = [
+        ('bar', [
+            Metric(name='bar', value=89, type=None, help='bar-help'),
+        ]),
+        ('bar2', [
+            Metric(name='bar2', value=89),
+        ]),
+        ('foo', [
+            Metric(name='foo', value=1, labels=dict(a='1'),
+                   type=MetricType.COUNTER, help='foo-help'),
+            Metric(name='foo', value=1, labels=dict(a='3'),
+                   type=MetricType.COUNTER, help='foo-help'),
+            Metric(name='foo', value=1, labels=dict(a='20'),
+                   type=MetricType.COUNTER, help='foo-help'),
+        ]),
+    ]
+
+    assert got_grouped == expected_grouped
+
+
+@mock.patch('rmi.storage.get_current_time', return_value='1531729598000')
+def test_convert_to_prometheus_exposition_format_grouped_case(mock_get_current_time, sample_metrics_mixed):
+    msg = storage.convert_to_prometheus_exposition_format(sample_metrics_mixed)
+    assert msg == '''# HELP bar bar-help
+bar 89 1531729598000
+
+bar2 89 1531729598000
+
+# HELP foo foo-help
+# TYPE foo counter
+foo{a="1"} 1 1531729598000
+foo{a="3"} 1 1531729598000
+foo{a="20"} 1 1531729598000
+
+'''

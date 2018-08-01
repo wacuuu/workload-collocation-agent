@@ -3,6 +3,7 @@ from unittest.mock import patch
 
 import pytest
 
+from rmi.metrics import MetricType
 from rmi.platforms import *
 from rmi.testing import create_open_mock
 
@@ -88,17 +89,9 @@ def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks)
 def test_collect_platform_information(*mocks):
     assert collect_platform_information() == (
         Platform(1, 1, 2, {0: 100, 1: 200}, 1337),
-        [Metric(name=MetricName.MEM_USAGE, value=1337, type=MetricType.GAUGE, labels={},
-                help="Total memory used by platform,"
-                     "in bytes. Calculated using values"
-                     "read from /proc/meminfo"),
-         Metric(name=MetricName.CPU_USAGE, value=100, type=MetricType.COUNTER, labels={"cpu": "0"},
-                help="Logical CPU usage in 1/USER_HZ (usually 10ms)."
-                     "Calculated using values read from /proc/stat"),
-         Metric(name=MetricName.CPU_USAGE, value=200, type=MetricType.COUNTER, labels={"cpu": "1"},
-                help="Logical CPU usage in 1/USER_HZ (usually 10ms)."
-                     "Calculated using values read from /proc/stat")
+        [Metric.create_metric_with_metadata(name=MetricName.MEM_USAGE, value=1337),
+         Metric.create_metric_with_metadata(name=MetricName.CPU_USAGE_PER_CPU, value=100, labels={"cpu": "0"}),
+         Metric.create_metric_with_metadata(name=MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}),
          ],
         {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host"}
-
     )

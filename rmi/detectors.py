@@ -14,7 +14,7 @@ from rmi.platforms import Platform
 TasksMeasurements = Dict[TaskId, Measurements]
 
 
-class ContendedResource(Enum):
+class ContendedResource(str, Enum):
 
     MEMORY = 'memory bandwidth'
     LLC = 'cache'

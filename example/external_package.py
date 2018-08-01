@@ -12,7 +12,7 @@ class ExampleDetector(detectors.AnomalyDectector):
     def detect(self, platform, task_measurements):
         anomalies = [
             detectors.Anomaly(
-                task_ids=['task_id'], 
+                task_ids=[self.task_id], 
                 resource=detectors.ContendedResource.CPUS
             )
         ]
@@ -21,7 +21,7 @@ class ExampleDetector(detectors.AnomalyDectector):
                 name='some_debug',
                 value=2,
                 labels=dict(
-                    version=2,
+                    version='2.0',
                 )
             )
         ]

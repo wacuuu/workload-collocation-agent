@@ -5,7 +5,7 @@ from typing import List, Dict, Set, Tuple
 
 from dataclasses import dataclass
 
-from rmi.metrics import Metric, MetricName, MetricType
+from rmi.metrics import Metric, MetricName
 
 # 0-based logical processor number (matches the value of "processor" in /proc/cpuinfo)
 CpuId = int
@@ -31,16 +31,19 @@ class Platform:
 def create_metrics(platform: Platform) -> List[Metric]:
     """Creates a list of Metric objects from data in Platform object"""
     platform_metrics = list()
-    platform_metrics.append(Metric(name=MetricName.MEM_USAGE, value=platform.total_memory_used,
-                                   type=MetricType.GAUGE,
-                                   help="Total memory used by platform,"
-                                        "in bytes. Calculated using values"
-                                        "read from /proc/meminfo"))
+    platform_metrics.append(
+        Metric.create_metric_with_metadata(
+            name=MetricName.MEM_USAGE,
+            value=platform.total_memory_used)
+        )
     for cpu_id, cpu_usage in platform.cpus_usage.items():
-        platform_metrics.append(Metric(name=MetricName.CPU_USAGE, value=cpu_usage,
-                                       type=MetricType.COUNTER, labels={"cpu": str(cpu_id)},
-                                       help="Logical CPU usage in 1/USER_HZ (usually 10ms)."
-                                            "Calculated using values read from /proc/stat"))
+        platform_metrics.append(
+            Metric.create_metric_with_metadata(
+                name=MetricName.CPU_USAGE_PER_CPU,
+                value=cpu_usage,
+                labels={"cpu": str(cpu_id)}
+            )
+        )
     return platform_metrics
 
 
