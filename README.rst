@@ -105,7 +105,7 @@ Assuming that external implementation of detector is provided as
     from rmi import metrics
 
 
-    class ExampleDetector(detectors.AnomalyDectector):
+    class ExampleDetector(detectors.AnomalyDetector):
         """Always return anomaly for given task."""
 
         def __init__(self, task_id: mesos.TaskId):
@@ -113,7 +113,7 @@ Assuming that external implementation of detector is provided as
 
         def detect(self, platform, task_measurements):
             anomalies = [
-                detectors.Anomaly(
+                detectors.ContentionAnomaly(
                     task_ids=['task_id'], 
                     resource=detectors.ContendedResource.CPUS
                 )
@@ -156,7 +156,7 @@ you will receive output:
     2018-07-13 14:51:32,829 DEBUG    {MainThread} [rmi.logger] level=DEBUG
     2018-07-13 14:51:32,829 DEBUG    {MainThread} [rmi.main] started PID=30048
     2018-07-13 14:51:32,913 DEBUG    {MainThread} [rmi.storage] [Metric(name='platform_dummy', value=1, labels={}, type=None, help=None)]
-    2018-07-13 14:51:32,913 DEBUG    {MainThread} [rmi.storage] [Metric(name='anomaly', value=1, labels={'task_id': 'task_id', 'resource': <ContendedResource.CPUS: 'cpus'>, 'uuid': <bound method Anomaly.uuid of Anomaly(task_ids=['task_id'], resource=<ContendedResource.CPUS: 'cpus'>)>}, type=<MetricType.COUNTER: 'counter'>, help=None), Metric(name='some_debug', value=2, labels={'version': 2}, type=None, help=None)]
+    2018-07-13 14:51:32,913 DEBUG    {MainThread} [rmi.storage] [Metric(name='anomaly', value=1, labels={'task_id': 'task_id', 'resource': <ContendedResource.CPUS: 'cpus'>, 'uuid': <bound method ContentionAnomaly.uuid of ContentionAnomaly(task_ids=['task_id'], resource=<ContendedResource.CPUS: 'cpus'>)>}, type=<MetricType.COUNTER: 'counter'>, help=None), Metric(name='some_debug', value=2, labels={'version': 2}, type=None, help=None)]
 
 
 
@@ -174,7 +174,7 @@ Instead of providing class as command line parameter you can register the class 
     from rmi import config
 
     @config.register
-    class ExampleDetector(detectors.AnomalyDectector):
+    class ExampleDetector(detectors.AnomalyDetector):
         ...
 
 

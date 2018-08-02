@@ -3,7 +3,7 @@
 import os
 from io import StringIO
 
-from rmi.detectors import ContendedResource, Anomaly, _create_uuid_from_tasks_ids
+from rmi.detectors import ContendedResource, ContentionAnomaly, _create_uuid_from_tasks_ids
 from rmi.mesos import MesosTask
 from rmi.metrics import Metric, MetricType
 
@@ -34,7 +34,9 @@ def anomaly_metric(task_id, task_ids=None):
                 value=1,
                 labels=dict(
                     task_id=task_id, resource=ContendedResource.MEMORY,
-                    uuid=_create_uuid_from_tasks_ids(task_ids or [task_id])),
+                    uuid=_create_uuid_from_tasks_ids(task_ids or [task_id]),
+                    type='contention',
+                ),
                 type=MetricType.COUNTER
             )
 
@@ -42,7 +44,7 @@ def anomaly_metric(task_id, task_ids=None):
 def anomaly(task_ids):
     """Helper method to create simple anomaly for single task.
     It is always about memory contention."""
-    return Anomaly(
+    return ContentionAnomaly(
         task_ids=task_ids,
         resource=ContendedResource.MEMORY,
     )

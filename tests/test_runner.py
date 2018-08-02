@@ -7,7 +7,7 @@ from rmi.containers import Container
 from rmi import storage
 from rmi import platforms
 from rmi.metrics import Metric
-from rmi.detectors import AnomalyDectector
+from rmi.detectors import AnomalyDetector
 from rmi.testing import anomaly_metric, anomaly, task
 
 
@@ -113,7 +113,7 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
     storage_mock = Mock(spec=storage.Storage, store=Mock())
 
     # simulate returning one anomaly and additional metric
-    detector_mock = Mock(spec=AnomalyDectector,
+    detector_mock = Mock(spec=AnomalyDetector,
                          detect=Mock(return_value=(
                              [anomaly(['task1'])],
                              [metric('bar')])))

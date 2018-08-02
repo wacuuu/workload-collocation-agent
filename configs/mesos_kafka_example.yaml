@@ -3,5 +3,5 @@ runner: !DetectionRunner
   action_delay: 1.
   storage: !KafkaStorage
     max_timeout_in_seconds: 5.
-  detector: !NOPAnomalyDectector
+  detector: !NOPAnomalyDetector
   rdt_enabled: False

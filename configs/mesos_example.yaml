@@ -2,5 +2,5 @@ runner: !DetectionRunner
   node: !MesosNode
   action_delay: 1.
   storage: !LogStorage
-  detector: !NOPAnomalyDectector
+  detector: !NOPAnomalyDetector
   rdt_enabled: True

@@ -10,7 +10,7 @@ from rmi.mesos import TaskId
 from rmi.platforms import Platform
 
 
-# Mapping from task to its measurments.
+# Mapping from task to its measurements.
 TasksMeasurements = Dict[TaskId, Measurements]
 
 
@@ -29,18 +29,69 @@ def _create_uuid_from_tasks_ids(task_ids: List[TaskId]):
     return str(uuid.UUID(bytes=sha1[:16]))
 
 
+class Anomaly(ABC):
+
+    @abstractmethod
+    def get_metrics(self) -> List[Metric]:
+        ...
+
+
 @dataclass
-class Anomaly:
+class ContentionAnomaly(ABC):
 
     task_ids: List[TaskId]
     resource: ContendedResource
 
-    def uuid(self):
+    type = 'contention'
+
+    def get_metrics(self):
+        """Encode contention anomaly as list of metrics.
+
+        Anomaly of multiple tasks together, will be encode as many metrics.
+        Note, it can return more metrics that provided anomalies because it is necessary
+        to encode relation in this way.
+        For example:
+        anomaly = ContentionAnomaly(tasks_ids=['task1', 'task2'], resource=ContendedResource.LLC)
+
+        wile be encoded as two metrics of type counters:
+
+        metrics = [
+            Metric(name='anomaly', type='counter', value=1,
+                labels=dict(uuid="1234", task_id="task1", type="contention"))
+            Metric(name='anomaly', type='counter', value=1,
+                labels=dict(uuid="1234", task_id="task2", type="contention"))
+        ]
+
+        Effectively being encoded as in Prometheus format:
+
+        # HELP anomaly ...
+        # TYPE anomaly counter
+        anomaly(type="contention", task_id="task1", resource="cache", uuid="1234") 1
+        anomaly(type="contention", task_id="task2", resource="cache", uuid="1234") 1
+        """
+        metrics = []
+        for task_id in self.task_ids:
+            metrics.append(
+                Metric(
+                    name='anomaly',
+                    value=1,
+                    type=MetricType.COUNTER,
+                    labels=dict(
+                        task_id=task_id,
+                        resource=self.resource,
+                        uuid=self._uuid(),
+                        type=self.type,
+                    )
+                )
+            )
+        return metrics
+
+    def _uuid(self):
         """Returns unique identifier based on combination of tasks_ids."""
         return _create_uuid_from_tasks_ids(self.task_ids)
 
 
-class AnomalyDectector(ABC):
+class AnomalyDetector(ABC):
 
     @abstractmethod
     def detect(
@@ -50,7 +101,7 @@ class AnomalyDectector(ABC):
         ...
 
 
-class NOPAnomalyDectector(AnomalyDectector):
+class NOPAnomalyDetector(AnomalyDetector):
 
     def detect(self, platform, tasks_measurements):
         return [], []
@@ -58,42 +109,10 @@ class NOPAnomalyDectector(AnomalyDectector):
 
 def convert_anomalies_to_metrics(anomalies: List[Anomaly]) -> List[Metric]:
     """Takes anomalies on input and convert them to something that can be
-    stored persistently adding help/type fields and labels, including
-    correlating Anomaly of multiple tasks together.
-
-    Note, it can return more metrics that provided anomalies because it is necessary
-    to encode relation in this way.
-    For example:
-    anomaly = Anomaly(tasks_ids=['task1', 'task2'], resource=ContendedResource.LLC)
-
-    wile be encoded as two metrics of type counters:
-
-    metrics = [
-        Metric(name='anomaly', type='counter', value=1, labels=dict(uuid="1234", task_id="task1"))
-        Metric(name='anomaly', type='counter', value=1, labels=dict(uuid="1234", task_id="task2"))
-    ]
-
-    Effectively being encoded as in Prometheus format:
-
-    # HELP anomaly ...
-    # TYPE anomaly counter
-    anomaly(task_id="task1", resource="cache", uuid="1234") 1
-    anomaly(task_id="task2", resource="cache", uuid="1234") 1
+    stored persistently adding help/type fields and labels.
     """
     metrics = []
     for anomaly in anomalies:
-        for task_id in anomaly.task_ids:
-            metrics.append(
-                Metric(
-                    name='anomaly',
-                    value=1,
-                    type=MetricType.COUNTER,
-                    labels=dict(
-                        task_id=task_id,
-                        resource=anomaly.resource,
-                        uuid=anomaly.uuid(),
-                    )
-                )
-            )
+        metrics.extend(anomaly.get_metrics())
 
     return metrics

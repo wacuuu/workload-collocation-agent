@@ -1,23 +1,24 @@
-from rmi import detectors
-from rmi import mesos
-from rmi import metrics
+from rmi.metrics import Metric
+from rmi.detectors import TasksMeasurements, ContentionAnomaly, ContendedResource, AnomalyDetector
+from rmi.mesos import TaskId
+from rmi.platforms import Platform
 
 
-class ExampleDetector(detectors.AnomalyDectector):
+class ExampleDetector(AnomalyDetector):
     """Always return anomaly for given task."""
 
-    def __init__(self, task_id: mesos.TaskId):
+    def __init__(self, task_id: TaskId):
         self.task_id = task_id
 
-    def detect(self, platform, task_measurements):
+    def detect(self, platform: Platform, tasks_measurements: TasksMeasurements):
         anomalies = [
-            detectors.Anomaly(
+            ContentionAnomaly(
                 task_ids=[self.task_id], 
-                resource=detectors.ContendedResource.CPUS
+                resource=ContendedResource.CPUS
             )
         ]
         debugging_metrics = [
-            metrics.Metric(
+            Metric(
                 name='some_debug',
                 value=2,
                 labels=dict(

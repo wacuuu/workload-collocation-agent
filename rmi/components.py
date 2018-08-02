@@ -13,7 +13,7 @@ def register_components(extra_components: List[str]):
     config.register(mesos.MesosNode)
     config.register(storage.LogStorage)
     config.register(storage.KafkaStorage)
-    config.register(detectors.NOPAnomalyDectector)
+    config.register(detectors.NOPAnomalyDetector)
 
     for component in extra_components:
         # Load external class ignored its requirements.

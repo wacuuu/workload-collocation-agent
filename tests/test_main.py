@@ -9,7 +9,8 @@ runner: !DetectionRunner
   node: !MesosNode
   action_delay: 1.
   storage: !LogStorage
-  detector: !NOPAnomalyDectector
+  detector: !ExampleDetector
+    task_id: foo
 '''
 
 mesos_tasks_mocks = [
@@ -25,7 +26,8 @@ mesos_tasks_mocks = [
 ]
 
 
-@mock.patch('sys.argv', ['rmi', '-c', 'configs/no_existing_file.yaml', '-l', 'trace'])
+@mock.patch('sys.argv', ['rmi', '-c', 'configs/no_existing_file.yaml',
+                         '-r', 'example.external_package:ExampleDetector', '-l', 'trace'])
 @mock.patch('os.rmdir')
 @mock.patch('rmi.config.open', mock.mock_open(read_data=yaml_config))
 @mock.patch('rmi.mesos.MesosNode.get_tasks', return_value=mesos_tasks_mocks)

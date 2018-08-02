@@ -56,7 +56,7 @@ class DetectionRunner:
     """
     node: mesos.MesosNode
     storage: storage.Storage
-    detector: detectors.AnomalyDectector
+    detector: detectors.AnomalyDetector
     action_delay: float = 0.  # [s]
     rdt_enabled: bool = True
 
