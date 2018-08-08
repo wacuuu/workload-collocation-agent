@@ -13,7 +13,7 @@ class ExampleDetector(AnomalyDetector):
     def detect(self, platform: Platform, tasks_measurements: TasksMeasurements):
         anomalies = [
             ContentionAnomaly(
-                task_ids=[self.task_id], 
+                task_ids=[self.task_id],
                 resource=ContendedResource.CPUS
             )
         ]

@@ -1,10 +1,10 @@
-from io import StringIO
 from unittest.mock import patch
 
 import pytest
 
-from rmi.metrics import MetricType
-from rmi.platforms import *
+from rmi.metrics import Metric, MetricName
+from rmi.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
+    collect_topology_information, collect_platform_information
 from rmi.testing import create_open_mock
 
 
@@ -17,8 +17,8 @@ from rmi.testing import create_open_mock
      "SwapCached:            0 kB\n"
      "Active:          8808464 kB\n"
      "Inactive:        4727816 kB\n"
-     "Active(anon):    5376088 kB\n"
-     , 6406972 * 1024)
+     "Active(anon):    5376088 kB\n",
+     6406972 * 1024)
 
 ])
 def test_parse_proc_meminfo(raw_meminfo_output, expected):
@@ -89,9 +89,16 @@ def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks)
 def test_collect_platform_information(*mocks):
     assert collect_platform_information() == (
         Platform(1, 1, 2, {0: 100, 1: 200}, 1337),
-        [Metric.create_metric_with_metadata(name=MetricName.MEM_USAGE, value=1337),
-         Metric.create_metric_with_metadata(name=MetricName.CPU_USAGE_PER_CPU, value=100, labels={"cpu": "0"}),
-         Metric.create_metric_with_metadata(name=MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}),
-         ],
+        [
+            Metric.create_metric_with_metadata(
+                name=MetricName.MEM_USAGE, value=1337
+            ),
+            Metric.create_metric_with_metadata(
+                name=MetricName.CPU_USAGE_PER_CPU, value=100, labels={"cpu": "0"}
+            ),
+            Metric.create_metric_with_metadata(
+                name=MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}
+            ),
+        ],
         {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host"}
     )

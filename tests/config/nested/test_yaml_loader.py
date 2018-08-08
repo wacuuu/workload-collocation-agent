@@ -52,4 +52,3 @@ def test_is_double_nested_file_imported_correctly_with_root_path():
 
     actual_cfg = config.load_config(os.path.join(ROOT_PATH, 'double_base.yaml'))
     assert expected_cfg == actual_cfg
-

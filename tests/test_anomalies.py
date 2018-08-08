@@ -1,6 +1,6 @@
 import pytest
 
-from rmi.detectors import convert_anomalies_to_metrics,_create_uuid_from_tasks_ids
+from rmi.detectors import convert_anomalies_to_metrics
 from rmi.testing import anomaly, anomaly_metric
 
 

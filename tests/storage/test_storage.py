@@ -1,7 +1,7 @@
 import pytest
 from unittest import mock
 
-from rmi.metrics import Metric, MetricType, MetricMetadata
+from rmi.metrics import Metric, MetricType
 import rmi.storage as storage
 
 
@@ -105,8 +105,8 @@ def test_is_convertable_to_prometheus_exposition_format(
     metric_nPEF = sample_metrics_unconvertable_to_PEF
     is_convertable = storage.is_convertable_to_prometheus_exposition_format
 
-    assert (True, "")  == is_convertable(sample_metrics)
-    assert (True, "")  == is_convertable(sample_metrics_with_float_value)
+    assert (True, "") == is_convertable(sample_metrics)
+    assert (True, "") == is_convertable(sample_metrics_with_float_value)
     assert (False, "Wrong metric name latency-miliseconds.") == is_convertable(metric_nPEF)
 
 
@@ -149,7 +149,9 @@ def test_grouping_metrics_by_metadata(sample_metrics_mixed):
 
 
 @mock.patch('rmi.storage.get_current_time', return_value='1531729598000')
-def test_convert_to_prometheus_exposition_format_grouped_case(mock_get_current_time, sample_metrics_mixed):
+def test_convert_to_prometheus_exposition_format_grouped_case(
+        mock_get_current_time, sample_metrics_mixed
+):
     msg = storage.convert_to_prometheus_exposition_format(sample_metrics_mixed)
     assert msg == '''# HELP bar bar-help
 bar 89 1531729598000

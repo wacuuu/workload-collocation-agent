@@ -87,21 +87,22 @@ def test_parse_event_groups(file, event_names, expected):
 
 
 @pytest.mark.parametrize("measurements_per_cpu,event_names,expected", [
-    ({
-         0: {
-             metrics.MetricName.CYCLES: 600,
-             metrics.MetricName.INSTRUCTIONS: 400
-         },
-         1: {
-             metrics.MetricName.CYCLES: 500,
-             metrics.MetricName.INSTRUCTIONS: 300
-         }
-     },
-     [metrics.MetricName.CYCLES, metrics.MetricName.INSTRUCTIONS],
-     {
-         metrics.MetricName.CYCLES: 1100,
-         metrics.MetricName.INSTRUCTIONS: 700
-     }
+    (
+            {
+                0: {
+                    metrics.MetricName.CYCLES: 600,
+                    metrics.MetricName.INSTRUCTIONS: 400
+                },
+                1: {
+                    metrics.MetricName.CYCLES: 500,
+                    metrics.MetricName.INSTRUCTIONS: 300
+                }
+            },
+            [metrics.MetricName.CYCLES, metrics.MetricName.INSTRUCTIONS],
+            {
+                metrics.MetricName.CYCLES: 1100,
+                metrics.MetricName.INSTRUCTIONS: 700
+            }
     ),
 ])
 def test_aggregate_measurements(measurements_per_cpu, event_names, expected):
@@ -145,7 +146,9 @@ def test_reset_and_enable_group_event_leaders(_open_mock, _get_cgroup_fd_mock, i
 @patch('rmi.perf.LIBC.ioctl', return_value=-1)
 @patch('rmi.perf._get_cgroup_fd')
 @patch('rmi.perf.PerfCounters._open')
-def test_reset_and_enable_group_event_leaders_reset_fail(_open_mock, _get_cgroup_fd_mock, ioctl_mock):
+def test_reset_and_enable_group_event_leaders_reset_fail(
+        _open_mock, _get_cgroup_fd_mock, ioctl_mock
+):
     prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES])
     # cpu0 group event leader mock
     prf._group_event_leader_files = {0: Mock()}
@@ -156,7 +159,9 @@ def test_reset_and_enable_group_event_leaders_reset_fail(_open_mock, _get_cgroup
 @patch('rmi.perf.LIBC.ioctl', side_effect=[1, -1])
 @patch('rmi.perf._get_cgroup_fd')
 @patch('rmi.perf.PerfCounters._open')
-def test_reset_and_enable_group_event_leaders_enable_fail(_open_mock, _get_cgroup_fd_mock, ioctl_mock):
+def test_reset_and_enable_group_event_leaders_enable_fail(
+        _open_mock, _get_cgroup_fd_mock, ioctl_mock
+):
     prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES])
     # cpu0 group event leader mock
     prf._group_event_leader_files = {0: Mock()}
@@ -200,11 +205,13 @@ def test_open_for_cpu(_open_mock, _get_cgroup_fd_mock,
     assert prf._group_event_leader_files == {0: mock.ANY}
     assert prf._event_files == []
     # perf_event_open call for the event group leader
-    _perf_event_open_mock.assert_called_once_with(perf_event_attr=mock.ANY,
-                                                  pid=10,
-                                                  cpu=0,
-                                                  group_fd=-1,
-                                                  flags=pc.PERF_FLAG_PID_CGROUP | pc.PERF_FLAG_FD_CLOEXEC)
+    _perf_event_open_mock.assert_called_once_with(
+        perf_event_attr=mock.ANY,
+        pid=10,
+        cpu=0,
+        group_fd=-1,
+        flags=pc.PERF_FLAG_PID_CGROUP | pc.PERF_FLAG_FD_CLOEXEC
+    )
     fdopen_mock.assert_called_once_with(5, 'rb')
 
 
@@ -258,13 +265,13 @@ def test_privileges_failed_capget(capget, read_paranoid):
 def no_cap_sys_admin(header, data):
     # https://github.com/python/cpython/blob/v3.6.6/Modules/_ctypes/callproc.c#L521
     # Do not even ask how I managed to find it ;)
-    data._obj.effective = 20 # 20 & 21 != 21
+    data._obj.effective = 20  # 20 & 21 != 21
     return 0
 
 
 def cap_sys_admin(header, data):
     # https://github.com/python/cpython/blob/v3.6.6/Modules/_ctypes/callproc.c#L521
-    data._obj.effective = 21 # 21 & 21 = 21
+    data._obj.effective = 21  # 21 & 21 = 21
     return 0
 
 
