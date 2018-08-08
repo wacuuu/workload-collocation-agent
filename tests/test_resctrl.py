@@ -6,7 +6,8 @@ from rmi.testing import create_open_mock
 
 @patch('builtins.open', new=create_open_mock({
     "/sys/fs/resctrl": "0",
-    "/sys/fs/resctrl/mon_data": "0",
+    "/sys/fs/resctrl/tasks": "0",
+    "/sys/fs/resctrl/mon_data/mon_L3_00/mbm_total_bytes": "0",
 }))
 def test_check_resctrl(*mock):
     assert check_resctrl()
@@ -57,4 +58,4 @@ def test_sync_resctrl_not_mounted(exists_mock, log_warning_mock):
 def test_get_measurements(*mock):
     cgroup_path = "/ddd"
     resgroup = ResGroup(cgroup_path)
-    assert {'memory_bandwidth': 2, 'cpu_usage': 4} == resgroup.get_measurements()
+    assert {'memory_bandwidth': 2} == resgroup.get_measurements()
