@@ -2,7 +2,6 @@ from setuptools import setup, find_packages
 
 setup(
     name='rmi',
-    version='0.0.1',
     author='Intel',
     description='Resource Mesos Integrator',
     classifiers = [
@@ -28,4 +27,9 @@ setup(
     ],
     packages=find_packages(),
     python_requires=">=3.6",
+    use_scm_version=True,
+    setup_requires=[
+        'setuptools_scm'
+    ],
+
 )

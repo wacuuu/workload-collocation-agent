@@ -7,12 +7,23 @@ and start main loop from Runner.
 import argparse
 import logging
 import os
+from pkg_resources import get_distribution, DistributionNotFound
 
 from rmi import components
 from rmi import config
 from rmi import logger
 
 log = logging.getLogger(__name__)
+
+
+def get_rmi_version():
+    try:
+        version = get_distribution('rmi').version
+    except DistributionNotFound:
+        log.warning("Version is not available.")
+        return None
+
+    return version
 
 
 def main():
@@ -27,12 +38,16 @@ def main():
     parser.add_argument(
         '-r', '--register', action='append', dest='components',
         help="Register additional components in config", default=[])
+    parser.add_argument(
+        '-v', '--version', action='version', version=get_rmi_version(),
+        help="Show version")
 
     args = parser.parse_args()
 
     # Initialize logging subsystem.
     logger.init_logging(args.log_level, package_name='rmi')
     log.debug('started PID=%r', os.getpid())
+    log.info('Version rmi: %s', get_rmi_version())
 
     # Register internal & external components.
     components.register_components(extra_components=args.components)
