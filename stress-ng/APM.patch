@@ -25,7 +25,7 @@ index fdbe1a2..559aaaa 100644
 +        shim_usleep(1000000);
 +        time_t now;
 +        time(&now);
-+		pr_inf("Time %ld, counter: %" PRIu64 "\n", now, *real_counter-last);
++		pr_inf("Time %ld, counter=%" PRIu64 "\n", now, *real_counter);
 +        last = *real_counter;
 +		fflush(stdout);
 +	}

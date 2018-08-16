@@ -1,0 +1,3 @@
+[submodule "wrapper/rmi"]
+	path = wrapper/rmi
+	url = git@github.intel.com:serenity/rmi.git
