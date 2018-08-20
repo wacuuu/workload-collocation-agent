@@ -1,0 +1,14 @@
+# Common for all workloads.
+
+# Variables of meaning in accordance with shell command:
+# $ aurora job create {cluster}/{user}/staging_{env_uniq_id}/{workload_uniq_id}
+cluster = os.environ.get('cluster', 'example')
+user = os.environ.get('user', os.environ['USER'])
+env_uniq_id = os.environ['env_uniq_id']
+workload_uniq_id = os.environ.get('workload_uniq_id')  # can return None
+
+# Note: for workloads like tensorflow ignore load_generator_host_ip.
+workload_host_ip = os.environ['workload_host_ip']
+load_generator_host_ip = os.environ['load_generator_host_ip']
+
+docker_registry = os.environ.get('docker_registry', '100.64.176.12:80')
