@@ -11,8 +11,6 @@ pytest = "*"
 pytest-cov = "*"
 flake8 = "*"
 ipython = "*"
-pdbpp = "*"
-ipdb = "*"
 tox = "*"
 pex = "*"
 
