@@ -57,7 +57,11 @@ def parse_loop(parse: ParseFunc, kafka_storage: KafkaStorage):
     GET request handler.
     """
     parse_loop.metrics = []
+    parse_loop.last_valid_metrics = []
     while True:
         parse_loop.metrics = parse()
+        # parse() can return an empty list, so we store new values for kafka and http server
+        # only when there are new metrics to store
         if parse_loop.metrics:
             kafka_storage.store(parse_loop.metrics)
+            parse_loop.last_valid_metrics = parse_loop.metrics.copy()

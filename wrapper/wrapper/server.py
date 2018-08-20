@@ -34,7 +34,7 @@ class MetricsRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         # pass metrics list as a copy, as it is modified in a separate thread
-        response_code, body = create_message(parse_loop.metrics.copy())
+        response_code, body = create_message(parse_loop.last_valid_metrics.copy())
         self.send_response(response_code)
         self.send_header('Content-type', 'text/plain')
         self.end_headers()
