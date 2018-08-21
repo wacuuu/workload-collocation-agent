@@ -12,3 +12,10 @@ workload_host_ip = os.environ['workload_host_ip']
 load_generator_host_ip = os.environ['load_generator_host_ip']
 
 docker_registry = os.environ.get('docker_registry', '100.64.176.12:80')
+
+# Wrapper variables:
+wrapper_kafka_brokers = os.environ.get('wrapper_kafka_brokers', '100.64.176.12:9092')
+wrapper_prometheus_port = os.environ.get('wrapper_prometheus_port', '9090')
+wrapper_log_level = os.environ.get('wrapper_log_level', 'DEBUG')
+# here as dict, must be passed to wrapper as json string
+wrapper_labels = {"workload_uniq_id": workload_uniq_id, "env_uniq_id": env_uniq_id}
