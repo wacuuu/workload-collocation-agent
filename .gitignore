@@ -1,0 +1,5 @@
+/tensorflow-train/*.zip
+*.swp
+.coverage
+.idea
+/wrapper/dist/
