@@ -3,3 +3,5 @@
 .coverage
 .idea
 /wrapper/dist/
+/tensorflow-inference/fruits-360/
+/tensorflow-inference/*.zip
