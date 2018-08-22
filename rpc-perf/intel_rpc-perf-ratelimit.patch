@@ -1,0 +1,88 @@
+diff --git a/src/lib.rs b/src/lib.rs
+index cf011a5..2dbb393 100644
+--- a/src/lib.rs
++++ b/src/lib.rs
+@@ -87,6 +87,11 @@ pub struct Builder {
+     capacity: u32,
+     quantum: u32,
+     interval: Duration,
++    time: Instant,
++    amplitude: i64,
++    period: i64,
++    phase: i64,
++    rate: u32,
+ }
+ 
+ /// Single-threaded rate limiter.
+@@ -317,6 +322,25 @@ impl Builder {
+         let mut interval = Duration::new(1, 0);
+         interval /= cycles;
+         self.interval = interval;
++        // remember thie initial value cycles [Hz],
++        // with every calculation sinus use it base value and add some value;
++        // self.rate + cos(time)
++        self.rate = cycles;
++        self
++    }
++
++    pub fn amplitude(mut self, amplitude: i64) -> Self {
++        self.amplitude = amplitude;
++        self
++    }
++
++    pub fn period(mut self, period: i64) -> Self {
++        self.period = period;
++        self
++    }
++
++    pub fn phase(mut self, phase: i64) -> Self {
++        self.phase = phase;
+         self
+     }
+ }
+@@ -328,6 +352,11 @@ impl Default for Builder {
+             capacity: 1,
+             quantum: 1,
+             interval: Duration::new(1, 0),
++            time: Instant::now(),
++            amplitude: 0,
++            period: 1,
++            phase: 0,
++            rate: 1,
+         }
+     }
+ }
+@@ -476,6 +505,9 @@ impl Limiter {
+     ///     limiter.wait_for(i);
+     /// }
+     pub fn wait_for(&mut self, count: usize) {
++        if self.config.amplitude > 0 {
++          self.sinus();
++        }
+         if let Some(wait) = self.take(Instant::now(), count) {
+             sleep(wait);
+         }
+@@ -532,6 +564,23 @@ impl Limiter {
+         self.give(tokens);
+         self.t0 = t1;
+     }
++
++    fn sinus(&mut self) -> std::time::Duration {
++        let angular_velocity = 2.0 * std::f64::consts::PI / self.config.period as f64;
++
++        let time = self.config.time.elapsed().as_secs() as f64 +
++            (self.config.time.elapsed().subsec_nanos() as f64 / 1_000_000_000.0);
++
++        let variable = (angular_velocity * time + self.config.phase as f64).cos();
++
++        let rate = (self.config.amplitude as f64 * variable + self.config.rate as f64) as u32;
++
++        let mut interval = Duration::new(1, 0);
++        interval /= rate;
++        self.config.interval = interval;
++
++        interval
++    }
+ }
+ 
+ // returns the number of cycles of period length within the duration

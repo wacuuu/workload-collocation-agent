@@ -5,3 +5,4 @@
 /wrapper/dist/
 /tensorflow-inference/fruits-360/
 /tensorflow-inference/*.zip
+/cassandra_ycsb/ycsb/YCSB
