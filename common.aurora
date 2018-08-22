@@ -7,6 +7,9 @@ user = os.environ.get('user', os.environ['USER'])
 env_uniq_id = os.environ['env_uniq_id']
 workload_uniq_id = os.environ.get('workload_uniq_id')  # can return None
 
+# Name of workload.
+workload_name = os.environ.get('workload_name', "unknown_workload")
+
 # Note: for workloads like tensorflow ignore load_generator_host_ip.
 workload_host_ip = os.environ['workload_host_ip']
 load_generator_host_ip = os.environ['load_generator_host_ip']
@@ -19,4 +22,4 @@ wrapper_prometheus_port = os.environ.get('wrapper_prometheus_port', '9090')
 wrapper_prometheus_address= os.environ.get('wrapper_prometheus_address', '0.0.0.0')
 wrapper_log_level = os.environ.get('wrapper_log_level', 'DEBUG')
 # here as dict, must be passed to wrapper as json string
-wrapper_labels = {"workload_uniq_id": workload_uniq_id, "env_uniq_id": env_uniq_id}
+wrapper_labels = {"workload_uniq_id": workload_uniq_id, "env_uniq_id": env_uniq_id, "workload_name": workload_name}
