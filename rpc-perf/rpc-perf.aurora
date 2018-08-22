@@ -5,13 +5,14 @@ include('../common.aurora')
 # port that stressed application listens on
 workload_port = os.environ.get('workload_port', 11211)
 # address that stresses application listens on
-workload_address = os.environ.get('workload_address' , '192.0.2.100')
+workload_address = os.environ.get('workload_address', '0.0.0.0')
 # type of application that you want to interact with ("redis" or "memcached" or "rpc-perf")
 workload_type = os.environ.get('workload_type', 'memcached')
 # workload Docker image 
 workload_image = os.environ.get('workload_image', 'serenity/twemcache')
 # workload Docker image tag
 workload_image_tag = os.environ.get('workload_image_tag', 'latest')
+
 
 # number of requests per second to generate (default: 1000; if `rpcperf_amplitude` and `rpcperf_period` are set - maximum of a sine curve)
 rpcperf_rate = os.environ.get('rpcperf_rate', '1000')
@@ -29,47 +30,81 @@ rpcperf_image_tag = 'tw-load'  # Workaround for "force pull images" defect in Au
 
 # JOB definitions
 jobs = [
-  Service(
-    name='memcached-%s' % workload_uniq_id,
-    cluster=cluster,
-    environment='staging'+env_uniq_id,
-    role=user,
-    container=Mesos(
-        image=DockerImage(
-            name=docker_registry + '/' + workload_image,
-            tag = workload_image_tag,
+    Service(
+        name='redis-%s' % workload_uniq_id,
+        cluster=cluster,
+        environment='staging' + env_uniq_id,
+        role=user,
+        container=Mesos(
+            image=DockerImage(
+                name=docker_registry + '/' + workload_image,
+                tag=workload_image_tag,
+            ),
+        ),
+        constraints=dict(own_ip=workload_host_ip),
+        task=SequentialTask(
+            name='redis-%s' % workload_uniq_id,
+            resources=Resources(cpu=1, ram=2 * GB, disk=100 * MB),
+            processes=[
+                Process(
+                    name='prep_config',
+                    cmdline=
+                    "set -x && cp /etc/redis.conf . && sed -i 's/port 6379/port {workload_port}/' redis.conf "
+                    "&& sed -i 's/bind 127.0.0.1/bind {workload_address}/' redis.conf ".format(
+                        workload_port=workload_port,
+                        workload_address=workload_address
+                    )
+                ),
+                Process(
+                    name='workload',
+                    cmdline='redis-server redis.conf'
+                ),
+            ],
         ),
     ),
-    constraints=dict(own_ip=workload_host_ip),
-    task=Task(
-      name='memcached-%s' % workload_uniq_id,
-      resources=Resources(cpu=1, ram=2*GB, disk=100*MB),
-      processes=[
-        Process(
-          name='workload',
-          cmdline='memcached -t 1 -m 350 -c 2048 -T -u root -p %s' % workload_port
+    Service(
+        name='memcached-%s' % workload_uniq_id,
+        cluster=cluster,
+        environment='staging' + env_uniq_id,
+        role=user,
+        container=Mesos(
+            image=DockerImage(
+                name=docker_registry + '/' + workload_image,
+                tag=workload_image_tag,
+            ),
         ),
-      ],
+        constraints=dict(own_ip=workload_host_ip),
+        task=Task(
+            name='memcached-%s' % workload_uniq_id,
+            resources=Resources(cpu=1, ram=2 * GB, disk=100 * MB),
+            processes=[
+                Process(
+                    name='workload',
+                    cmdline='memcached -t 1 -m 350 -c 2048 -T -u root -p %s' % workload_port
+                ),
+            ],
+        ),
     ),
-  ),
-  Service(
-    name='rpc-perf-%s' % workload_uniq_id,
-    cluster=cluster,
-    environment='staging'+env_uniq_id,
-    role=user,
-    constraints=dict(own_ip=load_generator_host_ip),
-    container=Mesos(image=DockerImage(
-      name=docker_registry+'/serenity/rpc-perf', tag=rpcperf_image_tag,
-    )),
-    task=Task(
-      name='rpc-perf-%s' % workload_uniq_id,
-      resources=Resources(cpu=1.5, ram=2*GB, disk=10*GB),
-      processes=[
-        Process(
-          name='memcached_rpc-perf',
-          cmdline = '/wrapper.pex --command "rpc-perf --config /etc/rpc-perf.toml -p %s --server %s:%s" --log_level %s --stderr 0 --prometheus_port %s --prometheus_ip %s --labels "%s"  --regexp "(?P<name>p\d*): (?P<value>\d+)" --kafka_brokers %s' % (rpcperf_protocol, workload_address, workload_port, wrapper_log_level, wrapper_prometheus_port, wrapper_prometheus_address, wrapper_labels, wrapper_kafka_brokers)
+    Service(
+        name='rpc-perf-%s' % workload_uniq_id,
+        cluster=cluster,
+        environment='staging' + env_uniq_id,
+        role=user,
+        constraints=dict(own_ip=load_generator_host_ip),
+        container=Mesos(image=DockerImage(
+            name=docker_registry + '/serenity/rpc-perf', tag=rpcperf_image_tag,
+        )),
+        task=Task(
+            name='rpc-perf-%s' % workload_uniq_id,
+            resources=Resources(cpu=1.5, ram=2 * GB, disk=10 * GB),
+            processes=[
+                Process(
+                    name='rpc-perf',
+                    cmdline='/wrapper.pex --command "rpc-perf --config /etc/rpc-perf.toml -p %s --server %s:%s" --log_level %s --stderr 0 --prometheus_port %s --prometheus_ip %s --labels "%s"  --regexp "(?P<name>p\d*): (?P<value>\d+)" --kafka_brokers %s' % (
+                        rpcperf_protocol, workload_address, workload_port, wrapper_log_level, wrapper_prometheus_port,
+                        wrapper_prometheus_address, wrapper_labels, wrapper_kafka_brokers)
+                )
+            ],
         )
-      ],
-    )
-  ),
+    ),
 ]
