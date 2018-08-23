@@ -44,7 +44,7 @@ jobs = [
         constraints=dict(own_ip=workload_host_ip),
         task=SequentialTask(
             name='redis-%s' % workload_uniq_id,
-            resources=Resources(cpu=1, ram=2 * GB, disk=100 * MB),
+            resources=Resources(cpu=1, ram=2 * GB, disk=10 * GB),
             processes=[
                 Process(
                     name='prep_config',
