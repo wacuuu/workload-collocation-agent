@@ -4,7 +4,7 @@ include('../common.aurora')
 
 workload_uniq_id = workload_uniq_id or wrapper_prometheus_port  # set by default to prometheus port
 
-tf_inference_image_tag = 'inference-5'  # Workaround for "force pull images" defect in Aurora.
+tf_inference_image_tag = 'inference-6'  # Workaround for "force pull images" defect in Aurora.
 
 # resources parameters
 cpu = 8

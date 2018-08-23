@@ -1,9 +1,9 @@
 #!/bin/python3.6
 import argparse
 import itertools
+import os
 from typing import List
 
-import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
@@ -33,6 +33,14 @@ def prepare_argument_parser():
         default="./",
         type=str
     )
+    parser.add_argument(
+        '--metric_frequency',
+        help='Defines how often (every metric_frequency images) the images_processed '
+             'metric should be printed',
+        dest='metric_frequency',
+        default=50,
+        type=int
+    )
     return parser
 
 
@@ -50,7 +58,9 @@ def main():
     for dataset_image in itertools.cycle(images):
         predictions = resnet_model.predict(dataset_image)
         images_processed += 1
-        print('images_processed={0}'.format(images_processed), flush=True)
+        # Print images_processed metric every args.metric_frequency images
+        if not images_processed % args.metric_frequency:
+            print('images_processed={0}'.format(images_processed), flush=True)
         print('Predicted:', decode_predictions(predictions, top=3)[0], flush=True)
 
 
