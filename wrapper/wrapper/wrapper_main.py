@@ -37,7 +37,8 @@ def main(parse: ParseFunc = default_parse):
 
     # create kafka storage with list of kafka brokers from arguments
     kafka_brokers_addresses = args.kafka_brokers.replace(" ", "").split(',')
-    kafka_storage = KafkaStorage(brokers_ips=kafka_brokers_addresses, max_timeout_in_seconds=5.0)
+    kafka_storage = KafkaStorage(brokers_ips=kafka_brokers_addresses, max_timeout_in_seconds=5.0,
+                                 topic=args.kafka_topic)
 
     threading.Thread(target=parse_loop, args=(parse, kafka_storage)).start()
 
@@ -112,6 +113,13 @@ def prepare_argument_parser():
         help='list of addresses with ports of kafka brokers (kafka nodes). Coma separated',
         dest='kafka_brokers',
         default="127.0.0.1:9092",
+        type=str
+    )
+    parser.add_argument(
+        '--kafka_topic',
+        help='Kafka messages topic, passed to KafkaStorage',
+        dest='kafka_topic',
+        default='rmi_metrics',
         type=str
     )
     return parser

@@ -6,14 +6,13 @@ import re
 from rmi.metrics import Metric, MetricType
 from wrapper import wrapper_main
 
-
 log = logging.getLogger(__name__)
 EMPTY_LINE = "^\s*$"
 
 
 def log_line(line, discarded=True):
-    """ 
-    :param discarded: if line was discarded by parse function 
+    """
+    :param discarded: if line was discarded by parse function
     """
     line = line.strip()
     if discarded:
@@ -29,7 +28,7 @@ def specjbb_parse_function(input: TextIOWrapper, regexp: str, separator: str = N
     For sample output from specjbb see file:
     ./specjbb_sample_stdout.txt
 
-    Discards until finds 
+    Discards until finds
     >>Response times:<<
     and read until empty line.
 
@@ -50,7 +49,7 @@ def specjbb_parse_function(input: TextIOWrapper, regexp: str, separator: str = N
     while not re.match(EMPTY_LINE, new_line):
         input_lines.append(new_line)
         new_line = input.readline()
-        log_line(line, False)
+        log_line(new_line, False)
     log.debug("Found separator in {0}".format(new_line))
 
     # Two dimensional list, first row contains names of columns. Almost as data frame.
