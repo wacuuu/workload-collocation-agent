@@ -11,6 +11,7 @@ INFO = 'info'
 MON_DATA = 'mon_data'
 MON_L3_00 = 'mon_L3_00'
 MBM_TOTAL = 'mbm_total_bytes'
+LLC_OCCUPANCY = 'llc_occupancy'
 
 
 log = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ class ResGroup:
         and cpu usage measurements
         """
         mbm_total = 0
+        llc_occupancy = 0
 
         # mon_dir contains event files for specific socket:
         # llc_occupancy, mbm_total_bytes, mbm_local_bytes
@@ -89,8 +91,11 @@ class ResGroup:
             with open(os.path.join(self.resgroup_dir, MON_DATA,
                                    mon_dir, MBM_TOTAL)) as mbm_total_file:
                 mbm_total += int(mbm_total_file.read())
+            with open(os.path.join(self.resgroup_dir, MON_DATA,
+                                   mon_dir, LLC_OCCUPANCY)) as llc_occupancy_file:
+                llc_occupancy += int(llc_occupancy_file.read())
 
-        return {MetricName.MEM_BW: mbm_total}
+        return {MetricName.MEM_BW: mbm_total, MetricName.LLC_OCCUPANCY: llc_occupancy}
 
     def cleanup(self):
         os.rmdir(self.resgroup_dir)

@@ -52,10 +52,12 @@ def test_sync_resctrl_not_mounted(exists_mock, log_warning_mock):
 @patch('builtins.open', new=create_open_mock({
     "/sys/fs/resctrl/ddd/mon_data/1/mbm_total_bytes": "1",
     "/sys/fs/resctrl/ddd/mon_data/2/mbm_total_bytes": "1",
+    "/sys/fs/resctrl/ddd/mon_data/1/llc_occupancy": "1",
+    "/sys/fs/resctrl/ddd/mon_data/2/llc_occupancy": "1",
     "/sys/fs/cgroup/cpu/ddd/cpuacct.usage": "4",
 }))
 @patch('os.listdir', return_value=['1', '2'])
 def test_get_measurements(*mock):
     cgroup_path = "/ddd"
     resgroup = ResGroup(cgroup_path)
-    assert {'memory_bandwidth': 2} == resgroup.get_measurements()
+    assert {'memory_bandwidth': 2, 'llc_occupancy': 2} == resgroup.get_measurements()
