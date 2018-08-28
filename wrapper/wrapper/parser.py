@@ -1,8 +1,11 @@
+import _thread
 import logging
 import re
+import time
 from io import TextIOWrapper
 from typing import List, Dict, Callable
 
+import rmi
 from rmi.metrics import Metric, MetricType
 from rmi.storage import KafkaStorage
 
@@ -12,6 +15,8 @@ ParseFunc = Callable[[TextIOWrapper, str, str, Dict[str, str]], List[Metric]]
 # Matches values returned in format "a=4.2". If different format is needed,
 # provide regex in arguments. It needs to have 2 named groups "name" and "value"
 DEFAULT_REGEXP = "(?P<name>\w+?)=(?P<value>\d+?.?\d*)"
+
+MAX_ATTEMPTS = 5
 
 
 def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
@@ -33,15 +38,21 @@ def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
     """
     new_metrics = []
     input_lines = []
-    if separator is None:
-        input_lines.append(input.readline())
-    else:
-        new_line = input.readline()
-        while new_line != separator:
+
+    new_line = input.readline()
+    if separator is not None:
+        # With separator, first we read the whole block of output until the separator appears
+        while new_line != separator and not new_line == '':
             input_lines.append(new_line)
             new_line = input.readline()
         log.debug("Found separator in {0}".format(new_line))
-
+    else:
+        # Without separator only one line is processed at a time
+        input_lines.append(new_line)
+    # When there is no source of output readline will return an empty string
+    if new_line == '':
+        log.warning("EOF received")
+        raise StopIteration
     found_metrics = re.finditer(regexp, '\n'.join(input_lines))
     for metric in list(found_metrics):
         metric = metric.groupdict()
@@ -51,17 +62,40 @@ def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
     return new_metrics
 
 
+def kafka_store_with_retry(kafka_storage: KafkaStorage, metrics: List[Metric]):
+    # Try MAX_ATTEMPTS times to send metrics to kafka server
+    # with increasing sleep time between attempts
+    backoff_delay = 1
+    for attempt in range(MAX_ATTEMPTS):
+        try:
+            kafka_storage.store(metrics)
+        except rmi.storage.FailedDeliveryException:
+            log.warning("Failed to deliver message to kafka, "
+                        "tried {0} times".format(attempt + 1))
+            if attempt == MAX_ATTEMPTS - 1:
+                raise
+            time.sleep(backoff_delay)
+            backoff_delay *= 2
+            continue
+        break
+
+
 def parse_loop(parse: ParseFunc, kafka_storage: KafkaStorage):
     """
-    Runs parsing and kafka storage in loop. parse_loop.metrics list is accessed by the HTTP server
-    GET request handler.
+    Runs parsing and kafka storage in loop. parse_loop.last_valid_metrics list is accessed
+    by the HTTP server GET request handler.
     """
     parse_loop.metrics = []
     parse_loop.last_valid_metrics = []
     while True:
-        parse_loop.metrics = parse()
-        # parse() can return an empty list, so we store new values for kafka and http server
-        # only when there are new metrics to store
-        if parse_loop.metrics:
-            kafka_storage.store(parse_loop.metrics)
-            parse_loop.last_valid_metrics = parse_loop.metrics.copy()
+        try:
+            parse_loop.metrics = parse()
+            # parse() can return an empty list, so we store new values for kafka and http server
+            # only when there are new metrics to store
+            if parse_loop.metrics:
+                parse_loop.last_valid_metrics = parse_loop.metrics.copy()
+                kafka_store_with_retry(kafka_storage, parse_loop.last_valid_metrics)
+
+        except BaseException:
+            _thread.interrupt_main()
+            raise

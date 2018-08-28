@@ -44,4 +44,11 @@ class MetricsRequestHandler(BaseHTTPRequestHandler):
 def run_server(ip: str, port: int) -> None:
     log.debug("Starting HTTP server at {0}:{1}".format(ip, port))
     httpd = HTTPServer((ip, port), MetricsRequestHandler)
-    httpd.serve_forever()
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        log.info("Received SIGINT, shutting down")
+    finally:
+        # Server cleanup
+        log.warning("Http server shutting down")
+        httpd.shutdown()

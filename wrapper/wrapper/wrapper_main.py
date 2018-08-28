@@ -23,7 +23,6 @@ def main(parse: ParseFunc = default_parse):
     # Configuring log
     logging.basicConfig(level=args.log_level)
     log.debug("Logger configured with {0}".format(args.log_level))
-
     workload_process = subprocess.Popen(args.command.split(' '),
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE,
@@ -41,9 +40,10 @@ def main(parse: ParseFunc = default_parse):
                                  topic=args.kafka_topic)
 
     threading.Thread(target=parse_loop, args=(parse, kafka_storage)).start()
-
-    # this blocks forever
+    # this blocks until it catches KeyboardInterrupt
     run_server(ip=args.ip, port=args.port)
+    # terminate all spawned processes
+    workload_process.terminate()
 
 
 def prepare_argument_parser():
