@@ -30,31 +30,37 @@ RUN cd /tensorflow && \
     bazel build --config=mkl --config=opt //tensorflow/tools/pip_package:build_pip_package && \
     bazel-bin/tensorflow/tools/pip_package/build_pip_package /output
 
+ADD tensorflow-train/prep_dataset.py /prep_dataset.py
+ADD tensorflow-train/requirements.txt /requirements.txt
+ADD kaggle.json /root/.kaggle/kaggle.json
+RUN pip3.6 install -r requirements.txt
+RUN python3.6 /prep_dataset.py
+RUN unzip tensorflow-train/dataset2-master.zip
+
+
 # Building final container with workload
 FROM centos:7
 
-# Tensorflow and workload runtime dependencies
+# Install Python 3.6
 RUN yum install -y epel-release
 RUN yum install -y python36
+
 # Install pip3.6
 RUN python3.6 -m ensurepip --default-pip
-RUN yum install -y unzip
+
+# Install TensorFlow with its dependencies
 COPY --from=tensorflow /output /tensorflow-pkg
 RUN pip3.6 install \
     wheel \
     /tensorflow-pkg/*.whl
+
 # Cleanup wheel and tensorflow package after install
 RUN pip3.6 uninstall -y wheel
 RUN rm -rf /tensorflow-pkg
-# Add workload scripts and workload dataset
-ADD tensorflow-train/dataset2-master.zip /
-RUN unzip dataset2-master.zip
-# Cleanup unzip, wheel and .zip file
-RUN rm dataset2-master.zip
-RUN yum remove -y unzip
-ADD tensorflow-train/training.py /training.py
-# Create symlink for workload runner and training script
-RUN ln -s /training.py /usr/local/bin/training
-# Make workload launcher and training scripts executables
-RUN chmod +x /training.py
+
+# Add workload dataset and workload script
+COPY --from=tensorflow dataset2-master /dataset2-master
+ADD tensorflow-train/training /usr/local/bin/training
+RUN chmod +x /usr/local/bin/training
+
 ADD /wrapper/dist/wrapper.pex /wrapper.pex

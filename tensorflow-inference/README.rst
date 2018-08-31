@@ -24,33 +24,9 @@ Example kill
 Building docker image
 ---------------------
 
-All commands and scripts should be run from the top folder of the repository.
+All commands and scripts should be run from the top directory of the repository. File `kaggle.json` needs to be available in this directory too (it is necessary to download image dataset from Kaggle). To obtain the file you will need to create an account at Kaggle and download API credentials as described in `documentation`_.
 
-To build the image, dataset files are needed in the workloads/tensorflow-inference/ folder.
-First, create virtual environment and activate it:
-
-.. code-block:: sh
-
-    python3 -m venv <PATH_TO_VENV>
-    source <PATH_TO_VENV>/bin/activate
-
-Then, install kaggle python package:
-
-.. code-block:: sh
-
-    pip install -r tensorflow-inference/requirements.txt
-
-prep_dataset_fruits.py script assumes that file ~/.kaggle/kaggle.json with the account token exists.
-To generate such file, one has to create an account at https://www.kaggle.com/ .
-To create the token, go to https://www.kaggle.com/<USERNAME>/account and press the "Create New API Token"
-button. kaggle.json file will be downloaded. Move it to the folder ~/.kaggle/
-Then run:
-
-.. code-block:: sh
-
-   python3 tensorflow-inference/prep_dataset_fruits.py
-
-After that the docker image can be built with:
+.. _documentation: https://github.com/Kaggle/kaggle-api#api-credentials
 
 .. code-block:: sh
 
