@@ -84,12 +84,13 @@ jobs = [
             processes=[
                 Process(
                     name='twemcache',
-                    cmdline="""
-                        twemcache --prealloc --hash-power=20 --max-memory=1024 \
-                            --port=${application_listen_port} --eviction-strategy=2 --verbosity=4 \
-                            --threads=1 --backlog=128 -u twemcache \
-                            --maximize-core-limit --slab-size=1048576
-                    """.format(application_listen_port=application_listen_port)
+                    cmdline=
+                        "twemcache --prealloc --hash-power=20 --max-memory=1024 "
+                            "--port={application_listen_port} --eviction-strategy=2 --verbosity=4 "
+                            "--threads=1 --backlog=128 -u twemcache "
+                            "--maximize-core-limit --slab-size=1048576 ".format(
+                                    application_listen_port=application_listen_port
+                            )
                 ),
             ],
         ),
@@ -109,18 +110,18 @@ jobs = [
             processes=[
                 Process(
                     name='rpc-perf',
-                    cmdline="""
-                        /wrapper.pex --command \
-                            "rpc-perf --config /etc/rpc-perf.toml -p {protocol} --server {ip}:{port}" \
-                                      --log_level {log_level} --stderr 0 --prometheus_port {prom_port} \
-                                      --prometheus_ip {prom_ip} --labels "{labels}" \
-                                      --regexp "(?P<name>p\d*): (?P<value>\d+)" \
-                                      --kafka_brokers {kafka_brokers}
-                    """.format(
-                        protocol=rpcperf_protocol, ip=application_host_ip, port=application_listen_port, 
-                        log_level=wrapper_log_level, prom_port=wrapper_prometheus_port, 
-                        prom_ip=wrapper_prometheus_address, labels=wrapper_labels, 
-                        kafka_brokers=wrapper_kafka_brokers)
+                    cmdline=
+                        '/wrapper.pex --command '
+                            '"rpc-perf --config /etc/rpc-perf.toml -p {protocol} --server {ip}:{port}" '
+                            '--log_level {log_level} --stderr 0 --prometheus_port {prom_port} '
+                            '--prometheus_ip {prom_ip} --labels "{labels}" '
+                            '--regexp "(?P<name>p\d*): (?P<value>\d+)" '
+                            '--kafka_brokers {kafka_brokers}'.format(
+                                protocol=rpcperf_protocol, ip=application_host_ip, 
+                                port=application_listen_port, 
+                                log_level=wrapper_log_level, prom_port=wrapper_prometheus_port, 
+                                prom_ip=wrapper_prometheus_address, labels=wrapper_labels, 
+                                kafka_brokers=wrapper_kafka_brokers)
                 )
             ],
         )

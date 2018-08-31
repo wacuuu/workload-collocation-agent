@@ -3,12 +3,13 @@
 
 # Variables believed to be often changed among experiments.
 
-export role=root
 export cluster=example
+export role=root
 export env_uniq_id=16
 export application_host_ip=100.64.176.16
 export load_generator_host_ip=100.64.176.17
 export wrapper_kafka_brokers=100.64.176.12:9092
+export docker_registry=100.64.176.12:80
 
 # The lowest prometheus exposition port to be used.
 #   Prometheus ports are assigned sequantially

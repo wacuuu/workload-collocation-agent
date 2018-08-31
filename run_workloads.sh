@@ -9,7 +9,7 @@ prometheus_port=$prometheus_smallest_port
 
 
 # kill all job on that cluster/role/environment
-aurora job list $cluster/$role/staging$env_uniq_id | xargs -i {} aurora job killall {}
+aurora job list $cluster/$role/staging$env_uniq_id | xargs -n 1 aurora job killall 
 
 # specjbb
 export qps=500

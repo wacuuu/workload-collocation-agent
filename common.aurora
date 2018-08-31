@@ -11,10 +11,10 @@ workload_uniq_id = os.environ.get('workload_uniq_id')  # can return None
 application_host_ip = os.environ['application_host_ip']
 load_generator_host_ip = os.environ['load_generator_host_ip']
 
-docker_registry = os.environ.get('docker_registry', '100.64.176.12:80')
+docker_registry = os.environ['docker_registry']
 
 # Wrapper variables:
-wrapper_kafka_brokers = os.environ.get('wrapper_kafka_brokers', '100.64.176.12:9092')
+wrapper_kafka_brokers = os.environ['wrapper_kafka_brokers']
 wrapper_prometheus_port = os.environ.get('wrapper_prometheus_port', '9090')
 wrapper_prometheus_address= os.environ.get('wrapper_prometheus_address', '0.0.0.0')
 wrapper_log_level = os.environ.get('wrapper_log_level', 'DEBUG')
