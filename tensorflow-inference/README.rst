@@ -12,14 +12,14 @@ Example run
 
 .. code-block:: sh
 
-    name=tf_inference cluster=example user=$USER load_generator_host_ip= wrapper_prometheus_port=9092 workload_uniq_id=$wrapper_prometheus_port env_uniq_id=16 workload_host_ip=192.0.2.100 sh -c 'aurora job create $cluster/$user/staging$env_uniq_id/$name-$wrapper_prometheus_port tensorflow_inference.aurora'
+    name=tf_inference cluster=example role=$USER load_generator_host_ip= wrapper_prometheus_port=9092 workload_uniq_id=$wrapper_prometheus_port env_uniq_id=16 application_host_ip=192.0.2.100 sh -c 'aurora job create $cluster/$role/staging$env_uniq_id/$name-$wrapper_prometheus_port tensorflow_inference.aurora'
 
 
 Example kill
 
 .. code-block:: sh
 
-    name=tf_inference cluster=example user=$USER load_generator_host_ip= wrapper_prometheus_port=9092 workload_uniq_id=$wrapper_prometheus_port env_uniq_id=16 workload_host_ip=192.0.2.100 sh -c 'aurora job killall $cluster/$user/staging$env_uniq_id/$name-$wrapper_prometheus_port'
+    name=tf_inference cluster=example role=$USER load_generator_host_ip= wrapper_prometheus_port=9092 workload_uniq_id=$wrapper_prometheus_port env_uniq_id=16 application_host_ip=192.0.2.100 sh -c 'aurora job killall $cluster/$role/staging$env_uniq_id/$name-$wrapper_prometheus_port'
 
 Building docker image
 ---------------------

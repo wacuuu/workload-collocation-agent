@@ -7,3 +7,4 @@
 /tensorflow-inference/*.zip
 /cassandra_ycsb/ycsb/YCSB
 /kaggle.json
+config.sh

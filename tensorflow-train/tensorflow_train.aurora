@@ -2,12 +2,16 @@ import os
 
 include('../common.aurora')
 
+# Add label for identification workload in prometheus.
+wrapper_labels["name"] = 'tf_train--%s' % workload_uniq_id
+wrapper_labels["load_generator"] = ""
+wrapper_labels["application"] = "tf_train"
+
 # tensorflow_train specific parameters.
-workload_uniq_id = workload_uniq_id or wrapper_prometheus_port  # set by default to prometheus port
 tf_train_batch_size = os.environ.get('tf_train_batch_size', '100')
 tf_train_epochs = os.environ.get('tf_train_epochs', '100')
 
-tf_train_image_tag = 'train-4'  # Workaround for "force pull images" defect in Aurora.
+tf_train_image_tag = '1'  # Workaround for "force pull images" defect in Aurora.
 
 # resources parameters
 cpu = 8
@@ -17,16 +21,16 @@ disk = 2 * GB
 # JOB definitions
 jobs = [
     Service(
-        name='tf_train-%s' % workload_uniq_id,
+        name='tf_train--%s' % workload_uniq_id,
         cluster=cluster,
         environment='staging' + env_uniq_id,
-        role=user,
-        constraints=dict(own_ip=workload_host_ip),
+        role=role,
+        constraints=dict(own_ip=application_host_ip),
         container=Mesos(image=DockerImage(
-            name=docker_registry + '/serenity/tf_train', tag=tf_train_image_tag,
+            name=docker_registry + '/serenity/tensorflow-train', tag=tf_train_image_tag,
         )),
         task=SequentialTask(
-            name='tf_train-%s' % workload_uniq_id,
+            name='tf_train--%s' % workload_uniq_id,
             resources=Resources(cpu=cpu, ram=ram, disk=disk),
             processes=[
                 Process(
@@ -40,7 +44,7 @@ jobs = [
                             "--labels \"{labels}\"".format(batch_size=tf_train_batch_size,
                                                            epochs=tf_train_epochs,
                                                            prometheus_port=wrapper_prometheus_port,
-                                                           prometheus_ip=workload_host_ip,
+                                                           prometheus_ip=application_host_ip,
                                                            kafka_brokers=wrapper_kafka_brokers,
                                                            log_level=wrapper_log_level,
                                                            labels=str(wrapper_labels)

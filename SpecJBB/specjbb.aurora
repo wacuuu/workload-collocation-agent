@@ -9,11 +9,16 @@ include('../common.aurora')
 # Additional variables which can be changed by setting ENV variables.
 #
 # port on which listen controller
-load_generator_host_port = os.environ.get('load_generator_host_port', '42000')
+load_generator_port = os.environ.get('load_generator_port', '42000')
 # injection rate
 qps = os.environ.get('qps', '1000')
 docker_image = os.environ.get('docker_image', 'serenity/specjbb')
-docker_image_tag = os.environ.get('docker_image_tag', 'wrapper-0.7')
+docker_image_tag = os.environ.get('docker_image_tag', '1')
+
+# Add label for identification workload in prometheus.
+wrapper_labels["name"] = 'specjbb--%s' % workload_uniq_id
+wrapper_labels["load_generator"] = "specjbb_injector"
+wrapper_labels["application"] = "specjbb"
 
 # Variables which cannot be changed differently than just by editing this file.
 #
@@ -36,10 +41,10 @@ specjbb_wrapper = '/usr/bin/specjbb_wrapper.pex'
 
 # We don't have yet good way of copying config to mesos container:
 # here we just create it on the fly running shell commands inside container.
-with open('specjbb.config', 'r') as fconfig:
+with open('SpecJBB/specjbb.config', 'r') as fconfig:
     config_content = "".join(fconfig.readlines())
     config_content = config_content.format(qps=qps, load_generator_host_ip=load_generator_host_ip,
-                               load_generator_host_port=load_generator_host_port,
+                               load_generator_port=load_generator_port,
                                config_path=config_path, cpu_backend=cpu_backend)
 config_create_cmd = """
 cat >{config_path} <<EOF
@@ -80,17 +85,17 @@ injector_process= Process(name='specjbb_injector', cmdline=injector_cmd)
 backend_process = Process(name='specjbb_backend', cmdline=backend_cmd)
 
 controller_task = SequentialTask(
-    name = 'specjbb_controller-{}'.format(workload_uniq_id),
+    name = 'specjbb_controller--{}'.format(workload_uniq_id),
     processes = [config_create_process, controller_process],
     resources = Resources(cpu=controller_cpu, ram=controller_ram*GB, disk=all_disk*GB)
 )
 injector_task = SequentialTask(
-    name = 'specjbb_injector-{}'.format(workload_uniq_id),
+    name = 'specjbb_injector--{}'.format(workload_uniq_id),
     processes = [config_create_process, injector_process],
     resources = Resources(cpu=cpu_injector, ram=ram_injector *GB, disk=all_disk*GB)
 )
 backend_task = SequentialTask(
-    name = 'specjbb_backend-{}'.format(workload_uniq_id),
+    name = 'specjbb_backend--{}'.format(workload_uniq_id),
     processes = [config_create_process, backend_process],
     resources = Resources(cpu=cpu_backend, ram=ram_backend*GB, disk=all_disk*GB)
 )
@@ -100,23 +105,20 @@ docker_image_mo = DockerImage(name="{}/{}".format(docker_registry, docker_image)
                               tag=docker_image_tag)
 environment = "staging" + env_uniq_id
 
-controller_job = Job(
-    cluster=cluster, environment=environment, role=user,
+BaseJob = Job(
+    cluster=cluster, environment=environment, role=role,
+    container = Mesos(image=docker_image_mo))
+controller_job = BaseJob(
     name='specjbb_controller--{}'.format(workload_uniq_id),
     task=controller_task,
-    container = Mesos(image=docker_image_mo),
     constraints={'own_ip': load_generator_host_ip})
-injector_job = Job(
-    cluster=cluster, environment=environment, role=user,
+injector_job = BaseJob(
     name='specjbb_injector--{}'.format(workload_uniq_id),
     task=injector_task,
-    container = Mesos(image=docker_image_mo),
     constraints={'own_ip': load_generator_host_ip})
-backend_job = Job(
-    cluster=cluster, environment=environment, role=user,
+backend_job = BaseJob(
     name='specjbb_backend--{}'.format(workload_uniq_id),
     task=backend_task,
-    container = Mesos(image=docker_image_mo),
-    constraints={'own_ip': workload_host_ip})
+    constraints={'own_ip': application_host_ip})
 
 jobs = [controller_job, injector_job, backend_job]

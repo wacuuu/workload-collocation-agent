@@ -45,28 +45,28 @@ To run aurora jobs:
 .. code-block:: shell
 
     export cluster=example
-    export user=<user>
+    export role=<role>
     export env_uniq_id=16  #used: last octet of IP address where backend is run (could be anything else)
     export load_generator_host_ip=<first_node_ip>
-    export workload_host_ip=<second_node_ip>  #backend
+    export application_host_ip=<second_node_ip>  #backend
     export qps=1000  # setting too high qps may result in a failure of specjbb
 
     # Must be different for each run.
     export port_=42000 # controller listen port (below used as workload_uniq_id)
     export workload_uniq_id=$port_
-    export load_generator_host_port=$port_
+    export load_generator_port=$port_
 
     # Note:
     # read ../common.aurora for more variables to set.
 
-    aurora job create $cluster/$user/staging${env_uniq_id}/specjbb_controller--${workload_uniq_id} specjbb.aurora
-    aurora job create $cluster/$user/staging${env_uniq_id}/specjbb_injector--${workload_uniq_id} specjbb.aurora
-    aurora job create $cluster/$user/staging${env_uniq_id}/specjbb_backend--${workload_uniq_id} specjbb.aurora
+    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_controller--${workload_uniq_id} specjbb.aurora
+    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_injector--${workload_uniq_id} specjbb.aurora
+    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_backend--${workload_uniq_id} specjbb.aurora
 
 To kill aurora jobs:
 
 .. code-block:: shell
 
-    aurora job killall $cluster/$user/staging${env_uniq_id}/specjbb_controller--${workload_uniq_id}
-    aurora job killall $cluster/$user/staging${env_uniq_id}/specjbb_injector--${workload_uniq_id}
-    aurora job killall $cluster/$user/staging${env_uniq_id}/specjbb_backend--${workload_uniq_id}
+    aurora job killall $cluster/$role/staging${env_uniq_id}/specjbb_controller--${workload_uniq_id}
+    aurora job killall $cluster/$role/staging${env_uniq_id}/specjbb_injector--${workload_uniq_id}
+    aurora job killall $cluster/$role/staging${env_uniq_id}/specjbb_backend--${workload_uniq_id}

@@ -2,9 +2,12 @@ import os
 
 include('../common.aurora')
 
-workload_uniq_id = workload_uniq_id or wrapper_prometheus_port  # set by default to prometheus port
+# Add label for identification workload in prometheus.
+wrapper_labels["name"] = 'tf_inference--%s' % workload_uniq_id
+wrapper_labels["load_generator"] = ""
+wrapper_labels["application"] = "tf_inference"
 
-tf_inference_image_tag = 'inference-6'  # Workaround for "force pull images" defect in Aurora.
+tf_inference_image_tag = '1'  # Workaround for "force pull images" defect in Aurora.
 
 # resources parameters
 cpu = 8
@@ -14,16 +17,16 @@ disk = 10 * GB
 # JOB definitions
 jobs = [
     Service(
-        name='tf_inference-%s' % workload_uniq_id,
+        name='tf_inference--%s' % workload_uniq_id,
         cluster=cluster,
         environment='staging' + env_uniq_id,
-        role=user,
-        constraints=dict(own_ip=workload_host_ip),
+        role=role,
+        constraints=dict(own_ip=application_host_ip),
         container=Mesos(image=DockerImage(
-            name=docker_registry + '/serenity/tf_inference', tag=tf_inference_image_tag,
+            name=docker_registry + '/serenity/tensorflow-inference', tag=tf_inference_image_tag,
         )),
         task=SequentialTask(
-            name='tf_inference-%s' % workload_uniq_id,
+            name='tf_inference--%s' % workload_uniq_id,
             resources=Resources(cpu=cpu, ram=ram, disk=disk),
             processes=[
                 Process(
@@ -34,11 +37,10 @@ jobs = [
                             "--stderr 0 --kafka_brokers '{kafka_brokers}' "
                             "--log_level {log_level} "
                             "--labels \"{labels}\"".format(prometheus_port=wrapper_prometheus_port,
-                                                           prometheus_ip=workload_host_ip,
+                                                           prometheus_ip=application_host_ip,
                                                            kafka_brokers=wrapper_kafka_brokers,
                                                            log_level=wrapper_log_level,
-                                                           labels=str(wrapper_labels)
-                                                           )
+                                                           labels=str(wrapper_labels))
                 )
             ],
         )
