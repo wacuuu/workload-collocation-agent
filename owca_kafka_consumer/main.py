@@ -1,7 +1,7 @@
 import argparse
 import logging
 
-from rmi_kafka_consumer.server import run_server, create_kafka_consumer
+from owca_kafka_consumer.server import run_server, create_kafka_consumer
 
 
 def main():
@@ -20,10 +20,10 @@ def main():
                         type=float,
                         help=("Timeout for reading a message from kafka while handling request."))
     parser.add_argument('--topic_name',
-                        default="rmi_metrics",
+                        default="owca_metrics",
                         help="kafka topic name to consume messages from")
     parser.add_argument('--group_id',
-                        default="rmi_group",
+                        default="owca_group",
                         help="kafka consumer group")
     parser.add_argument('--listen_ip',
                         default="127.0.0.1",
@@ -39,7 +39,7 @@ def main():
     args = parser.parse_args()
 
     logging.basicConfig(level=args.log_level)
-    logging.info("rmi_kafka_consumer was run with configuration:\n{}\n\n"
+    logging.info("owca_kafka_consumer was run with configuration:\n{}\n\n"
                  .format(args))
     kafka_consumer = create_kafka_consumer(args.kafka_broker_addresses,
                                            args.topic_name,
