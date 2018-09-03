@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Dict, List
 import urllib.parse
+import logging
 
 import requests
 
@@ -12,6 +13,8 @@ TaskId = str
 
 MESOS_TASK_STATE_RUNNING = 'TASK_RUNNING'
 CGROUP_DEFAULT_SUBSYSTEM = 'cpu'
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -74,6 +77,12 @@ class MesosNode:
             statuses = launched_task['statuses']
             last_status = statuses[-1]  # Assume the last on is the latest state # TODO: confirm
             if last_status['state'] != MESOS_TASK_STATE_RUNNING:
+                continue
+
+            if 'executor_pid' not in last_status['container_status']:
+                log.warning("'executor_pid' not found in container status for task %s on agent %s",
+                            last_status['task_id']['value'],
+                            last_status['agent_id']['value'])
                 continue
 
             executor_pid = last_status['container_status']['executor_pid']
