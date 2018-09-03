@@ -1,3 +1,4 @@
+import errno
 import logging
 import os
 
@@ -15,6 +16,28 @@ LLC_OCCUPANCY = 'llc_occupancy'
 
 
 log = logging.getLogger(__name__)
+
+
+def cleanup_resctrl():
+    """Remove taskless subfolders at resctrl folders to free scarce CLOSid resources. """
+
+    for entry in os.listdir(BASE_RESCTRL_PATH):
+        # Path to folder e.g. /sys/fs/resctrl/mesos-xxx represeting running container.
+        directory_path = os.path.join(BASE_RESCTRL_PATH, entry)
+        # Only examine folders at first level.
+        if os.path.isdir(directory_path):
+            # Examine tasks file
+            resctrl_tasks_path = os.path.join(directory_path, TASKS_FILENAME)
+            tasks = ''
+            if not os.path.exists(resctrl_tasks_path):
+                # Skip metadata folders e.g. info.
+                continue
+            with open(resctrl_tasks_path) as f:
+                tasks += f.read()
+            if len(tasks.split()) == 0:
+                log.warning('Found taskless (empty) resctrl group at %r - recycle CLOSid resource.'
+                            % directory_path)
+                os.rmdir(directory_path)
 
 
 def check_resctrl():
@@ -70,7 +93,13 @@ class ResGroup:
         with open(os.path.join(self.cgroup_fullpath, TASKS_FILENAME)) as f:
             tasks += f.read()
 
-        os.makedirs(self.resgroup_dir, exist_ok=True)
+        try:
+            os.makedirs(self.resgroup_dir, exist_ok=True)
+        except OSError as e:
+            if e.errno == errno.ENOSPC:  # "No space left on device"
+                raise Exception("Limit of workloads reached! (Oot of available CLoSes/RMIDs!)")
+            raise
+
         with open(self.resgroup_tasks, 'w') as f:
             for task in tasks.split():
                 f.write(task)

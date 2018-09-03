@@ -13,7 +13,7 @@ from owca.containers import Container
 from owca.detectors import TasksMeasurements, convert_anomalies_to_metrics
 from owca.mesos import MesosTask, create_metrics
 from owca.metrics import Metric
-from owca.resctrl import check_resctrl
+from owca.resctrl import check_resctrl, cleanup_resctrl
 from owca.perf import are_privileges_sufficient
 
 log = logging.getLogger(__name__)
@@ -108,6 +108,9 @@ class DetectionRunner:
         elif not self.rdt_enabled:
             log.warning('Rdt disabled. Skipping collecting measurements '
                         'and resctrl synchronization')
+        else:
+            # Resctrl is enabled and available - cleanup previous runs.
+            cleanup_resctrl()
 
         if not are_privileges_sufficient():
             log.critical("Impossible to use perf_event_open. You need to: be root; or adjust "
