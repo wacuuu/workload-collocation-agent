@@ -4,7 +4,7 @@ from unittest import mock
 
 from confluent_kafka import KafkaError
 
-from rmi_kafka_consumer.server import (consume_one_message,
+from owca_kafka_consumer.server import (consume_one_message,
                                        KafkaConsumptionException,
                                        create_kafka_consumer,
                                        http_get_handler)
@@ -52,7 +52,7 @@ def create_consumer_mock__error_code(error_code):
 MSG_VAL = "Message".encode('utf-8')  # in bytes
 
 
-@mock.patch('rmi_kafka_consumer.server.confluent_kafka.Consumer',
+@mock.patch('owca_kafka_consumer.server.confluent_kafka.Consumer',
             return_value=create_consumer_mock__consumed(MSG_VAL))
 def test_consume_one_message__consumed(mock_kafka_consumer):
     kafka_consumer = create_kafka_consumer(["any"], "any", "any")
@@ -60,7 +60,7 @@ def test_consume_one_message__consumed(mock_kafka_consumer):
     assert msg == MSG_VAL.decode('utf-8')
 
 
-@mock.patch('rmi_kafka_consumer.server.confluent_kafka.Consumer',
+@mock.patch('owca_kafka_consumer.server.confluent_kafka.Consumer',
             return_value=mock.Mock(poll=mock.Mock(return_value=None)))
 def test_consume_one_message__timeout(mock_kafka_consumer):
     """Timeout on reading from kafka -- return message is None."""
@@ -69,7 +69,7 @@ def test_consume_one_message__timeout(mock_kafka_consumer):
     assert msg == ""
 
 
-@mock.patch('rmi_kafka_consumer.server.confluent_kafka.Consumer',
+@mock.patch('owca_kafka_consumer.server.confluent_kafka.Consumer',
             return_value=create_consumer_mock__error_code(KafkaError._PARTITION_EOF))
 def test_consume_one_message__error_partition_eof(mock_kafka_consumer):
     """_PARTITION_EOF is special exceptional case: we do not differ it from timeout.
@@ -79,7 +79,7 @@ def test_consume_one_message__error_partition_eof(mock_kafka_consumer):
     assert msg == ""
 
 
-@mock.patch('rmi_kafka_consumer.server.confluent_kafka.Consumer',
+@mock.patch('owca_kafka_consumer.server.confluent_kafka.Consumer',
             return_value=create_consumer_mock__error_code(KafkaError._UNKNOWN_PARTITION))
 def test_consume_one_message__error_unknown_partition(mock_kafka_consumer):
     """Any error code different than _PARTITION_EOF; here _UNKNOWN_PARTITION."""
@@ -88,14 +88,14 @@ def test_consume_one_message__error_unknown_partition(mock_kafka_consumer):
         consume_one_message(kafka_consumer)
 
 
-@mock.patch('rmi_kafka_consumer.server.confluent_kafka.Consumer',
+@mock.patch('owca_kafka_consumer.server.confluent_kafka.Consumer',
             return_value=create_consumer_mock__consumed(MSG_VAL))
 def test_http_get_handler__success(*mock):
     kafka_consumer = create_kafka_consumer(["any"], "any", "any")
     assert http_get_handler(kafka_consumer) == (200, MSG_VAL)
 
 
-@mock.patch('rmi_kafka_consumer.server.confluent_kafka.Consumer',
+@mock.patch('owca_kafka_consumer.server.confluent_kafka.Consumer',
             return_value=create_consumer_mock__error_code(KafkaError._UNKNOWN_PARTITION))
 def test_http_get_handler__error(*mock):
     kafka_consumer = create_kafka_consumer(["any"], "any", "any")

@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='rmi_kafka_consumer',
+    name='owca_kafka_consumer',
     version='0.0.1',
     author='Intel',
     description='Expose data from kafka to prometheus',
