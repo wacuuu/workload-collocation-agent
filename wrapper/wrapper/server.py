@@ -2,8 +2,8 @@ import logging
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from typing import Tuple, List
 
-from rmi import storage
-from rmi.metrics import Metric
+from owca import storage
+from owca.metrics import Metric
 from wrapper.parser import parse_loop
 
 log = logging.getLogger(__name__)

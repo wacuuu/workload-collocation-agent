@@ -14,8 +14,8 @@ setup(
         'Topic :: System :: Distributed Computing',
     ],
     install_requires=[
-        # rmi package version should comply with current version in the rmi submodule
-        'rmi==0.1.dev68+g220fa16',
+        # owca package version should comply with current version in the owca submodule
+        'owca==0.1.dev71+gfc07b90',
     ],
     tests_require=[
         'pytest',

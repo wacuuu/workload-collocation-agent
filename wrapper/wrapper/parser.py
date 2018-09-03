@@ -5,9 +5,9 @@ import time
 from io import TextIOWrapper
 from typing import List, Dict, Callable
 
-import rmi
-from rmi.metrics import Metric, MetricType
-from rmi.storage import KafkaStorage
+import owca
+from owca.metrics import Metric, MetricType
+from owca.storage import KafkaStorage
 
 log = logging.getLogger(__name__)
 ParseFunc = Callable[[TextIOWrapper, str, str, Dict[str, str]], List[Metric]]
@@ -69,7 +69,7 @@ def kafka_store_with_retry(kafka_storage: KafkaStorage, metrics: List[Metric]):
     for attempt in range(MAX_ATTEMPTS):
         try:
             kafka_storage.store(metrics)
-        except rmi.storage.FailedDeliveryException:
+        except owca.storage.FailedDeliveryException:
             log.warning("Failed to deliver message to kafka, "
                         "tried {0} times".format(attempt + 1))
             if attempt == MAX_ATTEMPTS - 1:

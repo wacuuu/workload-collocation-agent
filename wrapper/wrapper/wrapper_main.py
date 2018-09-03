@@ -5,7 +5,7 @@ import subprocess
 import threading
 from functools import partial
 
-from rmi.storage import KafkaStorage
+from owca.storage import KafkaStorage
 from wrapper.parser import default_parse, parse_loop, DEFAULT_REGEXP, ParseFunc
 from wrapper.server import run_server
 
@@ -119,7 +119,7 @@ def prepare_argument_parser():
         '--kafka_topic',
         help='Kafka messages topic, passed to KafkaStorage',
         dest='kafka_topic',
-        default='rmi_metrics',
+        default='owca_metrics',
         type=str
     )
     return parser

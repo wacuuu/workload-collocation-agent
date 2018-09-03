@@ -1,7 +1,7 @@
 from io import TextIOWrapper
 from typing import List, Dict
 
-from rmi.metrics import Metric, MetricType
+from owca.metrics import Metric, MetricType
 from wrapper import wrapper_main
 
 

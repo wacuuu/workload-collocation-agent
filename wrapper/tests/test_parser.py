@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import patch, Mock, call
 from io import StringIO
 
-from rmi.metrics import Metric, MetricType
-from rmi.storage import FailedDeliveryException, KafkaStorage
+from owca.metrics import Metric, MetricType
+from owca.storage import FailedDeliveryException, KafkaStorage
 from wrapper.parser import default_parse, kafka_store_with_retry, DEFAULT_REGEXP, MAX_ATTEMPTS
 
 

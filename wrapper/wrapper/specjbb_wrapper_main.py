@@ -3,7 +3,7 @@ import logging
 from typing import List, Dict
 import re
 
-from rmi.metrics import Metric, MetricType
+from owca.metrics import Metric, MetricType
 from wrapper import wrapper_main
 
 log = logging.getLogger(__name__)

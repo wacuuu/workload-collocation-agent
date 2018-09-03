@@ -77,8 +77,8 @@ wrapper.example_workload_wrapper and .pex output file:
     [testenv:example_package]
     deps =
         pex
-        -e ./rmi
-    commands = pex . ./rmi -o dist/example_workload_wrapper.pex --disable-cache -m wrapper.example_workload_wrapper
+        -e ./owca
+    commands = pex . ./owca -o dist/example_workload_wrapper.pex --disable-cache -m wrapper.example_workload_wrapper
 
 Remember to extend the list of environments in tox.ini:
 
