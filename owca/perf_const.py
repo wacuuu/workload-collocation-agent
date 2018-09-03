@@ -1,5 +1,5 @@
 import ctypes
-from rmi.metrics import MetricName
+from owca.metrics import MetricName
 
 # x86 specific, from arch/x86/include/generated/uapi/asm/unistd_64.h
 PERF_EVENT_OPEN_NR = 298

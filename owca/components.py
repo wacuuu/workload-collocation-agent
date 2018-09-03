@@ -1,11 +1,11 @@
 from typing import List
 import pkg_resources
 
-from rmi import config
-from rmi import detectors
-from rmi import mesos
-from rmi import runner
-from rmi import storage
+from owca import config
+from owca import detectors
+from owca import mesos
+from owca import runner
+from owca import storage
 
 
 def register_components(extra_components: List[str]):

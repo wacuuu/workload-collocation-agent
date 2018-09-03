@@ -1,8 +1,8 @@
-from rmi.cgroups import Cgroup
+from owca.cgroups import Cgroup
 
 from unittest.mock import patch, mock_open
 
-from rmi.metrics import MetricName
+from owca.metrics import MetricName
 
 
 @patch('builtins.open', mock_open(read_data='100'))

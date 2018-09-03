@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 
 import pytest
 
-from rmi import config
-from rmi import testing
+from owca import config
+from owca import testing
 
 
 @config.register

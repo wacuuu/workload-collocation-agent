@@ -1,7 +1,7 @@
 from unittest import mock
-from rmi import main
-from rmi.mesos import MesosTask
-from rmi.logger import init_logging
+from owca import main
+from owca.mesos import MesosTask
+from owca.logger import init_logging
 
 
 yaml_config = '''
@@ -26,15 +26,15 @@ mesos_tasks_mocks = [
 ]
 
 
-@mock.patch('sys.argv', ['rmi', '-c', 'configs/no_existing_file.yaml',
+@mock.patch('sys.argv', ['owca', '-c', 'configs/no_existing_file.yaml',
                          '-r', 'example.external_package:ExampleDetector', '-l', 'trace'])
 @mock.patch('os.rmdir')
-@mock.patch('rmi.config.open', mock.mock_open(read_data=yaml_config))
-@mock.patch('rmi.mesos.MesosNode.get_tasks', return_value=mesos_tasks_mocks)
-@mock.patch('rmi.resctrl.ResGroup.sync')
-@mock.patch('rmi.containers.PerfCounters')
-@mock.patch('rmi.runner.DetectionRunner.wait_or_finish', return_value=False)
+@mock.patch('owca.config.open', mock.mock_open(read_data=yaml_config))
+@mock.patch('owca.mesos.MesosNode.get_tasks', return_value=mesos_tasks_mocks)
+@mock.patch('owca.resctrl.ResGroup.sync')
+@mock.patch('owca.containers.PerfCounters')
+@mock.patch('owca.runner.DetectionRunner.wait_or_finish', return_value=False)
 def test_main(*mocks):
     main.main()
     # restore 'silent' logging level
-    init_logging('critical', 'rmi')
+    init_logging('critical', 'owca')

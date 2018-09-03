@@ -4,17 +4,17 @@ import logging
 import time
 
 
-from rmi import detectors
-from rmi import logger
-from rmi import mesos
-from rmi import platforms
-from rmi import storage
-from rmi.containers import Container
-from rmi.detectors import TasksMeasurements, convert_anomalies_to_metrics
-from rmi.mesos import MesosTask, create_metrics
-from rmi.metrics import Metric
-from rmi.resctrl import check_resctrl
-from rmi.perf import are_privileges_sufficient
+from owca import detectors
+from owca import logger
+from owca import mesos
+from owca import platforms
+from owca import storage
+from owca.containers import Container
+from owca.detectors import TasksMeasurements, convert_anomalies_to_metrics
+from owca.mesos import MesosTask, create_metrics
+from owca.metrics import Metric
+from owca.resctrl import check_resctrl
+from owca.perf import are_privileges_sufficient
 
 log = logging.getLogger(__name__)
 

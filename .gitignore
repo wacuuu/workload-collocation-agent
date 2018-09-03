@@ -9,5 +9,6 @@ __pycache__/
 /.tox/
 /.cache/
 /.coach/
-/dist/rmi.pex
+/dist/owca.pex
 /gym_workloads-*
+.coverage

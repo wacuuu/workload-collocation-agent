@@ -2,7 +2,7 @@ import os
 
 from dataclasses import dataclass
 
-from rmi.metrics import Measurements, MetricName
+from owca.metrics import Measurements, MetricName
 
 
 CPU_USAGE = 'cpuacct.usage'

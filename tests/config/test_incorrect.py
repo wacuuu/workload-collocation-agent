@@ -1,6 +1,6 @@
 from io import StringIO
 
-from rmi import config
+from owca import config
 
 import pytest
 

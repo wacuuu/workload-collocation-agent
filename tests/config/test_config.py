@@ -1,5 +1,5 @@
-from rmi import config
-from rmi import testing
+from owca import config
+from owca import testing
 
 
 class OldClass:

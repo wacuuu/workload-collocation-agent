@@ -2,10 +2,10 @@ from unittest.mock import patch
 
 import pytest
 
-from rmi.metrics import Metric, MetricName
-from rmi.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
+from owca.metrics import Metric, MetricName
+from owca.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
     collect_topology_information, collect_platform_information
-from rmi.testing import create_open_mock
+from owca.testing import create_open_mock
 
 
 @pytest.mark.parametrize("raw_meminfo_output,expected", [
@@ -83,9 +83,9 @@ def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks)
 
 
 @patch('socket.gethostname', return_value="test_host")
-@patch('rmi.platforms.parse_proc_meminfo', return_value=1337)
-@patch('rmi.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
-@patch('rmi.platforms.collect_topology_information', return_value=(2, 1, 1))
+@patch('owca.platforms.parse_proc_meminfo', return_value=1337)
+@patch('owca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
+@patch('owca.platforms.collect_topology_information', return_value=(2, 1, 1))
 def test_collect_platform_information(*mocks):
     assert collect_platform_information() == (
         Platform(1, 1, 2, {0: 100, 1: 200}, 1337),

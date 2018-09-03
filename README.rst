@@ -1,6 +1,6 @@
-==========================
-Resource Mesos Integration
-==========================
+=====================================================
+OWCA - Orchestration-Aware Workload Collocation Agent
+=====================================================
 
 Requirements
 ============
@@ -16,8 +16,8 @@ Development installation & running tests.
 
 .. code:: shell-session
 
-   git clone https://github.intel.com/serenity/rmi
-   cd rmi
+   git clone https://github.intel.com/serenity/owca
+   cd owca
 
 
 Using pipenv for creating developer's environment
@@ -34,7 +34,7 @@ In case of any troubles check `pragmatic installation of pipenv.`_
 
 .. _`pragmatic installation of pipenv.`: https://docs.pipenv.org/install/#pragmatic-installation-of-pipenv
 
-Then prepare virtual environment for rmi project.
+Then prepare virtual environment for owca project.
 
 .. code:: shell-session
 
@@ -64,7 +64,7 @@ Building executable binary (distribution)
    tox -e package
 
 
-Results in single distributable and executable binary in ``dist/rmi.pex``.
+Results in single distributable and executable binary in ``dist/owca.pex``.
 
 
 Configuration
@@ -75,7 +75,7 @@ Available features:
 - Create complex and configure python objects using `YAML tags`_ e.g. Runner, MesosNode, Storage
 - Passing arguments and simple parameters type check
 - Including other yaml or json files
-- Register any external class with ``-r`` or by using ``rmi.config.register`` decorator API 
+- Register any external class with ``-r`` or by using ``owca.config.register`` decorator API 
 
 .. _`YAML tags`: http://yaml.org/spec/1.2/spec.html#id2764295
 
@@ -100,9 +100,9 @@ Assuming that external implementation of detector is provided as
 
     #example/external_package.py
 
-    from rmi import detectors
-    from rmi import mesos
-    from rmi import metrics
+    from owca import detectors
+    from owca import mesos
+    from owca import metrics
 
 
     class ExampleDetector(detectors.AnomalyDetector):
@@ -147,16 +147,16 @@ you can run Resource Mesos Integration in following way:
 
 .. code:: shell-session
 
-    # dist/rmi.pex -c example.yaml -r example.external_package:ExampleDetector -l debug
+    # dist/owca.pex -c example.yaml -r example.external_package:ExampleDetector -l debug
 
 you will receive output:
 
 .. code:: shell-session
 
-    2018-07-13 14:51:32,829 DEBUG    {MainThread} [rmi.logger] level=DEBUG
-    2018-07-13 14:51:32,829 DEBUG    {MainThread} [rmi.main] started PID=30048
-    2018-07-13 14:51:32,913 DEBUG    {MainThread} [rmi.storage] [Metric(name='platform_dummy', value=1, labels={}, type=None, help=None)]
-    2018-07-13 14:51:32,913 DEBUG    {MainThread} [rmi.storage] [Metric(name='anomaly', value=1, labels={'task_id': 'task_id', 'resource': <ContendedResource.CPUS: 'cpus'>, 'uuid': <bound method ContentionAnomaly.uuid of ContentionAnomaly(task_ids=['task_id'], resource=<ContendedResource.CPUS: 'cpus'>)>}, type=<MetricType.COUNTER: 'counter'>, help=None), Metric(name='some_debug', value=2, labels={'version': 2}, type=None, help=None)]
+    2018-07-13 14:51:32,829 DEBUG    {MainThread} [owca.logger] level=DEBUG
+    2018-07-13 14:51:32,829 DEBUG    {MainThread} [owca.main] started PID=30048
+    2018-07-13 14:51:32,913 DEBUG    {MainThread} [owca.storage] [Metric(name='platform_dummy', value=1, labels={}, type=None, help=None)]
+    2018-07-13 14:51:32,913 DEBUG    {MainThread} [owca.storage] [Metric(name='anomaly', value=1, labels={'task_id': 'task_id', 'resource': <ContendedResource.CPUS: 'cpus'>, 'uuid': <bound method ContentionAnomaly.uuid of ContentionAnomaly(task_ids=['task_id'], resource=<ContendedResource.CPUS: 'cpus'>)>}, type=<MetricType.COUNTER: 'counter'>, help=None), Metric(name='some_debug', value=2, labels={'version': 2}, type=None, help=None)]
 
 
 
@@ -171,7 +171,7 @@ Instead of providing class as command line parameter you can register the class 
     #example_package/example_module.py
 
     ...
-    from rmi import config
+    from owca import config
 
     @config.register
     class ExampleDetector(detectors.AnomalyDetector):
@@ -183,4 +183,4 @@ then you can run integration by just providing config file:
 
 .. code:: shell-session
 
-    # dist/rmi.pex -c example.yaml -l debug
+    # dist/owca.pex -c example.yaml -l debug

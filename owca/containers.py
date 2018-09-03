@@ -2,10 +2,10 @@ from typing import List
 
 from dataclasses import dataclass
 
-from rmi.resctrl import ResGroup
-from rmi.cgroups import Cgroup
-from rmi.perf import PerfCounters
-from rmi.metrics import Measurements, MetricName
+from owca.resctrl import ResGroup
+from owca.cgroups import Cgroup
+from owca.perf import PerfCounters
+from owca.metrics import Measurements, MetricName
 
 
 DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.CACHE_MISSES)

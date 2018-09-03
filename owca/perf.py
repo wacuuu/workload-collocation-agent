@@ -4,8 +4,8 @@ import os
 import struct
 from typing import List, Dict, BinaryIO
 
-from rmi import perf_const as pc
-from rmi.metrics import Measurements, MetricName
+from owca import perf_const as pc
+from owca.metrics import Measurements, MetricName
 
 LIBC = ctypes.CDLL('libc.so.6', use_errno=True)
 

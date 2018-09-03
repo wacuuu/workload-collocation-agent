@@ -61,7 +61,7 @@ def trace(log):
 
     Example usage:
 
-    # rmi/some_module.py
+    # owca/some_module.py
     log = logging.getLogger(__name__)
 
     @trace(log)
@@ -71,8 +71,8 @@ def trace(log):
     some_function(1)
 
     output in logs (when trace is enabled!)
-    [TRACE] rmi.some_module: -> some_function(args=(1,), kw={})
-    [TRACE] rmi.some_module: <- some_function(...) = 2 (time=1.5s)
+    [TRACE] owca.some_module: -> some_function(args=(1,), kw={})
+    [TRACE] owca.some_module: <- some_function(...) = 2 (time=1.5s)
 
     """
     def _trace(func):

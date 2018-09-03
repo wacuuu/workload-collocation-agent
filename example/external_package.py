@@ -1,7 +1,7 @@
-from rmi.metrics import Metric
-from rmi.detectors import TasksMeasurements, ContentionAnomaly, ContendedResource, AnomalyDetector
-from rmi.mesos import TaskId
-from rmi.platforms import Platform
+from owca.metrics import Metric
+from owca.detectors import TasksMeasurements, ContentionAnomaly, ContendedResource, AnomalyDetector
+from owca.mesos import TaskId
+from owca.platforms import Platform
 
 
 class ExampleDetector(AnomalyDetector):

@@ -3,9 +3,9 @@
 import os
 from io import StringIO
 
-from rmi.detectors import ContendedResource, ContentionAnomaly, _create_uuid_from_tasks_ids
-from rmi.mesos import MesosTask
-from rmi.metrics import Metric, MetricType
+from owca.detectors import ContendedResource, ContentionAnomaly, _create_uuid_from_tasks_ids
+from owca.mesos import MesosTask
+from owca.metrics import Metric, MetricType
 
 
 def relative_module_path(module_file, relative_path):

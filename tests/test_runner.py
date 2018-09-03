@@ -1,19 +1,19 @@
 import pytest
 from unittest.mock import patch, Mock, call
 
-from rmi.runner import _calculate_desired_state, DetectionRunner
-from rmi.mesos import MesosNode
-from rmi.containers import Container
-from rmi import storage
-from rmi import platforms
-from rmi.metrics import Metric
-from rmi.detectors import AnomalyDetector
-from rmi.testing import anomaly_metric, anomaly, task
+from owca.runner import _calculate_desired_state, DetectionRunner
+from owca.mesos import MesosNode
+from owca.containers import Container
+from owca import storage
+from owca import platforms
+from owca.metrics import Metric
+from owca.detectors import AnomalyDetector
+from owca.testing import anomaly_metric, anomaly, task
 
 
 def container(cgroup_path):
     """Helper method to create container with patched subsystems."""
-    with patch('rmi.containers.ResGroup'), patch('rmi.containers.PerfCounters'):
+    with patch('owca.containers.ResGroup'), patch('owca.containers.PerfCounters'):
         return Container(cgroup_path, rdt_enabled=False)
 
 
@@ -56,10 +56,10 @@ def test_calculate_desired_state(
     assert containers_to_delete == expected_containers_to_delete
 
 
-@patch('rmi.containers.ResGroup')
-@patch('rmi.containers.PerfCounters')
-@patch('rmi.containers.Container.sync')
-@patch('rmi.containers.Container.cleanup')
+@patch('owca.containers.ResGroup')
+@patch('owca.containers.PerfCounters')
+@patch('owca.containers.Container.sync')
+@patch('owca.containers.Container.cleanup')
 @pytest.mark.parametrize('tasks,existing_containers,expected_running_containers', (
     ([], {},
      {}),
@@ -99,10 +99,10 @@ def test_sync_containers_state(cleanup_mock, sync_mock, PerfCoutners_mock, ResGr
 
 
 # We are mocking objects used by containers.
-@patch('rmi.runner.are_privileges_sufficient', return_value=True)
-@patch('rmi.containers.ResGroup')
-@patch('rmi.containers.PerfCounters')
-@patch('rmi.containers.Cgroup.get_measurements', return_value=dict(cpu_usage=23))
+@patch('owca.runner.are_privileges_sufficient', return_value=True)
+@patch('owca.containers.ResGroup')
+@patch('owca.containers.PerfCounters')
+@patch('owca.containers.Cgroup.get_measurements', return_value=dict(cpu_usage=23))
 def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
                                  ResGroup_mock, are_privileges_sufficient_mock):
     """Tests proper interaction between runner instance and functions for
@@ -129,7 +129,7 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
     runner.wait_or_finish = Mock(return_value=False)
 
     platform_mock = Mock(spec=platforms.Platform)
-    with patch('rmi.platforms.collect_platform_information', return_value=(
+    with patch('owca.platforms.collect_platform_information', return_value=(
             platform_mock, [metric('platform-cpu-usage')], {})):
         runner.run()
 

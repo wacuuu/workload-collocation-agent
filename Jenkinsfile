@@ -6,7 +6,7 @@ pipeline {
           stage("Run tests") {
               steps {
                   sh '''
-                    cd $JENKINS_HOME/workspace/rmi
+                    cd $JENKINS_HOME/workspace/owca
                     pipenv install --dev
                     pipenv run tox
                   '''         

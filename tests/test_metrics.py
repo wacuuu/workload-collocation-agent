@@ -1,8 +1,8 @@
 import pytest
 
-from rmi.mesos import create_metrics
-from rmi.metrics import Metric
-from rmi.testing import task
+from owca.mesos import create_metrics
+from owca.metrics import Metric
+from owca.testing import task
 
 
 @pytest.mark.parametrize('task,task_measurements,expected_metrics', (

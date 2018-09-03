@@ -1,7 +1,7 @@
 from unittest.mock import call, MagicMock, patch
 
-from rmi.resctrl import ResGroup, check_resctrl
-from rmi.testing import create_open_mock
+from owca.resctrl import ResGroup, check_resctrl
+from owca.testing import create_open_mock
 
 
 @patch('builtins.open', new=create_open_mock({
@@ -13,7 +13,7 @@ def test_check_resctrl(*mock):
     assert check_resctrl()
 
 
-@patch('rmi.resctrl.log.warning')
+@patch('owca.resctrl.log.warning')
 @patch('os.path.exists', return_value=True)
 @patch('os.makedirs')
 def test_sync(makedirs_mock, exists_mock, log_warning_mock):
@@ -40,7 +40,7 @@ def test_sync(makedirs_mock, exists_mock, log_warning_mock):
         resctrl_file_mock_complex_name.assert_has_calls([call().__enter__().write('123')])
 
 
-@patch('rmi.resctrl.log.warning')
+@patch('owca.resctrl.log.warning')
 @patch('os.path.exists', return_value=False)
 def test_sync_resctrl_not_mounted(exists_mock, log_warning_mock):
     cgroup_path = "/ddd"

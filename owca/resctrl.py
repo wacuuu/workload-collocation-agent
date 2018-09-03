@@ -1,8 +1,8 @@
 import logging
 import os
 
-from rmi.cgroups import BASE_SUBSYSTEM_PATH
-from rmi.metrics import Measurements, MetricName
+from owca.cgroups import BASE_SUBSYSTEM_PATH
+from owca.metrics import Measurements, MetricName
 
 BASE_RESCTRL_PATH = '/sys/fs/resctrl'
 TASKS_FILENAME = 'tasks'

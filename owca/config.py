@@ -21,7 +21,7 @@ import warnings
 
 from ruamel import yaml
 
-from rmi import logger
+from owca import logger
 
 warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
 

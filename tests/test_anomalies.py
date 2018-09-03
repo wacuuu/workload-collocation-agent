@@ -1,7 +1,7 @@
 import pytest
 
-from rmi.detectors import convert_anomalies_to_metrics
-from rmi.testing import anomaly, anomaly_metric
+from owca.detectors import convert_anomalies_to_metrics
+from owca.testing import anomaly, anomaly_metric
 
 
 @pytest.mark.parametrize('anomalies,expected_metrics', (

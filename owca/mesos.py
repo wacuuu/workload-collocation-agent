@@ -5,7 +5,7 @@ import urllib.parse
 import requests
 
 # Mesos tasks id
-from rmi.metrics import Measurements, Metric
+from owca.metrics import Measurements, Metric
 
 TaskId = str
 

@@ -5,7 +5,7 @@ from typing import List, Dict, Set, Tuple
 
 from dataclasses import dataclass
 
-from rmi.metrics import Metric, MetricName
+from owca.metrics import Metric, MetricName
 
 # 0-based logical processor number (matches the value of "processor" in /proc/cpuinfo)
 CpuId = int

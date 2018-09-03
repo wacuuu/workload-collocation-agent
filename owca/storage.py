@@ -12,8 +12,8 @@ import re
 import confluent_kafka
 from dataclasses import dataclass, field
 
-from rmi.metrics import Metric, MetricType
-from rmi import logger
+from owca.metrics import Metric, MetricType
+from owca import logger
 
 log = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ def is_convertable_to_prometheus_exposition_format(metrics: List[Metric]) -> (bo
                 return (False, "Used reserved label name {} in metric {}."
                                .format(label_key, metric.name))
 
-        # Its our internal RMI requirement to use only GAUGE or COUNTER.
+        # Its our internal OWCA requirement to use only GAUGE or COUNTER.
         #   However, as in that function we do validation that code also
         #   goes here.
         if metric.type is not None and (metric.type != MetricType.GAUGE and
@@ -172,7 +172,7 @@ class KafkaStorage(Storage):
             self.store will throw FailedDeliveryException
     """
     brokers_ips: List[str] = field(default=("127.0.0.1:9092",))
-    topic: str = "rmi_metrics"
+    topic: str = "owca_metrics"
     max_timeout_in_seconds: float = 0.5  # defaults half of a second
 
     def __post_init__(self) -> None:

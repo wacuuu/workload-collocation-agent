@@ -1,9 +1,9 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='rmi',
+    name='owca',
     author='Intel',
-    description='Resource Mesos Integrator',
+    description='Orchestration-aware Workload Collocation Agent',
     classifiers = [
         'Development Status :: 2 - Pre-Alpha',
         'Environment :: Console',

@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Dict
 
-from rmi.metrics import Metric, Measurements, MetricType
-from rmi.mesos import TaskId
-from rmi.platforms import Platform
+from owca.metrics import Metric, Measurements, MetricType
+from owca.mesos import TaskId
+from owca.platforms import Platform
 
 
 # Mapping from task to its measurements.
