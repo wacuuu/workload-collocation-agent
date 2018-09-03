@@ -24,3 +24,14 @@ wrapper_labels = {
     'workload_uniq_id': workload_uniq_id,
     'env_uniq_id': env_uniq_id,
 }
+
+#Pre 0.20 way of adding metadata
+class AddMetadata:
+
+    def __init__(self, labels):
+        self.labels = labels		
+    
+    def pre_create_job(self, config):
+        for label_nama, label_value in self.labels.items():
+            config.add_metadata(label_nama, label_value)
+        return config

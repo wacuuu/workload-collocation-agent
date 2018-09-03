@@ -32,6 +32,7 @@ jobs = [
     cluster=cluster,
     environment='staging'+env_uniq_id,
     role=role,
+    enable_hooks=True,
     container=Mesos(
       image=DockerImage(
         # using generic cassandra image
@@ -138,3 +139,5 @@ jobs = [
     ),
   )
 ]
+
+hooks = [AddMetadata(wrapper_labels)]

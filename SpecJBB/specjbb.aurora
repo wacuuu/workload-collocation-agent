@@ -119,6 +119,8 @@ injector_job = BaseJob(
 backend_job = BaseJob(
     name='specjbb_backend--{}'.format(workload_uniq_id),
     task=backend_task,
+    enable_hooks=True,
     constraints={'own_ip': application_host_ip})
 
 jobs = [controller_job, injector_job, backend_job]
+hooks = [AddMetadata(wrapper_labels)]

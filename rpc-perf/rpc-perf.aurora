@@ -39,6 +39,7 @@ jobs = [
         cluster=cluster,
         environment='staging' + env_uniq_id,
         role=role,
+        enable_hooks=True,
         container=Mesos(
             image=DockerImage(
                 name=docker_registry + '/' + application_image,
@@ -71,6 +72,7 @@ jobs = [
         cluster=cluster,
         environment='staging' + env_uniq_id,
         role=role,
+        enable_hooks=True,
         container=Mesos(
             image=DockerImage(
                 name=docker_registry + '/' + application_image,
@@ -127,3 +129,5 @@ jobs = [
         )
     ),
 ]
+
+hooks = [AddMetadata(wrapper_labels)]

@@ -21,6 +21,7 @@ jobs = [
         cluster=cluster,
         environment='staging' + env_uniq_id,
         role=role,
+        enable_hooks=True,
         constraints=dict(own_ip=application_host_ip),
         container=Mesos(image=DockerImage(
             name=docker_registry + '/serenity/tensorflow-inference', tag=tf_inference_image_tag,
@@ -46,3 +47,5 @@ jobs = [
         )
     )
 ]
+
+hooks = [AddMetadata(wrapper_labels)]
