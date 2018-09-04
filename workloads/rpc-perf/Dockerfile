@@ -14,8 +14,6 @@ RUN curl https://sh.rustup.rs -sSf | \
 RUN git clone https://github.com/twitter/rpc-perf.git
 WORKDIR /rpc-perf
 RUN git checkout 8708682a73efae7d91e5d17a9867e7d1c770482f
-RUN cargo build --release
-
 ADD /workloads/rpc-perf/intel_rpc-perf.patch .
 RUN git apply intel_rpc-perf.patch
 
