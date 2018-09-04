@@ -13,4 +13,4 @@ if os.path.isdir(dataset_dir):
     print("Found dataset directory, exiting")
     exit(0)
 print("Dataset not found, using kaggle-api tool for download")
-kaggle.api.dataset_download_files(dataset, path="./tensorflow-inference/")
+kaggle.api.dataset_download_files(dataset, path="./tensorflow-inference/", unzip=True)

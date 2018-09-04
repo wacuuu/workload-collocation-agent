@@ -13,4 +13,4 @@ if os.path.isfile(dataset_file):
     print("Found dataset archive, exiting")
     exit(0)
 print("Dataset not found, using kaggle-api tool for download")
-kaggle.api.dataset_download_files(dataset, path="./tensorflow-train/")
+kaggle.api.dataset_download_files(dataset, path="./tensorflow-train/", unzip=True)
