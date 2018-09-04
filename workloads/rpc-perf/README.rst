@@ -6,7 +6,7 @@ Building Docker image
 
 .. code-block:: sh
 
-    docker build -f rpc-perf/Dockerfile -t serenity/rpc-perf .
+    docker build -f workloads/rpc-perf/Dockerfile -t serenity/rpc-perf .
 
 Running a workload in Aurora cluster
 ====================================

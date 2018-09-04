@@ -16,7 +16,7 @@ Following snippet can be used to build YCSB Docker image:
 
 .. code-block:: sh
 
-    docker build -f cassandra_ycsb/ycsb/Dockerfile -t 192.0.2.200/serenity/ycsb:2 .
+    docker build -f workloads/cassandra_ycsb/ycsb/Dockerfile -t 192.0.2.200/serenity/ycsb:2 .
 
 YCSB image contains Intel patch for generating sinousiod like load.
 

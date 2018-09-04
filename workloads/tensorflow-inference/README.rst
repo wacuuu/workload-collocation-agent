@@ -30,7 +30,7 @@ All commands and scripts should be run from the top directory of the repository.
 
 .. code-block:: sh
 
-    docker build -f tensorflow-inference/Dockerfile -t tensorflow-inference .
+    docker build -f workloads/tensorflow-inference/Dockerfile -t tensorflow-inference .
 
 Running the workload using wrapper
 ----------------------------------

@@ -22,7 +22,7 @@ To build and send to a docker registry:
 
     tag="wrapper-1.0"
     docker_registry=<ip:port>
-    sudo docker build -f SpecJBB/Dockerfile -t specjbb:$tag --network=host .
+    sudo docker build -f workloads/SpecJBB/Dockerfile -t specjbb:$tag --network=host .
     image_id=$(sudo docker images | grep "$tag"  | perl -pe 's/\s+/ /g' | cut -f3 -d' ')
     sudo docker tag $image_id $docker_registry/serenity/specjbb:$tag
     sudo docker push $docker_registry/serenity/specjbb:$tag
