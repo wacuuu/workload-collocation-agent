@@ -27,6 +27,6 @@ RUN echo 'export M2_HOME=/usr/local/maven' >> /etc/profile.d/maven.sh
 RUN echo 'export PATH=${M2_HOME}/bin:${PATH}' >> /etc/profile.d/maven.sh
 
 # Adding YCSB wrapper
-ADD /wrapper/dist/ycsb_wrapper.pex /usr/bin/
+ADD /dist/ycsb_wrapper.pex /usr/bin/
 
 ENTRYPOINT ["./bin/ycsb"]
