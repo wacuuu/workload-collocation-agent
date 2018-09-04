@@ -105,6 +105,8 @@ Platform type definition
         cpus_usage: Dict[CpuId, int]     # counter like, sum of all modes based on /proc/stat "CPU line" with 10ms resolution expressed in [ms]
         total_memory_used: int      # [bytes] based on /proc/meminfo (gauge like) difference between MemTotal and MemAvail (or MemFree)
 
+        timestamp: float # [unit timestamp] just after all nessesary data was collected for platform object (time.time())
+
 
 Example ``Platform`` instance
 =============================
