@@ -1,0 +1,1497 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 8657570..1544256 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -1,26 +1,3 @@
+-[root]
+-name = "rpc-perf"
+-version = "2.1.0-pre"
+-dependencies = [
+- "byteorder 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+- "bytes 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+- "crc 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+- "getopts 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
+- "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+- "log-panics 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
+- "mio 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
+- "mpmc 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+- "pad 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
+- "rand 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
+- "ratelimit 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+- "shuteye 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
+- "simple_logger 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+- "slab 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
+- "tic 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
+- "time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
+- "toml 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+-]
+-
+ [[package]]
+ name = "adler32"
+ version = "1.0.2"
+@@ -36,10 +13,18 @@ name = "arrayvec"
+ version = "0.3.23"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+- "nodrop 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
++ "nodrop 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
+  "odds 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
++[[package]]
++name = "arrayvec"
++version = "0.4.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "nodrop 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
+ [[package]]
+ name = "ascii"
+ version = "0.7.1"
+@@ -50,6 +35,11 @@ name = "bitflags"
+ version = "0.7.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
++[[package]]
++name = "bitflags"
++version = "1.0.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
+ [[package]]
+ name = "build_const"
+ version = "0.2.0"
+@@ -70,6 +60,15 @@ name = "bytes"
+ version = "0.3.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
++[[package]]
++name = "bytes"
++version = "0.4.9"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "byteorder 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "iovec 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
+ [[package]]
+ name = "cfg-if"
+ version = "0.1.2"
+@@ -94,15 +93,7 @@ name = "clocksource"
+ version = "0.2.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+- "libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
+-]
+-
+-[[package]]
+-name = "conv"
+-version = "0.3.3"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+-dependencies = [
+- "custom_derive 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
++ "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
+ [[package]]
+@@ -120,9 +111,34 @@ version = "0.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
+ [[package]]
+-name = "custom_derive"
+-version = "0.1.7"
++name = "crossbeam-deque"
++version = "0.3.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "crossbeam-epoch 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
++ "crossbeam-utils 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "crossbeam-epoch"
++version = "0.4.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "arrayvec 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)",
++ "cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "crossbeam-utils 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "lazy_static 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "memoffset 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
++ "scopeguard 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "crossbeam-utils"
++version = "0.3.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++]
+ 
+ [[package]]
+ name = "deflate"
+@@ -203,6 +219,15 @@ dependencies = [
+  "fuchsia-zircon-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
++[[package]]
++name = "fuchsia-zircon"
++version = "0.3.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "bitflags 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)",
++ "fuchsia-zircon-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
+ [[package]]
+ name = "fuchsia-zircon-sys"
+ version = "0.2.0"
+@@ -211,11 +236,47 @@ dependencies = [
+  "bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
++[[package]]
++name = "fuchsia-zircon-sys"
++version = "0.3.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
++[[package]]
++name = "futures"
++version = "0.1.23"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
++[[package]]
++name = "futures-cpupool"
++version = "0.1.8"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
+ [[package]]
+ name = "getopts"
+ version = "0.2.15"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
++[[package]]
++name = "h2"
++version = "0.1.10"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "byteorder 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "bytes 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
++ "fnv 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "http 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
++ "indexmap 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
++ "slab 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "string 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-io 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
+ [[package]]
+ name = "heatmap"
+ version = "0.6.5"
+@@ -235,6 +296,51 @@ name = "hsl"
+ version = "0.1.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
++[[package]]
++name = "http"
++version = "0.1.8"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "bytes 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
++ "fnv 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
++ "itoa 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "httparse"
++version = "1.3.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
++[[package]]
++name = "hyper"
++version = "0.12.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "bytes 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
++ "h2 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)",
++ "http 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)",
++ "httparse 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "iovec 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
++ "itoa 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
++ "net2 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
++ "time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-executor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-io 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-reactor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-tcp 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-timer 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
++ "want 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "indexmap"
++version = "1.0.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
+ [[package]]
+ name = "inflate"
+ version = "0.2.0"
+@@ -245,10 +351,15 @@ name = "iovec"
+ version = "0.1.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+- "libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
++ "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
+  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
++[[package]]
++name = "itoa"
++version = "0.4.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
+ [[package]]
+ name = "kernel32-sys"
+ version = "0.2.2"
+@@ -258,14 +369,19 @@ dependencies = [
+  "winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
++[[package]]
++name = "lazy_static"
++version = "1.0.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
+ [[package]]
+ name = "lazycell"
+-version = "0.5.1"
++version = "0.6.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
+ [[package]]
+ name = "libc"
+-version = "0.2.32"
++version = "0.2.42"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
+ [[package]]
+@@ -274,50 +390,46 @@ version = "0.3.8"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
+ [[package]]
+-name = "log-panics"
+-version = "1.1.0"
++name = "log"
++version = "0.4.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+- "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
++ "cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
+ [[package]]
+-name = "magenta"
+-version = "0.1.1"
++name = "log-panics"
++version = "1.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+- "conv 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+- "magenta-sys 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
+ [[package]]
+-name = "magenta-sys"
+-version = "0.1.1"
++name = "matches"
++version = "0.1.6"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-dependencies = [
+- "bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)",
+-]
+ 
+ [[package]]
+-name = "matches"
+-version = "0.1.6"
++name = "memoffset"
++version = "0.2.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
+ [[package]]
+ name = "mio"
+-version = "0.6.10"
++version = "0.6.14"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
++ "fuchsia-zircon 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
++ "fuchsia-zircon-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+  "iovec 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+  "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+- "lazycell 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)",
+- "libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
+- "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+- "magenta 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
+- "magenta-sys 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
++ "lazycell 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+  "miow 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+- "net2 0.2.31 (registry+https://github.com/rust-lang/crates.io-index)",
+- "slab 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "net2 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
++ "slab 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
+@@ -327,7 +439,7 @@ version = "0.2.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+  "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+- "net2 0.2.31 (registry+https://github.com/rust-lang/crates.io-index)",
++ "net2 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)",
+  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+  "ws2_32-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+@@ -339,23 +451,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
+ [[package]]
+ name = "net2"
+-version = "0.2.31"
++version = "0.2.33"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+  "cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+- "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+- "libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
+- "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+- "ws2_32-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
++ "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
++ "winapi 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
+ [[package]]
+ name = "nodrop"
+-version = "0.1.9"
++version = "0.1.12"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-dependencies = [
+- "odds 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)",
+-]
+ 
+ [[package]]
+ name = "num"
+@@ -389,6 +496,14 @@ name = "num-traits"
+ version = "0.1.40"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
++[[package]]
++name = "num_cpus"
++version = "1.8.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
+ [[package]]
+ name = "odds"
+ version = "0.2.25"
+@@ -419,19 +534,54 @@ version = "0.3.17"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+  "fuchsia-zircon 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
+- "libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
++ "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
+ [[package]]
+-name = "ratelimit"
++name = "rand"
+ version = "0.4.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "fuchsia-zircon 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
++ "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
++ "winapi 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "ratelimit"
++version = "0.4.4-pre"
+ 
+ [[package]]
+ name = "redox_syscall"
+ version = "0.1.31"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
++[[package]]
++name = "rpc-perf"
++version = "2.1.0-pre"
++dependencies = [
++ "byteorder 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "bytes 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "crc 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "fnv 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)",
++ "getopts 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)",
++ "histogram 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)",
++ "hyper 0.12.7 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log-panics 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "mio 0.6.14 (registry+https://github.com/rust-lang/crates.io-index)",
++ "mpmc 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "pad 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)",
++ "rand 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)",
++ "ratelimit 0.4.4-pre",
++ "shuteye 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "simple_logger 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "slab 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tic 0.2.4",
++ "time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
++ "toml 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
+ [[package]]
+ name = "rustc-serialize"
+ version = "0.3.24"
+@@ -446,6 +596,11 @@ dependencies = [
+  "stb_truetype 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
++[[package]]
++name = "scopeguard"
++version = "0.3.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
+ [[package]]
+ name = "serde"
+ version = "1.0.15"
+@@ -456,7 +611,7 @@ name = "shuteye"
+ version = "0.3.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+- "libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
++ "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
+ [[package]]
+@@ -473,6 +628,11 @@ name = "slab"
+ version = "0.3.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
++[[package]]
++name = "slab"
++version = "0.4.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
+ [[package]]
+ name = "stb_truetype"
+ version = "0.1.2"
+@@ -481,10 +641,14 @@ dependencies = [
+  "byteorder 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
++[[package]]
++name = "string"
++version = "0.1.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
+ [[package]]
+ name = "tic"
+ version = "0.2.4"
+-source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+  "allan 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+  "clocksource 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+@@ -493,7 +657,7 @@ dependencies = [
+  "heatmap 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)",
+  "histogram 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)",
+  "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
+- "mio 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)",
++ "mio 0.6.14 (registry+https://github.com/rust-lang/crates.io-index)",
+  "mpmc 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+  "time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
+  "tiny_http 0.5.8 (registry+https://github.com/rust-lang/crates.io-index)",
+@@ -506,7 +670,7 @@ version = "0.1.38"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ dependencies = [
+  "kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
+- "libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)",
++ "libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)",
+  "redox_syscall 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)",
+  "winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+@@ -525,6 +689,123 @@ dependencies = [
+  "url 0.2.38 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
++[[package]]
++name = "tokio"
++version = "0.1.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "mio 0.6.14 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-executor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-fs 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-io 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-reactor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-tcp 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-threadpool 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-timer 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-udp 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "tokio-codec"
++version = "0.1.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "bytes 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-io 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "tokio-executor"
++version = "0.1.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "tokio-fs"
++version = "0.1.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-io 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-threadpool 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "tokio-io"
++version = "0.1.7"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "bytes 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "tokio-reactor"
++version = "0.1.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
++ "mio 0.6.14 (registry+https://github.com/rust-lang/crates.io-index)",
++ "slab 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-executor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-io 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "tokio-tcp"
++version = "0.1.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "bytes 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "iovec 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
++ "mio 0.6.14 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-io 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-reactor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "tokio-threadpool"
++version = "0.1.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "crossbeam-deque 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)",
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
++ "num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "rand 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-executor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "tokio-timer"
++version = "0.2.4"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-executor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
++[[package]]
++name = "tokio-udp"
++version = "0.1.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "bytes 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
++ "mio 0.6.14 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-codec 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-io 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",
++ "tokio-reactor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
+ [[package]]
+ name = "toml"
+ version = "0.4.2"
+@@ -533,6 +814,11 @@ dependencies = [
+  "serde 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
++[[package]]
++name = "try-lock"
++version = "0.2.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
+ [[package]]
+ name = "unicode-width"
+ version = "0.1.4"
+@@ -557,6 +843,16 @@ dependencies = [
+  "rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)",
+ ]
+ 
++[[package]]
++name = "want"
++version = "0.0.6"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)",
++ "log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
++ "try-lock 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
+ [[package]]
+ name = "waterfall"
+ version = "0.7.0"
+@@ -573,11 +869,30 @@ name = "winapi"
+ version = "0.2.8"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
++[[package]]
++name = "winapi"
++version = "0.3.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++dependencies = [
++ "winapi-i686-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
++ "winapi-x86_64-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
++]
++
+ [[package]]
+ name = "winapi-build"
+ version = "0.1.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ 
++[[package]]
++name = "winapi-i686-pc-windows-gnu"
++version = "0.4.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
++[[package]]
++name = "winapi-x86_64-pc-windows-gnu"
++version = "0.4.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++
+ [[package]]
+ name = "ws2_32-sys"
+ version = "0.2.1"
+@@ -591,20 +906,24 @@ dependencies = [
+ "checksum adler32 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "6cbd0b9af8587c72beadc9f72d35b9fbb070982c9e6203e46e93f10df25f8f45"
+ "checksum allan 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "0781eb79c8595349e5efe3dba454d2a008323cb173a3bdd5f36f21c7f3d97b19"
+ "checksum arrayvec 0.3.23 (registry+https://github.com/rust-lang/crates.io-index)" = "699e63a93b79d717e8c3b5eb1b28b7780d0d6d9e59a72eb769291c83b0c8dc67"
++"checksum arrayvec 0.4.7 (registry+https://github.com/rust-lang/crates.io-index)" = "a1e964f9e24d588183fcb43503abda40d288c8657dfc27311516ce2f05675aef"
+ "checksum ascii 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3ae7d751998c189c1d4468cf0a39bb2eae052a9c58d50ebb3b9591ee3813ad50"
+ "checksum bitflags 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "aad18937a628ec6abcd26d1489012cc0e18c21798210f491af69ded9b881106d"
++"checksum bitflags 1.0.3 (registry+https://github.com/rust-lang/crates.io-index)" = "d0c54bb8f454c567f21197eefcdbf5679d0bd99f2ddbe52e84c77061952e6789"
+ "checksum build_const 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "e90dc84f5e62d2ebe7676b83c22d33b6db8bd27340fb6ffbff0a364efa0cb9c9"
+ "checksum byteorder 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "96c8b41881888cc08af32d47ac4edd52bc7fa27fef774be47a92443756451304"
+ "checksum byteorder 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ff81738b726f5d099632ceaffe7fb65b90212e8dce59d518729e7e8634032d3d"
+ "checksum bytes 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c129aff112dcc562970abb69e2508b40850dd24c274761bb50fb8a0067ba6c27"
++"checksum bytes 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)" = "e178b8e0e239e844b083d5a0d4a156b2654e67f9f80144d48398fcd736a24fb8"
+ "checksum cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d4c819a1287eb618df47cc647173c5c4c66ba19d888a6e50d605672aed3140de"
+ "checksum chrono 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)" = "9213f7cd7c27e95c2b57c49f0e69b1ea65b27138da84a170133fd21b07659c00"
+ "checksum chunked_transfer 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "498d20a7aaf62625b9bf26e637cf7736417cde1d0c99f1d04d1170229a85cf87"
+ "checksum clocksource 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "77b31e7b79cafabc322f19df8c21674955e0a4444caf75693e50788ebc6de8f2"
+-"checksum conv 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "78ff10625fd0ac447827aa30ea8b861fead473bb60aeb73af6c1c58caf0d1299"
+ "checksum crc 1.5.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fba69ea0e15e720f7e1cfe1cf3bc55007fbd41e32b8ae11cfa343e7e5961e79a"
+ "checksum crc-core 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "003d1170779d405378223470f5864b41b79a91969be1260e4de7b4ec069af69c"
+-"checksum custom_derive 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "ef8ae57c4978a2acd8b869ce6b9ca1dfe817bff704c220209fdef2c0b75a01b9"
++"checksum crossbeam-deque 0.3.1 (registry+https://github.com/rust-lang/crates.io-index)" = "fe8153ef04a7594ded05b427ffad46ddeaf22e63fd48d42b3e1e3bb4db07cae7"
++"checksum crossbeam-epoch 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2af0e75710d6181e234c8ecc79f14a97907850a541b13b0be1dd10992f2e4620"
++"checksum crossbeam-utils 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d636a8b3bcc1b409d7ffd3facef8f21dcb4009626adbd0c5e6c4305c07253c7b"
+ "checksum deflate 0.7.17 (registry+https://github.com/rust-lang/crates.io-index)" = "4dddda59aaab719767ab11d3efd9a714e95b610c4445d4435765021e9d52dfb1"
+ "checksum encoding 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)" = "6b0d943856b990d12d3b55b359144ff341533e516d94098b1d3fc1ac666d36ec"
+ "checksum encoding-index-japanese 1.20141219.5 (registry+https://github.com/rust-lang/crates.io-index)" = "04e8b2ff42e9a05335dbf8b5c6f7567e5591d0d916ccef4e0b1710d32a0d0c91"
+@@ -615,51 +934,80 @@ dependencies = [
+ "checksum encoding_index_tests 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "a246d82be1c9d791c5dfde9a2bd045fc3cbba3fa2b11ad558f27d01712f00569"
+ "checksum fnv 1.0.5 (registry+https://github.com/rust-lang/crates.io-index)" = "6cc484842f1e2884faf56f529f960cc12ad8c71ce96cc7abba0a067c98fee344"
+ "checksum fuchsia-zircon 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "f6c0581a4e363262e52b87f59ee2afe3415361c6ec35e665924eb08afe8ff159"
++"checksum fuchsia-zircon 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "2e9763c69ebaae630ba35f74888db465e49e259ba1bc0eda7d06f4a067615d82"
+ "checksum fuchsia-zircon-sys 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "43f3795b4bae048dc6123a6b972cadde2e676f9ded08aef6bb77f5f157684a82"
++"checksum fuchsia-zircon-sys 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "3dcaa9ae7725d12cdb85b3ad99a434db70b468c09ded17e012d86b5c1010f7a7"
++"checksum futures 0.1.23 (registry+https://github.com/rust-lang/crates.io-index)" = "884dbe32a6ae4cd7da5c6db9b78114449df9953b8d490c9d7e1b51720b922c62"
++"checksum futures-cpupool 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "ab90cde24b3319636588d0c35fe03b1333857621051837ed769faefb4c2162e4"
+ "checksum getopts 0.2.15 (registry+https://github.com/rust-lang/crates.io-index)" = "65922871abd2f101a2eb0eaebadc66668e54a87ad9c3dd82520b5f86ede5eff9"
++"checksum h2 0.1.10 (registry+https://github.com/rust-lang/crates.io-index)" = "6229ac66d3392dd83288fe04defd4b353354b15bbe07820d53dda063a736afcc"
+ "checksum heatmap 0.6.5 (registry+https://github.com/rust-lang/crates.io-index)" = "2e718532c484d0bb83c317ec560a2261d0404caead1e3c0db0fdf726964ca379"
+ "checksum histogram 0.6.7 (registry+https://github.com/rust-lang/crates.io-index)" = "6162da8402c959c4d4592e905e490108cac43ff1078c6d3afef4423d1bb42de5"
+ "checksum hsl 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "575fb7f1167f3b88ed825e90eb14918ac460461fdeaa3965c6a50951dee1c970"
++"checksum http 0.1.8 (registry+https://github.com/rust-lang/crates.io-index)" = "0d7f7b919d476c052ff46833ac89aaf205726da8133dae61facad50ec4c9eaec"
++"checksum httparse 1.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7b6288d7db100340ca12873fd4d08ad1b8f206a9457798dfb17c018a33fee540"
++"checksum hyper 0.12.7 (registry+https://github.com/rust-lang/crates.io-index)" = "c087746de95e20e4dabe86606c3a019964a8fde2d5f386152939063c116c5971"
++"checksum indexmap 1.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "08173ba1e906efb6538785a8844dd496f5d34f0a2d88038e95195172fc667220"
+ "checksum inflate 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d1238524675af3938a7c74980899535854b88ba07907bb1c944abe5b8fc437e5"
+ "checksum iovec 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "b6e8b9c2247fcf6c6a1151f1156932be5606c9fd6f55a2d7f9fc1cb29386b2f7"
++"checksum itoa 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "5adb58558dcd1d786b5f0bd15f3226ee23486e24b7b58304b60f64dc68e62606"
+ "checksum kernel32-sys 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "7507624b29483431c0ba2d82aece8ca6cdba9382bff4ddd0f7490560c056098d"
+-"checksum lazycell 0.5.1 (registry+https://github.com/rust-lang/crates.io-index)" = "3b585b7a6811fb03aa10e74b278a0f00f8dd9b45dc681f148bb29fa5cb61859b"
+-"checksum libc 0.2.32 (registry+https://github.com/rust-lang/crates.io-index)" = "56cce3130fd040c28df6f495c8492e5ec5808fb4c9093c310df02b0c8f030148"
++"checksum lazy_static 1.0.2 (registry+https://github.com/rust-lang/crates.io-index)" = "fb497c35d362b6a331cfd94956a07fc2c78a4604cdbee844a81170386b996dd3"
++"checksum lazycell 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)" = "a6f08839bc70ef4a3fe1d566d5350f519c5912ea86be0df1740a7d247c7fc0ef"
++"checksum libc 0.2.42 (registry+https://github.com/rust-lang/crates.io-index)" = "b685088df2b950fccadf07a7187c8ef846a959c142338a48f9dc0b94517eb5f1"
+ "checksum log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)" = "880f77541efa6e5cc74e76910c9884d9859683118839d6a1dc3b11e63512565b"
++"checksum log 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)" = "61bd98ae7f7b754bc53dca7d44b604f733c6bba044ea6f41bc8d89272d8161d2"
+ "checksum log-panics 1.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "26bbb657dd8a31b920792fba3fc60f2c18e9477931c0e01afed98116aa0056a7"
+-"checksum magenta 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4bf0336886480e671965f794bc9b6fce88503563013d1bfb7a502c81fe3ac527"
+-"checksum magenta-sys 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "40d014c7011ac470ae28e2f76a02bfea4a8480f73e701353b49ad7a8d75f4699"
+ "checksum matches 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "100aabe6b8ff4e4a7e32c1c13523379802df0772b82466207ac25b013f193376"
+-"checksum mio 0.6.10 (registry+https://github.com/rust-lang/crates.io-index)" = "dbd91d3bfbceb13897065e97b2ef177a09a438cb33612b2d371bf568819a9313"
++"checksum memoffset 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "0f9dc261e2b62d7a622bf416ea3c5245cdd5d9a7fcc428c0d06804dfce1775b3"
++"checksum mio 0.6.14 (registry+https://github.com/rust-lang/crates.io-index)" = "6d771e3ef92d58a8da8df7d6976bfca9371ed1de6619d9d5a5ce5b1f29b85bfe"
+ "checksum miow 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "8c1f2f3b1cf331de6896aabf6e9d55dca90356cc9960cca7eaaf408a355ae919"
+ "checksum mpmc 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e93e6c806a89abce6b59d120fd62cc9e424afc532453c5ce97328127171dda69"
+-"checksum net2 0.2.31 (registry+https://github.com/rust-lang/crates.io-index)" = "3a80f842784ef6c9a958b68b7516bc7e35883c614004dd94959a4dca1b716c09"
+-"checksum nodrop 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)" = "52cd74cd09beba596430cc6e3091b74007169a56246e1262f0ba451ea95117b2"
++"checksum net2 0.2.33 (registry+https://github.com/rust-lang/crates.io-index)" = "42550d9fb7b6684a6d404d9fa7250c2eb2646df731d1c06afc06dcee9e1bcf88"
++"checksum nodrop 0.1.12 (registry+https://github.com/rust-lang/crates.io-index)" = "9a2228dca57108069a5262f2ed8bd2e82496d2e074a06d1ccc7ce1687b6ae0a2"
+ "checksum num 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)" = "a311b77ebdc5dd4cf6449d81e4135d9f0e3b153839ac90e648a8ef538f923525"
+ "checksum num-integer 0.1.35 (registry+https://github.com/rust-lang/crates.io-index)" = "d1452e8b06e448a07f0e6ebb0bb1d92b8890eea63288c0b627331d53514d0fba"
+ "checksum num-iter 0.1.34 (registry+https://github.com/rust-lang/crates.io-index)" = "7485fcc84f85b4ecd0ea527b14189281cf27d60e583ae65ebc9c088b13dffe01"
+ "checksum num-traits 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)" = "99843c856d68d8b4313b03a17e33c4bb42ae8f6610ea81b28abe076ac721b9b0"
++"checksum num_cpus 1.8.0 (registry+https://github.com/rust-lang/crates.io-index)" = "c51a3322e4bca9d212ad9a158a02abc6934d005490c054a2778df73a70aa0a30"
+ "checksum odds 0.2.25 (registry+https://github.com/rust-lang/crates.io-index)" = "c3df9b730298cea3a1c3faa90b7e2f9df3a9c400d0936d6015e6165734eefcba"
+ "checksum pad 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "d1bf3336e626b898e7263790d432a711d4277e22faea20dd9f70e0cab268fa58"
+ "checksum png 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "48f397b84083c2753ba53c7b56ad023edb94512b2885ffe227c66ff7edb61868"
+ "checksum rand 0.3.17 (registry+https://github.com/rust-lang/crates.io-index)" = "61efcbcd9fa8d8fbb07c84e34a8af18a1ff177b449689ad38a6e9457ecc7b2ae"
+-"checksum ratelimit 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "c2587e63d5dd371de267bab5f73e32306bf457a3b1f389983a1b2c40b36d581f"
++"checksum rand 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "eba5f8cb59cc50ed56be8880a5c7b496bfd9bd26394e176bc67884094145c2c5"
+ "checksum redox_syscall 0.1.31 (registry+https://github.com/rust-lang/crates.io-index)" = "8dde11f18c108289bef24469638a04dce49da56084f2d50618b226e47eb04509"
+ "checksum rustc-serialize 0.3.24 (registry+https://github.com/rust-lang/crates.io-index)" = "dcf128d1287d2ea9d80910b5f1120d0b8eede3fbf1abe91c40d39ea7d51e6fda"
+ "checksum rusttype 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "07b8848db3b5b5ba97020c6a756c0fdf2dbf2ad7c0d06aa4344a3f2f49c3fe17"
++"checksum scopeguard 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)" = "94258f53601af11e6a49f722422f6e3425c52b06245a5cf9bc09908b174f5e27"
+ "checksum serde 1.0.15 (registry+https://github.com/rust-lang/crates.io-index)" = "6a7046c9d4c6c522d10b2d098f9bebe2bef227e0e74044d8c1bfcf6b476af799"
+ "checksum shuteye 0.3.2 (registry+https://github.com/rust-lang/crates.io-index)" = "3ee4f453e0b171800d5ab8e3031009107faa0ce9243c6718bee9d9303ec08efc"
+ "checksum simple_logger 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d5a3b341928cec79e536fe62b75bfe2e35891a5e65801ebfbd2741dddf7d7fac"
+ "checksum slab 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "17b4fcaed89ab08ef143da37bc52adbcc04d4a69014f4c1208d6b51f0c47bc23"
++"checksum slab 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "fdeff4cd9ecff59ec7e3744cbca73dfe5ac35c2aedb2cfba8a1c715a18912e9d"
+ "checksum stb_truetype 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "fcf3270840fc9de208d63e836eb3fdebb85379e7532f42f1b2cbd505fb6fda08"
+-"checksum tic 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "b430518516916da193a0e291754fa906101428802c04ac6fdf92ff81d8b01a7e"
++"checksum string 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "00caf261d6f90f588f8450b8e1230fa0d5be49ee6140fdfbcb55335aff350970"
+ "checksum time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)" = "d5d788d3aa77bc0ef3e9621256885555368b47bd495c13dd2e7413c89f845520"
+ "checksum tiny_http 0.5.8 (registry+https://github.com/rust-lang/crates.io-index)" = "016f040cfc9b5be610de3619eaaa57017fa0b0b678187327bde75fc146e2a41f"
++"checksum tokio 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "8ee337e5f4e501fc32966fec6fe0ca0cc1c237b0b1b14a335f8bfe3c5f06e286"
++"checksum tokio-codec 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "881e9645b81c2ce95fcb799ded2c29ffb9f25ef5bef909089a420e5961dd8ccb"
++"checksum tokio-executor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "8cac2a7883ff3567e9d66bb09100d09b33d90311feca0206c7ca034bc0c55113"
++"checksum tokio-fs 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "40697ecbea5660df15b15d50a077386477d2f6a35002adf01ce76ff9dd9dce48"
++"checksum tokio-io 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)" = "a5c9635ee806f26d302b8baa1e145689a280d8f5aa8d0552e7344808da54cc21"
++"checksum tokio-reactor 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e00ec63bbec2c97ce1178cb0587b2c438b2f6b09d3ee54a33c45a9cf0d530810"
++"checksum tokio-tcp 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ec9b094851aadd2caf83ba3ad8e8c4ce65a42104f7b94d9e6550023f0407853f"
++"checksum tokio-threadpool 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "24ab84f574027b0e875378f31575cf175360891919e93a3490f07e76e00e4efb"
++"checksum tokio-timer 0.2.4 (registry+https://github.com/rust-lang/crates.io-index)" = "028b94314065b90f026a21826cffd62a4e40a92cda3e5c069cc7b02e5945f5e9"
++"checksum tokio-udp 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "43eb534af6e8f37d43ab1b612660df14755c42bd003c5f8d2475ee78cc4600c0"
+ "checksum toml 0.4.2 (registry+https://github.com/rust-lang/crates.io-index)" = "b0601da6c97135c8d330c7a13a013ca6cd4143221b01de2f8d4edc50a9e551c7"
++"checksum try-lock 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)" = "e604eb7b43c06650e854be16a2a03155743d3752dd1c943f6829e26b7a36e382"
+ "checksum unicode-width 0.1.4 (registry+https://github.com/rust-lang/crates.io-index)" = "bf3a113775714a22dcb774d8ea3655c53a32debae63a063acc00a91cc586245f"
+ "checksum url 0.2.38 (registry+https://github.com/rust-lang/crates.io-index)" = "cbaa8377a162d88e7d15db0cf110c8523453edcbc5bc66d2b6fffccffa34a068"
+ "checksum uuid 0.1.18 (registry+https://github.com/rust-lang/crates.io-index)" = "78c590b5bd79ed10aad8fb75f078a59d8db445af6c743e55c4a53227fc01c13f"
++"checksum want 0.0.6 (registry+https://github.com/rust-lang/crates.io-index)" = "797464475f30ddb8830cc529aaaae648d581f99e2036a928877dfde027ddf6b3"
+ "checksum waterfall 0.7.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d064d35e8d8167949da128367d18338025e0f752f7f1783c04bc41017a72026d"
+ "checksum winapi 0.2.8 (registry+https://github.com/rust-lang/crates.io-index)" = "167dc9d6949a9b857f3451275e911c3f44255842c1f7a76f33c55103a909087a"
++"checksum winapi 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "773ef9dcc5f24b7d850d0ff101e542ff24c3b090a9768e03ff889fdef41f00fd"
+ "checksum winapi-build 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)" = "2d315eee3b34aca4797b2da6b13ed88266e6d612562a0c46390af8299fc699bc"
++"checksum winapi-i686-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "ac3b87c63620426dd9b991e5ce0329eff545bccbbb34f3be09ff6fb6ab51b7b6"
++"checksum winapi-x86_64-pc-windows-gnu 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+ "checksum ws2_32-sys 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "d59cefebd0c892fa2dd6de581e937301d8552cb44489cdff035c6187cb63fa5e"
+diff --git a/Cargo.toml b/Cargo.toml
+index 42f73cb..deb8bc6 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -40,18 +40,21 @@ codegen-units = 1
+ byteorder = "=1.1.0"
+ bytes = "=0.3.0"
+ crc = "=1.5.0"
++fnv = "1.0.5"
+ getopts = "=0.2.15"
++histogram = "0.6.6"
++hyper = "0.12"
+ log = "0.3.8"
+ log-panics = "=1.1.0"
+-mio = "=0.6.10"
++mio = "=0.6.14"
+ mpmc = "=0.1.2"
+ pad = "=0.1.4"
+ rand = "=0.3.17"
+-ratelimit = "=0.4.2"
++ratelimit = { path = "ratelimit" }
+ shuteye = "=0.3.2"
+ slab = "=0.3.0"
+ simple_logger = "=0.4.0"
+-tic = "=0.2.4"
++tic = { path = "tic" }
+ time = "=0.1.38"
+ toml = "=0.4.2"
+ 
+diff --git a/README_WC.md b/README_WC.md
+new file mode 100644
+index 0000000..e52c48b
+--- /dev/null
++++ b/README_WC.md
+@@ -0,0 +1,14 @@
++# Building and running rpc-perf with variable load support
++
++## Build
++```
++cargo build --release
++```
++
++## Run
++```
++./target/release/rpc-perf --config configs/sinus_workload.toml --server 127.0.0.1:11211
++```
++
++## Configuration file
++Example [sinus_workload.toml](./configs/sinus_workload.toml) config to sins-like load support:
+diff --git a/configs/prometheus_server.toml b/configs/prometheus_server.toml
+new file mode 100644
+index 0000000..409ae88
+--- /dev/null
++++ b/configs/prometheus_server.toml
+@@ -0,0 +1,27 @@
++# this example runs a workload with prometheus
++
++[general]
++request-timeout = 200
++connect-timeout = 500
++threads = 1
++connections = 1
++duration = 1
++windows = 30
++protocol = "memcache"
++tcp-nodelay = false
++ipv4 = true
++ipv6 = true
++database = 0
++prometheus-port = 9898                  # port on which the prometheus server will start, 127.0.0.1:8989
++histogram-max-value = 1_000_000_000     # max value, this value is in nanosecond, it is one second
++histogram-precision = 1                 # precision, this is the smallest value
++                                        # https://docs.rs/histogram/0.6.6/histogram/struct.Config.html
++
++[[workload]]
++name = "get"
++method = "get"
++rate = 2000
++  [[workload.parameter]]
++  style = "random"
++  size = 3
++  regenerate = true
+diff --git a/configs/sinus_workload.toml b/configs/sinus_workload.toml
+new file mode 100644
+index 0000000..8d95f95
+--- /dev/null
++++ b/configs/sinus_workload.toml
+@@ -0,0 +1,27 @@
++# this example runs a sinus workload suitable for memcache
++# important that .toml has this general parameters (example value)
++
++[general]
++request-timeout = 200
++connect-timeout = 500
++threads = 1
++connections = 1
++duration = 1
++windows = 30
++protocol = "memcache"
++tcp-nodelay = false
++ipv4 = true
++ipv6 = true
++database = 0
++
++[[workload]]
++name = "get"
++method = "get"
++rate = 2000
++period = 15                 # strongly required to generate sins-like load, the unit is second, default value is 1
++amplitude = 1000            # necessary to generate sins-like load, must be: amplitude <= rate/2
++phase = 0                   # not necessary to generate sins-like load, default value is 0
++  [[workload.parameter]]
++  style = "random"
++  size = 3
++  regenerate = true
+diff --git a/src/cfgtypes/mod.rs b/src/cfgtypes/mod.rs
+index 590daa5..06417f3 100644
+--- a/src/cfgtypes/mod.rs
++++ b/src/cfgtypes/mod.rs
+@@ -22,18 +22,36 @@ pub mod tools;
+ 
+ pub type CResult<T> = Result<T, String>;
+ 
++pub struct SinusParametersWorkload {
++    pub amplitude: i64,
++    pub period: i64,
++    pub phase: i64,
++}
++
++impl SinusParametersWorkload {
++    pub fn new(amplitude: i64, period: i64, phase: i64) -> SinusParametersWorkload {
++        SinusParametersWorkload {
++            amplitude: amplitude,
++            period: period,
++            phase: phase,
++        }
++    }
++}
++
+ pub struct BenchmarkWorkload {
+     pub name: String,
+     pub rate: usize,
+     pub gen: Box<ProtocolGen>,
++    pub sinus_parameters: Option<SinusParametersWorkload>,
+ }
+ 
+ impl BenchmarkWorkload {
+-    pub fn new(name: String, rate: usize, gen: Box<ProtocolGen>) -> BenchmarkWorkload {
++    pub fn new(name: String, rate: usize, gen: Box<ProtocolGen>, sinus_parameters: Option<SinusParametersWorkload>) -> BenchmarkWorkload {
+         BenchmarkWorkload {
+             name: name,
+             rate: rate,
+             gen: gen,
++            sinus_parameters: sinus_parameters,
+         }
+     }
+ }
+diff --git a/src/codec/echo/mod.rs b/src/codec/echo/mod.rs
+index baceb0b..b36faa5 100644
+--- a/src/codec/echo/mod.rs
++++ b/src/codec/echo/mod.rs
+@@ -138,7 +138,7 @@ fn extract_workload(workload: &BTreeMap<String, Value>) -> CResult<BenchmarkWork
+ 
+         let gen = Box::new(EchoGen { value: param });
+ 
+-        Ok(BenchmarkWorkload::new(name, rate as usize, gen))
++        Ok(BenchmarkWorkload::new(name, rate as usize, gen, None))
+     } else {
+         Err("malformed config: 'parameter' must be an array".to_owned())
+     }
+diff --git a/src/codec/memcache/mod.rs b/src/codec/memcache/mod.rs
+index b7bfecc..4ee368a 100644
+--- a/src/codec/memcache/mod.rs
++++ b/src/codec/memcache/mod.rs
+@@ -304,7 +304,24 @@ fn extract_workload(i: usize, workload: &BTreeMap<String, Value>) -> CResult<Ben
+             _ => return Err(format!("invalid command: {}", method)),
+         };
+ 
+-        Ok(BenchmarkWorkload::new(name, rate as usize, Box::new(cmd)))
++        let amplitude = workload
++            .get("amplitude")
++            .and_then(|k| k.as_integer())
++            .unwrap_or(0);
++
++        let period = workload
++            .get("period")
++            .and_then(|k| k.as_integer())
++            .unwrap_or(1);
++
++        let phase = workload
++            .get("phase")
++            .and_then(|k| k.as_integer())
++            .unwrap_or(0);
++
++        let sinus_parameters = SinusParametersWorkload::new(amplitude, period, phase);
++
++        Ok(BenchmarkWorkload::new(name, rate as usize, Box::new(cmd), Some(sinus_parameters)))
+     } else {
+         Err("malformed config: 'parameter' must be an array".to_owned())
+     }
+diff --git a/src/codec/ping/mod.rs b/src/codec/ping/mod.rs
+index ce6889a..0a334f8 100644
+--- a/src/codec/ping/mod.rs
++++ b/src/codec/ping/mod.rs
+@@ -97,5 +97,5 @@ fn extract_workload(workload: &BTreeMap<String, Value>) -> CResult<BenchmarkWork
+         .unwrap_or("ping")
+         .to_owned();
+ 
+-    Ok(BenchmarkWorkload::new(name, rate as usize, Box::new(Ping)))
++    Ok(BenchmarkWorkload::new(name, rate as usize, Box::new(Ping), None))
+ }
+diff --git a/src/codec/redis_inline/mod.rs b/src/codec/redis_inline/mod.rs
+index 60587de..8fa4869 100644
+--- a/src/codec/redis_inline/mod.rs
++++ b/src/codec/redis_inline/mod.rs
+@@ -265,8 +265,7 @@ fn extract_workload(workload: &BTreeMap<String, Value>) -> CResult<BenchmarkWork
+             }
+             _ => return Err(format!("invalid command: {}", method)),
+         };
+-
+-        Ok(BenchmarkWorkload::new(name, rate as usize, Box::new(cmd)))
++        Ok(BenchmarkWorkload::new(name, rate as usize, Box::new(cmd), None))
+     } else {
+         Err("malformed config: 'parameter' must be an array".to_owned())
+     }
+diff --git a/src/codec/redis_resp/mod.rs b/src/codec/redis_resp/mod.rs
+index 60587de..cf151d7 100644
+--- a/src/codec/redis_resp/mod.rs
++++ b/src/codec/redis_resp/mod.rs
+@@ -266,7 +266,7 @@ fn extract_workload(workload: &BTreeMap<String, Value>) -> CResult<BenchmarkWork
+             _ => return Err(format!("invalid command: {}", method)),
+         };
+ 
+-        Ok(BenchmarkWorkload::new(name, rate as usize, Box::new(cmd)))
++        Ok(BenchmarkWorkload::new(name, rate as usize, Box::new(cmd), None))
+     } else {
+         Err("malformed config: 'parameter' must be an array".to_owned())
+     }
+diff --git a/src/codec/thrift/config.rs b/src/codec/thrift/config.rs
+index 5c81714..6ee6ecf 100644
+--- a/src/codec/thrift/config.rs
++++ b/src/codec/thrift/config.rs
+@@ -122,7 +122,7 @@ fn extract_workload(workload: &BTreeMap<String, Value>) -> CResult<BenchmarkWork
+         parameters: ps,
+     });
+ 
+-    Ok(BenchmarkWorkload::new(name, rate as usize, cmd))
++     Ok(BenchmarkWorkload::new(name, rate as usize, cmd, None))
+ }
+ 
+ fn extract_parameter(i: usize, parameter: &BTreeMap<String, Value>) -> CResult<Parameter> {
+diff --git a/src/main.rs b/src/main.rs
+index a994985..d817d9c 100644
+--- a/src/main.rs
++++ b/src/main.rs
+@@ -26,6 +26,9 @@ extern crate bytes;
+ extern crate byteorder;
+ extern crate crc;
+ extern crate getopts;
++extern crate fnv;
++extern crate histogram;
++extern crate hyper;
+ extern crate log_panics;
+ extern crate mio;
+ extern crate mpmc;
+@@ -46,6 +49,7 @@ mod options;
+ mod stats;
+ mod codec;
+ mod request;
++mod prometheus_server;
+ 
+ use client::Client;
+ use client::net::InternetProtocol;
+@@ -152,6 +156,7 @@ pub fn main() {
+     info!("Workload:");
+ 
+     let windows = config.windows();
++    let prometheus_port = config.prometheus_port();
+ 
+     workload::launch_workloads(
+         config.protocol_config.workloads,
+@@ -160,7 +165,7 @@ pub fn main() {
+         &stats_receiver.get_clocksource(),
+     );
+ 
+-    stats::run(stats_receiver, windows, matches.opt_present("service"));
++    stats::run(stats_receiver, windows, matches.opt_present("service"), prometheus_port);
+ }
+ 
+ fn print_config(
+diff --git a/src/prometheus_server.rs b/src/prometheus_server.rs
+new file mode 100644
+index 0000000..1df91e7
+--- /dev/null
++++ b/src/prometheus_server.rs
+@@ -0,0 +1,48 @@
++extern crate hyper;
++
++use hyper::{Body, Response, Server};
++use hyper::rt::Future;
++use hyper::service::service_fn_ok;
++use std::thread;
++use std::sync::{Arc, Mutex};
++use std::net::SocketAddr;
++
++pub struct PrometheusServer {
++    prepared_metric: Arc<Mutex<String>>,
++    addres: SocketAddr,
++}
++
++impl PrometheusServer {
++    pub fn new_with_param(port: u16) -> PrometheusServer {
++        let addr = ([127, 0, 0, 1], port);
++        PrometheusServer {
++            prepared_metric: Arc::new(Mutex::new(String::new())),
++            addres: addr.into(),
++        }
++    }
++
++    pub fn start(&self) {
++        let prepared_metric =  Arc::clone(&self.prepared_metric);
++        let server = Server::bind(&self.addres)
++            .serve(move|| {
++                let prepared_metric =  Arc::clone(&prepared_metric);
++                service_fn_ok(move|_req| {
++
++                    let body = prepared_metric.lock().unwrap().to_string().to_owned();
++                    Response::new(Body::from(body))
++
++                })
++            })
++            .map_err(|e| eprintln!("server error: {}", e));
++
++        thread::spawn(|| {
++            hyper::rt::run(server);
++        });
++    }
++
++    pub fn deliver_metrics(&mut self, metric: String) {
++        self.prepared_metric.lock().unwrap().clear();
++        self.prepared_metric.lock().unwrap().push_str(metric.as_str());
++    }
++
++}
+diff --git a/src/request/config.rs b/src/request/config.rs
+index 355b820..1468fdd 100644
+--- a/src/request/config.rs
++++ b/src/request/config.rs
+@@ -137,6 +137,15 @@ fn load_config_table(
+         if let Some(v) = general.get("tx-buffer-size").and_then(|k| k.as_integer()) {
+             config.set_tx_buffer_size(v as usize);
+         }
++        if let Some(v) = general.get("prometheus-port").and_then(|k| k.as_integer()) {
++            config.set_prometheus_port(Some(v as u16));
++        }
++        if let Some(v) = general.get("histogram-max-value").and_then(|k| k.as_integer()) {
++            config.set_histogram_max_value(Some(v as u64));
++        }
++        if let Some(v) = general.get("histogram-precision").and_then(|k| k.as_integer()) {
++            config.set_histogram_precision(Some(v as u32));
++        }
+         config.protocol_name = protocol.clone();
+     }
+ 
+diff --git a/src/request/mod.rs b/src/request/mod.rs
+index f759b05..956840d 100644
+--- a/src/request/mod.rs
++++ b/src/request/mod.rs
+@@ -33,6 +33,9 @@ pub struct BenchmarkConfig {
+     pub protocol_config: ProtocolConfig,
+     rx_buffer_size: usize,
+     tx_buffer_size: usize,
++    prometheus_port: Option<u16>,
++    histogram_max_value: Option<u64>,
++    histogram_precision: Option<u32>,
+ }
+ 
+ impl BenchmarkConfig {
+@@ -51,6 +54,9 @@ impl BenchmarkConfig {
+             protocol_config: protocol,
+             tx_buffer_size: 4 * KILOBYTE,
+             rx_buffer_size: 4 * KILOBYTE,
++            prometheus_port: None,
++            histogram_max_value: None,
++            histogram_precision: None,
+         }
+     }
+ 
+@@ -135,6 +141,33 @@ impl BenchmarkConfig {
+         self
+     }
+ 
++    pub fn prometheus_port(&self) -> Option<u16> {
++        self.prometheus_port
++    }
++
++    pub fn set_prometheus_port(&mut self, port: Option<u16>) -> &Self {
++        self.prometheus_port = port;
++        self
++    }
++
++    pub fn histogram_max_value(&self) -> Option<u64> {
++        self.histogram_max_value
++    }
++
++    pub fn set_histogram_max_value(&mut self, max_value: Option<u64>) -> &Self {
++        self.histogram_max_value = max_value;
++        self
++    }
++
++    pub fn histogram_precision(&self) -> Option<u32> {
++        self.histogram_precision
++    }
++
++    pub fn set_histogram_precision(&mut self, precision: Option<u32>) -> &Self {
++        self.histogram_precision = precision;
++        self
++    }
++
+     pub fn protocol_name(&self) -> String {
+         self.protocol_name.clone()
+     }
+diff --git a/src/request/workload.rs b/src/request/workload.rs
+index 1195bbd..408ed73 100644
+--- a/src/request/workload.rs
++++ b/src/request/workload.rs
+@@ -17,7 +17,7 @@ pub const BUCKET_SIZE: usize = 10_000;
+ 
+ use cfgtypes;
+ 
+-use cfgtypes::ProtocolGen;
++use cfgtypes::{ProtocolGen, SinusParametersWorkload};
+ use common::stats::Stat;
+ use mpmc::Queue;
+ use ratelimit;
+@@ -46,6 +46,7 @@ pub fn launch_workloads(
+             work_queue.to_vec(),
+             stats.clone(),
+             clocksource.clone(),
++             w.sinus_parameters,
+         ).unwrap();
+ 
+         let _ = thread::Builder::new()
+@@ -72,14 +73,26 @@ impl Workload {
+         queue: Vec<Queue<Vec<u8>>>,
+         stats: Sender<Stat>,
+         clocksource: Clocksource,
++        sinus_parameters: Option<SinusParametersWorkload>,
+     ) -> Result<Workload, &'static str> {
+         let mut ratelimit = None;
++        let mut amplitude= 0;
++        let mut period = 1;
++        let mut phase = 0;
++        if let Some(r) = sinus_parameters {
++            amplitude = r.amplitude;
++            period = r.period;
++            phase = r.phase;
++        }
+         if let Some(r) = rate {
+             if r > 0 {
+                 ratelimit = Some(
+                     ratelimit::Builder::new()
+                         .frequency(r as u32)
+                         .capacity(BUCKET_SIZE as u32)
++                        .amplitude(amplitude)
++                        .phase(phase)
++                        .period(period)
+                         .build(),
+                 );
+             }
+diff --git a/src/stats.rs b/src/stats.rs
+index 2b7fd8d..42be5be 100644
+--- a/src/stats.rs
++++ b/src/stats.rs
+@@ -16,6 +16,12 @@
+ use common::*;
+ use request::BenchmarkConfig;
+ use tic::{Interest, Meters, Percentile, Receiver};
++use prometheus_server::PrometheusServer;
++use std::collections::HashMap;
++use histogram::Histogram;
++use std::collections::hash_map::Entry;
++use std::hash::BuildHasherDefault;
++use fnv::FnvHasher;
+ 
+ pub fn stats_receiver_init(
+     config: &BenchmarkConfig,
+@@ -23,11 +29,15 @@ pub fn stats_receiver_init(
+     waterfall: Option<String>,
+     trace: Option<String>,
+ ) -> Receiver<Stat> {
++    let histogram_max_value = config.histogram_max_value().unwrap_or(1_000_000_000);
++    let histogram_precision = config.histogram_precision().unwrap_or(1);
++
+     let mut stats_config = Receiver::<Stat>::configure()
+         .batch_size(1024)
+         .capacity(4096)
+         .duration(config.duration())
+-        .windows(config.windows());
++        .windows(config.windows())
++        .histogram_config(histogram_max_value, histogram_precision);
+ 
+     if let Some(addr) = listen {
+         stats_config = stats_config.http_listen(addr);
+@@ -84,7 +94,18 @@ pub fn meters_delta(t0: &Meters<Stat>, t1: &Meters<Stat>, stat: &Stat) -> u64 {
+     *t1.count(stat).unwrap_or(&0) - *t0.count(stat).unwrap_or(&0)
+ }
+ 
+-pub fn run(mut receiver: Receiver<Stat>, windows: usize, infinite: bool) {
++pub fn run(mut receiver: Receiver<Stat>, windows: usize, infinite: bool, prometheus_port: Option<u16>) {
++
++    // if port is set, run server
++    let mut prometheus_server = None;
++    if let Some(port) = prometheus_port {
++        let mut server = PrometheusServer::new_with_param(port);
++        server.start();
++        prometheus_server = Some(server);
++    }
++
++    let mut total_histograms: HashMap<Stat, HashMap<i32, u64>> = HashMap::new();
++    let mut total_counts: HashMap<Stat, u64> = HashMap::new();
+ 
+     let mut window = 0;
+     let mut warmup = true;
+@@ -103,6 +124,9 @@ pub fn run(mut receiver: Receiver<Stat>, windows: usize, infinite: bool) {
+         let t1 = clocksource.counter();
+         let m1 = receiver.clone_meters();
+ 
++        // receive histogram from one second from library tic
++        let interval_histograms_from_tic: HashMap<Stat, Histogram, BuildHasherDefault<FnvHasher>> = receiver.get_interval_histograms().lock().unwrap().clone();
++
+         if warmup {
+             info!("-----");
+             info!("Warmup complete");
+@@ -176,6 +200,18 @@ pub fn run(mut receiver: Receiver<Stat>, windows: usize, infinite: bool) {
+                 2,
+                 hit_rate
+             );
++
++            // if server exists prepare body(in prometheus format) for server
++            match prometheus_server.as_mut() {
++                Some(server) => {
++                    let mut text_respond: String = String::new();
++                    text_respond += &histograms_prometheus(interval_histograms_from_tic, &mut total_histograms, &mut total_counts);
++                    text_respond += &percentiles_prometheus(&m1, &Stat::ResponseOk).to_string();
++                    server.deliver_metrics(text_respond);
++                },
++                None => {},
++            }
++
+             display_percentiles(&m1, &Stat::ResponseOk, "Response OK");
+         }
+ 
+@@ -214,3 +250,109 @@ fn display_percentiles(meters: &Meters<Stat>, stat: &Stat, label: &str) {
+                         Percentile("max".to_owned(), 100.0)).unwrap_or(&0) / 1000,
+                 );
+ }
++
++fn histograms_prometheus(interval_histograms_from_tic: HashMap<Stat, Histogram, BuildHasherDefault<FnvHasher>>,
++                         total_histograms: &mut HashMap<Stat, HashMap<i32, u64>>,
++                         total_counts: &mut HashMap<Stat, u64>) -> String {
++    let mut text_respond: String = String::new();
++
++    // insert not existing histogram in total_histograms
++    for (stat, _histogram) in interval_histograms_from_tic.iter() {
++        match total_histograms.entry(stat.clone()) {
++            Entry::Occupied(_o) => {}
++            Entry::Vacant(v) => {
++                v.insert(HashMap::new());
++                total_counts.insert(stat.clone(), 0);
++            },
++        }
++    }
++
++    // prepare correct prometheus histograms
++    // to total_histogram add count new bucket and add sum all count smaller bucket from this interval histogram
++    for (stat, histogram) in interval_histograms_from_tic.iter() {
++        let mut sum_of_next_value_buckets_interval_histogram = 0;
++        for bucket in histogram.into_iter() {
++            sum_of_next_value_buckets_interval_histogram += bucket.count();
++            match total_histograms.get_mut(stat).unwrap().entry(bucket.value() as i32) {
++                Entry::Occupied(o) => {
++                    *o.into_mut() += sum_of_next_value_buckets_interval_histogram;
++                },
++                Entry::Vacant(v) => {
++                    v.insert(sum_of_next_value_buckets_interval_histogram);
++                },
++            }
++        }
++        *total_counts.get_mut(stat).unwrap() += sum_of_next_value_buckets_interval_histogram;
++    }
++
++    // creating text response in prometheus format
++    for (stat, histogram) in total_histograms.iter() {
++        // header prometheus metric histogram
++        text_respond += &beginning_prometheus_histogram(stat.to_string());
++        for (value, count) in histogram.iter() {
++            // add bucket to response if not empty
++            if *count > 0 {
++                text_respond += &bucket_prometheus_histogram(stat.to_string(), *value, *count);
++            }
++        }
++        // summary prometheus metric histogram
++        text_respond += &summary_prometheus_histogram(stat.to_string(), total_counts[stat], total_counts[stat]);
++    }
++
++    text_respond
++}
++
++fn beginning_prometheus_histogram(metric_name: String) -> String {
++    let help_text = "rpc-perf metric";
++    format!("\
++        # HELP {0} {1}\n\
++        # TYPE {0} histogram\n\
++        ",
++            metric_name,
++            help_text
++    ).to_string()
++}
++
++fn bucket_prometheus_histogram(metric_name: String, value: i32, count: u64) -> String {
++    format!("{0}_bucket{{le=\"{1}\"}} {2}\n", metric_name, value, count).to_string()
++}
++
++fn summary_prometheus_histogram(metric_name: String, count: u64, sum: u64) -> String {
++    format!("\
++    {0}_bucket{{le=\"+Inf\"}} {1}\n\
++    {0}_sum {2}\n\
++    {0}_count {1}\n\
++    ",
++            metric_name,
++            count,
++            sum
++    ).to_string()
++}
++
++fn percentiles_prometheus(meters: &Meters<Stat>, stat: &Stat) -> String {
++
++    let metric_name = "rpc_perf_performance";
++    let help_text = "rpc-perf metric";
++
++    format!("\
++        # HELP {0} {1}\n\
++        # TYPE {0} summary\n\
++        {0}{{quantile=\"0.5\"}} {2}\n\
++        {0}{{quantile=\"0.9\"}} {3}\n\
++        {0}{{quantile=\"0.99\"}} {4}\n\
++        {0}{{quantile=\"0.999\"}} {5}\n\
++        {0}{{quantile=\"0.9999\"}} {6}\n\
++        {0}_sum {7}\n\
++        {0}_count {8:?}\n\
++        ",
++            metric_name,
++            help_text,
++            meters.percentile(stat, Percentile("p50".to_owned(), 50.0)).unwrap_or(&0) / 1000,
++            meters.percentile(stat, Percentile("p90".to_owned(), 90.0)).unwrap_or(&0) / 1000,
++            meters.percentile(stat, Percentile("p99".to_owned(), 99.0)).unwrap_or(&0) / 1000,
++            meters.percentile(stat, Percentile("p999".to_owned(), 99.9)).unwrap_or(&0) / 1000,
++            meters.percentile(stat, Percentile("p9999".to_owned(), 99.99)).unwrap_or(&0) / 1000,
++            meters.percentile(stat, Percentile("max".to_owned(), 100.0)).unwrap_or(&0) / 1000,
++            meters.count(stat).unwrap(),
++    ).to_string()
++}

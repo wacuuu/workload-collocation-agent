@@ -52,7 +52,7 @@ Or using tox (flake8 will be run too):
 .. code:: shell-session
 
    tox
-   
+
 Tip, you can use virtualenv created by pipenv in your favorite IDE.
 
 
@@ -70,12 +70,12 @@ Results in single distributable and executable binary in ``dist/owca.pex``.
 Configuration
 -------------
 
-Available features: 
+Available features:
 
 - Create complex and configure python objects using `YAML tags`_ e.g. Runner, MesosNode, Storage
 - Passing arguments and simple parameters type check
 - Including other yaml or json files
-- Register any external class with ``-r`` or by using ``owca.config.register`` decorator API 
+- Register any external class with ``-r`` or by using ``owca.config.register`` decorator API
 
 .. _`YAML tags`: http://yaml.org/spec/1.2/spec.html#id2764295
 
@@ -86,7 +86,7 @@ External detector example
 ------------------------------
 
 
-Before you run the example you need to: 
+Before you run the example you need to:
 
 - Have Mesos cluster set up
 - Mesos operator API available at http://127.0.0.1:5051
@@ -114,7 +114,7 @@ Assuming that external implementation of detector is provided as
         def detect(self, platform, task_measurements):
             anomalies = [
                 detectors.ContentionAnomaly(
-                    task_ids=['task_id'], 
+                    task_ids=['task_id'],
                     resource=detectors.ContendedResource.CPUS
                 )
             ]
@@ -184,3 +184,94 @@ then you can run integration by just providing config file:
 .. code:: shell-session
 
     # dist/owca.pex -c example.yaml -l debug
+
+Workloads
+=========
+
+Description
+-----------
+
+This project consists of Dockerfiles and wrappers that allow to launch a workload and expose its metrics in Prometheus format over HTTP.
+
+Building docker images
+----------------------
+Docker build commands have to be run from the top project directory, for example
+
+.. code-block:: sh
+
+    docker build -f stress-ng/Dockerfile -t stress-ng-workload .
+
+Building wrapper
+----------------
+
+
+.. code-block:: sh
+
+    git clone https://github.intel.com/serenity/workloads
+    cd workloads/wrapper
+
+Initialize and update git submodule:
+
+.. code-block:: sh
+
+    git submodule update --init
+
+Prepare virtual environment:
+
+.. code-block:: sh
+
+    pipenv install --dev
+    pipenv shell
+
+Then you can run tests and build package using tox.
+Wrapper executable will be in ``workloads/wrapper/dist/wrapper.pex``
+
+.. code-block:: sh
+
+    tox
+
+Wrapper
+-------
+stress-ng example:
+
+
+.. code-block:: sh
+
+    docker run -p 8080:8080 stress-ng-workload ./wrapper.pex --command "stress-ng -c 1" --log_level DEBUG --stderr 1 --prometheus_port 8080 --prometheus_ip 0.0.0.0 --labels "{'workload':'stress-ng','cores':'1'}"
+
+Check for values with
+
+.. code-block:: sh
+
+   curl localhost:8080
+
+Returned Prometheus message example:
+
+.. code-block:: sh
+
+    # TYPE counter counter
+    counter{cores="1",workload="stress-ng"} 360.0 1533906162000
+
+Implementing workload specific parsing function
+-----------------------------------------------
+Wrapper allows to provide a different implementation of the workload output parsing function. Example with dummy parsing function is in wrapper/example_workload_wrapper.py.
+To use the implemented function, developer has to create his own, workload specific pex. One has to extend the tox.ini file with a new environment with different starting point, here
+wrapper.example_workload_wrapper and .pex output file:
+
+.. code-block:: sh
+
+    [testenv:example_package]
+    deps =
+        pex
+        -e ./owca
+    commands = pex . ./owca -o dist/example_workload_wrapper.pex --disable-cache -m wrapper.example_workload_wrapper
+
+Remember to extend the list of environments in tox.ini:
+
+.. code-block:: sh
+
+    [tox]
+    envlist = flake8,unit,package,example_package
+
+Implementation of the parsing function should return only the Metrics read from the current lines of workload output. Previous metrics should be discarded/overwritten.
+

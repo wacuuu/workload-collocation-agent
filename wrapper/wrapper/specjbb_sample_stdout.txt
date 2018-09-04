@@ -1,0 +1,104 @@
+Changing root to /var/lib/mesos/slaves/b2e8718e-be90-4aeb-955b-2ac4a9bdacb0-S37/frameworks/b2e8718e-be90-4aeb-955b-2ac4a9bdacb0-0000/executors/thermos-felidadae-staging16-specjbb_controller--42000-0-47dbd136-a5e0-48d6-a54e-c8b44071a964/runs/fc490fbe-4b96-4c81-882b-98e7bcb6a2c2/taskfs
+
+SPECjbb2015 Java Business Benchmark
+ (c) Standard Performance Evaluation Corporation, 2015
+
+Preparing to launch Standalone SPECjbb2015 Distributed Controller.
+
+Reading property file: /tmp/senerity_config.raw
+
+     0s: Enumerating plugins...
+     0s:    Connectivity:
+     0s:             HTTP_Grizzly: Grizzly HTTP server, JDK HTTP client
+     0s:              NIO_Grizzly: Grizzly NIO server, Grizzly NIO client
+     0s:               HTTP_Jetty: Jetty HTTP server, JDK HTTP client
+     0s:    Snapshot:
+     0s:                 InMemory: Stores snapshots in heap memory
+     0s:    Data Writers:
+     0s:                     Demo: Send all frame to listener
+     0s:                   InFile: Writing Data into file
+     0s:                   Silent: Drop all frames
+     0s: 
+     0s: Validating kit integrity...
+     0s: Kit validation had passed.
+     0s: 
+     0s: Tests are skipped.
+     0s: 
+     0s: Ladies and gentlemen, this is your Controller speaking.
+     1s: We are delighted in having you for benchmark run today.
+     1s: 
+     1s: Binary log file is ./specjbb2015-D-20180820-00001.data.gz
+     1s: 
+     1s: Performing handshake with all agents ...
+     1s: 
+     1s:  Agent GRP1.Backend.JVM_A has attached to Controller
+     6s: . Agent GRP1.TxInjector.JVM_B has attached to Controller
+     8s: 
+     8s: All agents have connected.
+     8s: 
+     8s: Attached agents info:
+
+Group "GRP1"
+    TxInjectors:
+        JVM_B, includes { Driver } @ [100.64.176.17:38348, 100.64.176.17:34083, 100.64.176.17:46446]
+    Backends:
+        JVM_A, includes { SM(2),SP(2) } @ [100.64.176.16:33586, 100.64.176.16:35217, 100.64.176.16:45605]
+
+     8s: Initializing... (init) OK
+    26s: 
+    26s: Check whether properties are compliant
+    26s: (validation=FAILED) WARNING: Property settings are NOT COMPLIANT.
+    26s: 
+    26s: Running steady on IR = 1000 for 10000000 msecs
+    26s: [reconfig (term) (init) ] Ramping up
+    44s:       rampup IR =      0 ... (rIR:aIR:PR = 0:0:0) (tPR = 0) [OK] 
+    47s: Ramping up completed!
+    47s: 
+    47s: ( 0%) ......?....??.......|.............................. (rIR:aIR:PR = 1000:984:968) (tPR = 16678) [OK] 
+    99s: Performance info:
+         Transaction,    Success,    Partial,     Failed,   Receipts, AvgBarcode, 
+             Overall,      29291,        494,          0,      28298,      59.49, 
+         Response times:
+             Request,    Success,    Partial,     Failed,   SkipFail,     Probes,    Samples,      min,      p50,      p90,      p95,      p99,      max, 
+       TotalPurchase,      28299,          0,          0,          0,      27220,      48313,     1300,     6100,  3500000,  3600000,  3800000,  4600000,
+     InStorePurchase,      14892,          0,          0,          0,      14367,      25397,     1300,     6200,  3500000,  3500000,  3600000,  4600000,
+      OnlinePurchase,      10420,          0,          0,          0,      10091,      18004,     1300,     6100,  3500000,  3800000,  3800000,  4500000,
+        InstPurchase,       2987,          0,          0,          0,       2762,       4912,     1500,     5900,  3400000,  3700000,  3700000,  3900000,
+          AssocOfCat,          7,         22,          0,          0,          6,          7,    30000,    43000,    52000,    52000,    52000,    52000,
+      AssocOfProduct,        109,        189,          0,          0,         51,         83,     1600,     3300,   224400,   318800,   382000,   382000,
+      BusinessReport,         74,          0,          0,          0,         50,        109,    36000,    67000,  2800000,  3000000,  3880000,  3900000,
+          CustBuyBeh,         99,        195,          0,          0,         47,         57,     1900,     3200,    38400,   164200,   308000,   308000,
+       ProductReturn,        792,          0,          0,          0,        692,       1360,     1100,    10300,  3300000,  3800000,  3800000,  4200000,
+
+    99s: ( 0%) ....|............................. (rIR:aIR:PR = 1000:1000:1000) (tPR = 15721) [OK] 
+   133s: Performance info:
+         Transaction,    Success,    Partial,     Failed,   Receipts, AvgBarcode, 
+             Overall,      30645,         12,          0,      29120,      59.48, 
+         Response times:
+             Request,    Success,    Partial,     Failed,   SkipFail,     Probes,    Samples,      min,      p50,      p90,      p95,      p99,      max, 
+       TotalPurchase,      29120,          0,          0,          0,      27670,      31968,     1000,     3200,   141000,   368000,   581000,   840000,
+     InStorePurchase,      15350,          0,          0,          0,      14650,      16809,     1000,     3200,   130000,   371000,   610000,   840000,
+      OnlinePurchase,      10684,          0,          0,          0,      10204,      11897,     1000,     3100,   148000,   366000,   558040,   840000,
+        InstPurchase,       3086,          0,          0,          0,       2816,       3262,     1100,     3200,   160000,   356550,   559700,   840000,
+          AssocOfCat,         29,          1,          0,          0,         29,         32,    32000,    38500,    83300,   182250,   218000,   218000,
+      AssocOfProduct,        302,          4,          0,          0,        253,        320,     1300,     3150,   279800,   438550,   733700,   840000,
+      BusinessReport,         77,          0,          0,          0,         45,         68,    33000,    40500,    80900,   501850,   780000,   780000,
+          CustBuyBeh,        301,          6,          0,          0,        242,        316,      800,     2100,    63800,   360550,   559090,   780000,
+       ProductReturn,        817,          0,          0,          0,        722,        882,     1000,     3300,   203500,   417850,   610000,   840000,
+
+   133s: ( 0%) ....|.......................??????.. (rIR:aIR:PR = 1000:969:954) (tPR = 14625) [OK] 
+   169s: Performance info:
+         Transaction,    Success,    Partial,     Failed,   Receipts, AvgBarcode, 
+             Overall,      30305,          0,          0,      28804,      59.49, 
+         Response times:
+             Request,    Success,    Partial,     Failed,   SkipFail,     Probes,    Samples,      min,      p50,      p90,      p95,      p99,      max, 
+       TotalPurchase,      29228,          0,          0,          0,      22003,      32511,     1000,     3300,  4000000,  5600000,  6800000,  7300000,
+     InStorePurchase,      15344,          0,          0,          0,      11594,      17007,     1000,     3300,  4000000,  5500000,  6700000,  7300000,
+      OnlinePurchase,      10786,          0,          0,          0,       8141,      12083,     1000,     3200,  4200000,  5700000,  6900000,  7200000,
+        InstPurchase,       3098,          0,          0,          0,       2268,       3421,     1200,     3300,  3700000,  5400000,  6600000,  7200000,
+          AssocOfCat,         32,          0,          0,          0,         24,         27,    35000,    39000,   235200,   561200,   690000,   690000,
+      AssocOfProduct,        312,          0,          0,          0,        199,        340,     1200,     3600,  6900000,  6900000,  6900000,  6900000,
+      BusinessReport,         79,          0,          0,          0,         50,         75,    32000,    45000,  1200000,  1200000,  1200000,  1200000,
+          CustBuyBeh,        314,          0,          0,          0,        190,        318,      800,     2450,  7000000,  7000000,  7000000,  7000000,
+       ProductReturn,        820,          0,          0,          0,        601,        947,     1000,     3300,  1200000,  1200000,  1300000,  1700000,
+

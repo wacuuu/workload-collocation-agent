@@ -1,0 +1,126 @@
+import os
+
+# Note: for specjbb only controller port can be assigned manually:
+#   ports for backends and injectors are arbitrarily assigned.
+
+# Variables shared among different workloads.
+include('../common.aurora')
+
+# Additional variables which can be changed by setting ENV variables.
+#
+# port on which listen controller
+load_generator_port = os.environ.get('load_generator_port', '42000')
+# injection rate
+qps = os.environ.get('qps', '1000')
+docker_image = os.environ.get('docker_image', 'serenity/specjbb')
+docker_image_tag = os.environ.get('docker_image_tag', '1')
+
+# Add label for identification workload in prometheus.
+wrapper_labels["name"] = 'specjbb--%s' % workload_uniq_id
+wrapper_labels["load_generator"] = "specjbb_injector"
+wrapper_labels["application"] = "specjbb"
+
+# Variables which cannot be changed differently than just by editing this file.
+#
+# Warning: giving too little resources may result in failure while running
+#   (for instance assigning 1 cpu core to backend will result in failure).
+# We assign more amount of RAM as resource argument to
+#   aurora Job class than to JVM in command line (1GB of margin).
+controller_cpu = 5
+controller_ram = 5
+cpu_backend = 5
+ram_backend = 5
+cpu_injector = 5
+ram_injector = 5
+all_disk = 1
+
+# Paths inside container.
+config_path = '/tmp/senerity_config.raw'
+specjbb_jar = '/home/specjbb/specjbb2015.jar'
+specjbb_wrapper = '/usr/bin/specjbb_wrapper.pex'
+
+# We don't have yet good way of copying config to mesos container:
+# here we just create it on the fly running shell commands inside container.
+with open('SpecJBB/specjbb.config', 'r') as fconfig:
+    config_content = "".join(fconfig.readlines())
+    config_content = config_content.format(qps=qps, load_generator_host_ip=load_generator_host_ip,
+                               load_generator_port=load_generator_port,
+                               config_path=config_path, cpu_backend=cpu_backend)
+config_create_cmd = """
+cat >{config_path} <<EOF
+{config_content}
+EOF
+cat {config_path}
+""".format(config_path=config_path, config_content=config_content)
+
+# By specyfying the same group both in injector and backend
+#   we instruct a specjbb injector to communicate with
+#   the chosen backend.
+controller_cmd = ("java -Dspecjbb.forkjoin.workers={} -Xms4g -Xmx4g -jar {} -m distcontroller -p {}"
+                  .format(cpu_backend, specjbb_jar, config_path))
+
+# Add wrapper to controller_cmd; specjbb prints data to stderr.
+controller_cmd = ("{wrapper} --command '{command}' --prometheus_port {port} \
+                             --prometheus_ip {ip} --stderr 0 \
+                             --kafka_brokers {brokers} --log_level DEBUG \
+                             --labels \"{labels}\""
+                 .format(wrapper=specjbb_wrapper, command=controller_cmd,
+                         port=wrapper_prometheus_port, ip=load_generator_host_ip,
+                         brokers=wrapper_kafka_brokers, log=wrapper_log_level,
+                         labels=wrapper_labels))
+
+# @TODO we should set max RAM assigned to JVM, but if set the job fails to run.
+injector_cmd = ("""
+    java -jar {jar} -m txinjector -p {config} -G GRP1 -J JVM_B"""
+    .format(jar=specjbb_jar, config=config_path))
+
+backend_cmd = ("""
+    java -Xms4g -Xmx4g -Xmn2g -XX:-UseBiasedLocking -XX:+UseParallelOldGC \
+        -jar {jar} -m backend -p {config} -G GRP1 -J JVM_A"""
+    .format(jar=specjbb_jar, config=config_path))
+
+config_create_process = Process(name='specjbb_build_config', cmdline=config_create_cmd)
+controller_process = Process(name='specjbb_controller',	cmdline=controller_cmd)
+injector_process= Process(name='specjbb_injector', cmdline=injector_cmd)
+backend_process = Process(name='specjbb_backend', cmdline=backend_cmd)
+
+controller_task = SequentialTask(
+    name = 'specjbb_controller--{}'.format(workload_uniq_id),
+    processes = [config_create_process, controller_process],
+    resources = Resources(cpu=controller_cpu, ram=controller_ram*GB, disk=all_disk*GB)
+)
+injector_task = SequentialTask(
+    name = 'specjbb_injector--{}'.format(workload_uniq_id),
+    processes = [config_create_process, injector_process],
+    resources = Resources(cpu=cpu_injector, ram=ram_injector *GB, disk=all_disk*GB)
+)
+backend_task = SequentialTask(
+    name = 'specjbb_backend--{}'.format(workload_uniq_id),
+    processes = [config_create_process, backend_process],
+    resources = Resources(cpu=cpu_backend, ram=ram_backend*GB, disk=all_disk*GB)
+)
+
+# Common docker image.
+docker_image_mo = DockerImage(name="{}/{}".format(docker_registry, docker_image), 
+                              tag=docker_image_tag)
+environment = "staging" + env_uniq_id
+
+BaseJob = Job(
+    cluster=cluster, environment=environment, role=role,
+    container = Mesos(image=docker_image_mo))
+controller_job = BaseJob(
+    name='specjbb_controller--{}'.format(workload_uniq_id),
+    task=controller_task,
+    constraints={'own_ip': load_generator_host_ip})
+injector_job = BaseJob(
+    name='specjbb_injector--{}'.format(workload_uniq_id),
+    task=injector_task,
+    constraints={'own_ip': load_generator_host_ip})
+backend_job = BaseJob(
+    name='specjbb_backend--{}'.format(workload_uniq_id),
+    task=backend_task,
+    enable_hooks=True,
+    constraints={'own_ip': application_host_ip})
+
+jobs = [controller_job, injector_job, backend_job]
+hooks = [AddMetadata(wrapper_labels)]

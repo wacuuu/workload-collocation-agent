@@ -1,0 +1,72 @@
+diff --git a/core/src/main/java/com/yahoo/ycsb/Client.java b/core/src/main/java/com/yahoo/ycsb/Client.java
+index 00b1e37..a2e9259 100644
+--- a/core/src/main/java/com/yahoo/ycsb/Client.java
++++ b/core/src/main/java/com/yahoo/ycsb/Client.java
+@@ -37,6 +37,8 @@ import java.util.concurrent.ThreadLocalRandom;
+ import java.util.concurrent.TimeUnit;
+ import java.util.concurrent.locks.LockSupport;
+ 
++import static java.lang.Math.*;
++
+ /**
+  * A thread to periodically show the status of the experiment to reassure you that progress is being made.
+  */
+@@ -378,6 +380,12 @@ class ClientThread implements Runnable {
+   private long targetOpsTickNs;
+   private final Measurements measurements;
+ 
++  private int amplitudePerThread;
++  private int period; //second
++  private double phase;
++  private double angularVelocity;
++
++
+   /**
+    * Constructor.
+    *
+@@ -404,6 +412,14 @@ class ClientThread implements Runnable {
+     measurements = Measurements.getMeasurements();
+     spinSleep = Boolean.valueOf(this.props.getProperty("spin.sleep", "false"));
+     this.completeLatch = completeLatch;
++
++    this.period = Integer.parseInt(props.getProperty("workload.peroid", "1"));
++    this.phase = Math.PI * Integer.parseInt(props.getProperty("workload.phase", "0"));
++    int amplitude = Integer.parseInt(props.getProperty("workload.amplitude", "0"));
++    int threadcountAll = Integer.parseInt(props.getProperty("threadcount", "1"));
++
++    this.amplitudePerThread = amplitude * 1000000; // from sec to microsecund
++    this.angularVelocity = 2 * Math.PI / period;
+   }
+ 
+   public void setThreadId(final int threadId) {
+@@ -503,7 +519,13 @@ class ClientThread implements Runnable {
+     //throttle the operations
+     if (targetOpsPerMs > 0) {
+       // delay until next tick
+-      long deadline = startTimeNanos + opsdone * targetOpsTickNs;
++
++      //TODO: IS % 13 enought
++      //reduce first 3 number (problem to big number for double) | nanosecond -> second
++      double time = (System.nanoTime() - startTimeNanos) % Math.pow(10, 13) / 1000000000.0;
++      double sinusoid = amplitudePerThread * (1 / angularVelocity) * sin(time * angularVelocity + phase);
++
++      long deadline = (long) (startTimeNanos + targetOpsTickNs * opsdone + sinusoid);
+       sleepUntil(deadline);
+       measurements.setIntendedStartTimeNs(deadline);
+     }
+@@ -734,12 +756,15 @@ public final class Client {
+     int threadcount = Integer.parseInt(props.getProperty(THREAD_COUNT_PROPERTY, "1"));
+     String dbname = props.getProperty(DB_PROPERTY, "com.yahoo.ycsb.BasicDB");
+     int target = Integer.parseInt(props.getProperty(TARGET_PROPERTY, "0"));
++    int amplitude = Integer.parseInt(props.getProperty("workload.amplitude", "0"));
++    int peroid = Integer.parseInt(props.getProperty("workload.peroid", "0"));
+ 
+     //compute the target throughput
+     double targetperthreadperms = -1;
+     if (target > 0) {
+       double targetperthread = ((double) target) / ((double) threadcount);
+       targetperthreadperms = targetperthread / 1000.0;
++      double amplitudeperthread = ((double) amplitude) / ((double) threadcount);
+     }
+ 
+     Thread warningthread = setupWarningThread();

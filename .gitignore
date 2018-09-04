@@ -12,3 +12,13 @@ __pycache__/
 /dist/owca.pex
 /gym_workloads-*
 .coverage
+/tensorflow-train/*.zip
+*.swp
+.coverage
+.idea
+/wrapper/dist/
+/tensorflow-inference/fruits-360/
+/tensorflow-inference/*.zip
+/cassandra_ycsb/ycsb/YCSB
+/kaggle.json
+config.sh

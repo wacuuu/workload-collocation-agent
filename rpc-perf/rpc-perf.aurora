@@ -1,0 +1,133 @@
+import os
+
+include('../common.aurora')
+
+# port that stressed application listens on
+application_listen_port = os.environ.get('application_listen_port', 11211)
+# type of application that you want to interact with ("redis" or "memcached" or "rpc-perf")
+application = os.environ.get('application', 'memcached')
+# workload Docker image 
+application_image = os.environ.get('application_image', 'serenity/twemcache')
+# workload Docker image tag
+application_image_tag = os.environ.get('application_image_tag', '1')
+
+# Add label for identification workload in prometheus.
+wrapper_labels["name"] = '%s--%s' % (application, workload_uniq_id)
+wrapper_labels["load_generator"] = "rpc-perf"
+wrapper_labels["application"] = "{}".format(application)
+
+# number of requests per second to generate (default: 1000; if `rpcperf_amplitude` and `rpcperf_period` are set - maximum of a sine curve)
+rpcperf_rate = os.environ.get('rpcperf_rate', '1000')
+# number of threads used to generate traffic
+rpcperf_thread_count = os.environ.get('rpcperf_thread_count', '1')
+# rpcperf_period and rpcperf_amplitiude are used to generate non-constant number of QpS; see: http://jwilson.coe.uga.edu/EMAT6680/Dunbar/Assignment1/sine_curves_KD.html
+rpcperf_period = os.environ.get('rpcperf_period', '100')
+rpcperf_amplitiude = os.environ.get('rpcperf_amplitiude', '100')
+# number of connections per thread
+rpcperf_connections = os.environ.get('rpcperf_connections', '1')
+# name of a protocol used to generate load ("memcache" or "redis")
+if application == 'memcached': rpcperf_protocol = 'memcache'
+if application == 'twemcache': rpcperf_protocol = 'memcache'
+if application == 'redis': rpcperf_protocol = 'redis'
+# rpc-perf Docker image tag
+rpcperf_image_tag = '1'  # Workaround for "force pull images" defect in Aurora.
+
+# JOB definitions
+jobs = [
+    Service(
+        name='redis--%s' % workload_uniq_id,
+        cluster=cluster,
+        environment='staging' + env_uniq_id,
+        role=role,
+        enable_hooks=True,
+        container=Mesos(
+            image=DockerImage(
+                name=docker_registry + '/' + application_image,
+                tag=application_image_tag,
+            ),
+        ),
+        constraints=dict(own_ip=application_host_ip),
+        task=SequentialTask(
+            name='redis--%s' % workload_uniq_id,
+            resources=Resources(cpu=1, ram=2 * GB, disk=10 * GB),
+            processes=[
+                Process(
+                    name='prep_config',
+                    cmdline=
+                    "set -x && cp /etc/redis.conf . && sed -i 's/port 6379/port {application_listen_port}/' redis.conf "
+                    "&& sed -i 's/bind 127.0.0.1/bind {application_host_ip}/' redis.conf ".format(
+                        application_listen_port=application_listen_port,
+                        application_host_ip=application_host_ip
+                    )
+                ),
+                Process(
+                    name='redis',
+                    cmdline='redis-server redis.conf'
+                ),
+            ],
+        ),
+    ),
+    Service(
+        name='twemcache--%s' % workload_uniq_id,
+        cluster=cluster,
+        environment='staging' + env_uniq_id,
+        role=role,
+        enable_hooks=True,
+        container=Mesos(
+            image=DockerImage(
+                name=docker_registry + '/' + application_image,
+                tag=application_image_tag,
+            ),
+        ),
+        constraints=dict(own_ip=application_host_ip),
+        task=Task(
+            name='twemcache--%s' % workload_uniq_id,
+            resources=Resources(cpu=1, ram=2 * GB, disk=100 * MB),
+            processes=[
+                Process(
+                    name='twemcache',
+                    cmdline=
+                        "twemcache --prealloc --hash-power=20 --max-memory=1024 "
+                            "--port={application_listen_port} --eviction-strategy=2 --verbosity=4 "
+                            "--threads=1 --backlog=128 -u twemcache "
+                            "--maximize-core-limit --slab-size=1048576 ".format(
+                                    application_listen_port=application_listen_port
+                            )
+                ),
+            ],
+        ),
+    ),
+    Service(
+        name='rpc-perf--{}'.format(workload_uniq_id),
+        cluster=cluster,
+        environment='staging' + env_uniq_id,
+        role=role,
+        constraints=dict(own_ip=load_generator_host_ip),
+        container=Mesos(image=DockerImage(
+            name=docker_registry + '/serenity/rpc-perf', tag=rpcperf_image_tag,
+        )),
+        task=Task(
+            name='rpc-perf--{}'.format(workload_uniq_id),
+            resources=Resources(cpu=1.5, ram=2 * GB, disk=10 * GB),
+            processes=[
+                Process(
+                    name='rpc-perf',
+                    cmdline=
+                        '/wrapper.pex --command '
+                            '"rpc-perf --config /etc/rpc-perf.toml -p {protocol} --server {ip}:{port}" '
+                            '--log_level {log_level} --stderr 0 --prometheus_port {prom_port} '
+                            '--prometheus_ip {prom_ip} --labels "{labels}" '
+                            '--regexp "(?P<name>p\d*): (?P<value>\d+)" '
+                            '--kafka_brokers {kafka_brokers}'.format(
+                                protocol=rpcperf_protocol, ip=application_host_ip, 
+                                port=application_listen_port, 
+                                log_level=wrapper_log_level, prom_port=wrapper_prometheus_port, 
+                                prom_ip=wrapper_prometheus_address, labels=wrapper_labels, 
+                                kafka_brokers=wrapper_kafka_brokers)
+                )
+            ],
+        )
+    ),
+]
+
+hooks = [AddMetadata(wrapper_labels)]
