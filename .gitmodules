@@ -1,3 +1,0 @@
-[submodule "wrapper/owca"]
-	path = wrapper/owca
-	url = git@github.intel.com:serenity/owca.git

@@ -1,7 +1,7 @@
 import pytest
 
 from owca.metrics import Metric
-from wrapper.server import create_message
+from owca.wrapper.server import create_message
 
 
 # These use cases check only simple logic in create_message, as prometheus formatting is checked

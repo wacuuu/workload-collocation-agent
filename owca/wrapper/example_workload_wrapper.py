@@ -2,7 +2,7 @@ from io import TextIOWrapper
 from typing import List, Dict
 
 from owca.metrics import Metric, MetricType
-from wrapper import wrapper_main
+from owca.wrapper import wrapper_main
 
 
 def example_parse_function(input: TextIOWrapper, regexp: str, separator: str = None,

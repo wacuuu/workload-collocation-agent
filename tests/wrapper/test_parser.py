@@ -3,8 +3,8 @@ from unittest.mock import patch, Mock, call
 from io import StringIO
 
 from owca.metrics import Metric, MetricType
-from owca.storage import FailedDeliveryException, KafkaStorage
-from wrapper.parser import default_parse, kafka_store_with_retry, DEFAULT_REGEXP, MAX_ATTEMPTS
+from owca.storage import FailedDeliveryException
+from owca.wrapper.parser import default_parse, kafka_store_with_retry, DEFAULT_REGEXP, MAX_ATTEMPTS
 
 
 @pytest.mark.parametrize("input,separator,expected", [

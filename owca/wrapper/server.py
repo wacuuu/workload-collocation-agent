@@ -4,7 +4,7 @@ from typing import Tuple, List
 
 from owca import storage
 from owca.metrics import Metric
-from wrapper.parser import parse_loop
+from owca.wrapper.parser import parse_loop
 
 log = logging.getLogger(__name__)
 

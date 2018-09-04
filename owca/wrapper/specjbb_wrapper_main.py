@@ -4,7 +4,7 @@ from typing import List, Dict
 import re
 
 from owca.metrics import Metric, MetricType
-from wrapper import wrapper_main
+from owca.wrapper import wrapper_main
 
 log = logging.getLogger(__name__)
 EMPTY_LINE = "^\s*$"

@@ -6,8 +6,8 @@ import threading
 from functools import partial
 
 from owca.storage import KafkaStorage
-from wrapper.parser import default_parse, parse_loop, DEFAULT_REGEXP, ParseFunc
-from wrapper.server import run_server
+from owca.wrapper.parser import default_parse, parse_loop, DEFAULT_REGEXP, ParseFunc
+from owca.wrapper.server import run_server
 
 log = logging.getLogger(__name__)
 
