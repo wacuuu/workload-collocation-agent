@@ -14,6 +14,8 @@ RUN curl https://sh.rustup.rs -sSf | \
 RUN git clone https://github.com/twitter/rpc-perf.git
 WORKDIR /rpc-perf
 RUN git checkout 8708682a73efae7d91e5d17a9867e7d1c770482f
+RUN cargo build --release
+
 ADD /workloads/rpc-perf/intel_rpc-perf.patch .
 RUN git apply intel_rpc-perf.patch
 
@@ -41,7 +43,7 @@ RUN yum makecache
 RUN yum install -y python36
 
 ADD /dist/wrapper.pex /wrapper.pex
-ADD /rpc-perf/rpc-perf.toml /etc/
+ADD /workloads/rpc-perf/rpc-perf.toml /etc/
 COPY --from=rpc-perf /rpc-perf/target/release/rpc-perf /usr/bin/
 COPY --from=rpc-perf /rpc-perf/configs /etc/rpc-perf/
 
