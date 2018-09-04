@@ -1,0 +1,51 @@
+import os
+
+include('../common.aurora')
+
+# Add label for identification workload in prometheus.
+wrapper_labels["name"] = 'tf_inference--%s' % workload_uniq_id
+wrapper_labels["load_generator"] = ""
+wrapper_labels["application"] = "tf_inference"
+
+tf_inference_image_tag = '1'  # Workaround for "force pull images" defect in Aurora.
+
+# resources parameters
+cpu = 8
+ram = 2 * GB
+disk = 10 * GB
+
+# JOB definitions
+jobs = [
+    Service(
+        name='tf_inference--%s' % workload_uniq_id,
+        cluster=cluster,
+        environment='staging' + env_uniq_id,
+        role=role,
+        enable_hooks=True,
+        constraints=dict(own_ip=application_host_ip),
+        container=Mesos(image=DockerImage(
+            name=docker_registry + '/serenity/tensorflow-inference', tag=tf_inference_image_tag,
+        )),
+        task=SequentialTask(
+            name='tf_inference--%s' % workload_uniq_id,
+            resources=Resources(cpu=cpu, ram=ram, disk=disk),
+            processes=[
+                Process(
+                    name='tf_inference_run',
+                    cmdline="/wrapper.pex --command 'inference --dataset_path '/'' "
+                            "--prometheus_port {prometheus_port} "
+                            "--prometheus_ip '{prometheus_ip}' "
+                            "--stderr 0 --kafka_brokers '{kafka_brokers}' "
+                            "--log_level {log_level} "
+                            "--labels \"{labels}\"".format(prometheus_port=wrapper_prometheus_port,
+                                                           prometheus_ip=application_host_ip,
+                                                           kafka_brokers=wrapper_kafka_brokers,
+                                                           log_level=wrapper_log_level,
+                                                           labels=str(wrapper_labels))
+                )
+            ],
+        )
+    )
+]
+
+hooks = [AddMetadata(wrapper_labels)]

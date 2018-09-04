@@ -9,6 +9,11 @@ __pycache__/
 /.tox/
 /.cache/
 /.coach/
-/dist/owca.pex
+/dist/*.pex
 /gym_workloads-*
 .coverage
+/workloads/tensorflow-train/*.zip
+/workloads/tensorflow-inference/fruits-360/
+/workloads/tensorflow-inference/*.zip
+/workloads/cassandra_ycsb/ycsb/YCSB
+config.sh
