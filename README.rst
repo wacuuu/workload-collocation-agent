@@ -6,7 +6,7 @@ Overview
 ============
 
 A Kafka consumer which exposes the latest read message in its own HTTP server.
-OWCA stands for Resource Mesos Integration, see https://github.intel.com/serenity/owca/.
+OWCA stands for Orchestration-aware Workload Collocation Agent, see https://github.intel.com/serenity/owca/.
 
 
 Motivation
