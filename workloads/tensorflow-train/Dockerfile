@@ -30,8 +30,8 @@ RUN cd /tensorflow && \
     bazel build --config=mkl --config=opt //tensorflow/tools/pip_package:build_pip_package && \
     bazel-bin/tensorflow/tools/pip_package/build_pip_package /output
 
-ADD tensorflow-train/prep_dataset.py /prep_dataset.py
-ADD tensorflow-train/requirements.txt /requirements.txt
+ADD /workloads/tensorflow-train/prep_dataset.py /prep_dataset.py
+ADD /workloads/tensorflow-train/requirements.txt /requirements.txt
 ADD kaggle.json /root/.kaggle/kaggle.json
 RUN pip3.6 install -r requirements.txt
 RUN python3.6 /prep_dataset.py
@@ -60,7 +60,7 @@ RUN rm -rf /tensorflow-pkg
 
 # Add workload dataset and workload script
 COPY --from=tensorflow dataset2-master /dataset2-master
-ADD tensorflow-train/training /usr/local/bin/training
+ADD /workloads/tensorflow-train/training /usr/local/bin/training
 RUN chmod +x /usr/local/bin/training
 
-ADD /wrapper/dist/wrapper.pex /wrapper.pex
+ADD /dist/wrapper.pex /wrapper.pex

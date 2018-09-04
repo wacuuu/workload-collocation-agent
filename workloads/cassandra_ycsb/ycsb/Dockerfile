@@ -14,7 +14,7 @@ RUN tar -C /tmp -xzf /tmp/apache-maven-3.5.4-bin.tar.gz && mv /tmp/apache-maven-
 
 # Apply intel patch that allow to generate variable (sine-shaped) amount of QPS.
 WORKDIR "/opt/ycsb"
-ADD /cassandra_ycsb/ycsb/intel.patch /opt/ycsb/
+ADD /workloads/cassandra_ycsb/ycsb/intel.patch /opt/ycsb/
 RUN patch -p1 -i intel.patch
 
 # Required for running /opt/ycsb.
