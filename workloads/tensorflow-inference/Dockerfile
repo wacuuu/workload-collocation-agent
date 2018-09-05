@@ -30,9 +30,9 @@ RUN cd /tensorflow && \
     bazel build --config=mkl --config=opt //tensorflow/tools/pip_package:build_pip_package && \
     bazel-bin/tensorflow/tools/pip_package/build_pip_package /output
 
-ADD tensorflow-inference/prep_dataset_fruits.py /prep_dataset_fruits.py
-ADD tensorflow-inference/requirements.txt /requirements.txt
-ADD kaggle.json /root/.kaggle/kaggle.json
+ADD /workloads/tensorflow-inference/prep_dataset_fruits.py /prep_dataset_fruits.py
+ADD /workloads/tensorflow-inference/requirements.txt /requirements.txt
+ADD /kaggle.json /root/.kaggle/kaggle.json
 RUN pip3.6 install -r requirements.txt
 RUN python3.6 /prep_dataset_fruits.py
 
@@ -60,14 +60,14 @@ RUN pip3.6 uninstall -y wheel
 RUN rm -rf /tensorflow-pkg
 
 # Add and run resnet50 weights loading script
-ADD tensorflow-inference/load_nn_weights.py /load_nn_weights.py
+ADD /workloads/tensorflow-inference/load_nn_weights.py /load_nn_weights.py
 RUN python3.6 load_nn_weights.py
 
 # Add workload dataset and workload script
 COPY --from=tensorflow /tensorflow-inference/fruits-360 /fruits-360
-ADD tensorflow-inference/inference /usr/local/bin/inference
+ADD /workloads/tensorflow-inference/inference /usr/local/bin/inference
 RUN chmod +x /usr/local/bin/inference
 
 # Add workload wrapper
-ADD /wrapper/dist/wrapper.pex /wrapper.pex
+ADD //dist/wrapper.pex /wrapper.pex
 
