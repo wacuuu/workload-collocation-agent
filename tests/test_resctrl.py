@@ -64,6 +64,33 @@ def test_sync_resctrl_not_mounted(exists_mock, log_warning_mock):
     log_warning_mock.assert_called_once_with('Resctrl not mounted, ignore sync!')
 
 
+@patch('owca.resctrl.log.warning')
+@patch('os.path.exists', return_value=True)
+@patch('os.makedirs')
+def test_sync_flush_exception(makedirs_mock, exists_mock, log_warning_mock):
+    resctrl_file_mock = MagicMock(  # open
+            return_value=MagicMock(
+                __enter__=MagicMock(  # __enter__
+                    return_value=MagicMock(
+                        write=MagicMock(  # write
+                            side_effect=ProcessLookupError
+                        )
+                    )
+                )
+            )
+        )
+    open_mock = create_open_mock({
+        "/sys/fs/resctrl": "0",
+        "/sys/fs/cgroup/cpu/ddd/tasks": "123",
+        "/sys/fs/resctrl/ddd/tasks": resctrl_file_mock,
+    })
+    with patch('builtins.open', open_mock):
+        cgroup_path = "/ddd"
+        resgroup = ResGroup(cgroup_path)
+        resgroup.sync()
+        log_warning_mock.assert_any_call('sync: Unsuccessful synchronization attempts. Ignoring.')
+
+
 @patch('builtins.open', new=create_open_mock({
     "/sys/fs/resctrl/ddd/mon_data/1/mbm_total_bytes": "1",
     "/sys/fs/resctrl/ddd/mon_data/2/mbm_total_bytes": "1",

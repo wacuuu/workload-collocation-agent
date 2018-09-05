@@ -2,6 +2,7 @@ import errno
 import logging
 import os
 
+from owca import logger
 from owca.cgroups import BASE_SUBSYSTEM_PATH
 from owca.metrics import Measurements, MetricName
 
@@ -82,28 +83,52 @@ class ResGroup:
         self.resgroup_dir = os.path.join(BASE_RESCTRL_PATH, flatten_rescgroup_name)
         self.resgroup_tasks = os.path.join(self.resgroup_dir, TASKS_FILENAME)
 
-    def sync(self):
+    def sync(self, max_attempts=3):
         """Copy all the tasks from all cgroups to resctrl tasks file
         """
         if not os.path.exists('/sys/fs/resctrl'):
             log.warning('Resctrl not mounted, ignore sync!')
             return
 
-        tasks = ''
-        with open(os.path.join(self.cgroup_fullpath, TASKS_FILENAME)) as f:
-            tasks += f.read()
+        attempt = 1
+        while attempt <= max_attempts:
+            tasks = ''
+            with open(os.path.join(self.cgroup_fullpath, TASKS_FILENAME)) as f:
+                tasks += f.read()
+            log.log(logger.TRACE, 'sync: Read tasks for %r (found %d pids)'
+                    % (self.resgroup_dir, len(tasks)))
 
-        try:
-            os.makedirs(self.resgroup_dir, exist_ok=True)
-        except OSError as e:
-            if e.errno == errno.ENOSPC:  # "No space left on device"
-                raise Exception("Limit of workloads reached! (Oot of available CLoSes/RMIDs!)")
-            raise
+            try:
+                os.makedirs(self.resgroup_dir, exist_ok=True)
+            except OSError as e:
+                if e.errno == errno.ENOSPC:  # "No space left on device"
+                    raise Exception("Limit of workloads reached! (Oot of available CLoSes/RMIDs!)")
+                raise
 
-        with open(self.resgroup_tasks, 'w') as f:
-            for task in tasks.split():
-                f.write(task)
-                f.flush()
+            try:
+                log.log(logger.TRACE, 'sync: Writings tasks for %r' % (self.resgroup_dir))
+                with open(self.resgroup_tasks, 'w') as f:
+                    for task in tasks.split():
+                        f.write(task)
+                        f.flush()
+            except ProcessLookupError:
+                log.warning('Could not write process pids to resctrl (%r). '
+                            'Process probably does not exist. '
+                            'Restarting synchronization (attempt=%d).'
+                            % (self.resgroup_dir, attempt))
+                attempt += 1
+                continue
+
+            log.log(logger.TRACE,
+                    'sync: Succesful synchronization for %r - braking' % self.resgroup_dir)
+            break
+
+        else:
+            log.warning('sync: Unsuccessful synchronization attempts. Ignoring.')
+            return
+
+        log.log(logger.TRACE,
+                'sync: Succesful synchronization for %r - returning' % self.resgroup_dir)
 
     def get_measurements(self) -> Measurements:
         """

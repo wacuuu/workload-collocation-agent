@@ -4,7 +4,7 @@ setup(
     name='owca',
     author='Intel',
     description='Orchestration-aware Workload Collocation Agent',
-    classifiers = [
+    classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Environment :: Console',
         'Intended Audience :: System Administrators',
