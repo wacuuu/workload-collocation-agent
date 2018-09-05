@@ -214,7 +214,7 @@ Implementing workload specific parsing function
 -----------------------------------------------
 Wrapper allows to provide a different implementation of the workload output parsing function. Example with dummy parsing function is in wrapper/example_workload_wrapper.py.
 To use the implemented function, developer has to create his own, workload specific pex. One has to extend the tox.ini file with a new environment with different starting point, here
-wrapper.example_workload_wrapper and .pex output file:
+wrapper.parser_example_workload and .pex output file:
 
 .. code-block:: sh
 
@@ -222,7 +222,7 @@ wrapper.example_workload_wrapper and .pex output file:
     deps =
         pex
         -e ./owca
-    commands = pex . ./owca -o dist/example_workload_wrapper.pex --disable-cache -m wrapper.example_workload_wrapper
+    commands = pex . ./owca -o dist/example_workload_wrapper.pex --disable-cache -m wrapper.parser_example_workload
 
 Remember to extend the list of environments in tox.ini:
 
@@ -232,4 +232,14 @@ Remember to extend the list of environments in tox.ini:
     envlist = flake8,unit,package,example_package
 
 Implementation of the parsing function should return only the Metrics read from the current lines of workload output. Previous metrics should be discarded/overwritten.
+Use function readline_with_check(input) instead of input.readline() to read a line from an input stream. The function raises expection StopIteration when EOF is read.
 
+.. code-block:: sh
+
+    #import
+    from owca.wrapper.parser import readline_with_check
+
+    #...
+
+    # Read a line using readline_with_check(input)
+    new_line = readline_with_check(input)

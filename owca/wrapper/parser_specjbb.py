@@ -5,6 +5,7 @@ import re
 
 from owca.metrics import Metric, MetricType
 from owca.wrapper import wrapper_main
+from owca.wrapper.parser import readline_with_check
 
 log = logging.getLogger(__name__)
 EMPTY_LINE = "^\s*$"
@@ -21,8 +22,8 @@ def log_line(line, discarded=True):
         log.debug("+ {0}".format(line))
 
 
-def specjbb_parse_function(input: TextIOWrapper, regexp: str, separator: str = None,
-                           labels: Dict[str, str] = {}) -> List[Metric]:
+def parse(input: TextIOWrapper, labels: Dict[str, str] = {},
+          *args, **kwargs) -> List[Metric]:
     """
     Custom parse function for specjbb.
     For sample output from specjbb see file:
@@ -39,16 +40,16 @@ def specjbb_parse_function(input: TextIOWrapper, regexp: str, separator: str = N
     input_lines = []
 
     # discarding lines
-    new_line = input.readline()
+    new_line = readline_with_check(input)
     while not re.match("^\s*Response times:\s*$", new_line):
-        new_line = input.readline()
+        new_line = readline_with_check(input)
         log_line(new_line, True)
-    new_line = input.readline()
+    new_line = readline_with_check(input)
 
     # reading until empty line
     while not re.match(EMPTY_LINE, new_line):
         input_lines.append(new_line)
-        new_line = input.readline()
+        new_line = readline_with_check(input)
         log_line(new_line, False)
     log.debug("Found separator in {0}".format(new_line))
 
@@ -67,4 +68,4 @@ def specjbb_parse_function(input: TextIOWrapper, regexp: str, separator: str = N
 
 
 if __name__ == "__main__":
-    wrapper_main.main(specjbb_parse_function)
+    wrapper_main.main(parse)

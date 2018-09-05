@@ -19,6 +19,15 @@ DEFAULT_REGEXP = "(?P<name>\w+?)=(?P<value>\d+?.?\d*)"
 MAX_ATTEMPTS = 5
 
 
+def readline_with_check(input: TextIOWrapper) -> str:
+    """Additionally check if EOF."""
+    EOF_line = ""
+    new_line = input.readline()
+    if new_line == EOF_line:
+        raise StopIteration
+    return new_line
+
+
 def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
                   labels: Dict[str, str] = {}) -> List[Metric]:
     """
@@ -39,20 +48,16 @@ def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
     new_metrics = []
     input_lines = []
 
-    new_line = input.readline()
+    new_line = readline_with_check(input)
     if separator is not None:
         # With separator, first we read the whole block of output until the separator appears
         while new_line != separator and not new_line == '':
             input_lines.append(new_line)
-            new_line = input.readline()
+            new_line = readline_with_check(input)
         log.debug("Found separator in {0}".format(new_line))
     else:
         # Without separator only one line is processed at a time
         input_lines.append(new_line)
-    # When there is no source of output readline will return an empty string
-    if new_line == '':
-        log.warning("EOF received")
-        raise StopIteration
     found_metrics = re.finditer(regexp, '\n'.join(input_lines))
     for metric in list(found_metrics):
         metric = metric.groupdict()

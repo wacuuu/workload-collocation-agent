@@ -4,7 +4,8 @@ from io import StringIO
 
 from owca.metrics import Metric, MetricType
 from owca.storage import FailedDeliveryException
-from owca.wrapper.parser import default_parse, kafka_store_with_retry, DEFAULT_REGEXP, MAX_ATTEMPTS
+from owca.wrapper.parser import (default_parse, kafka_store_with_retry,
+                                 DEFAULT_REGEXP, MAX_ATTEMPTS, readline_with_check)
 
 
 @pytest.mark.parametrize("input,separator,expected", [
@@ -38,6 +39,13 @@ def test_default_parse_no_source_separator():
                                      # last line is an empty string, which should raise the
                                      # exception
                                      ""), regexp=DEFAULT_REGEXP, separator="---")
+
+
+def test_readline_with_check():
+    with pytest.raises(StopIteration):
+        readline_with_check(input=StringIO(""))
+    line = "content_of_line"
+    assert line == readline_with_check(input=StringIO(line))
 
 
 @patch('time.sleep')
