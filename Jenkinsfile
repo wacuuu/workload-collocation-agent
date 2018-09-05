@@ -2,8 +2,9 @@ pipeline {
      agent any
      environment {
           JENKINS_HOME = '/var/lib/jenkins'
-          DOCKERFILES = ''}
-          stages{
+          DOCKERFILES = ''
+     }
+     stages{
           stage("Run tests") {
               steps {
                   sh '''
