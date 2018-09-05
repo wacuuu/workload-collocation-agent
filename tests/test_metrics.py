@@ -8,8 +8,10 @@ from owca.testing import task
 @pytest.mark.parametrize('task,task_measurements,expected_metrics', (
         (task('/t1'),
          {}, []),
-        (task('/t1'), {'cpu': 15},
-         [Metric(name='cpu', value=15, labels={'task_id': 'task-id-/t1', 'foo': 'bar'})]),
+        (task('/t1', labels=dict(task_label='task_label_value')), {'cpu': 15},
+         [Metric(name='cpu', value=15, labels={'task_id': 'task-id-/t1', 'foo': 'bar',
+                                               'task_label': 'task_label_value',
+                                               })]),
         (task('/t1'), {'cpu': 15, 'ram': 30},
          [
              Metric(name='cpu', value=15, labels={'task_id': 'task-id-/t1', 'foo': 'bar'}),

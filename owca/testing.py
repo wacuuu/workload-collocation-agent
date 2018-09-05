@@ -54,7 +54,7 @@ def anomaly(task_ids):
     )
 
 
-def task(cgroup_path):
+def task(cgroup_path, labels=None):
     """Helper method to create task with default values."""
     return MesosTask(
         cgroup_path=cgroup_path,
@@ -64,4 +64,5 @@ def task(cgroup_path):
         task_id='task-id-' + cgroup_path,
         executor_id='executor-id-' + cgroup_path,
         agent_id='agent-id-' + cgroup_path,
+        labels=labels or dict(),
     )
