@@ -7,23 +7,13 @@ and start main loop from Runner.
 import argparse
 import logging
 import os
-from pkg_resources import get_distribution, DistributionNotFound
 
 from owca import components
 from owca import config
 from owca import logger
+from owca import platforms
 
 log = logging.getLogger(__name__)
-
-
-def get_owca_version():
-    try:
-        version = get_distribution('owca').version
-    except DistributionNotFound:
-        log.warning("Version is not available.")
-        return None
-
-    return version
 
 
 def main():
@@ -39,7 +29,7 @@ def main():
         '-r', '--register', action='append', dest='components',
         help="Register additional components in config", default=[])
     parser.add_argument(
-        '-v', '--version', action='version', version=get_owca_version(),
+        '-v', '--version', action='version', version=platforms.get_owca_version(),
         help="Show version")
 
     args = parser.parse_args()
@@ -47,7 +37,7 @@ def main():
     # Initialize logging subsystem.
     logger.init_logging(args.log_level, package_name='owca')
     log.debug('started PID=%r', os.getpid())
-    log.info('Version owca: %s', get_owca_version())
+    log.info('Version owca: %s', platforms.get_owca_version())
 
     # Register internal & external components.
     components.register_components(extra_components=args.components)

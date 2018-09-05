@@ -2,14 +2,29 @@ import os
 import re
 import socket
 import time
+import logging
 from typing import List, Dict, Set, Tuple
+from pkg_resources import get_distribution, DistributionNotFound
 
 from dataclasses import dataclass
 
 from owca.metrics import Metric, MetricName
 
+log = logging.getLogger(__name__)
+
 # 0-based logical processor number (matches the value of "processor" in /proc/cpuinfo)
 CpuId = int
+
+
+def get_owca_version():
+    """Returns information about owca version."""
+    try:
+        version = get_distribution('owca').version
+    except DistributionNotFound:
+        log.warning("Version is not available.")
+        return None
+
+    return version
 
 
 @dataclass
@@ -60,6 +75,7 @@ def create_labels(platform: Platform) -> Dict[str, str]:
     labels["cpus"] = str(platform.cpus)
     # Additional labels
     labels["host"] = socket.gethostname()
+    labels["owca_version"] = get_owca_version()
     return labels
 
 

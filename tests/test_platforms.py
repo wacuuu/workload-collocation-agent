@@ -82,6 +82,7 @@ def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks)
     assert (4, 4, 2) == collect_topology_information()
 
 
+@patch('owca.platforms.get_owca_version', return_value="0.1")
 @patch('socket.gethostname', return_value="test_host")
 @patch('owca.platforms.parse_proc_meminfo', return_value=1337)
 @patch('owca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
@@ -101,5 +102,5 @@ def test_collect_platform_information(*mocks):
                 name=MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}
             ),
         ],
-        {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host"}
+        {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host", "owca_version": "0.1"}
     )
