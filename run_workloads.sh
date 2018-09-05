@@ -9,7 +9,7 @@ prometheus_port=$prometheus_smallest_port
 
 
 # kill all job on that cluster/role/environment
-aurora job list $cluster/$role/staging$env_uniq_id | xargs -n 1 aurora job killall 
+aurora job list $cluster/$role/staging$env_uniq_id | xargs --no-run-if-empty -n 1 aurora job killall
 
 # specjbb
 export qps=500
@@ -18,9 +18,9 @@ for i in $(seq 0 $((specjbb_instances_count-1))); do
     export wrapper_prometheus_port=$prometheus_port
     prometheus_port=$((prometheus_port+1))
     export workload_uniq_id=$load_generator_port
-    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_controller--${workload_uniq_id} SpecJBB/specjbb.aurora
-    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_injector--${workload_uniq_id} SpecJBB/specjbb.aurora
-    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_backend--${workload_uniq_id} SpecJBB/specjbb.aurora
+    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_controller--${workload_uniq_id} workloads/SpecJBB/specjbb.aurora
+    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_injector--${workload_uniq_id} workloads/SpecJBB/specjbb.aurora
+    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_backend--${workload_uniq_id} workloads/SpecJBB/specjbb.aurora
 
     export load_generator_port=$((load_generator_port+1))
 done
@@ -33,9 +33,9 @@ for i in $(seq 0 $((ycsb_cassandra_instances_count-1))); do
     export wrapper_prometheus_port=$prometheus_port
     prometheus_port=$((prometheus_port+1))
     export workload_uniq_id=$cassandra_port
-    aurora job create $cluster/$role/staging$env_uniq_id/cassandra--$workload_uniq_id cassandra_ycsb/cassandra_ycsb.aurora
+    aurora job create $cluster/$role/staging$env_uniq_id/cassandra--$workload_uniq_id workloads/cassandra_ycsb/cassandra_ycsb.aurora
     sleep 1
-    aurora job create $cluster/$role/staging$env_uniq_id/ycsb--$workload_uniq_id cassandra_ycsb/cassandra_ycsb.aurora
+    aurora job create $cluster/$role/staging$env_uniq_id/ycsb--$workload_uniq_id workloads/cassandra_ycsb/cassandra_ycsb.aurora
 
     export cassandra_port=$((cassandra_port+1))
     export jmx_port=$((jmx_port+1))
@@ -50,8 +50,8 @@ for i in $(seq 0 $((rpcperf_twemcache_instances_count-1))); do
     export wrapper_prometheus_port=$prometheus_port
     prometheus_port=$((prometheus_port+1))
     export workload_uniq_id=$application_listen_port
-    aurora job create $cluster/$role/staging$env_uniq_id/$application--$workload_uniq_id rpc-perf/rpc-perf.aurora
-    aurora job create $cluster/$role/staging$env_uniq_id/rpc-perf--$workload_uniq_id rpc-perf/rpc-perf.aurora
+    aurora job create $cluster/$role/staging$env_uniq_id/$application--$workload_uniq_id workloads/rpc-perf/rpc-perf.aurora
+    aurora job create $cluster/$role/staging$env_uniq_id/rpc-perf--$workload_uniq_id workloads/rpc-perf/rpc-perf.aurora
 
     export application_listen_port=$((application_listen_port+1))
 done
@@ -65,8 +65,8 @@ for i in $(seq 0 $((rpcperf_redis_instances_count-1))); do
     export wrapper_prometheus_port=$prometheus_port
     prometheus_port=$((prometheus_port+1))
     export workload_uniq_id=$application_listen_port
-    aurora job create $cluster/$role/staging$env_uniq_id/$application--$workload_uniq_id rpc-perf/rpc-perf.aurora
-    aurora job create $cluster/$role/staging$env_uniq_id/rpc-perf--$workload_uniq_id rpc-perf/rpc-perf.aurora
+    aurora job create $cluster/$role/staging$env_uniq_id/$application--$workload_uniq_id workloads/rpc-perf/rpc-perf.aurora
+    aurora job create $cluster/$role/staging$env_uniq_id/rpc-perf--$workload_uniq_id workloads/rpc-perf/rpc-perf.aurora
 
     export application_listen_port=$((application_listen_port+1))
 done
@@ -76,7 +76,7 @@ for i in $(seq 0 $((tf_train_instances_count-1))); do
     export wrapper_prometheus_port=$prometheus_port
     prometheus_port=$((prometheus_port+1))
     export workload_uniq_id=$i
-    aurora job create $cluster/$role/staging$env_uniq_id/tf_train--$workload_uniq_id tensorflow-train/tensorflow_train.aurora
+    aurora job create $cluster/$role/staging$env_uniq_id/tf_train--$workload_uniq_id workloads/tensorflow-train/tensorflow_train.aurora
 done
 
 # tensorflow inference
@@ -84,5 +84,5 @@ for i in $(seq 0 $((tf_inference_instances_count-1))); do
     export wrapper_prometheus_port=$prometheus_port
     prometheus_port=$((prometheus_port+1))
     export workload_uniq_id=$i
-    aurora job create $cluster/$role/staging$env_uniq_id/tf_inference--$workload_uniq_id tensorflow-inference/tensorflow_inference.aurora
+    aurora job create $cluster/$role/staging$env_uniq_id/tf_inference--$workload_uniq_id workloads/tensorflow-inference/tensorflow_inference.aurora
 done

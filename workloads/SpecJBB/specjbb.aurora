@@ -41,7 +41,7 @@ specjbb_wrapper = '/usr/bin/specjbb_wrapper.pex'
 
 # We don't have yet good way of copying config to mesos container:
 # here we just create it on the fly running shell commands inside container.
-with open('SpecJBB/specjbb.config', 'r') as fconfig:
+with open('workloads/SpecJBB/specjbb.config', 'r') as fconfig:
     config_content = "".join(fconfig.readlines())
     config_content = config_content.format(qps=qps, load_generator_host_ip=load_generator_host_ip,
                                load_generator_port=load_generator_port,
