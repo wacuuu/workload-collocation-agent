@@ -109,7 +109,8 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
     creating anomalies and calculating the desired state.
     """
 
-    node_mock = Mock(spec=MesosNode, get_tasks=Mock(return_value=[task('/t1')]))
+    node_mock = Mock(spec=MesosNode, get_tasks=Mock(return_value=[
+        task('/t1', resources=dict(cpus=8.))]))
     storage_mock = Mock(spec=storage.Storage, store=Mock())
 
     # simulate returning one anomaly and additional metric
@@ -146,9 +147,13 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
     ])
 
     # Check that detector was called with proper arguments.
-    detector_mock.detect.assert_called_once_with(platform_mock, {'task-id-/t1': {'cpu_usage': 23}})
+    detector_mock.detect.assert_called_once_with(
+        platform_mock,
+        {'task-id-/t1': {'cpu_usage': 23}},
+        {'task-id-/t1': {'cpus': 8}}
+    )
 
     # assert expected state (new container based on first task /t1)
-    assert runner.containers == {task('/t1'): container('/t1')}
+    assert runner.containers == {task('/t1', resources=dict(cpus=8.)): container('/t1')}
 
     runner.wait_or_finish.assert_called_once()

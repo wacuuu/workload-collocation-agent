@@ -1,5 +1,6 @@
 from owca.metrics import Metric
-from owca.detectors import TasksMeasurements, ContentionAnomaly, ContendedResource, AnomalyDetector
+from owca.detectors import (TasksMeasurements, ContentionAnomaly,
+                            ContendedResource, AnomalyDetector, TasksResources)
 from owca.mesos import TaskId
 from owca.platforms import Platform
 
@@ -10,7 +11,10 @@ class ExampleDetector(AnomalyDetector):
     def __init__(self, task_id: TaskId):
         self.task_id = task_id
 
-    def detect(self, platform: Platform, tasks_measurements: TasksMeasurements):
+    def detect(self, platform: Platform,
+               tasks_measurements: TasksMeasurements,
+               tasks_resources: TasksResources,
+               ):
         anomalies = [
             ContentionAnomaly(
                 task_ids=[self.task_id],

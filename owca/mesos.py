@@ -33,6 +33,9 @@ class MesosTask:
     cgroup_path: str  # Starts with leading "/"
     labels: Dict[str, str] = field(default_factory=dict)
 
+    # Resources assigned accorind Mesos/Aurora task definition.
+    resources: Dict[str, float] = field(default_factory=dict)
+
     def __hash__(self):
         """Every instance of mesos task is uniqully identified by cgroup_path.
         Assumption here is that every mesos task is represented by one main cgroup.
@@ -90,6 +93,12 @@ class MesosNode:
 
             labels = {label['key']: label['value'] for label in launched_task['labels']['labels']}
 
+            # Extract scalar resoruces.
+            resources = dict()
+            for resource in launched_task['resources']:
+                if resource['type'] == 'SCALAR':
+                    resources[resource['name']] = float(resource['scalar']['value'])
+
             tasks.append(
                 MesosTask(
                     name=launched_task['name'],
@@ -100,6 +109,7 @@ class MesosNode:
                     agent_id=last_status['agent_id']['value'],
                     executor_id=last_status['executor_id']['value'],
                     labels=labels,
+                    resources=resources
                 )
             )
 

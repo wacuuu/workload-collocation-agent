@@ -37,7 +37,11 @@ You can configure system to detect and report anomalies in following way in ``co
 
     class AnomalyDetector(ABC):
 
-        def detect(self, platform: Platform, tasks_measurements: TasksMeasurements) -> (List[Anomaly], List[Metric]):
+        def detect(self,
+                    platform: Platform,
+                    tasks_measurements: TasksMeasurements,
+                    tasks_resources: TasksResources
+                    ) -> (List[Anomaly], List[Metric]):
             ...
 
 
@@ -51,7 +55,10 @@ Example implementation:
             self.example_config_list = example_config_list
             ...
 
-        def detect(self, platform: Platform, tasks_measurements: TasksMeasurements) -> (List[Anomaly], List[Metric]):
+        def detect(self, platform: Platform,
+                         tasks_measurements: TasksMeasurements,
+                         tasks_resources: TasksResources,
+                         ) -> (List[Anomaly], List[Metric]):
             return [], []
 
 All config values provided under `detector` key in configuration are treated as simple types (including lists and dict),
@@ -70,6 +77,7 @@ In example above ``ContentionAnomalyDetector`` implements all required methods o
             
 ``AnomalyDetector`` defines interface where ``Platform`` class represents capacity and utilization information 
 covering whole system and ``TasksMeasurements`` class represents individual measurements for specific Mesos tasks running on this node.
+``TasksResources``` class represents initial resource assigment as defined in orchestration software API (e.g. Mesos/Aurora).
 
 Implementation of ``AnomalyDetector`` is responsible for returning new immutable instances of ``Anomaly`` and in 
 specific case of "resource contention" should return subclass called ``ContentionAnomaly`` with extended context.
@@ -163,15 +171,18 @@ This is example of how to ``Platform`` instance looks like on two sockets "Intel
     Measurements = Dict[MetricName, MetricValue]
 
 
-``TasksMeasurements`` type
-==========================
+``TasksMeasurements`` and ``TaskResources`` types
+=================================================
 
 ``TasksMeasurements`` is a nested mapping from task and metric name to value of metric. 
+``TasksResources`` is a nested mapping from task and resource name to value of resource allocated
+by task definition as defined in used orechstrator.
 
 .. code:: python
 
     TaskId = str  # Mesos tasks id
     TasksMeasurements = Dict[TaskId, Measurements]
+    TasksResources = Dict[TaskId, Dict[str,float]]
 
     # Example:
     tasks_measurements = {
@@ -191,8 +202,15 @@ This is example of how to ``Platform`` instance looks like on two sockets "Intel
         },
     }
 
+    tasks_resources = {
+        'ppalucki-devel-cassandra-0-f096985b-1f1e-4f94-b0b7-4728f5b476b2': {
+            'cpus': 8.0,
+            'mem': 2000.0,
+            'disk': 8000.0,
+        },
+    }
     # and example call of detect function
-    anomalies, detection_metrics = anomaly_detector.detect(platform, tasks_measurements)
+    anomalies, detection_metrics = anomaly_detector.detect(platform, tasks_measurements, tasks_resources)
 
 
 ``Anomaly`` type
@@ -239,7 +257,7 @@ Example detection function returning one instance of ``Anomaly``:
 
 .. code:: python
 
-    def detect(platform, tasks_measurements):
+    def detect(platform, tasks_measurements, tasks_resources):
 
         anomalies = []
 

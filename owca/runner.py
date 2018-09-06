@@ -10,7 +10,7 @@ from owca import mesos
 from owca import platforms
 from owca import storage
 from owca.containers import Container
-from owca.detectors import TasksMeasurements, convert_anomalies_to_metrics
+from owca.detectors import TasksMeasurements, convert_anomalies_to_metrics, TasksResources
 from owca.mesos import MesosTask, create_metrics
 from owca.metrics import Metric
 from owca.resctrl import check_resctrl, cleanup_resctrl
@@ -138,19 +138,28 @@ class DetectionRunner:
 
             # Build labeled tasks_metrics and task_metrics_values.
             tasks_measurements: TasksMeasurements = {}
+            tasks_resources: TasksResources = {}
             tasks_metrics: List[Metric] = []
             for task, container in self.containers.items():
+
+                # Single task data
                 task_measurements = container.get_measurements()
-                tasks_measurements[task.task_id] = task_measurements
                 task_metrics = create_metrics(task, task_measurements)
+
+                # Task scoped label decoration.
                 for task_metric in task_metrics:
                     task_metric.labels.update(common_labels)
+
+                # Aggregate over all tasks.
+                tasks_measurements[task.task_id] = task_measurements
+                tasks_resources[task.task_id] = task.resources
                 tasks_metrics += task_metrics
 
             self.storage.store(platform_metrics + tasks_metrics)
 
             # Wrap tasks with metrics
-            anomalies, extra_metrics = self.detector.detect(platform, tasks_measurements)
+            anomalies, extra_metrics = self.detector.detect(
+                platform, tasks_measurements, tasks_resources)
 
             anomaly_metrics = convert_anomalies_to_metrics(anomalies)
 
