@@ -17,3 +17,4 @@ __pycache__/
 /workloads/tensorflow-inference/*.zip
 /workloads/cassandra_ycsb/ycsb/YCSB
 config.sh
+config-*.sh

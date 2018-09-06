@@ -22,4 +22,9 @@ ycsb_cassandra_instances_count=2
 rpcperf_twemcache_instances_count=4
 rpcperf_redis_instances_count=4
 tf_train_instances_count=2
-tf_inference_instances_count=2
+tf_inference_instances_count=1
+
+total_jobs_per_env=29
+
+# Total jobs per config is:
+# 15 + 4 + 4 + 4 + 2 = 29

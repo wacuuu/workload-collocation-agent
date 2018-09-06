@@ -23,6 +23,7 @@ wrapper_log_level = os.environ.get('wrapper_log_level', 'DEBUG')
 wrapper_labels = {
     'workload_uniq_id': workload_uniq_id,
     'env_uniq_id': env_uniq_id,
+    'own_ip': application_host_ip,
 }
 
 #Pre 0.20 way of adding metadata

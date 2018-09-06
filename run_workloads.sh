@@ -1,15 +1,21 @@
 #!/bin/bash -ex
 
+# Run multiple configurations files run like this:
+#ls -1 config-*.sh | xargs -n1 -P 8 bash run_workloads.sh 
+
+first_arg=$1
+config_file=${first_arg:-config.sh}
+
+echo Using: $config_file
+
 # Shared among all workloads. Variables believed to be often changed.
-[ ! -e config.sh ] && echo "A file config.sh does not exist." && exit 1
-source config.sh
+[ ! -e "$config_file" ] && echo "A file $config_file does not exist." && exit 1
+source $config_file
 
 prometheus_port=$prometheus_smallest_port
 
-
-
 # kill all job on that cluster/role/environment
-aurora job list $cluster/$role/staging$env_uniq_id | xargs --no-run-if-empty -n 1 aurora job killall
+aurora job list $cluster/$role/staging$env_uniq_id | xargs --no-run-if-empty -n 1 -P $total_jobs_per_env aurora job killall
 
 # specjbb
 export qps=500

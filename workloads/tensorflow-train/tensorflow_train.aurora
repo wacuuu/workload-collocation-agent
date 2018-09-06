@@ -14,7 +14,7 @@ tf_train_epochs = os.environ.get('tf_train_epochs', '100')
 tf_train_image_tag = '1'  # Workaround for "force pull images" defect in Aurora.
 
 # resources parameters
-cpu = 8
+cpu = 1
 ram = 2 * GB
 disk = 2 * GB
 

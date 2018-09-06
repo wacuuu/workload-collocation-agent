@@ -32,6 +32,8 @@ if application == 'redis': rpcperf_protocol = 'redis'
 # rpc-perf Docker image tag
 rpcperf_image_tag = '1'  # Workaround for "force pull images" defect in Aurora.
 
+cpu = 0.5
+
 # JOB definitions
 jobs = [
     Service(
@@ -49,7 +51,7 @@ jobs = [
         constraints=dict(own_ip=application_host_ip),
         task=SequentialTask(
             name='redis--%s' % workload_uniq_id,
-            resources=Resources(cpu=1, ram=2 * GB, disk=10 * GB),
+            resources=Resources(cpu=cpu, ram=2 * GB, disk=2 * GB),
             processes=[
                 Process(
                     name='prep_config',
@@ -82,7 +84,7 @@ jobs = [
         constraints=dict(own_ip=application_host_ip),
         task=Task(
             name='twemcache--%s' % workload_uniq_id,
-            resources=Resources(cpu=1, ram=2 * GB, disk=100 * MB),
+            resources=Resources(cpu=cpu, ram=2 * GB, disk=2 * GB),
             processes=[
                 Process(
                     name='twemcache',
@@ -108,7 +110,7 @@ jobs = [
         )),
         task=Task(
             name='rpc-perf--{}'.format(workload_uniq_id),
-            resources=Resources(cpu=1.5, ram=2 * GB, disk=10 * GB),
+            resources=Resources(cpu=cpu, ram=2 * GB, disk=2 * GB),
             processes=[
                 Process(
                     name='rpc-perf',

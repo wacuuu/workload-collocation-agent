@@ -10,9 +10,9 @@ wrapper_labels["application"] = "tf_inference"
 tf_inference_image_tag = '1'  # Workaround for "force pull images" defect in Aurora.
 
 # resources parameters
-cpu = 8
+cpu = 1
 ram = 2 * GB
-disk = 10 * GB
+disk = 2 * GB
 
 # JOB definitions
 jobs = [

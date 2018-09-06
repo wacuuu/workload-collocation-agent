@@ -43,7 +43,7 @@ jobs = [
     constraints=dict(own_ip=application_host_ip),
     task=SequentialTask(
       name='cassandra--%s' % workload_uniq_id,
-      resources=Resources(cpu=8, ram=2*GB, disk=10*GB),
+      resources=Resources(cpu=8, ram=2*GB, disk=2*GB),
       processes=[
         Process(
           name='prep_configs',
