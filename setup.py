@@ -2,7 +2,6 @@ from setuptools import setup, find_packages
 
 setup(
     name='owca_kafka_consumer',
-    version='0.0.1',
     author='Intel',
     description='Expose data from kafka to prometheus',
     classifiers=[
@@ -14,16 +13,17 @@ setup(
         'Topic :: System :: Distributed Computing',
     ],
     install_requires=[
-          'confluent-kafka==0.11.4'
-    ],
-    setup_requires=[
-        'pytest-runner',
+        'confluent-kafka==0.11.4'
     ],
     tests_require=[
-          'pytest',
-          'pytest-cov',
-          'flake8'
+        'pytest',
+        'pytest-cov',
+        'flake8'
     ],
     packages=find_packages(),
     python_requires=">=3.6",
+    use_scm_version=True,
+    setup_requires=[
+        'setuptools_scm'
+    ],
 )

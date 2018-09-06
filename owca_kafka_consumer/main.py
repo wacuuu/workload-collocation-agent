@@ -1,7 +1,16 @@
 import argparse
 import logging
+from pkg_resources import get_distribution, DistributionNotFound
 
 from owca_kafka_consumer.server import run_server, create_kafka_consumer
+
+
+def get_version():
+    try:
+        version = get_distribution('owca_kafka_consumer').version
+    except DistributionNotFound:
+        return ""
+    return version
 
 
 def main():
@@ -36,11 +45,14 @@ def main():
                         choices=["CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"],
                         help="log levels",
                         default='ERROR')
+    parser.add_argument('-v', '--version', action='version',
+                        version=get_version(),
+                        help="Show version")
     args = parser.parse_args()
 
     logging.basicConfig(level=args.log_level)
-    logging.info("owca_kafka_consumer was run with configuration:\n{}\n\n"
-                 .format(args))
+    logging.info("owca_kafka_consumer {} was executed with following arguments:\n{}\n\n"
+                 .format(get_version(), args))
     kafka_consumer = create_kafka_consumer(args.kafka_broker_addresses,
                                            args.topic_name,
                                            args.group_id)
