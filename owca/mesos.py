@@ -126,20 +126,15 @@ def sanitize_mesos_label(label_key):
 
 def create_metrics(
         task: MesosTask,
-        task_measurements: Measurements,
-        common_labels: Dict[str, str]) -> List[Metric]:
+        task_measurements: Measurements) -> List[Metric]:
     """Prepare a list of metrics for a mesos tasks based on provided measurements
     applying common_labels.
     :param task: use information from MesosTask to decorate metrics with labels
     :param task_measurements: use values of measurements to create metrics
-    :param common_labels: apply those labels to every created metric
     """
     metrics = []
     for metric_name, metric_value in task_measurements.items():
         metric = Metric.create_metric_with_metadata(name=metric_name, value=metric_value)
-
-        # Common labels
-        metric.labels.update(common_labels)
 
         # Task labels
         metric.labels.update(dict(

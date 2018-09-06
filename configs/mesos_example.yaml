@@ -4,3 +4,5 @@ runner: !DetectionRunner
   storage: !LogStorage
   detector: !NOPAnomalyDetector
   rdt_enabled: True
+  extra_labels:
+    env_id: "host"

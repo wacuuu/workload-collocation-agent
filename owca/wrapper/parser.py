@@ -23,7 +23,7 @@ def readline_with_check(input: TextIOWrapper) -> str:
     """Additionally check if EOF."""
     EOF_line = ''
     new_line = input.readline()
-    # Print to stdout read lines from subprocess stdout or stderr. 
+    # Print to stdout read lines from subprocess stdout or stderr.
     print(new_line, end='')
     if new_line == EOF_line:
         raise StopIteration

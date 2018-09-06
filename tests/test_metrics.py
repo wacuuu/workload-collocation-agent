@@ -17,17 +17,16 @@ def test_sanitize_labels(label_key, expected_label_key):
 @pytest.mark.parametrize('task,task_measurements,expected_metrics', (
         (task('/t1'),
          {}, []),
-        (task('/t1', labels={'task.label': 'task_label_value'}), {'cpu': 15},
-         [Metric(name='cpu', value=15, labels={'task_id': 'task-id-/t1', 'foo': 'bar',
+        (task('/t1', labels=dict(task_label='task_label_value')), {'cpu': 15},
+         [Metric(name='cpu', value=15, labels={'task_id': 'task-id-/t1',
                                                'task_label': 'task_label_value',
                                                })]),
         (task('/t1'), {'cpu': 15, 'ram': 30},
          [
-             Metric(name='cpu', value=15, labels={'task_id': 'task-id-/t1', 'foo': 'bar'}),
-             Metric(name='ram', value=30, labels={'task_id': 'task-id-/t1', 'foo': 'bar'})
+             Metric(name='cpu', value=15, labels={'task_id': 'task-id-/t1'}),
+             Metric(name='ram', value=30, labels={'task_id': 'task-id-/t1'})
          ]),
 ))
 def test_create_metrics(task, task_measurements, expected_metrics):
-    common_labels = {'foo': 'bar'}
-    got_metrics = create_metrics(task, task_measurements, common_labels)
+    got_metrics = create_metrics(task, task_measurements)
     assert expected_metrics == got_metrics

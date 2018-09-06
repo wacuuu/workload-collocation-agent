@@ -44,7 +44,8 @@ def main(parse: ParseFunc = default_parse):
     kafka_brokers_addresses = args.kafka_brokers.replace(" ", "").split(',')
     if kafka_brokers_addresses != [""]:
         log.info("KafkaStorage {}".format(kafka_brokers_addresses))
-        kafka_storage = KafkaStorage(brokers_ips=kafka_brokers_addresses, max_timeout_in_seconds=5.0,
+        kafka_storage = KafkaStorage(brokers_ips=kafka_brokers_addresses,
+                                     max_timeout_in_seconds=5.0,
                                      topic=args.kafka_topic)
     else:
         kafka_storage = None

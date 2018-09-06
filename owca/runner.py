@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import List, Dict
 import logging
 import time
@@ -59,6 +59,7 @@ class DetectionRunner:
     detector: detectors.AnomalyDetector
     action_delay: float = 0.  # [s]
     rdt_enabled: bool = True
+    extra_labels: Dict[str, str] = field(default_factory=dict)
 
     def __post_init__(self):
         self.containers: Dict[MesosTask, Container] = {}
@@ -126,7 +127,14 @@ class DetectionRunner:
             self._sync_containers_state(tasks)
 
             # Platform information
-            platform, platform_metrics, common_labels = platforms.collect_platform_information()
+            platform, platform_metrics, platform_labels = platforms.collect_platform_information()
+
+            # Common labels
+            common_labels = dict(platform_labels, **self.extra_labels)
+
+            # Update platform_metrics with common labels.
+            for metric in platform_metrics:
+                metric.labels.update(common_labels)
 
             # Build labeled tasks_metrics and task_metrics_values.
             tasks_measurements: TasksMeasurements = {}
@@ -134,7 +142,9 @@ class DetectionRunner:
             for task, container in self.containers.items():
                 task_measurements = container.get_measurements()
                 tasks_measurements[task.task_id] = task_measurements
-                task_metrics = create_metrics(task, task_measurements, common_labels)
+                task_metrics = create_metrics(task, task_measurements)
+                for task_metric in task_metrics:
+                    task_metric.labels.update(common_labels)
                 tasks_metrics += task_metrics
 
             self.storage.store(platform_metrics + tasks_metrics)
@@ -143,6 +153,11 @@ class DetectionRunner:
             anomalies, extra_metrics = self.detector.detect(platform, tasks_measurements)
 
             anomaly_metrics = convert_anomalies_to_metrics(anomalies)
+
+            # Update anomaly & extra metrics with common labels.
+            for metric in anomaly_metrics + extra_metrics:
+                metric.labels.update(common_labels)
+
             self.storage.store(anomaly_metrics + extra_metrics)
 
             if not self.wait_or_finish():
