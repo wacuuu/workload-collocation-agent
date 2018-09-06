@@ -2,12 +2,14 @@ import argparse
 import ast
 import logging
 import subprocess
+import shlex
 import threading
 from functools import partial
 
 from owca.storage import KafkaStorage
 from owca.wrapper.parser import default_parse, parse_loop, DEFAULT_REGEXP, ParseFunc
 from owca.wrapper.server import run_server
+from owca.platforms import get_owca_version
 
 log = logging.getLogger(__name__)
 
@@ -23,7 +25,11 @@ def main(parse: ParseFunc = default_parse):
     # Configuring log
     logging.basicConfig(level=args.log_level)
     log.debug("Logger configured with {0}".format(args.log_level))
-    workload_process = subprocess.Popen(args.command.split(' '),
+    log.info("Starting wrapper version {}".format(get_owca_version()))
+
+    command_splited = shlex.split(args.command)
+    log.info("Running command: {}".format(command_splited))
+    workload_process = subprocess.Popen(command_splited,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE,
                                         universal_newlines=True,
@@ -36,12 +42,22 @@ def main(parse: ParseFunc = default_parse):
 
     # create kafka storage with list of kafka brokers from arguments
     kafka_brokers_addresses = args.kafka_brokers.replace(" ", "").split(',')
-    kafka_storage = KafkaStorage(brokers_ips=kafka_brokers_addresses, max_timeout_in_seconds=5.0,
-                                 topic=args.kafka_topic)
+    if kafka_brokers_addresses != [""]:
+        log.info("KafkaStorage {}".format(kafka_brokers_addresses))
+        kafka_storage = KafkaStorage(brokers_ips=kafka_brokers_addresses, max_timeout_in_seconds=5.0,
+                                     topic=args.kafka_topic)
+    else:
+        kafka_storage = None
 
-    threading.Thread(target=parse_loop, args=(parse, kafka_storage)).start()
-    # this blocks until it catches KeyboardInterrupt
-    run_server(ip=args.ip, port=args.port)
+    t = threading.Thread(target=parse_loop, args=(parse, kafka_storage))
+    t.start()
+    if args.ip != "":
+        # this blocks until it catches KeyboardInterrupt
+        run_server(ip=args.ip, port=args.port)
+    else:
+        # Wait for parser thread to terminate.
+        t.join()
+
     # terminate all spawned processes
     workload_process.terminate()
 
@@ -60,7 +76,7 @@ def prepare_argument_parser():
         '--prometheus_ip',
         help='IP used to expose the metrics',
         dest='ip',
-        default='127.0.0.1',
+        default='',
         type=str
     )
     parser.add_argument(
@@ -112,7 +128,7 @@ def prepare_argument_parser():
         '--kafka_brokers',
         help='list of addresses with ports of kafka brokers (kafka nodes). Coma separated',
         dest='kafka_brokers',
-        default="127.0.0.1:9092",
+        default="",
         type=str
     )
     parser.add_argument(

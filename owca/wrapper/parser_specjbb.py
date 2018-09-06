@@ -62,7 +62,6 @@ def parse(input: TextIOWrapper, labels: Dict[str, str] = {},
     new_metrics.append(Metric(metric_name, metric_value,
                               type=MetricType.GAUGE, labels=labels,
                               help="Specjbb2015 metric, Total Purchase, percentile 99"))
-    log.debug("Found metric name: {0}, value: {1}".format(metric_name, metric_value))
 
     return new_metrics
 

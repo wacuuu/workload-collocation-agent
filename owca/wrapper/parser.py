@@ -21,8 +21,10 @@ MAX_ATTEMPTS = 5
 
 def readline_with_check(input: TextIOWrapper) -> str:
     """Additionally check if EOF."""
-    EOF_line = ""
+    EOF_line = ''
     new_line = input.readline()
+    # Print to stdout read lines from subprocess stdout or stderr. 
+    print(new_line, end='')
     if new_line == EOF_line:
         raise StopIteration
     return new_line
@@ -63,7 +65,6 @@ def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
         metric = metric.groupdict()
         new_metrics.append(Metric(metric['name'], float(metric['value']),
                                   type=MetricType.COUNTER, labels=labels))
-        log.debug("Found metric name: {0}, value: {1}".format(metric["name"], metric["value"]))
     return new_metrics
 
 
@@ -98,8 +99,11 @@ def parse_loop(parse: ParseFunc, kafka_storage: KafkaStorage):
             # parse() can return an empty list, so we store new values for kafka and http server
             # only when there are new metrics to store
             if parse_loop.metrics:
+                for metric in parse_loop.metrics:
+                    log.debug("Found metric: {}".format(metric))
                 parse_loop.last_valid_metrics = parse_loop.metrics.copy()
-                kafka_store_with_retry(kafka_storage, parse_loop.last_valid_metrics)
+                if kafka_storage is not None:
+                    kafka_store_with_retry(kafka_storage, parse_loop.last_valid_metrics)
 
         except BaseException:
             _thread.interrupt_main()

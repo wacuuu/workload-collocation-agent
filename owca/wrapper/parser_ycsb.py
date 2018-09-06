@@ -27,14 +27,12 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
     if "READ" in new_line:
         read = re.search('\[READ.*?99\.99=(\d+).*?\]', new_line)
         p9999 = float(read.group(1))
-        log.debug("99.99th READ percentile found: {}".format(p9999))
         new_metrics.append(Metric('cassandra_read_p9999', p9999,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="99.99th percentile of read latency in Cassandra"))
     if "UPDATE" in new_line:
         update = re.search('\[UPDATE.*?99\.99=(\d+).*?\]', new_line)
         p9999 = float(update.group(1))
-        log.debug("99.99th UPDATE percentile found: {}".format(p9999))
         new_metrics.append(Metric('cassandra_update_p9999', p9999,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="99.99th percentile of update latency in Cassandra"))
