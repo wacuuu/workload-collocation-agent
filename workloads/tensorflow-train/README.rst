@@ -9,17 +9,15 @@ Used dataset comes from https://www.kaggle.com/paultimothymooney/blood-cells/
 Aurora job run and kill examples
 --------------------------------
 
-Example run
+Aurora job manifest supports all the `common environment variables`_.
+Additional variables are documented in `tensorflow_train.aurora`_.
+Please read `run_workloads.sh`_ and `config.template.sh`_
+to see how to run or stop the workload.
 
-.. code-block:: sh
-
-    load_generator_host_ip= name=tf_train cluster=example role=$USER wrapper_prometheus_port=9092 workload_uniq_id=$wrapper_prometheus_port env_uniq_id=16 application_host_ip=192.0.2.100 sh -c 'aurora job create $cluster/$role/staging$env_uniq_id/$name-$wrapper_prometheus_port tensorflow_train.aurora'
-
-Example kill
-
-.. code-block:: sh
-
-    load_generator_host_ip= name=tf_train cluster=example role=$USER wrapper_prometheus_port=9092 workload_uniq_id=$wrapper_prometheus_port env_uniq_id=16 application_host_ip=192.0.2.100 sh -c 'aurora job killall $cluster/$role/staging$env_uniq_id/$name-$wrapper_prometheus_port'
+.. _common environment variables: /workloads/common.aurora
+.. _tensorflow_train.aurora: tensorflow_train.aurora
+.. _run_workloads.sh: /run_workloads.sh
+.. _config.template.sh: /config.template.sh
 
 Building docker image
 ---------------------

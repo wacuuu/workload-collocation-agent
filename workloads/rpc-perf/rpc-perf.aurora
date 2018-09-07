@@ -2,35 +2,49 @@ import os
 
 include('../common.aurora')
 
-# port that stressed application listens on
+#----------------------------------------------------------------------------------------------------
+###
+# Params which can be modified by exporting environment variables.
+###
+
+# Port that stressed application listens on.
 application_listen_port = os.environ.get('application_listen_port', 11211)
-# type of application that you want to interact with ("redis" or "memcached" or "rpc-perf")
-application = os.environ.get('application', 'memcached')
-# workload Docker image 
-application_image = os.environ.get('application_image', 'serenity/twemcache')
-# workload Docker image tag
-application_image_tag = os.environ.get('application_image_tag', '1')
+
+# Type of application that you want to interact with ("redis" or "twemcache" or "rpc-perf").
+application = os.environ.get('application')
+
+# Number of requests per second to generate (default: 1000; if `rpcperf_amplitude` and `rpcperf_period` are set - maximum of a sine curve).
+rpcperf_rate = os.environ.get('rpcperf_rate', '1000')
+
+# Number of threads used to generate traffic.
+rpcperf_thread_count = os.environ.get('rpcperf_thread_count', '1')
+
+# rpcperf_period and rpcperf_amplitiude are used to generate non-constant number of QpS; see: http://jwilson.coe.uga.edu/EMAT6680/Dunbar/Assignment1/sine_curves_KD.html
+rpcperf_period = os.environ.get('rpcperf_period', '100')
+rpcperf_amplitiude = os.environ.get('rpcperf_amplitiude', '100')
+
+# Number of connections per thread.
+rpcperf_connections = os.environ.get('rpcperf_connections', '1')
+
+# rpc-perf Docker image tag.
+rpcperf_image_tag = os.environ.get('rpcperf_image_tag')  # Workaround for "force pull images" defect in Aurora.
+
+# Additionally used in the code below:
+# * 'redis_image_tag'
+# * 'twemcache_image_tag'
+#----------------------------------------------------------------------------------------------------
+
+
+# name of a protocol used to generate load ("twemcache" or "redis")
+if application == 'twemcache': 
+    rpcperf_protocol = 'memcache'
+if application == 'redis': 
+    rpcperf_protocol = 'redis'
 
 # Add label for identification workload in prometheus.
 wrapper_labels["name"] = '%s--%s' % (application, workload_uniq_id)
 wrapper_labels["load_generator"] = "rpc-perf"
 wrapper_labels["application"] = "{}".format(application)
-
-# number of requests per second to generate (default: 1000; if `rpcperf_amplitude` and `rpcperf_period` are set - maximum of a sine curve)
-rpcperf_rate = os.environ.get('rpcperf_rate', '1000')
-# number of threads used to generate traffic
-rpcperf_thread_count = os.environ.get('rpcperf_thread_count', '1')
-# rpcperf_period and rpcperf_amplitiude are used to generate non-constant number of QpS; see: http://jwilson.coe.uga.edu/EMAT6680/Dunbar/Assignment1/sine_curves_KD.html
-rpcperf_period = os.environ.get('rpcperf_period', '100')
-rpcperf_amplitiude = os.environ.get('rpcperf_amplitiude', '100')
-# number of connections per thread
-rpcperf_connections = os.environ.get('rpcperf_connections', '1')
-# name of a protocol used to generate load ("memcache" or "redis")
-if application == 'memcached': rpcperf_protocol = 'memcache'
-if application == 'twemcache': rpcperf_protocol = 'memcache'
-if application == 'redis': rpcperf_protocol = 'redis'
-# rpc-perf Docker image tag
-rpcperf_image_tag = '1'  # Workaround for "force pull images" defect in Aurora.
 
 cpu = 0.5
 
@@ -44,8 +58,8 @@ jobs = [
         enable_hooks=True,
         container=Mesos(
             image=DockerImage(
-                name=docker_registry + '/' + application_image,
-                tag=application_image_tag,
+                name=docker_registry + '/serenity/redis',
+                tag=os.environ.get('redis_image_tag'),
             ),
         ),
         constraints=dict(own_ip=application_host_ip),
@@ -77,8 +91,8 @@ jobs = [
         enable_hooks=True,
         container=Mesos(
             image=DockerImage(
-                name=docker_registry + '/' + application_image,
-                tag=application_image_tag,
+                name=docker_registry + '/serenity/twemcache',
+                tag=os.environ.get('twemcache_image_tag'),
             ),
         ),
         constraints=dict(own_ip=application_host_ip),
@@ -106,7 +120,8 @@ jobs = [
         role=role,
         constraints=dict(own_ip=load_generator_host_ip),
         container=Mesos(image=DockerImage(
-            name=docker_registry + '/serenity/rpc-perf', tag=rpcperf_image_tag,
+            name=docker_registry + '/serenity/rpc-perf', 
+            tag=rpcperf_image_tag,
         )),
         task=Task(
             name='rpc-perf--{}'.format(workload_uniq_id),

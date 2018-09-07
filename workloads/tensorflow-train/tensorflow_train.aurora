@@ -2,16 +2,24 @@ import os
 
 include('../common.aurora')
 
+#----------------------------------------------------------------------------------------------------
+###
+# Params which can be modified by exporting environment variables.
+###
+
+# Batch size and epochs.
+tensorflow_train_batch_size = os.environ.get('tensorflow_train_batch_size', '100')
+tensorflow_train_epochs = os.environ.get('tensorflow_train_epochs', '100')
+
+# Docker image tag.
+tensorflow_train_image_tag = os.environ.get('tensorflow_train_image_tag')  # Workaround for "force pull images" defect in Aurora.
+#----------------------------------------------------------------------------------------------------
+
+
 # Add label for identification workload in prometheus.
-wrapper_labels["name"] = 'tf_train--%s' % workload_uniq_id
+wrapper_labels["name"] = 'tensorflow_train--%s' % workload_uniq_id
 wrapper_labels["load_generator"] = ""
-wrapper_labels["application"] = "tf_train"
-
-# tensorflow_train specific parameters.
-tf_train_batch_size = os.environ.get('tf_train_batch_size', '100')
-tf_train_epochs = os.environ.get('tf_train_epochs', '100')
-
-tf_train_image_tag = '1'  # Workaround for "force pull images" defect in Aurora.
+wrapper_labels["application"] = "tensorflow_train"
 
 # resources parameters
 cpu = 1
@@ -21,29 +29,29 @@ disk = 2 * GB
 # JOB definitions
 jobs = [
     Service(
-        name='tf_train--%s' % workload_uniq_id,
+        name='tensorflow_train--%s' % workload_uniq_id,
         cluster=cluster,
         environment='staging' + env_uniq_id,
         role=role,
         enable_hooks=True,
         constraints=dict(own_ip=application_host_ip),
         container=Mesos(image=DockerImage(
-            name=docker_registry + '/serenity/tensorflow-train', tag=tf_train_image_tag,
+            name=docker_registry + '/serenity/tensorflow-train', tag=tensorflow_train_image_tag,
         )),
         task=SequentialTask(
-            name='tf_train--%s' % workload_uniq_id,
+            name='tensorflow_train--%s' % workload_uniq_id,
             resources=Resources(cpu=cpu, ram=ram, disk=disk),
             processes=[
                 Process(
-                    name='tf_train_run',
+                    name='tensorflow_train_run',
                     cmdline="/wrapper.pex --command 'training --dataset_path '/' --batch_size {batch_size} "
                             "--epochs {epochs}' "
                             "--prometheus_port {prometheus_port} "
                             "--prometheus_ip '{prometheus_ip}' "
                             "--stderr 0 --kafka_brokers '{kafka_brokers}' "
                             "--log_level {log_level} "
-                            "--labels \"{labels}\"".format(batch_size=tf_train_batch_size,
-                                                           epochs=tf_train_epochs,
+                            "--labels \"{labels}\"".format(batch_size=tensorflow_train_batch_size,
+                                                           epochs=tensorflow_train_epochs,
                                                            prometheus_port=wrapper_prometheus_port,
                                                            prometheus_ip=application_host_ip,
                                                            kafka_brokers=wrapper_kafka_brokers,

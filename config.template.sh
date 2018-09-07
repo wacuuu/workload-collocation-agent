@@ -16,6 +16,20 @@ export docker_registry=100.64.176.12:80
 #   incrementing by 1.
 prometheus_smallest_port=9091
 
+# Docker images tags to be used.
+common_tag=<DOCKER_TAG>
+export specjbb_image_tag=$common_tag
+#--
+export ycsb_image_tag=$common_tag
+#--
+export rpcperf_image_tag=$common_tag
+export redis_image_tag=$common_tag
+export twemcache_image_tag=$common_tag
+#--
+export tensorflow_train_image_tag=$common_tag
+#--
+export tensorflow_inference_image_tag=$common_tag
+
 # Instances count for workloads (workloads pairs).
 specjbb_instances_count=2
 ycsb_cassandra_instances_count=2

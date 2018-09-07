@@ -2,28 +2,44 @@ import os
 
 include('../common.aurora')
 
+#----------------------------------------------------------------------------------------------------
+###
+# Params which can be modified by exporting environment variables.
+###
+
 # Port that Cassnadra will bind to.
 cassandra_port = os.environ.get('cassandra_port', '9042')
 
 # Number of QpS send to cassandra (default: 1000;
 # if `ycsb_amplitude` and `ycsb_period` are set - maximum of a sine curve).
 ycsb_target = os.environ.get('ycsb_target', '1000')
+
 # Number of YCSB threads.
 ycsb_thread_count = os.environ.get('ycsb_thread_count', '1')
+
 # ycsb_period and ycsb_amplitiude are used to generate non-constant number of QpS;
 # see: http://jwilson.coe.uga.edu/EMAT6680/Dunbar/Assignment1/sine_curves_KD.html.
 ycsb_period = os.environ.get('ycsb_period', '100')
 ycsb_amplitiude = os.environ.get('ycsb_amplitiude', '100')
+
+# Currently only cassandra is supported.
 application = os.environ.get('application', 'cassandra')
+
+# Workarounds for "force pull images" defect in Aurora.
+ycsb_image_tag = os.environ.get('ycsb_image_tag')
+
+# Docker image for cassandra. 
+# By default we use cassandra docker image from dockerhub https://hub.docker.com/_/cassandra/.
+cassandra_image_tag = os.environ.get('cassandra_image_tag', '3.11.3')
+cassandra_image = os.environ.get('cassandra_image', 'cassandra')
+#----------------------------------------------------------------------------------------------------
+
 
 # Add label for identification workload in prometheus.
 wrapper_labels["name"] = '%s--%s' % (application, workload_uniq_id)
 wrapper_labels['load_generator'] = 'ycsb'
 wrapper_labels['application'] = application
 
-# Workarounds for "force pull images" defect in Aurora.
-ycsb_image_tag = '1'
-cassandra_image_tag = '3.11.3'
 
 # JOB definitions
 jobs = [
@@ -35,8 +51,7 @@ jobs = [
     enable_hooks=True,
     container=Mesos(
       image=DockerImage(
-        # using generic cassandra image
-        name='cassandra',
+        name=cassandra_image,
         tag=cassandra_image_tag,
       ),
     ),
@@ -79,13 +94,13 @@ jobs = [
           cmdline="""
             cqlsh --cqlversion 3.4.4 -e \
                 "create keyspace ycsb WITH REPLICATION = {{'class' : 'SimpleStrategy', 'replication_factor': 1 }};" \
-                {cassandra_address} {cassandra_port};
+                {cassandra_address} {cassandra_port} || true
             cqlsh --cqlversion 3.4.4 -k ycsb -e \
                 "create table usertable (y_id varchar primary key, field0 varchar, 
                 field1 varchar, field2 varchar, field3 varchar, field4 varchar, 
                 field5 varchar, field6 varchar, field7 varchar, field8 varchar, 
                 field9 varchar);" \
-                {cassandra_address} {cassandra_port};
+                {cassandra_address} {cassandra_port} || true
           """.format(cassandra_address=application_host_ip, cassandra_port=cassandra_port),
         ),
         Process(
@@ -108,7 +123,7 @@ jobs = [
                 --command \
                     "/opt/ycsb/bin/ycsb run cassandra2-cql -s \
                         -P workloads/workloada \
-                        -p hosts={load_generator_host_ip} \
+                        -p hosts={application_host_ip} \
                         -p port={cassandra_port} \
                         -target {ycsb_target} \
                         -p status.interval=1 \
@@ -123,7 +138,7 @@ jobs = [
                 --log_level {log_level} \
                 --labels "{labels}"
           """.format(
-            load_generator_host_ip=load_generator_host_ip,
+            application_host_ip=application_host_ip,
             cassandra_port=cassandra_port,
             ycsb_target=ycsb_target,
             ycsb_thread_count=ycsb_thread_count,

@@ -49,8 +49,6 @@ done
 
 # rpc-perf + twemcache 
 export application_listen_port=11211
-export application_image='serenity/twemcache'
-export application_image_tag=1
 export application=twemcache
 for i in $(seq 0 $((rpcperf_twemcache_instances_count-1))); do
     export wrapper_prometheus_port=$prometheus_port
@@ -65,8 +63,6 @@ done
 # rpc-perf + redis
 export application_listen_port=6789
 export application=redis
-export application_image='serenity/redis'
-export application_image_tag=1
 for i in $(seq 0 $((rpcperf_redis_instances_count-1))); do
     export wrapper_prometheus_port=$prometheus_port
     prometheus_port=$((prometheus_port+1))
@@ -82,7 +78,7 @@ for i in $(seq 0 $((tf_train_instances_count-1))); do
     export wrapper_prometheus_port=$prometheus_port
     prometheus_port=$((prometheus_port+1))
     export workload_uniq_id=$i
-    aurora job create $cluster/$role/staging$env_uniq_id/tf_train--$workload_uniq_id workloads/tensorflow-train/tensorflow_train.aurora
+    aurora job create $cluster/$role/staging$env_uniq_id/tensorflow_train--$workload_uniq_id workloads/tensorflow-train/tensorflow_train.aurora
 done
 
 # tensorflow inference
@@ -90,5 +86,5 @@ for i in $(seq 0 $((tf_inference_instances_count-1))); do
     export wrapper_prometheus_port=$prometheus_port
     prometheus_port=$((prometheus_port+1))
     export workload_uniq_id=$i
-    aurora job create $cluster/$role/staging$env_uniq_id/tf_inference--$workload_uniq_id workloads/tensorflow-inference/tensorflow_inference.aurora
+    aurora job create $cluster/$role/staging$env_uniq_id/tensorflow_inference--$workload_uniq_id workloads/tensorflow-inference/tensorflow_inference.aurora
 done

@@ -11,17 +11,6 @@ log = logging.getLogger(__name__)
 EMPTY_LINE = "^\s*$"
 
 
-def log_line(line, discarded=True):
-    """
-    :param discarded: if line was discarded by parse function
-    """
-    line = line.strip()
-    if discarded:
-        log.debug("- {0}".format(line))
-    else:
-        log.debug("+ {0}".format(line))
-
-
 def parse(input: TextIOWrapper, labels: Dict[str, str] = {},
           *args, **kwargs) -> List[Metric]:
     """
@@ -43,14 +32,12 @@ def parse(input: TextIOWrapper, labels: Dict[str, str] = {},
     new_line = readline_with_check(input)
     while not re.match("^\s*Response times:\s*$", new_line):
         new_line = readline_with_check(input)
-        log_line(new_line, True)
     new_line = readline_with_check(input)
 
     # reading until empty line
     while not re.match(EMPTY_LINE, new_line):
         input_lines.append(new_line)
         new_line = readline_with_check(input)
-        log_line(new_line, False)
     log.debug("Found separator in {0}".format(new_line))
 
     # Two dimensional list, first row contains names of columns. Almost as data frame.

@@ -1,19 +1,29 @@
 import os
 
+include('../common.aurora')
+
+#----------------------------------------------------------------------------------------------------
+###
+# Params which can be modified by exporting environment variables.
+###
+
 # Note: for specjbb only controller port can be assigned manually:
 #   ports for backends and injectors are arbitrarily assigned.
 
-# Variables shared among different workloads.
-include('../common.aurora')
-
-# Additional variables which can be changed by setting ENV variables.
-#
-# port on which listen controller
+# Port on which listen controller.
 load_generator_port = os.environ.get('load_generator_port', '42000')
-# injection rate
+
+# Injection rate.
 qps = os.environ.get('qps', '1000')
-docker_image = os.environ.get('docker_image', 'serenity/specjbb')
-docker_image_tag = os.environ.get('docker_image_tag', '1')
+
+# Docker image tag.
+specjbb_image_tag = os.environ.get('specjbb_image_tag')
+
+# Note:
+# there are many specjbb config params which can be set.
+# Please modify specjbb.config file to change them.
+#----------------------------------------------------------------------------------------------------
+
 
 # Add label for identification workload in prometheus.
 wrapper_labels["name"] = 'specjbb--%s' % workload_uniq_id
@@ -35,7 +45,7 @@ ram_injector = 5
 all_disk = 2
 
 # Paths inside container.
-config_path = '/tmp/senerity_config.raw'
+config_path = '/tmp/owca_config.raw'
 specjbb_jar = '/home/specjbb/specjbb2015.jar'
 specjbb_wrapper = '/usr/bin/specjbb_wrapper.pex'
 
@@ -101,8 +111,8 @@ backend_task = SequentialTask(
 )
 
 # Common docker image.
-docker_image_mo = DockerImage(name="{}/{}".format(docker_registry, docker_image), 
-                              tag=docker_image_tag)
+docker_image_mo = DockerImage(name="{}/serenity/specjbb".format(docker_registry), 
+                              tag=specjbb_image_tag)
 environment = "staging" + env_uniq_id
 
 BaseJob = Job(

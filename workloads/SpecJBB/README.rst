@@ -35,38 +35,12 @@ File specjbb.aurora is prepared for running specjbb on two nodes.
 On first a controller and an injector processes will be created.
 On second a backend process will be created.
 
-Aurora job manifest supports all the `common environment variables`_. Additional variables are documented in `specjbb.aurora`_.
+Aurora job manifest supports all the `common environment variables`_.
+Additional variables are documented in `specjbb.aurora`_.
+Please read `run_workloads.sh`_ and `config.template.sh`_
+to see how to run or stop the workload.
 
-.. _common environment variables: /common.aurora
+.. _common environment variables: /workloads/common.aurora
 .. _specjbb.aurora: specjbb.aurora
-
-To run aurora jobs:
-
-.. code-block:: shell
-
-    export cluster=example
-    export role=<role>
-    export env_uniq_id=16  #used: last octet of IP address where backend is run (could be anything else)
-    export load_generator_host_ip=<first_node_ip>
-    export application_host_ip=<second_node_ip>  #backend
-    export qps=1000  # setting too high qps may result in a failure of specjbb
-
-    # Must be different for each run.
-    export port_=42000 # controller listen port (below used as workload_uniq_id)
-    export workload_uniq_id=$port_
-    export load_generator_port=$port_
-
-    # Note:
-    # read ../common.aurora for more variables to set.
-
-    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_controller--${workload_uniq_id} specjbb.aurora
-    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_injector--${workload_uniq_id} specjbb.aurora
-    aurora job create $cluster/$role/staging${env_uniq_id}/specjbb_backend--${workload_uniq_id} specjbb.aurora
-
-To kill aurora jobs:
-
-.. code-block:: shell
-
-    aurora job killall $cluster/$role/staging${env_uniq_id}/specjbb_controller--${workload_uniq_id}
-    aurora job killall $cluster/$role/staging${env_uniq_id}/specjbb_injector--${workload_uniq_id}
-    aurora job killall $cluster/$role/staging${env_uniq_id}/specjbb_backend--${workload_uniq_id}
+.. _run_workloads.sh: /run_workloads.sh
+.. _config.template.sh: /config.template.sh

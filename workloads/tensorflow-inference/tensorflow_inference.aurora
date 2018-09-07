@@ -2,12 +2,19 @@ import os
 
 include('../common.aurora')
 
-# Add label for identification workload in prometheus.
-wrapper_labels["name"] = 'tf_inference--%s' % workload_uniq_id
-wrapper_labels["load_generator"] = ""
-wrapper_labels["application"] = "tf_inference"
+#----------------------------------------------------------------------------------------------------
+###
+# Params which can be modified by exporting environment variables.
+###
 
-tf_inference_image_tag = '1'  # Workaround for "force pull images" defect in Aurora.
+tensorflow_inference_image_tag = os.environ.get('tensorflow_inference_image_tag')  # Workaround for "force pull images" defect in Aurora.
+#----------------------------------------------------------------------------------------------------
+
+
+# Add label for identification workload in prometheus.
+wrapper_labels["name"] = 'tensorflow_inference--%s' % workload_uniq_id
+wrapper_labels["load_generator"] = ""
+wrapper_labels["application"] = "tensorflow_inference"
 
 # resources parameters
 cpu = 1
@@ -17,21 +24,21 @@ disk = 2 * GB
 # JOB definitions
 jobs = [
     Service(
-        name='tf_inference--%s' % workload_uniq_id,
+        name='tensorflow_inference--%s' % workload_uniq_id,
         cluster=cluster,
         environment='staging' + env_uniq_id,
         role=role,
         enable_hooks=True,
         constraints=dict(own_ip=application_host_ip),
         container=Mesos(image=DockerImage(
-            name=docker_registry + '/serenity/tensorflow-inference', tag=tf_inference_image_tag,
+            name=docker_registry + '/serenity/tensorflow-inference', tag=tensorflow_inference_image_tag,
         )),
         task=SequentialTask(
-            name='tf_inference--%s' % workload_uniq_id,
+            name='tensorflow_inference--%s' % workload_uniq_id,
             resources=Resources(cpu=cpu, ram=ram, disk=disk),
             processes=[
                 Process(
-                    name='tf_inference_run',
+                    name='tensorflow_inference_run',
                     cmdline="/wrapper.pex --command 'inference --dataset_path '/'' "
                             "--prometheus_port {prometheus_port} "
                             "--prometheus_ip '{prometheus_ip}' "
