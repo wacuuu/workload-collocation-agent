@@ -20,6 +20,7 @@ import typing
 import warnings
 
 from ruamel import yaml
+import ruamel
 
 from owca import logger
 
@@ -150,7 +151,7 @@ def register(cls):
 def _parse(yaml_body: io.StringIO) -> Any:
     """Parses configuration from given yaml body and returns initialized object."""
     try:
-        return yaml.load(yaml_body)
+        return yaml.load(yaml_body, Loader=ruamel.yaml.Loader)
     except yaml.constructor.ConstructorError as e:
         raise ConfigLoadError(
             '%s %s. ' % (e.problem, e.problem_mark) +
@@ -214,7 +215,7 @@ def _file_loader_constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node):
         if not filename.endswith(('.yaml', '.yml')):
             raise ConfigLoadError('Unsupported file %r%stype (use: YAML)!' % (
                 full_filename, node.start_mark))
-        content = yaml.load(f)
+        content = yaml.load(f, Loader=loader.__class__)
     return content
 
 
