@@ -5,6 +5,8 @@ single threaded (otherwise we could get out of order error in prometheus)
 
 from functools import partial
 from http.server import BaseHTTPRequestHandler, HTTPServer
+from socketserver import ThreadingMixIn
+
 import logging
 from typing import List
 
@@ -16,13 +18,24 @@ class KafkaConsumptionException(Exception):
     pass
 
 
-def consume_one_message(kafka_consumer: confluent_kafka.Consumer,
-                        kafka_poll_timeout: float) -> str:
+kafka_consumers = {}
+
+
+def create_kafka_consumer(broker_addresses: List[str],
+                          topic_name: str,
+                          group_id: str) -> confluent_kafka.Consumer:
+    consumer = confluent_kafka.Consumer({
+        'bootstrap.servers': ",".join(broker_addresses),
+        'group.id': group_id,
+    })
+    consumer.subscribe([topic_name])
+    return consumer
+
+
+def consume_one_message(kafka_consumer: confluent_kafka.Consumer) -> str:
     """read one message from kafka consumer
 
-    Args:
-        timeout: consumer will wait for a message
-        for maximum timeout seconds
+    :param kafka_consumer:
 
     Raises:
         KafkaConsumptionException if there was any error
@@ -31,7 +44,10 @@ def consume_one_message(kafka_consumer: confluent_kafka.Consumer,
             is not exceptional condition - no exception is
             raised then)
     """
-    msg = kafka_consumer.poll(kafka_poll_timeout)
+
+    # With timeout=0 just immediatily checks internal driver buffer and returns if there is no
+    # messages - desired behavior for just checking existance of message.
+    msg = kafka_consumer.poll(timeout=0)
 
     # https://docs.confluent.io/current/clients/
     #    confluent-kafka-python/index.html#confluent_kafka.Consumer.poll
@@ -42,7 +58,7 @@ def consume_one_message(kafka_consumer: confluent_kafka.Consumer,
     if msg is None or (msg.error() and
                        msg.error().code() == confluent_kafka.KafkaError._PARTITION_EOF):
 
-        logging.info("No new message was received from broker.")
+        logging.debug("No new message was received from broker.")
 
         # We return empty string as no message was readed.
         # Prometheus will get reponse with empty body
@@ -55,13 +71,12 @@ def consume_one_message(kafka_consumer: confluent_kafka.Consumer,
 
     # we got proper message
     msg_str = msg.value().decode('utf-8')
-    logging.info("New message was received from broker:\n{}\n"
-                 .format(msg_str))
+    logging.debug("New message was received from broker:\n{}\n".format(msg_str))
     return msg_str
 
 
-def http_get_handler(kafka_consumer: confluent_kafka.Consumer,
-                     kafka_poll_timeout: float) -> (int, bytes):
+def http_get_handler(topic_name: str, kafka_broker_addresses: List[str],
+                     group_id: str) -> (int, bytes):
     """Logic of HTTP GET handler slightly abstracted from
     used http server.
 
@@ -72,28 +87,45 @@ def http_get_handler(kafka_consumer: confluent_kafka.Consumer,
     simpler testing the code. Testing http.server is not trivial
     and would need quite complex mocking.
     """
+    if topic_name in kafka_consumers:
+        kafka_consumer = kafka_consumers[topic_name]
+        logging.debug('Reuse existing consumer {!r} for topic {!r}'.format(
+            id(kafka_consumer), topic_name))
+    else:
+        kafka_consumer = create_kafka_consumer(kafka_broker_addresses, topic_name,
+                                               group_id=group_id)
+        kafka_consumers[topic_name] = kafka_consumer
+        logging.info('Register new consumer {!s} for topic {!r}'.format(
+            id(kafka_consumer), topic_name))
+
     response_code, body = "", ""
     try:
-        msg = consume_one_message(kafka_consumer, kafka_poll_timeout)
+        msg = consume_one_message(kafka_consumer)
         response_code = 200
+        if msg == '':
+            msg = 'no_messages{topic="%s"} 1' % topic_name
     except KafkaConsumptionException as e:
         msg = str(e)
         response_code = 503
+        logging.warning('Kafka execption: {!r}'.format(e))
+
     body = msg.encode('utf-8')
     return response_code, body
 
 
 class MetricsRequestHandler(BaseHTTPRequestHandler):
-    def __init__(self, kafka_consumer, kafka_poll_timeout,
-                 request, client_address, server):
-        """
-        Args:
-            kafka_consumer (confluent_kafka.Consumer): Object used for
-                access to kafka.
-            kafka_poll_timeout: meaning defined in function consume_one_message
-        """
-        self.kafka_consumer = kafka_consumer
-        self.kafka_poll_timeout = kafka_poll_timeout
+    def __init__(
+            self,
+            topic_names,
+            kafka_broker_addresses,
+            group_id,
+            request,
+            client_address,
+            server
+            ):
+        self.topic_names = topic_names
+        self.kafka_broker_addresses = kafka_broker_addresses
+        self.group_id = group_id
         super().__init__(request, client_address, server)
 
     def do_GET(self):
@@ -103,27 +135,36 @@ class MetricsRequestHandler(BaseHTTPRequestHandler):
         Uses given in constructor kafka_consumer for
         accessing kafka.
         """
-        response_code, body = http_get_handler(self.kafka_consumer, self.kafka_poll_timeout)
-        self.send_response(response_code)
-        self.send_header('Content-type', 'text/plain')
-        self.end_headers()
-        self.wfile.write(body)
+        topic_name = self.path.lstrip('/')
+        if topic_name in self.topic_names:
+            response_code, body = http_get_handler(
+                topic_name, self.kafka_broker_addresses, self.group_id)
+            self.send_response(response_code)
+            self.send_header('Content-type', 'text/plain')
+            self.end_headers()
+            self.wfile.write(body)
+        else:
+            # not found
+            self.send_response(404, 'Topic not found!')
+            self.end_headers()
+            self.wfile.write(b'Topic not found!')
+
+    # Suppress inf
+    def log_request(self, *args, **kwargs):
+        if logging.getLogger().getEffectiveLevel() <= logging.DEBUG:
+            super().log_request(*args, **kwargs)
 
 
-def run_server(ip: str, port: int, kafka_consumer: confluent_kafka.Consumer,
-               kafka_poll_timeout: float) -> None:
+class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
+    pass
+
+
+def run_server(ip: str, port: int, args) -> None:
     server_address = (ip, port)
-    handler_class = partial(MetricsRequestHandler, kafka_consumer, kafka_poll_timeout)
-    httpd = HTTPServer(server_address, handler_class)
+    handler_class = partial(MetricsRequestHandler,
+                            args.topic_names,
+                            args.kafka_broker_addresses,
+                            args.group_id,
+                            )
+    httpd = ThreadedHTTPServer(server_address, handler_class)
     httpd.serve_forever()
-
-
-def create_kafka_consumer(broker_addresses: List[str],
-                          topic_name: str,
-                          group_id: str) -> confluent_kafka.Consumer:
-    consumer = confluent_kafka.Consumer({
-        'bootstrap.servers': ",".join(broker_addresses),
-        'group.id': group_id,
-    })
-    consumer.subscribe([topic_name])
-    return consumer

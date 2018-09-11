@@ -12,9 +12,12 @@ from owca_kafka_consumer.server import (consume_one_message,
 
 # To not pass to each call to below two functions parameter kafka_poll_timeout
 #   partials are created with the same names as originals.
-KAFKA_TIMEOUT_DEFAULT = 0.3  # for unit tests that value could be anything
-consume_one_message = partial(consume_one_message, kafka_poll_timeout=KAFKA_TIMEOUT_DEFAULT)
-http_get_handler = partial(http_get_handler, kafka_poll_timeout=KAFKA_TIMEOUT_DEFAULT)
+consume_one_message = partial(consume_one_message)
+kafka_broker_addresses = ['127.0.0.1']
+group_id = 'test-group'
+
+http_get_handler = partial(http_get_handler, kafka_broker_addresses=kafka_broker_addresses,
+                           group_id=group_id)
 
 
 # Creating mock confluent_kafka.Consumer inline

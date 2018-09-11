@@ -2,7 +2,7 @@ import argparse
 import logging
 from pkg_resources import get_distribution, DistributionNotFound
 
-from owca_kafka_consumer.server import run_server, create_kafka_consumer
+from owca_kafka_consumer.server import run_server
 
 
 def get_version():
@@ -24,13 +24,10 @@ def main():
                         default=["127.0.0.1:9092"],
                         help=("whitespace seperated list of kafka brokers"
                               "(ip with port for each)"))
-    parser.add_argument('--kafka_poll_timeout',
-                        default=0.3,
-                        type=float,
-                        help=("Timeout for reading a message from kafka while handling request."))
-    parser.add_argument('--topic_name',
-                        default="owca_metrics",
-                        help="kafka topic name to consume messages from")
+    parser.add_argument('--topic_names',
+                        nargs='+',
+                        default=["owca_metrics", "owca_anomalies", "owca_apms"],
+                        help="whitespace seperated list of kafka topics")
     parser.add_argument('--group_id',
                         default="owca_group",
                         help="kafka consumer group")
@@ -51,14 +48,10 @@ def main():
     args = parser.parse_args()
 
     logging.basicConfig(level=args.log_level)
-    logging.info("owca_kafka_consumer {} was executed with following arguments:\n{}\n\n"
+    logging.info("owca_kafka_consumer version={} was executed with following arguments: {}"
                  .format(get_version(), args))
-    kafka_consumer = create_kafka_consumer(args.kafka_broker_addresses,
-                                           args.topic_name,
-                                           args.group_id)
-    run_server(ip=args.listen_ip, port=args.listen_port,
-               kafka_consumer=kafka_consumer,
-               kafka_poll_timeout=args.kafka_poll_timeout)
+
+    run_server(ip=args.listen_ip, port=args.listen_port, args=args)
 
 
 if __name__ == "__main__":
