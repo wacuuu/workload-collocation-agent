@@ -17,7 +17,7 @@ TasksResources = Dict[TaskId, Dict[str, float]]
 
 class ContendedResource(str, Enum):
 
-    MEMORY = 'memory bandwidth'
+    MEMORY_BW = 'memory bandwidth'
     LLC = 'cache'
     CPUS = 'cpus'
 
@@ -33,55 +33,77 @@ def _create_uuid_from_tasks_ids(task_ids: List[TaskId]):
 class Anomaly(ABC):
 
     @abstractmethod
-    def get_metrics(self) -> List[Metric]:
+    def generate_metrics(self) -> List[Metric]:
         ...
 
 
 @dataclass
-class ContentionAnomaly(ABC):
+class ContentionAnomaly(Anomaly):
 
-    task_ids: List[TaskId]
     resource: ContendedResource
+    contended_task_id: TaskId
+    contending_task_ids: List[TaskId]
 
-    type = 'contention'
+    # List of metrics describing context of contention
+    metrics: List[Metric]
 
-    def get_metrics(self):
-        """Encode contention anomaly as list of metrics.
+    # Type of anomaly (will be used to label anomaly metrics)
+    anomaly_type = 'contention'
+
+    def generate_metrics(self):
+        """Encodes contention anomaly as list of metrics.
 
         Anomaly of multiple tasks together, will be encode as many metrics.
         Note, it can return more metrics that provided anomalies because it is necessary
         to encode relation in this way.
         For example:
-        anomaly = ContentionAnomaly(tasks_ids=['task1', 'task2'], resource=ContendedResource.LLC)
+        anomaly = ContentionAnomaly(
+            resource=ContendedResource.LLC,
+            contended_task_id='task1',
+            contending_task_ids=['task2', 'task3'],
+            metrics=[Metrics(name='cpi', type='gauge', value=10)],
+        )
 
         wile be encoded as two metrics of type counters:
 
         metrics = [
             Metric(name='anomaly', type='counter', value=1,
-                labels=dict(uuid="1234", task_id="task1", type="contention"))
+                labels=dict(
+                    uuid="1234",
+                    contended_task_id="task1",
+                    contending_task_id='task2',
+                    type="contention"))
             Metric(name='anomaly', type='counter', value=1,
-                labels=dict(uuid="1234", task_id="task2", type="contention"))
+                labels=dict(
+                    uuid="1234",
+                    contended_task_id="task1",
+                    contending_task_id='task3',
+                    type="contention"))
+            Metrics(name='cpi', type='gauge', value=10,
+                labels=dict(uuid="1234", contended_task_id="task1"))
         ]
 
         Effectively being encoded as in Prometheus format:
 
         # HELP anomaly ...
         # TYPE anomaly counter
-        anomaly(type="contention", task_id="task1", resource="cache", uuid="1234") 1
-        anomaly(type="contention", task_id="task2", resource="cache", uuid="1234") 1
+        anomaly{type="contention", contended_task_id="task1", contending_task_ids="task2",  resource="cache", uuid="1234"} 1 # noqa
+        anomaly{type="contention", contended_task_id="task1", contending_task_ids="task3", resource="cache", uuid="1234"} 1 # noqa
+        cpi{contended_task_id="task1", uuid="1234"} 10
         """
         metrics = []
-        for task_id in self.task_ids:
+        for task_id in self.contending_task_ids:
             metrics.append(
                 Metric(
                     name='anomaly',
                     value=1,
                     type=MetricType.COUNTER,
                     labels=dict(
-                        task_id=task_id,
+                        contended_task_id=self.contended_task_id,
+                        contending_task_id=task_id,
                         resource=self.resource,
                         uuid=self._uuid(),
-                        type=self.type,
+                        type=self.anomaly_type,
                     )
                 )
             )
@@ -89,7 +111,7 @@ class ContentionAnomaly(ABC):
 
     def _uuid(self):
         """Returns unique identifier based on combination of tasks_ids."""
-        return _create_uuid_from_tasks_ids(self.task_ids)
+        return _create_uuid_from_tasks_ids([self.contended_task_id] + self.contending_task_ids)
 
 
 class AnomalyDetector(ABC):
@@ -116,6 +138,6 @@ def convert_anomalies_to_metrics(anomalies: List[Anomaly]) -> List[Metric]:
     """
     metrics = []
     for anomaly in anomalies:
-        metrics.extend(anomaly.get_metrics())
+        metrics.extend(anomaly.generate_metrics())
 
     return metrics

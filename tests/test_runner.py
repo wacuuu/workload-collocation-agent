@@ -118,7 +118,7 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
     # simulate returning one anomaly and additional metric
     detector_mock = Mock(spec=AnomalyDetector,
                          detect=Mock(return_value=(
-                             [anomaly(['task1'])],
+                             [anomaly('task1', ['task2'])],
                              [metric('bar')])))
 
     runner = DetectionRunner(
@@ -144,7 +144,7 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
             metric('platform-cpu-usage'),  # Store metrics from platform ...
             Metric(name='cpu_usage', value=23, labels={'task_id': 'task-id-/t1'}))  # and task
     anomalies_storage.store.called_once_with(
-            anomaly_metric('task1'),
+            anomaly_metric('task1', []),
             metric('bar'))  # Store with metrics returned from detector + anomaly.
 
     # Check that detector was called with proper arguments.

@@ -6,12 +6,8 @@ from owca.testing import anomaly, anomaly_metric
 
 @pytest.mark.parametrize('anomalies,expected_metrics', (
     ([], []),
-    ([anomaly(['t1'])],
-     [anomaly_metric('t1')]
-     ),
-    ([anomaly(['t2', 't1'])],
-     [anomaly_metric('t2', task_ids=['t1', 't2']), anomaly_metric('t1', task_ids=['t1', 't2'])]
-     ),
+    ([anomaly('t1', ['t2'])], anomaly_metric('t1', ['t2'])),
+    ([anomaly('t2', ['t1', 't3'])], anomaly_metric('t2', ['t1', 't3'])),
 ))
 def test_convert_anomalies_to_metrics(anomalies, expected_metrics):
     metrics_got = convert_anomalies_to_metrics(anomalies)

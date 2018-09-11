@@ -2,9 +2,10 @@
 
 import os
 from io import StringIO
+from typing import List
 
 from owca.detectors import ContendedResource, ContentionAnomaly, _create_uuid_from_tasks_ids
-from owca.mesos import MesosTask
+from owca.mesos import MesosTask, TaskId
 from owca.metrics import Metric, MetricType
 
 
@@ -29,28 +30,33 @@ def create_open_mock(sys_file_mock):
     return OpenMock(sys_file_mock)
 
 
-def anomaly_metric(task_id, task_ids=None):
+def anomaly_metric(contended_task_id: TaskId, contending_task_ids: List[TaskId]):
     """Helper method to create metric based on anomaly.
     uuid is used if provided.
     """
-    return Metric(
+    metrics = []
+    for task_id in contending_task_ids:
+        uuid = _create_uuid_from_tasks_ids(contending_task_ids + [contended_task_id])
+        metrics.append(Metric(
                 name='anomaly',
                 value=1,
                 labels=dict(
-                    task_id=task_id, resource=ContendedResource.MEMORY,
-                    uuid=_create_uuid_from_tasks_ids(task_ids or [task_id]),
-                    type='contention',
+                    contended_task_id=contended_task_id, contending_task_id=task_id,
+                    resource=ContendedResource.MEMORY_BW, uuid=uuid, type='contention'
                 ),
                 type=MetricType.COUNTER
-            )
+            ))
+    return metrics
 
 
-def anomaly(task_ids):
+def anomaly(contended_task_id: TaskId, contending_task_ids: List[TaskId]):
     """Helper method to create simple anomaly for single task.
     It is always about memory contention."""
     return ContentionAnomaly(
-        task_ids=task_ids,
-        resource=ContendedResource.MEMORY,
+        contended_task_id=contended_task_id,
+        contending_task_ids=contending_task_ids,
+        resource=ContendedResource.MEMORY_BW,
+        metrics=[],
     )
 
 

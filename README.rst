@@ -114,8 +114,10 @@ Assuming that external implementation of detector is provided as
         def detect(self, platform, task_measurements):
             anomalies = [
                 detectors.ContentionAnomaly(
-                    task_ids=['task_id'],
                     resource=detectors.ContendedResource.CPUS
+                    contended_task_id='task1',
+                    contending_task_ids=['task2', 'task3']
+                    metrics=[Metric(name="a_threshold", value=66.6, type="gauge")]
                 )
             ]
             debugging_metrics = [

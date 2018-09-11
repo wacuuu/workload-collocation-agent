@@ -234,16 +234,22 @@ The context depends on type of anomaly. The only supported subtype is ``Contenti
     class ContendedResource(Enum, str):
 
         MEMORY_BW = 'memory bandwidth'
-        LLC_CACHE = 'llc_cache'
+        LLC = 'cache'
         CPUS = 'cpus'
 
 
     @dataclass
     class ContentionAnomaly:
         
-        # Context
-        tasks: List[TaskId]  # can be empty if specifying tasks is impossible
         resource: ContendedResource
+        contended_task_id: TaskId
+        contending_task_ids: List[TaskId]
+
+        # List of metrics describing context of contention
+        metrics: List[Metric]
+
+        # Type of anomaly (will be uses to label anomaly metrics)
+        anomaly_type = 'contention'
 
         @property
         def uuid(self) -> str:
@@ -266,8 +272,10 @@ Example detection function returning one instance of ``Anomaly``:
         if platform.total_memory_used > 0.8*platform.total_memory:
             anomalies.append(
                 ContentionAnomaly(
-                    tasks = all_tasks_ids,
+                    contended_task_id = all_tasks_ids[0],
+                    contending_task_ids = all_tasks_ids[1:],
                     resource = ContendedResource.MEMORY_BW,
+                    metrics = [Metric(name="memory_usage_treshold", value=0.8*platform.total_memory type="gauge")]
                 )
             )
 
@@ -327,10 +335,9 @@ Example message stored in Kafka using Prometheus exposition format:
 
     # HELP anomaly The total number of anomalies detected on host.
     # TYPE anomaly counter
-    anomaly{type="contention",task_id="ppaluc-devel-memacache-0-sasdf",resource="llc_cache",uuid="962524f4-79e0-468a-b697-ed0b26d6535b",host="igk-016"} 4 1395066363000
-    anomaly{type="contention",task_id="ppaluc-devel-cassandra-2-aaaa-bbbb",resource="llc_cache",uuid="962524f4-79e0-468a-b697-ed0b26d6535b",host="igk-016"} 4 1395066363000
-    anomaly{type="contention",task_id="ppaluc-devel-memacache-0-sasdf",resource="memory bandwidth",uuid="030B4A82-1B7C-11CF-9D53-00AA003C9CB6",host="igk-016"} 6 1395066363000
-    anomaly{type="contention",task_id="ppaluc-devel-stress-ng-0-ffff-xxx",resource="memory bandwidth",uuid="030B4A82-1B7C-11CF-9D53-00AA003C9CB6",host="igk-016"} 6 1395066363000
+    anomaly{type="contention", contended_task_id="task1", contending_task_id="task2",  resource="memory bandwidth", uuid="1234"} 1
+    anomaly{type="contention", contended_task_id="task1", contending_task_id="task3", resource="memory bandwidth", uuid="1234"} 1
+    memory_usage_treshold{contended_task_id="task1", uuid="1234"} 10
 
 
 **Note** that not all labels comments where showed for readability.

@@ -17,14 +17,17 @@ class ExampleDetector(AnomalyDetector):
                ):
         anomalies = [
             ContentionAnomaly(
-                task_ids=[self.task_id],
-                resource=ContendedResource.CPUS
+                contended_task_id=self.task_id,
+                contending_task_ids=['some', 'ids'],
+                resource=ContendedResource.CPUS,
+                metrics=[Metric(name="cpu_threshold", value="90", type="gauge")],
             )
         ]
         debugging_metrics = [
             Metric(
                 name='some_debug',
                 value=2,
+                type="gauge",
                 labels=dict(
                     version='2.0',
                 )
