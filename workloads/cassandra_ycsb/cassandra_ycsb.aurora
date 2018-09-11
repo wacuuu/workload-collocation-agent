@@ -66,7 +66,8 @@ jobs = [
             set -x \
             && sed -i 's/native_transport_port: 9042/native_transport_port: {cassandra_port}/' /etc/cassandra/cassandra.yaml \
             && sed -i 's/storage_port: 7000/storage_port: {{{{thermos.ports[storage_port]}}}}/' /etc/cassandra/cassandra.yaml \
-            && sed -i 's/JMX_PORT=\"7199\"/JMX_PORT=\"{{{{thermos.ports[jmx_port]}}}}\"/' /etc/cassandra/cassandra-env.sh
+            && sed -i 's/JMX_PORT=\"7199\"/JMX_PORT=\"{{{{thermos.ports[jmx_port]}}}}\"/' /etc/cassandra/cassandra-env.sh \
+            && cat /etc/cassandra/cassandra.yaml
             """.format(cassandra_port=cassandra_port)
         ),
         Process(
@@ -87,11 +88,23 @@ jobs = [
     )),
     task=SequentialTask(
       name='ycsb--%s' % workload_uniq_id,
-      resources=Resources(cpu=1.5, ram=2*GB, disk=10*GB),
+      resources=Resources(cpu=1.5, ram=2*GB, disk=5*GB),
       processes=[
+        # Wait until cassandra initialize itself.
+        Process(
+          name='ycsb_cassandra_wait_for_cassandra',
+          cmdline="""
+          set -x
+          until nc -vz {cassandra_address} {cassandra_port}; do
+            echo "$(date) Waiting for cassandra to initialize itself."
+            sleep 3
+          done
+          """.format(cassandra_address=application_host_ip, cassandra_port=cassandra_port),
+        ),
         Process(
           name='ycsb_cassandra_create_structure',
           cmdline="""
+            set -x
             cqlsh --cqlversion 3.4.4 -e \
                 "create keyspace ycsb WITH REPLICATION = {{'class' : 'SimpleStrategy', 'replication_factor': 1 }};" \
                 {cassandra_address} {cassandra_port} || true
@@ -106,6 +119,7 @@ jobs = [
         Process(
           name='ycsb_cassandra_load',
           cmdline="""
+            set -x
             cd /opt/ycsb
             ./bin/ycsb load cassandra2-cql -s \
                 -P workloads/workloada \
@@ -118,6 +132,7 @@ jobs = [
         Process(
           name='ycsb_cassandra_run',
           cmdline="""
+            set -x
             cd /opt/ycsb
             ycsb_wrapper.pex \
                 --command \

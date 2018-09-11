@@ -1,6 +1,6 @@
 FROM centos:7
 
-RUN yum -y update && yum -y install java-1.8.0-openjdk-devel wget git patch which epel-release
+RUN yum -y update && yum -y install java-1.8.0-openjdk-devel wget git patch which epel-release nc
 RUN yum -y install python2-pip python36 && pip install cqlsh
 
 # Download Apache Maven.
