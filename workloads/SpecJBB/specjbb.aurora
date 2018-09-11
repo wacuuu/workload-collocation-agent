@@ -73,11 +73,12 @@ controller_cmd = ("java -Dspecjbb.forkjoin.workers={} -Xms4g -Xmx4g -jar {} -m d
 controller_cmd = ("{wrapper} --command '{command}' --prometheus_port {port} \
                              --prometheus_ip {ip} --stderr 0 \
                              --kafka_brokers {brokers} --log_level DEBUG \
+                             --kafka_topic {kafka_topic} --log_level DEBUG \
                              --labels \"{labels}\""
                  .format(wrapper=specjbb_wrapper, command=controller_cmd,
                          port=wrapper_prometheus_port, ip=load_generator_host_ip,
                          brokers=wrapper_kafka_brokers, log=wrapper_log_level,
-                         labels=wrapper_labels))
+                         kafka_topic=apms_kafka_topic_name, labels=wrapper_labels))
 
 # @TODO we should set max RAM assigned to JVM, but if set the job fails to run.
 injector_cmd = ("""

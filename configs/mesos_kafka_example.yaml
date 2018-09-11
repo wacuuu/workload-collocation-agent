@@ -1,7 +1,11 @@
 runner: !DetectionRunner
   node: !MesosNode
   action_delay: 1.
-  storage: !KafkaStorage
+  metrics_storage: !KafkaStorage
+    topic: owca_metrics
+    max_timeout_in_seconds: 5.
+  anomalies_storage: !KafkaStorage
+    topic: owca_anomalies
     max_timeout_in_seconds: 5.
   detector: !NOPAnomalyDetector
   rdt_enabled: False

@@ -171,8 +171,8 @@ class KafkaStorage(Storage):
         max_timeout_in_seconds: if a message was not delivered in maximum_timeout seconds
             self.store will throw FailedDeliveryException
     """
+    topic: str
     brokers_ips: List[str] = field(default=("127.0.0.1:9092",))
-    topic: str = "owca_metrics"
     max_timeout_in_seconds: float = 0.5  # defaults half of a second
 
     def __post_init__(self) -> None:

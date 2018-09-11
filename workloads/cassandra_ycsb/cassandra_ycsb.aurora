@@ -135,6 +135,7 @@ jobs = [
                 --prometheus_port {prometheus_port} \
                 --prometheus_ip "{prometheus_ip}" \
                 --stderr 1 --kafka_brokers "{kafka_brokers}" \
+                --kafka_topic {kafka_topic} \
                 --log_level {log_level} \
                 --labels "{labels}"
           """.format(
@@ -147,6 +148,7 @@ jobs = [
             prometheus_port=wrapper_prometheus_port,
             prometheus_ip=load_generator_host_ip,
             kafka_brokers=wrapper_kafka_brokers,
+            kafka_topic=apms_kafka_topic_name,
             log_level=wrapper_log_level,
             labels=str(wrapper_labels)),
           )

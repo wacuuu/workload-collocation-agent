@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, Mock, call
+from unittest.mock import patch, Mock
 
 from owca.runner import _calculate_desired_state, DetectionRunner
 from owca.mesos import MesosNode
@@ -79,7 +79,8 @@ def test_sync_containers_state(cleanup_mock, sync_mock, PerfCoutners_mock, ResGr
     # Mocker runner, because we're only interested in one sync_containers_state function.
     runner = DetectionRunner(
         node=Mock(),
-        storage=Mock(),
+        metrics_storage=Mock(),
+        anomalies_storage=Mock(),
         detector=Mock(),
         rdt_enabled=False,
     )
@@ -111,7 +112,8 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
 
     node_mock = Mock(spec=MesosNode, get_tasks=Mock(return_value=[
         task('/t1', resources=dict(cpus=8.))]))
-    storage_mock = Mock(spec=storage.Storage, store=Mock())
+    metrics_storage = Mock(spec=storage.Storage, store=Mock())
+    anomalies_storage = Mock(spec=storage.Storage, store=Mock())
 
     # simulate returning one anomaly and additional metric
     detector_mock = Mock(spec=AnomalyDetector,
@@ -121,7 +123,8 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
 
     runner = DetectionRunner(
         node=node_mock,
-        storage=storage_mock,
+        metrics_storage=metrics_storage,
+        anomalies_storage=anomalies_storage,
         detector=detector_mock,
         rdt_enabled=False,
     )
@@ -137,14 +140,12 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
     # store() method was called twice:
     # 1. Before calling detect() to store state of the environment.
     # 2. After calling detect to store information about detected anomalies.
-    storage_mock.assert_has_calls([
-        call.store([
+    metrics_storage.store.called_once_with(
             metric('platform-cpu-usage'),  # Store metrics from platform ...
-            Metric(name='cpu_usage', value=23, labels={'task_id': 'task-id-/t1'})]),  # and task
-        call.store([
+            Metric(name='cpu_usage', value=23, labels={'task_id': 'task-id-/t1'}))  # and task
+    anomalies_storage.store.called_once_with(
             anomaly_metric('task1'),
-            metric('bar')])  # Store with metrics returned from detector + anomaly.
-    ])
+            metric('bar'))  # Store with metrics returned from detector + anomaly.
 
     # Check that detector was called with proper arguments.
     detector_mock.detect.assert_called_once_with(

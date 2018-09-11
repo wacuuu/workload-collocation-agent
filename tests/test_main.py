@@ -9,7 +9,8 @@ yaml_config = '''
 runner: !DetectionRunner
   node: !MesosNode
   action_delay: 1.
-  storage: !LogStorage
+  metrics_storage: !LogStorage
+  anomalies_storage: !LogStorage
   detector: !ExampleDetector
     task_id: foo
 '''

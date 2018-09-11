@@ -136,7 +136,7 @@ def prepare_argument_parser():
         '--kafka_topic',
         help='Kafka messages topic, passed to KafkaStorage',
         dest='kafka_topic',
-        default='owca_metrics',
+        default='owca_apms',
         type=str
     )
     return parser

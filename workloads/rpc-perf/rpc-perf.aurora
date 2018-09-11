@@ -135,11 +135,13 @@ jobs = [
                             '--log_level {log_level} --stderr 0 --prometheus_port {prom_port} '
                             '--prometheus_ip {prom_ip} --labels "{labels}" '
                             '--regexp "(?P<name>p\d*): (?P<value>\d+)" '
+                            '--kafka_topic {kafka_topic} '
                             '--kafka_brokers {kafka_brokers}'.format(
                                 protocol=rpcperf_protocol, ip=application_host_ip, 
                                 port=application_listen_port, 
                                 log_level=wrapper_log_level, prom_port=wrapper_prometheus_port, 
                                 prom_ip=wrapper_prometheus_address, labels=wrapper_labels, 
+                                kafka_topic=apms_kafka_topic_name,
                                 kafka_brokers=wrapper_kafka_brokers)
                 )
             ],

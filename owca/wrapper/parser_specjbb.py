@@ -8,7 +8,7 @@ from owca.wrapper import wrapper_main
 from owca.wrapper.parser import readline_with_check
 
 log = logging.getLogger(__name__)
-EMPTY_LINE = "^\s*$"
+EMPTY_LINE = r"^\s*$"
 
 
 def parse(input: TextIOWrapper, labels: Dict[str, str] = {},

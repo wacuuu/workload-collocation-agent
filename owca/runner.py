@@ -55,7 +55,8 @@ class DetectionRunner:
     and report externally (using storage) detected anomalies.
     """
     node: mesos.MesosNode
-    storage: storage.Storage
+    metrics_storage: storage.Storage
+    anomalies_storage: storage.Storage
     detector: detectors.AnomalyDetector
     action_delay: float = 0.  # [s]
     rdt_enabled: bool = True
@@ -155,7 +156,7 @@ class DetectionRunner:
                 tasks_resources[task.task_id] = task.resources
                 tasks_metrics += task_metrics
 
-            self.storage.store(platform_metrics + tasks_metrics)
+            self.metrics_storage.store(platform_metrics + tasks_metrics)
 
             # Wrap tasks with metrics
             anomalies, extra_metrics = self.detector.detect(
@@ -167,7 +168,7 @@ class DetectionRunner:
             for metric in anomaly_metrics + extra_metrics:
                 metric.labels.update(common_labels)
 
-            self.storage.store(anomaly_metrics + extra_metrics)
+            self.anomalies_storage.store(anomaly_metrics + extra_metrics)
 
             if not self.wait_or_finish():
                 break

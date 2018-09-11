@@ -13,6 +13,9 @@ load_generator_host_ip = os.environ['load_generator_host_ip']
 
 docker_registry = os.environ['docker_registry']
 
+# apms -> application performance metrics
+apms_kafka_topic_name = os.environ.get('apms_kafka_topic_name', 'owca_apms')
+
 # Wrapper variables:
 wrapper_kafka_brokers = os.environ['wrapper_kafka_brokers']
 wrapper_prometheus_port = os.environ.get('wrapper_prometheus_port', '9090')

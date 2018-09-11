@@ -42,12 +42,13 @@ jobs = [
                     cmdline="/wrapper.pex --command 'inference --dataset_path '/'' "
                             "--prometheus_port {prometheus_port} "
                             "--prometheus_ip '{prometheus_ip}' "
-                            "--stderr 0 --kafka_brokers '{kafka_brokers}' "
+                            "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic}"
                             "--log_level {log_level} "
                             "--labels \"{labels}\"".format(prometheus_port=wrapper_prometheus_port,
                                                            prometheus_ip=application_host_ip,
                                                            kafka_brokers=wrapper_kafka_brokers,
                                                            log_level=wrapper_log_level,
+                                                           kafka_topic=apms_kafka_topic_name,
                                                            labels=str(wrapper_labels))
                 )
             ],

@@ -18,3 +18,4 @@ __pycache__/
 /workloads/cassandra_ycsb/ycsb/YCSB
 config.sh
 config-*.sh
+/SpecJBB
