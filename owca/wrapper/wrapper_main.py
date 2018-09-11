@@ -38,7 +38,8 @@ def main(parse: ParseFunc = default_parse):
     input = workload_process.stderr if args.stderr else workload_process.stdout
 
     labels = ast.literal_eval(args.labels)
-    parse = partial(parse, regexp=args.regexp, separator=args.separator, labels=labels, input=input)
+    parse = partial(parse, regexp=args.regexp, separator=args.separator, labels=labels,
+                    input=input, metric_name_prefix=args.metric_name_prefix)
 
     # create kafka storage with list of kafka brokers from arguments
     kafka_brokers_addresses = args.kafka_brokers.replace(" ", "").split(',')
@@ -102,6 +103,11 @@ def prepare_argument_parser():
         dest='regexp',
         type=str,
         default=DEFAULT_REGEXP
+    )
+    parser.add_argument(
+        '--metric_name_prefix',
+        help='metric name prefix (only relevant for default parse function)',
+        default=''
     )
     parser.add_argument(
         '--separator',

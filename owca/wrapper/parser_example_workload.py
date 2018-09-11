@@ -6,7 +6,7 @@ from owca.wrapper import wrapper_main
 
 
 def parse(input: TextIOWrapper, regexp: str, separator: str = None,
-          labels: Dict[str, str] = {}) -> List[Metric]:
+          labels: Dict[str, str] = {}, metric_name_prefix: str = '') -> List[Metric]:
     return [Metric(name="example", value=1.337, labels={"test": "label"}, type=MetricType.GAUGE,
                    help="Empty example metric")]
 

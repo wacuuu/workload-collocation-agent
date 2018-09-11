@@ -134,6 +134,7 @@ jobs = [
                             '"rpc-perf --config /etc/rpc-perf.toml -p {protocol} --server {ip}:{port}" '
                             '--log_level {log_level} --stderr 0 --prometheus_port {prom_port} '
                             '--prometheus_ip {prom_ip} --labels "{labels}" '
+                            '--metric_name_prefix "{application}_" '
                             '--regexp "(?P<name>p\d*): (?P<value>\d+)" '
                             '--kafka_topic {kafka_topic} '
                             '--kafka_brokers {kafka_brokers}'.format(
@@ -142,7 +143,9 @@ jobs = [
                                 log_level=wrapper_log_level, prom_port=wrapper_prometheus_port, 
                                 prom_ip=wrapper_prometheus_address, labels=wrapper_labels, 
                                 kafka_topic=apms_kafka_topic_name,
-                                kafka_brokers=wrapper_kafka_brokers)
+                                kafka_brokers=wrapper_kafka_brokers,
+                                application=application
+                            )
                 )
             ],
         )

@@ -50,6 +50,7 @@ jobs = [
                             "--prometheus_ip '{prometheus_ip}' "
                             "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
                             "--log_level {log_level} "
+                            "--metric_name_prefix 'tensorflow_train_' "
                             "--labels \"{labels}\"".format(batch_size=tensorflow_train_batch_size,
                                                            epochs=tensorflow_train_epochs,
                                                            prometheus_port=wrapper_prometheus_port,

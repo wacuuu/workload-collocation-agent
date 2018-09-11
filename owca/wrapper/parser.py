@@ -14,7 +14,7 @@ ParseFunc = Callable[[TextIOWrapper, str, str, Dict[str, str]], List[Metric]]
 
 # Matches values returned in format "a=4.2". If different format is needed,
 # provide regex in arguments. It needs to have 2 named groups "name" and "value"
-DEFAULT_REGEXP = "(?P<name>\w+?)=(?P<value>\d+?.?\d*)"
+DEFAULT_REGEXP = r"(?P<name>\w+?)=(?P<value>\d+?.?\d*)"
 
 MAX_ATTEMPTS = 5
 
@@ -31,7 +31,7 @@ def readline_with_check(input: TextIOWrapper) -> str:
 
 
 def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
-                  labels: Dict[str, str] = {}) -> List[Metric]:
+                  labels: Dict[str, str] = {}, metric_name_prefix: str = '') -> List[Metric]:
     """
     Parses workload output. If no separator is provided, parses only one line at a time.
     With separator, it appends lines to a list until the line with separator appears and then
@@ -63,7 +63,7 @@ def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
     found_metrics = re.finditer(regexp, '\n'.join(input_lines))
     for metric in list(found_metrics):
         metric = metric.groupdict()
-        new_metrics.append(Metric(metric['name'], float(metric['value']),
+        new_metrics.append(Metric(metric_name_prefix+metric['name'], float(metric['value']),
                                   type=MetricType.COUNTER, labels=labels))
     return new_metrics
 

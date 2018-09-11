@@ -11,8 +11,8 @@ log = logging.getLogger(__name__)
 EMPTY_LINE = r"^\s*$"
 
 
-def parse(input: TextIOWrapper, labels: Dict[str, str] = {},
-          *args, **kwargs) -> List[Metric]:
+def parse(input: TextIOWrapper, regexp: str, separator: str = None,
+          labels: Dict[str, str] = {}, metric_name_prefix: str = '') -> List[Metric]:
     """
     Custom parse function for specjbb.
     For sample output from specjbb see file:
@@ -30,7 +30,7 @@ def parse(input: TextIOWrapper, labels: Dict[str, str] = {},
 
     # discarding lines
     new_line = readline_with_check(input)
-    while not re.match("^\s*Response times:\s*$", new_line):
+    while not re.match(r"^\s*Response times:\s*$", new_line):
         new_line = readline_with_check(input)
     new_line = readline_with_check(input)
 
