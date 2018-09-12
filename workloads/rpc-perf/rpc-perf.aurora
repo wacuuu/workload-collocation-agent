@@ -135,7 +135,7 @@ jobs = [
                             '--log_level {log_level} --stderr 0 --prometheus_port {prom_port} '
                             '--prometheus_ip {prom_ip} --labels "{labels}" '
                             '--metric_name_prefix "{application}_" '
-                            '--regexp "(?P<name>p\d*): (?P<value>\d+)" '
+                            '--regexp "(?P<name>Success|Hit Rate|Rate|min|max|p\d*): (?P<value>\d+.\d+)" '
                             '--kafka_topic {kafka_topic} '
                             '--kafka_brokers {kafka_brokers}'.format(
                                 protocol=rpcperf_protocol, ip=application_host_ip, 
