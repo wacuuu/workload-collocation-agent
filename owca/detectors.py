@@ -20,6 +20,8 @@ class ContendedResource(str, Enum):
     MEMORY_BW = 'memory bandwidth'
     LLC = 'cache'
     CPUS = 'cpus'
+    TDP = 'thermal design power'
+    UNKN = 'unknown resource'
 
 
 def _create_uuid_from_tasks_ids(task_ids: List[TaskId]):
