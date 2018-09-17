@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Dict
+from collections import defaultdict
 import logging
 import time
 
@@ -11,7 +12,7 @@ from owca import platforms
 from owca import storage
 from owca.containers import Container
 from owca.detectors import TasksMeasurements, convert_anomalies_to_metrics, TasksResources
-from owca.mesos import MesosTask, create_metrics
+from owca.mesos import MesosTask, create_metrics, TaskId, sanitize_mesos_label
 from owca.metrics import Metric
 from owca.resctrl import check_resctrl, cleanup_resctrl
 from owca.perf import are_privileges_sufficient
@@ -141,17 +142,27 @@ class DetectionRunner:
             tasks_measurements: TasksMeasurements = {}
             tasks_resources: TasksResources = {}
             tasks_metrics: List[Metric] = []
+            tasks_labels: Dict[TaskId, Dict[str, str]] = defaultdict(dict)
             for task, container in self.containers.items():
 
                 # Single task data
                 task_measurements = container.get_measurements()
-                task_metrics = create_metrics(task, task_measurements)
+                task_metrics = create_metrics(task_measurements)
+                # Prepare tasks labels based on Mesos tasks metadata labels and task id.
+                task_labels = {
+                    sanitize_mesos_label(label_key): label_value
+                    for label_key, label_value
+                    in task.labels.items()
+                }
+                task_labels['task_id'] = task.task_id
 
                 # Task scoped label decoration.
                 for task_metric in task_metrics:
                     task_metric.labels.update(common_labels)
+                    task_metric.labels.update(task_labels)
 
                 # Aggregate over all tasks.
+                tasks_labels[task.task_id] = task_labels
                 tasks_measurements[task.task_id] = task_measurements
                 tasks_resources[task.task_id] = task.resources
                 tasks_metrics += task_metrics
@@ -162,7 +173,18 @@ class DetectionRunner:
             anomalies, extra_metrics = self.detector.detect(
                 platform, tasks_measurements, tasks_resources)
 
+            log.info('anomalies detected: %d', len(anomalies))
+
+            # Note: anomaly metrics include metrics found in ContentionAnomaly.metrics.
             anomaly_metrics = convert_anomalies_to_metrics(anomalies)
+
+            for anomaly_metric in anomaly_metrics:
+                # Extra labels for anomaly metrics for information about task.
+                if 'contended_task_id' in anomaly_metric.labels:  # Only for anomaly metrics.
+                    contended_task_id = anomaly_metric.labels['contended_task_id']
+                    anomaly_metric.labels.update(
+                        tasks_labels.get(contended_task_id, {})
+                    )
 
             # Update anomaly & extra metrics with common labels.
             for metric in anomaly_metrics + extra_metrics:

@@ -12,7 +12,7 @@ runner: !DetectionRunner
   metrics_storage: !LogStorage
   anomalies_storage: !LogStorage
   detector: !ExampleDetector
-    task_id: foo
+    cycle_length: 100
 '''
 
 proc_stat = """

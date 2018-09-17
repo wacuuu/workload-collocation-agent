@@ -289,6 +289,8 @@ Representation of anomaly and metrics in persistent storage
 
 All stored information is labeled with platform information such as: *host*, *number of cores*, *number of sockets* and so on.
 Additionally single anomaly object is serialized as multiple metrics that can be grouped by ``anomaly.uuid`` field to find correlated tasks.
+If anomaly objects contains any additional related metrics, they will be marked with additional label type="anomaly" 
+and uuid pointing to original contention instance.
 
 Example message stored in Kafka using Prometheus exposition format:
 
@@ -337,7 +339,7 @@ Example message stored in Kafka using Prometheus exposition format:
     # TYPE anomaly counter
     anomaly{type="contention", contended_task_id="task1", contending_task_id="task2",  resource="memory bandwidth", uuid="1234"} 1
     anomaly{type="contention", contended_task_id="task1", contending_task_id="task3", resource="memory bandwidth", uuid="1234"} 1
-    memory_usage_treshold{contended_task_id="task1", uuid="1234"} 10
+    memory_usage_treshold{contended_task_id="task1", uuid="1234", type="anomaly"} 10
 
 
 **Note** that not all labels comments where showed for readability.

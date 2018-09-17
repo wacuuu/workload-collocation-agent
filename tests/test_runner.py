@@ -8,7 +8,7 @@ from owca import storage
 from owca import platforms
 from owca.metrics import Metric
 from owca.detectors import AnomalyDetector
-from owca.testing import anomaly_metric, anomaly, task
+from owca.testing import anomaly_metrics, anomaly, task
 
 
 def container(cgroup_path):
@@ -17,9 +17,9 @@ def container(cgroup_path):
         return Container(cgroup_path, rdt_enabled=False)
 
 
-def metric(name):
+def metric(name, labels=None):
     """Helper method to create metric with default values. Value is ignored during tests."""
-    return Metric(name=name, value=1234)
+    return Metric(name=name, value=1234, labels=labels or {})
 
 
 @pytest.mark.parametrize(
@@ -108,18 +108,32 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
                                  ResGroup_mock, are_privileges_sufficient_mock):
     """Tests proper interaction between runner instance and functions for
     creating anomalies and calculating the desired state.
+
+    Also tests labelling of metrics during iteration loop.
     """
 
+    # Node mock
     node_mock = Mock(spec=MesosNode, get_tasks=Mock(return_value=[
         task('/t1', resources=dict(cpus=8.))]))
+
+    # Storage mocks
     metrics_storage = Mock(spec=storage.Storage, store=Mock())
     anomalies_storage = Mock(spec=storage.Storage, store=Mock())
 
-    # simulate returning one anomaly and additional metric
-    detector_mock = Mock(spec=AnomalyDetector,
-                         detect=Mock(return_value=(
-                             [anomaly('task1', ['task2'])],
-                             [metric('bar')])))
+    # Detector mock - simulate returning one anomaly and additional metric
+    detector_mock = Mock(
+        spec=AnomalyDetector,
+        detect=Mock(
+            return_value=(
+                [anomaly(
+                    'task1', ['task2'], metrics=[
+                        metric('contention_related_metric')
+                    ]
+                )],  # one anomaly + related metric
+                [metric('bar')]  # one extra metric
+            )
+        )
+    )
 
     runner = DetectionRunner(
         node=node_mock,
@@ -139,13 +153,18 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
 
     # store() method was called twice:
     # 1. Before calling detect() to store state of the environment.
+    metrics_storage.store.assert_called_once_with(
+            [metric('platform-cpu-usage'),  # Store metrics from platform ...
+             Metric(name='cpu_usage', value=23, labels={'task_id': 'task-id-/t1'})])  # and task
+
     # 2. After calling detect to store information about detected anomalies.
-    metrics_storage.store.called_once_with(
-            metric('platform-cpu-usage'),  # Store metrics from platform ...
-            Metric(name='cpu_usage', value=23, labels={'task_id': 'task-id-/t1'}))  # and task
-    anomalies_storage.store.called_once_with(
-            anomaly_metric('task1', []),
-            metric('bar'))  # Store with metrics returned from detector + anomaly.
+    expected_anomaly_metrics = anomaly_metrics('task1', ['task2'])
+    expected_anomaly_metrics.extend([
+        metric('contention_related_metric',
+               labels={'uuid': 'c87600b2-c560-a177-2275-a6ad404feec8', 'type': 'anomaly'}),
+        metric('bar')
+    ])
+    anomalies_storage.store.assert_called_once_with(expected_anomaly_metrics)
 
     # Check that detector was called with proper arguments.
     detector_mock.detect.assert_called_once_with(

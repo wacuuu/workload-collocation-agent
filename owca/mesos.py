@@ -134,30 +134,13 @@ def sanitize_mesos_label(label_key):
     return label_key
 
 
-def create_metrics(
-        task: MesosTask,
-        task_measurements: Measurements) -> List[Metric]:
+def create_metrics(task_measurements: Measurements) -> List[Metric]:
     """Prepare a list of metrics for a mesos tasks based on provided measurements
     applying common_labels.
-    :param task: use information from MesosTask to decorate metrics with labels
     :param task_measurements: use values of measurements to create metrics
     """
     metrics = []
     for metric_name, metric_value in task_measurements.items():
         metric = Metric.create_metric_with_metadata(name=metric_name, value=metric_value)
-
-        # Task labels
-        metric.labels.update(dict(
-            task_id=task.task_id,
-        ))
-        metric.labels.update(task.labels)
-
-        # Sanitaize Mesos labels (containing dots) before passing to Prometheus.
-        metric.labels = {
-            sanitize_mesos_label(label_key): label_value
-            for label_key, label_value
-            in metric.labels.items()
-        }
-
         metrics.append(metric)
     return metrics

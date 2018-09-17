@@ -78,7 +78,7 @@ controller_cmd = ("{wrapper} --command '{command}' --prometheus_port {port} \
                  .format(wrapper=specjbb_wrapper, command=controller_cmd,
                          port=wrapper_prometheus_port, ip=load_generator_host_ip,
                          brokers=wrapper_kafka_brokers, log=wrapper_log_level,
-                         kafka_topic=apms_kafka_topic_name, labels=wrapper_labels))
+                         kafka_topic='owca_apms_specjbb', labels=wrapper_labels))
 
 # @TODO we should set max RAM assigned to JVM, but if set the job fails to run.
 injector_cmd = ("""

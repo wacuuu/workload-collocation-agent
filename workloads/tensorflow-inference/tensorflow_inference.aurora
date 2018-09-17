@@ -49,7 +49,7 @@ jobs = [
                                                            prometheus_ip=application_host_ip,
                                                            kafka_brokers=wrapper_kafka_brokers,
                                                            log_level=wrapper_log_level,
-                                                           kafka_topic=apms_kafka_topic_name,
+                                                           kafka_topic='owca_apms_tensorflow_inference',
                                                            labels=str(wrapper_labels))
                 )
             ],

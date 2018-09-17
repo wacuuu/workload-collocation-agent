@@ -30,7 +30,7 @@ def create_open_mock(sys_file_mock):
     return OpenMock(sys_file_mock)
 
 
-def anomaly_metric(contended_task_id: TaskId, contending_task_ids: List[TaskId]):
+def anomaly_metrics(contended_task_id: TaskId, contending_task_ids: List[TaskId]):
     """Helper method to create metric based on anomaly.
     uuid is used if provided.
     """
@@ -49,14 +49,15 @@ def anomaly_metric(contended_task_id: TaskId, contending_task_ids: List[TaskId])
     return metrics
 
 
-def anomaly(contended_task_id: TaskId, contending_task_ids: List[TaskId]):
+def anomaly(contended_task_id: TaskId, contending_task_ids: List[TaskId],
+            metrics: List[Metric] = None):
     """Helper method to create simple anomaly for single task.
     It is always about memory contention."""
     return ContentionAnomaly(
         contended_task_id=contended_task_id,
         contending_task_ids=contending_task_ids,
         resource=ContendedResource.MEMORY_BW,
-        metrics=[],
+        metrics=metrics or [],
     )
 
 

@@ -2,7 +2,6 @@ import pytest
 
 from owca.mesos import create_metrics, sanitize_mesos_label
 from owca.metrics import Metric
-from owca.testing import task
 
 
 @pytest.mark.parametrize('label_key,expected_label_key', (
@@ -14,19 +13,16 @@ def test_sanitize_labels(label_key, expected_label_key):
     assert sanitize_mesos_label(label_key) == expected_label_key
 
 
-@pytest.mark.parametrize('task,task_measurements,expected_metrics', (
-        (task('/t1'),
-         {}, []),
-        (task('/t1', labels=dict(task_label='task_label_value')), {'cpu': 15},
-         [Metric(name='cpu', value=15, labels={'task_id': 'task-id-/t1',
-                                               'task_label': 'task_label_value',
-                                               })]),
-        (task('/t1'), {'cpu': 15, 'ram': 30},
+@pytest.mark.parametrize('task_measurements,expected_metrics', (
+        ({}, []),
+        ({'cpu': 15},
+         [Metric(name='cpu', value=15)]),
+        ({'cpu': 15, 'ram': 30},
          [
-             Metric(name='cpu', value=15, labels={'task_id': 'task-id-/t1'}),
-             Metric(name='ram', value=30, labels={'task_id': 'task-id-/t1'})
+             Metric(name='cpu', value=15),
+             Metric(name='ram', value=30)
          ]),
 ))
-def test_create_metrics(task, task_measurements, expected_metrics):
-    got_metrics = create_metrics(task, task_measurements)
+def test_create_metrics(task_measurements, expected_metrics):
+    got_metrics = create_metrics(task_measurements)
     assert expected_metrics == got_metrics

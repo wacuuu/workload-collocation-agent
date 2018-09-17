@@ -82,8 +82,10 @@ class ContentionAnomaly(Anomaly):
                     contending_task_id='task3',
                     type="contention"))
             Metrics(name='cpi', type='gauge', value=10,
-                labels=dict(uuid="1234", contended_task_id="task1"))
+                labels=dict(type='anomaly', uuid="1234", contended_task_id="task1"))
         ]
+
+        Note, that contention related metrics will get additional labels (type and uuid).
 
         Effectively being encoded as in Prometheus format:
 
@@ -91,7 +93,7 @@ class ContentionAnomaly(Anomaly):
         # TYPE anomaly counter
         anomaly{type="contention", contended_task_id="task1", contending_task_ids="task2",  resource="cache", uuid="1234"} 1 # noqa
         anomaly{type="contention", contended_task_id="task1", contending_task_ids="task3", resource="cache", uuid="1234"} 1 # noqa
-        cpi{contended_task_id="task1", uuid="1234"} 10
+        cpi{contended_task_id="task1", uuid="1234", type="anomaly"} 10
         """
         metrics = []
         for task_id in self.contending_task_ids:
@@ -109,7 +111,15 @@ class ContentionAnomaly(Anomaly):
                     )
                 )
             )
-        return metrics
+
+        # Mark contention related metrics with two labels: uuid and type='anomaly'.
+        for metric in self.metrics:
+            metric.labels.update(
+                uuid=self._uuid(),
+                type='anomaly'
+            )
+
+        return metrics + self.metrics
 
     def _uuid(self):
         """Returns unique identifier based on combination of tasks_ids."""
