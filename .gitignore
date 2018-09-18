@@ -19,5 +19,4 @@ __pycache__/
 config.sh
 config-*.sh
 /SpecJBB
-/component-licenses/NOTICE
 /dist
