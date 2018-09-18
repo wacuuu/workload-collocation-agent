@@ -3,7 +3,7 @@ import socket
 import hashlib
 from owca.metrics import Metric
 from owca.detectors import (TasksMeasurements, ContentionAnomaly,
-                            ContendedResource, AnomalyDetector, TasksResources)
+                            ContendedResource, AnomalyDetector, TasksResources, TasksLabels)
 from owca.platforms import Platform
 
 import logging
@@ -21,6 +21,7 @@ class ExampleDetector(AnomalyDetector):
     def detect(self, platform: Platform,
                tasks_measurements: TasksMeasurements,
                tasks_resources: TasksResources,
+               tasks_labels: TasksLabels
                ):
 
         anomalies = []

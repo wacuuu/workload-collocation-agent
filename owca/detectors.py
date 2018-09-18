@@ -13,6 +13,7 @@ from owca.platforms import Platform
 # Mapping from task to its measurements.
 TasksMeasurements = Dict[TaskId, Measurements]
 TasksResources = Dict[TaskId, Dict[str, float]]
+TasksLabels = Dict[TaskId, Dict[str, str]]
 
 
 class ContendedResource(str, Enum):
@@ -134,13 +135,14 @@ class AnomalyDetector(ABC):
             platform: Platform,
             tasks_measurements: TasksMeasurements,
             tasks_resources: TasksResources,
+            tasks_labels: TasksLabels
             ) -> (List[Anomaly], List[Metric]):
         ...
 
 
 class NOPAnomalyDetector(AnomalyDetector):
 
-    def detect(self, platform, tasks_measurements, tasks_resources):
+    def detect(self, platform, tasks_measurements, tasks_resources, tasks_labels):
         return [], []
 
 

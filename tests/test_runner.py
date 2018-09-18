@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import patch, Mock
 
 from owca.runner import _calculate_desired_state, DetectionRunner
-from owca.mesos import MesosNode
+from owca.mesos import MesosNode, sanitize_mesos_label
 from owca.containers import Container
 from owca import storage
 from owca import platforms
@@ -112,9 +112,23 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
     Also tests labelling of metrics during iteration loop.
     """
 
+    # Task labels
+    task_labels = {
+        'org.apache.aurora.metadata.application': 'redis',
+        'org.apache.aurora.metadata.load_generator': 'rpc-perf',
+        'org.apache.aurora.metadata.name': 'redis--6792',
+    }
+    task_labels_sanitized = {
+        sanitize_mesos_label(label_key): label_value
+        for label_key, label_value
+        in task_labels.items()
+    }
+    task_labels_sanitized_with_task_id = {'task_id': 'task-id-/t1'}
+    task_labels_sanitized_with_task_id.update(task_labels_sanitized)
+
     # Node mock
     node_mock = Mock(spec=MesosNode, get_tasks=Mock(return_value=[
-        task('/t1', resources=dict(cpus=8.))]))
+        task('/t1', resources=dict(cpus=8.), labels=task_labels)]))
 
     # Storage mocks
     metrics_storage = Mock(spec=storage.Storage, store=Mock())
@@ -155,7 +169,8 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
     # 1. Before calling detect() to store state of the environment.
     metrics_storage.store.assert_called_once_with(
             [metric('platform-cpu-usage'),  # Store metrics from platform ...
-             Metric(name='cpu_usage', value=23, labels={'task_id': 'task-id-/t1'})])  # and task
+             Metric(name='cpu_usage', value=23,
+                    labels=task_labels_sanitized_with_task_id)])  # and task
 
     # 2. After calling detect to store information about detected anomalies.
     expected_anomaly_metrics = anomaly_metrics('task1', ['task2'])
@@ -170,10 +185,12 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
     detector_mock.detect.assert_called_once_with(
         platform_mock,
         {'task-id-/t1': {'cpu_usage': 23}},
-        {'task-id-/t1': {'cpus': 8}}
+        {'task-id-/t1': {'cpus': 8}},
+        {'task-id-/t1': task_labels_sanitized_with_task_id}
     )
 
     # assert expected state (new container based on first task /t1)
-    assert runner.containers == {task('/t1', resources=dict(cpus=8.)): container('/t1')}
+    assert (runner.containers ==
+            {task('/t1', resources=dict(cpus=8.), labels=task_labels): container('/t1')})
 
     runner.wait_or_finish.assert_called_once()

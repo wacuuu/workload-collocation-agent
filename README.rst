@@ -111,7 +111,13 @@ Assuming that external implementation of detector is provided as
         def __init__(self, task_id: mesos.TaskId):
             self.task_id = task_id
 
-        def detect(self, platform, task_measurements):
+        def detect(
+                self,
+                platform: Platform,
+                tasks_measurements: TasksMeasurements,
+                tasks_resources: TasksResources,
+                tasks_labels: TasksLabels
+                ) -> (List[Anomaly], List[Metric]):
             anomalies = [
                 detectors.ContentionAnomaly(
                     resource=detectors.ContendedResource.CPUS

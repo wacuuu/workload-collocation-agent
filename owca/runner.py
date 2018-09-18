@@ -1,6 +1,5 @@
 from dataclasses import dataclass, field
 from typing import List, Dict
-from collections import defaultdict
 import logging
 import time
 
@@ -11,8 +10,9 @@ from owca import mesos
 from owca import platforms
 from owca import storage
 from owca.containers import Container
-from owca.detectors import TasksMeasurements, convert_anomalies_to_metrics, TasksResources
-from owca.mesos import MesosTask, create_metrics, TaskId, sanitize_mesos_label
+from owca.detectors import (TasksMeasurements, TasksResources,
+                            TasksLabels, convert_anomalies_to_metrics)
+from owca.mesos import MesosTask, create_metrics, sanitize_mesos_label
 from owca.metrics import Metric
 from owca.resctrl import check_resctrl, cleanup_resctrl
 from owca.perf import are_privileges_sufficient
@@ -141,10 +141,9 @@ class DetectionRunner:
             # Build labeled tasks_metrics and task_metrics_values.
             tasks_measurements: TasksMeasurements = {}
             tasks_resources: TasksResources = {}
+            tasks_labels: TasksLabels = {}
             tasks_metrics: List[Metric] = []
-            tasks_labels: Dict[TaskId, Dict[str, str]] = defaultdict(dict)
             for task, container in self.containers.items():
-
                 # Single task data
                 task_measurements = container.get_measurements()
                 task_metrics = create_metrics(task_measurements)
@@ -169,9 +168,8 @@ class DetectionRunner:
 
             self.metrics_storage.store(platform_metrics + tasks_metrics)
 
-            # Wrap tasks with metrics
             anomalies, extra_metrics = self.detector.detect(
-                platform, tasks_measurements, tasks_resources)
+                platform, tasks_measurements, tasks_resources, tasks_labels)
 
             log.info('anomalies detected: %d', len(anomalies))
 
