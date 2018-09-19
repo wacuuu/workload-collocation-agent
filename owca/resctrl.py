@@ -38,6 +38,7 @@ def cleanup_resctrl():
             if len(tasks.split()) == 0:
                 log.warning('Found taskless (empty) resctrl group at %r - recycle CLOSid resource.'
                             % directory_path)
+                log.log(logger.TRACE, 'resctrl - cleanup: rmdir(%s)', directory_path)
                 os.rmdir(directory_path)
 
 
@@ -99,6 +100,7 @@ class ResGroup:
                     % (self.resgroup_dir, len(tasks)))
 
             try:
+                log.log(logger.TRACE, 'resctrl: makedirs(%s)', self.resgroup_dir)
                 os.makedirs(self.resgroup_dir, exist_ok=True)
             except OSError as e:
                 if e.errno == errno.ENOSPC:  # "No space left on device"
@@ -152,4 +154,5 @@ class ResGroup:
         return {MetricName.MEM_BW: mbm_total, MetricName.LLC_OCCUPANCY: llc_occupancy}
 
     def cleanup(self):
+        log.log(logger.TRACE, 'resctrl: rmdir(%s)', self.resgroup_dir)
         os.rmdir(self.resgroup_dir)

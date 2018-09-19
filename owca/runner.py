@@ -88,12 +88,20 @@ class DetectionRunner:
         new_tasks, containers_to_cleanup = _calculate_desired_state(
             tasks, list(self.containers.values()))
 
+        if containers_to_cleanup:
+            log.debug('state: cleaning up %d containers', len(containers_to_cleanup))
+            log.log(logger.TRACE, 'state: containers_to_cleanup=%r', containers_to_cleanup)
+
         # Cleanup and remove orphaned containers (cleanup).
         for container_to_cleanup in containers_to_cleanup:
             container_to_cleanup.cleanup()
         self.containers = {task: container
                            for task, container in self.containers.items()
                            if task in tasks}
+
+        if new_tasks:
+            log.debug('state: found %d new tasks', len(new_tasks))
+            log.log(logger.TRACE, 'state: new_tasks=%r', new_tasks)
 
         # Create new containers and store them.
         for new_task in new_tasks:
