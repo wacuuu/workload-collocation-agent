@@ -32,7 +32,7 @@ RUN cd /tensorflow && \
 
 ADD /workloads/tensorflow-train/prep_dataset.py /prep_dataset.py
 ADD /workloads/tensorflow-train/requirements.txt /requirements.txt
-ADD kaggle.json /root/.kaggle/kaggle.json
+ADD /workloads/tensorflow-train/kaggle.json /root/.kaggle/kaggle.json
 RUN pip3.6 install -r requirements.txt
 RUN python3.6 /prep_dataset.py
 RUN unzip tensorflow-train/dataset2-master.zip
