@@ -1,0 +1,31 @@
+# Full example with logger configuration per module, using external detector,
+# storing logs in dedicated files and extra labels.
+
+# Any package can be reconfigured to specifc level.
+# To debug issues with loggers, run owca with enviornment variable:
+# OWCA_DUMP_LOGGERS=True
+loggers:
+  example.external_package: debug  # Debug level for external component
+  owca.perf: error
+  owca.storage: info
+  owca.runner: debug
+
+runner: !DetectionRunner
+  node: !MesosNode
+  action_delay: 1.
+
+  anomalies_storage: !LogStorage
+    output_filename: '/tmp/input_metrics.log'
+  metrics_storage: !LogStorage
+    output_filename: '/tmp/output_anomalies.log'
+
+  # Use external component.
+  # Requires registration with -r example.external_package:ExternalDetector
+  detector: !ExampleDetector
+
+  # Run even without RDT available.
+  rdt_enabled: False
+
+  # Decorate every metric with extra labels.
+  extra_labels:
+    env_id: "host"

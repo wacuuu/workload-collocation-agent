@@ -39,20 +39,10 @@ def init_logging(level: str, package_name: str):
 
     # Prepare main log to be used by main entry point module
     # (because you cannot create logger before initialization).
-    log.debug('level=%s', logging.getLevelName(log.getEffectiveLevel()))
-
-    if level == 'TRACE':
-        log.warning('Trace level logging enabled!')
-        root_logger = logging.getLogger()
-        root_logger.setLevel(TRACE)
-        root_logger.handlers.clear()
-        root_logger.addHandler(handler)
-        root_logger.log(TRACE, 'Root logger trace messages enabled.')
-
-        print('------------------------------------ Logging tree ---------------------')
-        import logging_tree
-        logging_tree.printout()
-        print('------------------------------------ Logging tree END------------------')
+    log.debug(
+        'setting level=%s for %r package', logging.getLevelName(log.getEffectiveLevel()),
+        package_name
+    )
 
 
 def trace(log):

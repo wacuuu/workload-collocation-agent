@@ -251,3 +251,41 @@ Use function readline_with_check(input) instead of input.readline() to read a li
 
     # Read a line using readline_with_check(input)
     new_line = readline_with_check(input)
+
+
+OWCA loggers configuration.
+===========================
+
+Command line ``--log_level (-l)`` only configures owca package.
+If you want to quiet owca, and enable verbose messages for some sub packages or 
+external components you have to create section loggers in configuration file and 
+set desired level.
+
+
+
+For example:
+
+.. code-block:: yaml
+
+    loggers:
+        owca: error  # Overrides value provided from command line
+        owca.storage: info  # Enables debugging for specifc owca module.
+        example.external_package: debug  # Enables verbose mode for external component.
+
+
+Note: that setting level for root logger named ``""`` can enable logging with desired level for all modules including 
+any third party and standard library.
+
+Please see full example of configuration in ``configs/mesos_external_detector.yaml`` for full 
+context.
+
+In case of any troubles with loggers configuration, you can run application with
+``OWCA_DUMP_LOGGERS=True`` environment variable to dump configuration of all loggers on standard output.
+
+
+.. code-block:: shell
+
+    OWCA_DUMP_LOGGERS=True dist/owca.pex -c configs/mesos_external_detector.yaml -r example.external_package:ExampleDetector
+    
+
+

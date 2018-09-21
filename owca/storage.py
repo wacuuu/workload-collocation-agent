@@ -3,6 +3,7 @@ Module is responsible for exposing functionality of storing labeled metrics
 in durable external storage.
 """
 import abc
+import sys
 import itertools
 import time
 import logging
@@ -26,10 +27,31 @@ class Storage(abc.ABC):
         ...
 
 
+@dataclass
 class LogStorage(Storage):
 
+    output_filename: str = None  # Defaults to stderr.
+
+    def __post_init__(self):
+        if self.output_filename is not None:
+            self.output = open(self.output_filename, 'a')
+            log.info('configuring log storage to dump metrics to: %r', self.output_filename)
+        else:
+            self.output = sys.stderr
+
     def store(self, metrics):
-        log.debug(metrics)
+        log.debug('storing: %d', len(metrics))
+        log.log(logger.TRACE, 'Dump of metrics: %r', metrics)
+
+        is_convertable, error_message = is_convertable_to_prometheus_exposition_format(metrics)
+        if not is_convertable:
+            log.warning(
+                'failed to convert metrics into'
+                'prometheus exposition format; error: "{}" - skipping '.format(error_message)
+            )
+        else:
+            msg = convert_to_prometheus_exposition_format(metrics)
+            print(msg, file=self.output)
 
 
 class FailedDeliveryException(Exception):

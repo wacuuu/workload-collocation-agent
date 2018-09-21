@@ -1,8 +1,7 @@
+# Basic minimal configuration to dump metrics on stderr with NOPAnomaly detector
 runner: !DetectionRunner
   node: !MesosNode
   action_delay: 1.
-  storage: !LogStorage
+  metrics_storage: !LogStorage
+  anomalies_storage: !LogStorage
   detector: !NOPAnomalyDetector
-  rdt_enabled: True
-  extra_labels:
-    env_id: "host"

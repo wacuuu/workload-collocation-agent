@@ -179,7 +179,7 @@ class DetectionRunner:
             anomalies, extra_metrics = self.detector.detect(
                 platform, tasks_measurements, tasks_resources, tasks_labels)
 
-            log.info('anomalies detected: %d', len(anomalies))
+            log.debug('Anomalies detected: %d', len(anomalies))
 
             # Note: anomaly metrics include metrics found in ContentionAnomaly.metrics.
             anomaly_metrics = convert_anomalies_to_metrics(anomalies)
