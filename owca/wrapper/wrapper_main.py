@@ -33,7 +33,7 @@ def main(parse: ParseFunc = default_parse):
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE,
                                         universal_newlines=True,
-                                        bufsize=1024)
+                                        bufsize=1)
 
     input = workload_process.stderr if args.stderr else workload_process.stdout
 
