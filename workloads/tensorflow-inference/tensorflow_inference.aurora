@@ -8,6 +8,8 @@ include('../common.aurora')
 ###
 
 tensorflow_inference_image_tag = os.environ.get('tensorflow_inference_image_tag')  # Workaround for "force pull images" defect in Aurora.
+
+slo = os.environ.get('tf_inference_slo')
 #----------------------------------------------------------------------------------------------------
 
 
@@ -45,12 +47,13 @@ jobs = [
                             "--metric_name_prefix 'tensorflow_inference_' "
                             "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
                             "--log_level {log_level} "
+                            "--slo {slo} --sli_metric_name tensorflow_inference_images_processed --inverse_sli_metric_value"
                             "--labels \"{labels}\"".format(prometheus_port=wrapper_prometheus_port,
                                                            prometheus_ip=application_host_ip,
                                                            kafka_brokers=wrapper_kafka_brokers,
                                                            log_level=wrapper_log_level,
                                                            kafka_topic='owca_apms_tensorflow_inference',
-                                                           labels=str(wrapper_labels))
+                                                           labels=str(wrapper_labels), slo=slo)
                 )
             ],
         )

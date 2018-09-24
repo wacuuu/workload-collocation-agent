@@ -29,6 +29,10 @@ rpcperf_connections = os.environ.get('rpcperf_connections', '1')
 # rpc-perf Docker image tag.
 rpcperf_image_tag = os.environ.get('rpcperf_image_tag')  # Workaround for "force pull images" defect in Aurora.
 
+# SLO
+slo_twemcache = os.environ.get('rpcperf_twemcache_slo')
+slo_redis = os.environ.get('rpcperf_redis_slo')
+
 # Additionally used in the code below:
 # * 'redis_image_tag'
 # * 'twemcache_image_tag'
@@ -38,8 +42,12 @@ rpcperf_image_tag = os.environ.get('rpcperf_image_tag')  # Workaround for "force
 # name of a protocol used to generate load ("twemcache" or "redis")
 if application == 'twemcache': 
     rpcperf_protocol = 'memcache'
+    slo = slo_twemcache
+    sli_metric_name = "twemcache_p99"
 if application == 'redis': 
     rpcperf_protocol = 'redis'
+    slo = slo_redis
+    sli_metric_name = "redis_p99"
 
 # Add label for identification workload in prometheus.
 wrapper_labels["name"] = '%s--%s' % (application, workload_uniq_id)
@@ -137,15 +145,17 @@ jobs = [
                             '--metric_name_prefix "{application}_" '
                             '--regexp "(?P<name>(?<!(Hit )|(get ))Rate|min|max|p\d*): (?P<value>\d+.\d+)" '
                             '--kafka_topic {kafka_topic} '
-                            '--kafka_brokers {kafka_brokers}'.format(
+                            '--kafka_brokers {kafka_brokers} '
+                            '--slo {slo} --sli_metric_name "{sli_metric_name}" '
+                            ''.format(
                                 protocol=rpcperf_protocol, ip=application_host_ip, 
                                 port=application_listen_port, 
                                 log_level=wrapper_log_level, prom_port=wrapper_prometheus_port, 
                                 prom_ip=wrapper_prometheus_address, labels=wrapper_labels, 
                                 kafka_topic='owca_apms_'+application,
                                 kafka_brokers=wrapper_kafka_brokers,
-                                application=application
-                            )
+                                application=application,
+                                slo=slo, sli_metric_name=sli_metric_name)
                 )
             ],
         )

@@ -7,7 +7,8 @@ import threading
 from functools import partial
 
 from owca.storage import KafkaStorage
-from owca.wrapper.parser import default_parse, parse_loop, DEFAULT_REGEXP, ParseFunc
+from owca.wrapper.parser import (default_parse, parse_loop, DEFAULT_REGEXP,
+                                 ParseFunc, ServiceLevelArgs, append_service_level_metrics)
 from owca.wrapper.server import run_server
 from owca.platforms import get_owca_version
 
@@ -22,6 +23,10 @@ def main(parse: ParseFunc = default_parse):
     # It is assumed that unknown arguments should be passed to workload.
     args = arg_parser.parse_args()
 
+    # Needs to be passed to parse_loop
+    service_level_args = ServiceLevelArgs(args.slo, args.sli_metric_name,
+                                          args.inverse_sli_metric_value)
+
     # Configuring log
     logging.basicConfig(level=args.log_level)
     log.debug("Logger configured with {0}".format(args.log_level))
@@ -34,12 +39,13 @@ def main(parse: ParseFunc = default_parse):
                                         stderr=subprocess.PIPE,
                                         universal_newlines=True,
                                         bufsize=1)
-
     input = workload_process.stderr if args.stderr else workload_process.stdout
 
     labels = ast.literal_eval(args.labels)
     parse = partial(parse, regexp=args.regexp, separator=args.separator, labels=labels,
                     input=input, metric_name_prefix=args.metric_name_prefix)
+    append_service_level_metrics_func = partial(
+        append_service_level_metrics, labels=labels, service_level_args=service_level_args)
 
     # create kafka storage with list of kafka brokers from arguments
     kafka_brokers_addresses = args.kafka_brokers.replace(" ", "").split(',')
@@ -51,7 +57,8 @@ def main(parse: ParseFunc = default_parse):
     else:
         kafka_storage = None
 
-    t = threading.Thread(target=parse_loop, args=(parse, kafka_storage))
+    t = threading.Thread(target=parse_loop, args=(parse, kafka_storage,
+                                                  append_service_level_metrics_func))
     t.start()
     if args.ip != "":
         # this blocks until it catches KeyboardInterrupt
@@ -144,6 +151,26 @@ def prepare_argument_parser():
         dest='kafka_topic',
         default='owca_apms',
         type=str
+    )
+    parser.add_argument(
+        '--slo',
+        help='Service level objective. Must be expressed in the same units as SLI.',
+        default=float("inf"),
+        type=float
+    )
+    parser.add_argument(
+        '--sli_metric_name',
+        help='Metric name parsed from the application stream '
+             'used as service level indicator.',
+        default="",
+        type=str
+    )
+    parser.add_argument(
+        '--inverse_sli_metric_value',
+        help='Add this flag if value of a metric used to calculate service ' +
+             'level indicator should be inversed.',
+        action='store_true',
+        default=False,
     )
     return parser
 

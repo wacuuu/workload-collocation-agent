@@ -35,6 +35,8 @@ ycsb_image_tag = os.environ.get('ycsb_image_tag')
 # By default we use cassandra docker image from dockerhub https://hub.docker.com/_/cassandra/.
 cassandra_image_tag = os.environ.get('cassandra_image_tag', '3.11.3')
 cassandra_image = os.environ.get('cassandra_image', 'cassandra')
+
+slo = os.environ.get('ycsb_cassandra_slo')
 #----------------------------------------------------------------------------------------------------
 
 
@@ -155,7 +157,8 @@ jobs = [
                 --stderr 1 --kafka_brokers "{kafka_brokers}" \
                 --kafka_topic {kafka_topic} \
                 --log_level {log_level} \
-                --labels "{labels}"
+                --labels "{labels}" \
+                --slo {slo} --sli_metric_name "cassandra_read_p9999"
           """.format(
             application_host_ip=application_host_ip,
             cassandra_port=cassandra_port,
@@ -169,7 +172,7 @@ jobs = [
             kafka_brokers=wrapper_kafka_brokers,
             kafka_topic='owca_apms_cassandra',
             log_level=wrapper_log_level,
-            labels=str(wrapper_labels)),
+            labels=str(wrapper_labels), slo=slo)
           )
       ],
     ),

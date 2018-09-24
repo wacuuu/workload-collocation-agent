@@ -38,6 +38,16 @@ rpcperf_redis_instances_count=4
 tf_train_instances_count=2
 tf_inference_instances_count=1
 
+# SLO (service level objective) per workload. 
+#   Set to "inf" to set SLO to infinity (any number divided by infinity gives 0).
+#   Use the same units as for SLI.
+export specjbb_slo="inf"
+export ycsb_cassandra_slo="inf"
+export rpcperf_twemcache_slo="inf"
+export rpcperf_redis_slo="inf"
+export tf_train_slo="inf"
+export tf_inference_slo="inf"
+
 total_jobs_per_env=29
 
 # Total jobs per config is:

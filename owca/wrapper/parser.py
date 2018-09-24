@@ -1,3 +1,4 @@
+import collections
 import _thread
 import logging
 import re
@@ -86,7 +87,32 @@ def kafka_store_with_retry(kafka_storage: KafkaStorage, metrics: List[Metric]):
         break
 
 
-def parse_loop(parse: ParseFunc, kafka_storage: KafkaStorage):
+ServiceLevelArgs = collections.namedtuple(
+    'ServiceLevelArgs', ['slo', 'sli_metric_name', 'inverse_sli_metric_value'])
+
+
+def append_service_level_metrics(service_level_args: ServiceLevelArgs,
+                                 labels: Dict[str, str], metrics: List[Metric]):
+    """Append service level metrics based on choosen matric from parsed metrics.
+    :param metrics: list of metrics, additional service level metrics will
+        be appended to that list.
+    """
+    for metric in metrics:
+        if service_level_args.sli_metric_name == metric.name:
+            if service_level_args.inverse_sli_metric_value:
+                value = 1.0/float(metric.value)
+            else:
+                value = float(metric.value)
+            log.debug(metric)
+            # send SLO metric only if SLI was found.
+            metrics.append(Metric("slo", float(service_level_args.slo), labels=labels))
+            metrics.append(Metric("sli", value, labels=labels))
+            metrics.append(Metric("sli_normalized", value/service_level_args.slo * 100,
+                                  labels=labels))
+
+
+def parse_loop(parse: Callable[[], List[Metric]], kafka_storage: KafkaStorage,
+               append_service_level_metrics_func: Callable[[List[Metric]], None]):
     """
     Runs parsing and kafka storage in loop. parse_loop.last_valid_metrics list is accessed
     by the HTTP server GET request handler.
@@ -99,6 +125,7 @@ def parse_loop(parse: ParseFunc, kafka_storage: KafkaStorage):
             # parse() can return an empty list, so we store new values for kafka and http server
             # only when there are new metrics to store
             if parse_loop.metrics:
+                append_service_level_metrics_func(metrics=parse_loop.metrics)
                 for metric in parse_loop.metrics:
                     log.debug("Found metric: {}".format(metric))
                 parse_loop.last_valid_metrics = parse_loop.metrics.copy()

@@ -13,6 +13,8 @@ tensorflow_train_epochs = os.environ.get('tensorflow_train_epochs', '100')
 
 # Docker image tag.
 tensorflow_train_image_tag = os.environ.get('tensorflow_train_image_tag')  # Workaround for "force pull images" defect in Aurora.
+
+slo = os.environ.get('tf_train_slo')
 #----------------------------------------------------------------------------------------------------
 
 
@@ -51,6 +53,7 @@ jobs = [
                             "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
                             "--log_level {log_level} "
                             "--metric_name_prefix 'tensorflow_train_' "
+                            "--slo {slo} --sli_metric_name tensorflow_train_images_processed --inverse_sli_metric_value"
                             "--labels \"{labels}\"".format(batch_size=tensorflow_train_batch_size,
                                                            epochs=tensorflow_train_epochs,
                                                            prometheus_port=wrapper_prometheus_port,
@@ -58,7 +61,7 @@ jobs = [
                                                            kafka_brokers=wrapper_kafka_brokers,
                                                            log_level=wrapper_log_level,
                                                            kafka_topic='owca_apms_tensorflow_train',
-                                                           labels=str(wrapper_labels)
+                                                           labels=str(wrapper_labels), slo=slo
                                                            )
                 )
             ],
