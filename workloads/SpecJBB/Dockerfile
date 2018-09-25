@@ -9,10 +9,10 @@ RUN yum install -y java-1.8.0-openjdk-devel && yum install -y python36
 ADD workloads/SpecJBB/specjbb /home/specjbb
 
 # add specjbb custom wrapper to docker
-ADD dist/specjbb_wrapper.pex /usr/bin/specjbb_wrapper.pex
+ADD /dist/specjbb_wrapper.pex /usr/bin/specjbb_wrapper.pex
 
 # Note: will be ignored by mesos
-WORKDIR /home/specjbb/
+WORKDIR /home/specjbb
 
 # Notes:
 # path to main executable is:
