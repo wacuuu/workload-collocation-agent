@@ -47,7 +47,7 @@ jobs = [
                             "--metric_name_prefix 'tensorflow_inference_' "
                             "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
                             "--log_level {log_level} "
-                            "--slo {slo} --sli_metric_name tensorflow_inference_images_processed --inverse_sli_metric_value"
+                            "--slo {slo} --sli_metric_name tensorflow_inference_images_processed --inverse_sli_metric_value "
                             "--labels \"{labels}\"".format(prometheus_port=wrapper_prometheus_port,
                                                            prometheus_ip=application_host_ip,
                                                            kafka_brokers=wrapper_kafka_brokers,
