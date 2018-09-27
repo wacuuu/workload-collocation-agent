@@ -39,6 +39,7 @@ jobs = [
             name='tensorflow_inference--%s' % workload_uniq_id,
             resources=Resources(cpu=cpu, ram=ram, disk=disk),
             processes=[
+                Process(name='fetch_imagenet_weights', cmdline="ln -s /root/.keras ${HOME}/.keras"),
                 Process(
                     name='tensorflow_inference_run',
                     cmdline="KMP_BLOCKTIME=0 KMP_AFFINITY=granularity=fine,verbose,compact,1,0 KMP_SETTINGS=1 OMP_NUM_THREADS={cpus} "
