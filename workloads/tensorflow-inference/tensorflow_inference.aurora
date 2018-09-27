@@ -41,19 +41,22 @@ jobs = [
             processes=[
                 Process(
                     name='tensorflow_inference_run',
-                    cmdline="/wrapper.pex --command 'inference --dataset_path '/'' "
+                    cmdline="KMP_BLOCKTIME=0 KMP_AFFINITY=granularity=fine,verbose,compact,1,0 KMP_SETTINGS=1 OMP_NUM_THREADS={cpus} "
+                            "/wrapper.pex --command 'inference --dataset_path '/' --metric_frequency=1' "
                             "--prometheus_port {prometheus_port} "
                             "--prometheus_ip '{prometheus_ip}' "
                             "--metric_name_prefix 'tensorflow_inference_' "
                             "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
                             "--log_level {log_level} "
-                            "--slo {slo} --sli_metric_name tensorflow_inference_images_processed --inverse_sli_metric_value "
+                            "--slo {slo} --sli_metric_name tensorflow_inference_images_processed_per_second --inverse_sli_metric_value "
                             "--labels \"{labels}\"".format(prometheus_port=wrapper_prometheus_port,
                                                            prometheus_ip=application_host_ip,
                                                            kafka_brokers=wrapper_kafka_brokers,
                                                            log_level=wrapper_log_level,
                                                            kafka_topic='owca_apms_tensorflow_inference',
-                                                           labels=str(wrapper_labels), slo=slo)
+                                                           labels=str(wrapper_labels), 
+                                                           slo=slo,
+                                                           cpus=cpu)
                 )
             ],
         )

@@ -2,10 +2,12 @@
 import argparse
 import itertools
 import os
+import time
 from typing import List
 
 import numpy as np
 import tensorflow as tf
+from tensorflow.keras import backend as K
 from tensorflow.keras.applications.resnet50 import preprocess_input, decode_predictions
 from tensorflow.keras.preprocessing import image
 
@@ -38,7 +40,7 @@ def prepare_argument_parser():
         help='Defines how often (every metric_frequency images) the images_processed '
              'metric should be printed',
         dest='metric_frequency',
-        default=50,
+        default=1,
         type=int
     )
     return parser
@@ -48,6 +50,12 @@ def main():
     arg_parser = prepare_argument_parser()
     args = arg_parser.parse_args()
 
+    sess = tf.Session(config=tf.ConfigProto(
+        allow_soft_placement=True,
+        intra_op_parallelism_threads=os.environ.get('intra_op_parallelism_threads', 4),
+        inter_op_parallelism_threads=os.environ.get('inter_op_parallelism_threads', 1)))
+    K.set_session(sess)
+
     resnet_model = tf.keras.applications.ResNet50(
         weights='imagenet',
     )
@@ -56,11 +64,14 @@ def main():
 
     images_processed = 0
     for dataset_image in itertools.cycle(images):
+        start = time.time()
         predictions = resnet_model.predict(dataset_image)
+        delta = time.time() - start
         images_processed += 1
         # Print images_processed metric every args.metric_frequency images
         if not images_processed % args.metric_frequency:
             print('images_processed={0}'.format(images_processed), flush=True)
+            print('images_processed_per_second={0}'.format(float(args.metric_frequency) / delta), flush=True)
         print('Predicted:', decode_predictions(predictions, top=3)[0], flush=True)
 
 
