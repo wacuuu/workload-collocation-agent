@@ -256,14 +256,22 @@ Use function readline_with_check(input) instead of input.readline() to read a li
 OWCA loggers configuration.
 ===========================
 
-Command line ``--log_level (-l)`` only configures owca package.
-If you want to quiet owca, and enable verbose messages for some sub packages or 
-external components you have to create section loggers in configuration file and 
-set desired level.
+Command line ``--log_level (-l)`` only configures ``owca`` module by default but 
+it is possible to configure additional modules by specifying ``-l`` multiple times
+in a form like this:
 
+.. code-block:: shell
 
+    ./dist/owca.pex -l debug -l example:info
 
-For example:
+Those will configure ``owca`` module to debug level and ``example`` module to info level.
+
+If you want to quiet ``owca``, and enable verbose messages for some sub packages or 
+external components you can create section loggers in configuration file and 
+set desired level. Using configuration file will not work for messages during 
+objects creation (``__init__`` or ``__post_init__``) - use command line method then.
+
+Example of specifying loggers using configuration file:
 
 .. code-block:: yaml
 
@@ -272,6 +280,7 @@ For example:
         owca.storage: info  # Enables debugging for specifc owca module.
         example.external_package: debug  # Enables verbose mode for external component.
 
+Note that, command line parameters have higher priority than configuration files.
 
 Note: that setting level for root logger named ``""`` can enable logging with desired level for all modules including 
 any third party and standard library.

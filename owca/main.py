@@ -23,8 +23,16 @@ def main():
         '-c', '--config',
         help="Configuration", default=None, required=True)
     parser.add_argument(
-        '-l', '--log-level',
-        help="log level for owca: CRITICAL,ERROR,WARNING,INFO,DEBUG,TRACE", default='INFO')
+        '-l',
+        '--log-level',
+        help='Log level for modules (by default for owca) in [module:]level form,'
+             'where level can be one of: CRITICAL,ERROR,WARNING,INFO,DEBUG,TRACE'
+             'Example -l debug -l example:debug'
+             'Can be overridden at runtime with config.yaml "loggers" section.',
+        default=['info'],
+        action='append',
+        dest='levels',
+    )
     parser.add_argument(
         '-r', '--register', action='append', dest='components',
         help="Register additional components in config", default=[])
@@ -34,8 +42,10 @@ def main():
 
     args = parser.parse_args()
 
-    # Initialize logging subsystem.
-    logger.init_logging(args.log_level, package_name='owca')
+    # Initialize logging subsystem from command line options.
+    log_levels = logger.parse_loggers_from_list(args.levels)
+    logger.configure_loggers_from_dict(log_levels)
+
     log.debug('started PID=%r', os.getpid())
     log.info('Version owca: %s', platforms.get_owca_version())
 
@@ -49,15 +59,17 @@ def main():
         log.error('Error: Cannot load config file %r: %s', args.config, e)
         exit(1)
 
-    # Handle loggers section, provided by configuration file.
+    # Configure loggers using configuration file.
     if 'loggers' in configuration:
-        loggers = configuration['loggers']
-        if not isinstance(loggers, dict):
+        log_levels_config = configuration['loggers']
+        if not isinstance(log_levels, dict):
             log.error('Loggers configuration error: log levels are mapping from logger name to'
-                      'log level got "%r" instead!' % loggers)
+                      'log level got "%r" instead!' % log_levels_config)
             exit(1)
-        for logger_name, log_level in loggers.items():
-            logger.init_logging(log_level, package_name=logger_name)
+        # Merge config from cmd line and config file.
+        # Overide config file values with values provided from command line.
+        log_levels = dict(log_levels, **log_levels_config)
+        logger.configure_loggers_from_dict(log_levels)
 
     # Dump loggers configurations  to debug issues with loggers.
     if os.environ.get('OWCA_DUMP_LOGGERS') == 'True':

@@ -1,12 +1,37 @@
 import logging
 import sys
 import time
+from typing import List, Dict
 
 import colorlog
 
+
 TRACE = 9
+DEFAULT_MODULE = 'owca'
 
 log = logging.getLogger(__name__)
+
+
+def parse_loggers_from_list(log_levels_list: List[str]) -> Dict[str, str]:
+    """Configure loggers using list of strings in a form '[module:]level'.
+    """
+    log_levels_dict = {}
+    for log_level in log_levels_list:
+        if ':' in log_level:
+            if len(log_level.split(':')) != 2:
+                log.error('Loggers levels from command line my be in form module:level!')
+                exit(1)
+            module, log_level = log_level.split(':')
+        else:
+            module = DEFAULT_MODULE
+        log_levels_dict[module] = log_level
+    return log_levels_dict
+
+
+def configure_loggers_from_dict(loggers: Dict[str, str]):
+    """Handle loggers section, provided as dict from module to level."""
+    for module, log_level in loggers.items():
+        init_logging(log_level, package_name=module)
 
 
 def init_logging(level: str, package_name: str):
