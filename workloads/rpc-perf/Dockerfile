@@ -40,7 +40,7 @@ RUN yum install -y epel-release
 RUN yum makecache
 RUN yum install -y python36
 
-ADD /dist/wrapper.pex /wrapper.pex
+ADD /dist/rpc_perf_wrapper.pex /usr/bin/
 ADD /workloads/rpc-perf/rpc-perf.toml /etc/
 COPY --from=rpc-perf /rpc-perf/target/release/rpc-perf /usr/bin/
 COPY --from=rpc-perf /rpc-perf/configs /etc/rpc-perf/

@@ -1,3 +1,5 @@
+import textwrap
+
 # Common for all workloads.
 
 # Variables of meaning in accordance with shell command:
@@ -36,3 +38,6 @@ class AddMetadata:
         for label_nama, label_value in self.labels.items():
             config.add_metadata(label_nama, label_value)
         return config
+
+def dedent(s):
+    return textwrap.dedent(s).replace('\n', ' ')

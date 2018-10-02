@@ -24,6 +24,23 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
     new_metrics = []
 
     new_line = readline_with_check(input)
+
+    if "operations" in new_line:
+        operations_and_ops = \
+            re.search(r'(?P<operations>\d+) operations;', new_line).groupdict()
+        operations = float(operations_and_ops['operations'])
+        new_metrics.append(Metric('cassandra_operations', operations,
+                                  type=MetricType.GAUGE, labels=labels,
+                                  help="Done operations in Cassandra"))
+
+    if "current ops" in new_line:
+        operations_and_ops = \
+            re.search(r'(?P<ops_per_sec>\d+.\d+) current ops\/sec', new_line).groupdict()
+        ops_per_sec = float(operations_and_ops['ops_per_sec'])
+        new_metrics.append(Metric('cassandra_ops_per_sec', ops_per_sec,
+                                  type=MetricType.GAUGE, labels=labels,
+                                  help="Ops per sec Cassandra"))
+
     if "READ" in new_line:
         read = re.search(r'\[READ.*?99\.99=(\d+).*?\]', new_line)
         p9999 = float(read.group(1))

@@ -14,9 +14,13 @@ def test_parse():
         "Min=254, Avg=383.83, 90=441, 99=512, 99.9=589, 99.99=699] # noq"
     )
     expected = [
+        Metric("cassandra_operations", value=581117, type=MetricType.GAUGE,
+               help="Done operations in Cassandra"),
+        Metric("cassandra_ops_per_sec", value=975, type=MetricType.GAUGE,
+               help="Ops per sec Cassandra"),
         Metric("cassandra_read_p9999", value=554.0, type=MetricType.GAUGE,
                help="99.99th percentile of read latency in Cassandra"),
         Metric("cassandra_update_p9999", value=699.0, type=MetricType.GAUGE,
-               help="99.99th percentile of update latency in Cassandra")
+               help="99.99th percentile of update latency in Cassandra"),
     ]
     assert expected == parse(input_, {})
