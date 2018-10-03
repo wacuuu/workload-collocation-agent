@@ -7,7 +7,7 @@ import sys
 import itertools
 import time
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 import re
 
 import confluent_kafka
@@ -192,21 +192,30 @@ class KafkaStorage(Storage):
         topic: name of a kafka topic where message should be saved
         max_timeout_in_seconds: if a message was not delivered in maximum_timeout seconds
             self.store will throw FailedDeliveryException
+        producer_config: additionall key value pairs that will be passed to kafka driver
+            https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+            e.g. {'debug':'broker,topic,msg'} to enable logging for kafka producer threads
     """
     topic: str
     brokers_ips: List[str] = field(default=("127.0.0.1:9092",))
     max_timeout_in_seconds: float = 0.5  # defaults half of a second
+    extra_config: Dict[str, str] = None
 
     def __post_init__(self) -> None:
-        self._create_producer()
+        try:
+            self._create_producer()
+        except Exception:
+            log.exception('Exception durning kafka consumer initialization:')
+            raise
 
         self.error_from_callback = None
         """used to pass error from within callback_on_delivery
           (called from different thread) to KafkaStorage instance"""
 
     def _create_producer(self) -> None:
-        self.producer = confluent_kafka.Producer(
-            {'bootstrap.servers': ",".join(self.brokers_ips)})
+        config = self.extra_config or dict()
+        config.update({'bootstrap.servers': ",".join(self.brokers_ips)})
+        self.producer = confluent_kafka.Producer(config)
 
     def callback_on_delivery(self, err, msg) -> None:
         """Called once for each message produced to indicate delivery result.

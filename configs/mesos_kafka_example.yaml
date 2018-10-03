@@ -5,6 +5,8 @@ runner: !DetectionRunner
   metrics_storage: !KafkaStorage
     topic: owca_metrics
     max_timeout_in_seconds: 5.
+    extra_config: 
+      debug: broker,topic,msg
   anomalies_storage: !KafkaStorage
     topic: owca_anomalies
     max_timeout_in_seconds: 5.
