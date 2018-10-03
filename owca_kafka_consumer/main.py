@@ -15,8 +15,7 @@ def get_version():
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Retrieve messages from kafka topic and expose them in HTTP server."
-                    "Single threaded server reading one message per request.",
+        description="Retrieve messages from kafka topic and expose them in HTTP server.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('--kafka_broker_addresses',
@@ -45,6 +44,14 @@ def main():
     parser.add_argument('-v', '--version', action='version',
                         version=get_version(),
                         help="Show version")
+    parser.add_argument(
+        '--most_recent_count',
+        default=0, type=int,
+        help="If set to value greater than 0, turn on 'most_recent mode': "
+             "creates thread per topic and consume messages in an infinity loop,"
+             "keeps N most recent messages per topic."
+             "Otherwise (if set to 0) consume messsage synchronously in HTTP handler."
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=args.log_level)

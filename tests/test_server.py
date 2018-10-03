@@ -1,3 +1,10 @@
+# Important note:
+# do not create real objects of confluent_kafka.Consumer class:
+# it may result in stucking tests (waiting on confluent_kafka internal
+# threads to be finished).
+# For reference look at how confluent_kafka.Consumer is mocked in test function
+# test_http_get_handler__success.
+
 from functools import partial
 import pytest
 from unittest import mock
@@ -5,9 +12,11 @@ from unittest import mock
 from confluent_kafka import KafkaError
 
 from owca_kafka_consumer.server import (consume_one_message,
-                                       KafkaConsumptionException,
-                                       create_kafka_consumer,
-                                       http_get_handler)
+                                        KafkaConsumptionException,
+                                        create_kafka_consumer,
+                                        create_kafka_consumers,
+                                        http_get_handler,
+                                        append_with_max_size)
 
 
 # To not pass to each call to below two functions parameter kafka_poll_timeout
@@ -15,9 +24,11 @@ from owca_kafka_consumer.server import (consume_one_message,
 consume_one_message = partial(consume_one_message)
 kafka_broker_addresses = ['127.0.0.1']
 group_id = 'test-group'
+topic_name = 'testing-topic'
 
-http_get_handler = partial(http_get_handler, kafka_broker_addresses=kafka_broker_addresses,
-                           group_id=group_id)
+http_get_handler = partial(http_get_handler, topic_name=topic_name,
+                           kafka_broker_addresses=kafka_broker_addresses,
+                           group_id=group_id, is_most_recent_mode=False)
 
 
 # Creating mock confluent_kafka.Consumer inline
@@ -94,12 +105,20 @@ def test_consume_one_message__error_unknown_partition(mock_kafka_consumer):
 @mock.patch('owca_kafka_consumer.server.confluent_kafka.Consumer',
             return_value=create_consumer_mock__consumed(MSG_VAL))
 def test_http_get_handler__success(*mock):
-    kafka_consumer = create_kafka_consumer(["any"], "any", "any")
-    assert http_get_handler(kafka_consumer) == (200, MSG_VAL)
+    create_kafka_consumers(["None"], [topic_name], "None")
+    assert http_get_handler() == (200, MSG_VAL)
 
 
 @mock.patch('owca_kafka_consumer.server.confluent_kafka.Consumer',
             return_value=create_consumer_mock__error_code(KafkaError._UNKNOWN_PARTITION))
 def test_http_get_handler__error(*mock):
-    kafka_consumer = create_kafka_consumer(["any"], "any", "any")
-    assert http_get_handler(kafka_consumer)[0] == 503
+    create_kafka_consumers(["None"], [topic_name], "None")
+    assert http_get_handler()[0] == 503
+
+
+def test_append_with_max_size():
+    buf = [1, 2, 3, 4, 5]
+    msg = 6
+    assert append_with_max_size(buf, 3, msg) == [4, 5, 6]
+    assert append_with_max_size(buf, 1, msg) == [6]
+    assert append_with_max_size(buf, 10, msg) == [1, 2, 3, 4, 5, 6]
