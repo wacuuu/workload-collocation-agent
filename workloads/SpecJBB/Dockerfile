@@ -6,7 +6,7 @@ RUN yum install -y epel-release && yum makecache
 RUN yum install -y java-1.8.0-openjdk-devel && yum install -y python36
 
 # add the specjbb to docker
-ADD workloads/SpecJBB/specjbb /home/specjbb
+ADD workloads/SpecJBB/specjbb /home/
 
 # add specjbb custom wrapper to docker
 ADD /dist/specjbb_wrapper.pex /usr/bin/specjbb_wrapper.pex
