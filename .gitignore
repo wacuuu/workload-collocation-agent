@@ -21,3 +21,4 @@ config-*.sh
 /SpecJBB
 /dist
 /workloads/SpecJBB/specjbb/
+*.pyc
