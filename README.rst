@@ -256,7 +256,7 @@ Use function readline_with_check(input) instead of input.readline() to read a li
 OWCA loggers configuration.
 ===========================
 
-Command line ``--log_level (-l)`` only configures ``owca`` module by default but 
+Command line ``--log_level (-l)`` only configures ``owca`` module by default but
 it is possible to configure additional modules by specifying ``-l`` multiple times
 in a form like this:
 
@@ -266,9 +266,9 @@ in a form like this:
 
 Those will configure ``owca`` module to debug level and ``example`` module to info level.
 
-If you want to quiet ``owca``, and enable verbose messages for some sub packages or 
-external components you can create section loggers in configuration file and 
-set desired level. Using configuration file will not work for messages during 
+If you want to quiet ``owca``, and enable verbose messages for some sub packages or
+external components you can create section loggers in configuration file and
+set desired level. Using configuration file will not work for messages during
 objects creation (``__init__`` or ``__post_init__``) - use command line method then.
 
 Example of specifying loggers using configuration file:
@@ -282,10 +282,10 @@ Example of specifying loggers using configuration file:
 
 Note that, command line parameters have higher priority than configuration files.
 
-Note: that setting level for root logger named ``""`` can enable logging with desired level for all modules including 
+Note: that setting level for root logger named ``""`` can enable logging with desired level for all modules including
 any third party and standard library.
 
-Please see full example of configuration in ``configs/mesos_external_detector.yaml`` for full 
+Please see full example of configuration in ``configs/mesos_external_detector.yaml`` for full
 context.
 
 In case of any troubles with loggers configuration, you can run application with
@@ -295,6 +295,22 @@ In case of any troubles with loggers configuration, you can run application with
 .. code-block:: shell
 
     OWCA_DUMP_LOGGERS=True dist/owca.pex -c configs/mesos_external_detector.yaml -r example.external_package:ExampleDetector
-    
 
+
+OWCA Kafka Consumer
+===================
+
+Overview
+--------
+
+A Kafka consumer which exposes the latest read message in its own HTTP server.
+
+
+Motivation
+----------
+
+There is no official integration between Prometheus and Kafka and we need this
+functionality in OWCA project.  In OWCA we send metrics already in Prometheus
+format to Kafka, so the only thing developed in this project is to read them and
+expose them using HTTP server to allow Prometheus to scrap the data.
 
