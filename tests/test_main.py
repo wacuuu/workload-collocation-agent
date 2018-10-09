@@ -109,8 +109,8 @@ mesos_tasks_mocks = [
     "/sys/devices/system/cpu/cpu0/topology/core_id": "0",
     "/sys/fs/resctrl/tasks": "666",
     "/sys/fs/resctrl/mon_data/mon_L3_00/mbm_total_bytes": "1024",
-    "/sys/fs/resctrl/mesos-xxxx-yyy/mon_data/cpu0/mbm_total_bytes": "512",
-    "/sys/fs/resctrl/mesos-xxxx-yyy/mon_data/cpu0/llc_occupancy": "2048",
+    "/sys/fs/resctrl/mon_groups/mesos-xxxx-yyy/mon_data/cpu0/mbm_total_bytes": "512",
+    "/sys/fs/resctrl/mon_groups/mesos-xxxx-yyy/mon_data/cpu0/llc_occupancy": "2048",
 }))
 @mock.patch('os.listdir', return_value=["cpu0"])
 def test_main(*mocks):

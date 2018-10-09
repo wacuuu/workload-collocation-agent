@@ -7,6 +7,7 @@ from owca.cgroups import BASE_SUBSYSTEM_PATH
 from owca.metrics import Measurements, MetricName
 
 BASE_RESCTRL_PATH = '/sys/fs/resctrl'
+MON_GROUPS = 'mon_groups'
 TASKS_FILENAME = 'tasks'
 SCHEMATA = 'schemata'
 INFO = 'info'
@@ -20,26 +21,32 @@ log = logging.getLogger(__name__)
 
 
 def cleanup_resctrl():
-    """Remove taskless subfolders at resctrl folders to free scarce CLOSid resources. """
+    """Remove taskless subfolders at resctrl folders to free scarce CLOS and RMID resources. """
 
-    for entry in os.listdir(BASE_RESCTRL_PATH):
-        # Path to folder e.g. /sys/fs/resctrl/mesos-xxx represeting running container.
-        directory_path = os.path.join(BASE_RESCTRL_PATH, entry)
-        # Only examine folders at first level.
-        if os.path.isdir(directory_path):
-            # Examine tasks file
-            resctrl_tasks_path = os.path.join(directory_path, TASKS_FILENAME)
-            tasks = ''
-            if not os.path.exists(resctrl_tasks_path):
-                # Skip metadata folders e.g. info.
-                continue
-            with open(resctrl_tasks_path) as f:
-                tasks += f.read()
-            if len(tasks.split()) == 0:
-                log.warning('Found taskless (empty) resctrl group at %r - recycle CLOSid resource.'
-                            % directory_path)
-                log.log(logger.TRACE, 'resctrl - cleanup: rmdir(%s)', directory_path)
-                os.rmdir(directory_path)
+    def _clean_taskless_folders(initialdir, subfolder, resource_recycled):
+        for entry in os.listdir(os.path.join(initialdir, subfolder)):
+            # Path to folder e.g. mesos-xxx represeting running container.
+            directory_path = os.path.join(BASE_RESCTRL_PATH, subfolder, entry)
+            # Only examine folders at first level.
+            if os.path.isdir(directory_path):
+                # Examine tasks file
+                resctrl_tasks_path = os.path.join(directory_path, TASKS_FILENAME)
+                tasks = ''
+                if not os.path.exists(resctrl_tasks_path):
+                    # Skip metadata folders e.g. info.
+                    continue
+                with open(resctrl_tasks_path) as f:
+                    tasks += f.read()
+                if len(tasks.split()) == 0:
+                    log.warning('Found taskless (empty) mon group at %r - recycle %s resource.'
+                                % (directory_path, resource_recycled))
+                    log.log(logger.TRACE, 'resctrl (mon_groups) - cleanup: rmdir(%s)',
+                            directory_path)
+                    os.rmdir(directory_path)
+
+    # Remove all monitoring groups for both CLOS and RMID.
+    _clean_taskless_folders(BASE_RESCTRL_PATH, '', resource_recycled='CLOS')
+    _clean_taskless_folders(BASE_RESCTRL_PATH, MON_GROUPS, resource_recycled='RMID')
 
 
 def check_resctrl():
@@ -81,7 +88,7 @@ class ResGroup:
             BASE_SUBSYSTEM_PATH, relative_cgroup_path)
         # Resctrl group is flat so flatten then cgroup hierarchy.
         flatten_rescgroup_name = relative_cgroup_path.replace('/', '-')
-        self.resgroup_dir = os.path.join(BASE_RESCTRL_PATH, flatten_rescgroup_name)
+        self.resgroup_dir = os.path.join(BASE_RESCTRL_PATH, MON_GROUPS, flatten_rescgroup_name)
         self.resgroup_tasks = os.path.join(self.resgroup_dir, TASKS_FILENAME)
 
     def sync(self, max_attempts=3):

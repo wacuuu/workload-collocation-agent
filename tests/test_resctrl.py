@@ -25,21 +25,23 @@ def test_sync(makedirs_mock, exists_mock, log_warning_mock):
     open_mock = create_open_mock({
         "/sys/fs/resctrl": "0",
         "/sys/fs/cgroup/cpu/ddd/tasks": "123",
-        "/sys/fs/resctrl/ddd/tasks": resctrl_file_mock_simple_name,
+        "/sys/fs/resctrl/mon_groups/ddd/tasks": resctrl_file_mock_simple_name,
         "/sys/fs/cgroup/cpu/ddd/ddd/tasks": "123",
-        "/sys/fs/resctrl/ddd-ddd/tasks": resctrl_file_mock_complex_name,
+        "/sys/fs/resctrl/mon_groups/ddd-ddd/tasks": resctrl_file_mock_complex_name,
     })
     with patch('builtins.open', open_mock):
         cgroup_path = "/ddd"
         resgroup = ResGroup(cgroup_path)
         resgroup.sync()
-        resctrl_file_mock_simple_name.assert_called_once_with('/sys/fs/resctrl/ddd/tasks', 'w')
+        resctrl_file_mock_simple_name.assert_called_once_with(
+            '/sys/fs/resctrl/mon_groups/ddd/tasks', 'w')
         resctrl_file_mock_simple_name.assert_has_calls([call().__enter__().write('123')])
     with patch('builtins.open', open_mock):
         cgroup_path = "/ddd/ddd"
         resgroup = ResGroup(cgroup_path)
         resgroup.sync()
-        resctrl_file_mock_complex_name.assert_called_once_with('/sys/fs/resctrl/ddd-ddd/tasks', 'w')
+        resctrl_file_mock_complex_name.assert_called_once_with(
+            '/sys/fs/resctrl/mon_groups/ddd-ddd/tasks', 'w')
         resctrl_file_mock_complex_name.assert_has_calls([call().__enter__().write('123')])
 
 
@@ -82,7 +84,7 @@ def test_sync_flush_exception(makedirs_mock, exists_mock, log_warning_mock):
     open_mock = create_open_mock({
         "/sys/fs/resctrl": "0",
         "/sys/fs/cgroup/cpu/ddd/tasks": "123",
-        "/sys/fs/resctrl/ddd/tasks": resctrl_file_mock,
+        "/sys/fs/resctrl/mon_groups/ddd/tasks": resctrl_file_mock,
     })
     with patch('builtins.open', open_mock):
         cgroup_path = "/ddd"
@@ -92,10 +94,10 @@ def test_sync_flush_exception(makedirs_mock, exists_mock, log_warning_mock):
 
 
 @patch('builtins.open', new=create_open_mock({
-    "/sys/fs/resctrl/ddd/mon_data/1/mbm_total_bytes": "1",
-    "/sys/fs/resctrl/ddd/mon_data/2/mbm_total_bytes": "1",
-    "/sys/fs/resctrl/ddd/mon_data/1/llc_occupancy": "1",
-    "/sys/fs/resctrl/ddd/mon_data/2/llc_occupancy": "1",
+    "/sys/fs/resctrl/mon_groups/ddd/mon_data/1/mbm_total_bytes": "1",
+    "/sys/fs/resctrl/mon_groups/ddd/mon_data/2/mbm_total_bytes": "1",
+    "/sys/fs/resctrl/mon_groups/ddd/mon_data/1/llc_occupancy": "1",
+    "/sys/fs/resctrl/mon_groups/ddd/mon_data/2/llc_occupancy": "1",
     "/sys/fs/cgroup/cpu/ddd/cpuacct.usage": "4",
 }))
 @patch('os.listdir', return_value=['1', '2'])
@@ -109,6 +111,9 @@ def test_get_measurements(*mock):
     "/sys/fs/resctrl/mesos-1/tasks": "1\n2\n",
     "/sys/fs/resctrl/mesos-2/tasks": "",  # resctrl group to recycle - expected to be removed.
     "/sys/fs/resctrl/mesos-3/tasks": "2",
+    "/sys/fs/resctrl/mon_groups/mesos-1/tasks": "1\n2\n",
+    "/sys/fs/resctrl/mon_groups/mesos-2/tasks": "",  # resctrl group to recycle - should be removed.
+    "/sys/fs/resctrl/mon_groups/mesos-3/tasks": "2",
 }))
 @patch('os.listdir', return_value=['mesos-1', 'mesos-2', 'mesos-3'])
 @patch('os.rmdir')
@@ -117,7 +122,11 @@ def test_get_measurements(*mock):
 def test_clean_resctrl(exists_mock, isdir_mock, rmdir_mock, listdir_mock):
     from owca.resctrl import cleanup_resctrl
     cleanup_resctrl()
-    listdir_mock.assert_called_once()
-    assert isdir_mock.call_count == 3
-    assert exists_mock.call_count == 3
-    rmdir_mock.assert_called_once_with('/sys/fs/resctrl/mesos-2')
+    assert listdir_mock.call_count == 2
+    assert isdir_mock.call_count == 6
+    assert exists_mock.call_count == 6
+    assert rmdir_mock.call_count == 2
+    rmdir_mock.assert_has_calls([
+        call('/sys/fs/resctrl/mesos-2'),
+        call('/sys/fs/resctrl/mon_groups/mesos-2'),
+    ])
