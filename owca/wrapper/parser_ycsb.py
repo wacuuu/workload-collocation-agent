@@ -29,7 +29,7 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
         operations_and_ops = \
             re.search(r'(?P<operations>\d+) operations;', new_line).groupdict()
         operations = float(operations_and_ops['operations'])
-        new_metrics.append(Metric('cassandra_operations', operations,
+        new_metrics.append(Metric(metric_name_prefix + 'operations', operations,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="Done operations in Cassandra"))
 
@@ -37,20 +37,20 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
         operations_and_ops = \
             re.search(r'(?P<ops_per_sec>\d+.\d+) current ops\/sec', new_line).groupdict()
         ops_per_sec = float(operations_and_ops['ops_per_sec'])
-        new_metrics.append(Metric('cassandra_ops_per_sec', ops_per_sec,
+        new_metrics.append(Metric(metric_name_prefix + 'ops_per_sec', ops_per_sec,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="Ops per sec Cassandra"))
 
     if "READ" in new_line:
         read = re.search(r'\[READ.*?99\.99=(\d+).*?\]', new_line)
         p9999 = float(read.group(1))
-        new_metrics.append(Metric('cassandra_read_p9999', p9999,
+        new_metrics.append(Metric(metric_name_prefix + 'read_p9999', p9999,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="99.99th percentile of read latency in Cassandra"))
     if "UPDATE" in new_line:
         update = re.search(r'\[UPDATE.*?99\.99=(\d+).*?\]', new_line)
         p9999 = float(update.group(1))
-        new_metrics.append(Metric('cassandra_update_p9999', p9999,
+        new_metrics.append(Metric(metric_name_prefix + 'update_p9999', p9999,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="99.99th percentile of update latency in Cassandra"))
 

@@ -44,7 +44,7 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
     data_frame = [[el.strip() for el in line.split(",")] for line in input_lines]
 
     # For now we need only one metric: TotalPurchase, p99.
-    metric_name = "specjbb_p99_total_purchase"
+    metric_name = metric_name_prefix + 'p99_total_purchase'
     metric_value = float(data_frame[1][-3])  # total purchase, p99
     new_metrics.append(Metric(metric_name, metric_value,
                               type=MetricType.GAUGE, labels=labels,

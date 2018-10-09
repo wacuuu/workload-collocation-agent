@@ -154,6 +154,7 @@ jobs = [
                         -p operationcount={ycsb_operation_count}" \
                 --prometheus_port {prometheus_port} \
                 --prometheus_ip "{prometheus_ip}" \
+                --metric_name_prefix 'cassandra_' \
                 --stderr 1 --kafka_brokers "{kafka_brokers}" \
                 --kafka_topic {kafka_topic} \
                 --log_level {log_level} \

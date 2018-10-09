@@ -76,6 +76,7 @@ controller_cmd = ("{wrapper} --command '{command}' --prometheus_port {port} \
                              --prometheus_ip {ip} --stderr 0 \
                              --kafka_brokers {brokers} --log_level DEBUG \
                              --kafka_topic {kafka_topic} --log_level DEBUG \
+                             --metric_name_prefix 'specjbb_' \
                              --labels \"{labels}\" \
                              --slo {slo} --sli_metric_name specjbb_p99_total_purchase"
                  .format(wrapper=specjbb_wrapper, command=controller_cmd,

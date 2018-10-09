@@ -43,11 +43,10 @@ slo_redis = os.environ.get('rpcperf_redis_slo')
 if application == 'twemcache': 
     rpcperf_protocol = 'memcache'
     slo = slo_twemcache
-    sli_metric_name = "twemcache_p99"
 if application == 'redis': 
     rpcperf_protocol = 'redis'
     slo = slo_redis
-    sli_metric_name = "redis_p99"
+sli_metric_name = "{application}_p99".format(application=application)
 
 # Add label for identification workload in prometheus.
 wrapper_labels["name"] = '%s--%s' % (application, workload_uniq_id)

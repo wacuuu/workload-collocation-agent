@@ -23,4 +23,4 @@ def test_parse():
         Metric("cassandra_update_p9999", value=699.0, type=MetricType.GAUGE,
                help="99.99th percentile of update latency in Cassandra"),
     ]
-    assert expected == parse(input_, {})
+    assert expected == parse(input_, None, None, {}, 'cassandra_')

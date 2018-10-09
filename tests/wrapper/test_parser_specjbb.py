@@ -13,8 +13,8 @@ def test_parse():
     path = os.path.dirname(os.path.abspath(__file__))
     with open(path + '/specjbb_sample_stdout.txt', 'r') as fin:
         expected[0].value = 3800000.0
-        assert expected == parse(fin, {})
+        assert expected == parse(fin, None, None, {}, 'specjbb_')
         expected[0].value = 581000.0
-        assert expected == parse(fin, {})
+        assert expected == parse(fin, None, None, {}, 'specjbb_')
         expected[0].value = 6800000.0
-        assert expected == parse(fin, {})
+        assert expected == parse(fin, None, None, {}, 'specjbb_')

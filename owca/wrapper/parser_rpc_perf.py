@@ -40,25 +40,25 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
         p50 = float(percentiles['p50'])
         min = float(percentiles['min'])
         max = float(percentiles['max'])
-        new_metrics.append(Metric('rpc_perf_p9999', p9999,
+        new_metrics.append(Metric(metric_name_prefix + 'p9999', p9999,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="99.99th percentile of latency in rpc-perf"))
-        new_metrics.append(Metric('rpc_perf_p999', p999,
+        new_metrics.append(Metric(metric_name_prefix + 'p999', p999,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="99.9th percentile of latency in rpc-perf"))
-        new_metrics.append(Metric('rpc_perf_p99', p99,
+        new_metrics.append(Metric(metric_name_prefix + 'p99', p99,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="99th percentile of latency in rpc-perf"))
-        new_metrics.append(Metric('rpc_perf_p90', p90,
+        new_metrics.append(Metric(metric_name_prefix + 'p90', p90,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="90th percentile of latency in rpc-perf"))
-        new_metrics.append(Metric('rpc_perf_p50', p50,
+        new_metrics.append(Metric(metric_name_prefix + 'p50', p50,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="50th percentile of latency in rpc-perf"))
-        new_metrics.append(Metric('rpc_perf_min', min,
+        new_metrics.append(Metric(metric_name_prefix + 'min', min,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="min of latency in rpc-perf"))
-        new_metrics.append(Metric('rpc_perf_max', max,
+        new_metrics.append(Metric(metric_name_prefix + 'max', max,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="max of latency in rpc-perf"))
 
@@ -68,13 +68,13 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
         hit_rate = float(statistic['Hit Rate'])
         success = float(statistic['Success'])
         rate = float(statistic['Rate'])
-        new_metrics.append(Metric('rpc_perf_hit_rate', hit_rate,
+        new_metrics.append(Metric(metric_name_prefix + 'hit_rate', hit_rate,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="Hit rate in rpc-perf"))
-        new_metrics.append(Metric('rpc_perf_success', success,
+        new_metrics.append(Metric(metric_name_prefix + 'success', success,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="Success responses in rpc-perf"))
-        new_metrics.append(Metric('rpc_perf_rate', rate,
+        new_metrics.append(Metric(metric_name_prefix + 'rate', rate,
                                   type=MetricType.GAUGE, labels=labels,
                                   help="Rate in rpc-perf"))
 

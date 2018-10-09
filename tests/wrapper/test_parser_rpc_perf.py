@@ -21,25 +21,25 @@ def test_parse():
         " p90: 775 p99: 86436 p999: 89120 p9999: 89657 max: 89657"
     )
     expected = [
-        Metric("rpc_perf_p9999", value=89657, type=MetricType.GAUGE,
+        Metric("rpcperf_p9999", value=89657, type=MetricType.GAUGE,
                help="99.99th percentile of latency in rpc-perf"),
-        Metric("rpc_perf_p999", value=89120, type=MetricType.GAUGE,
+        Metric("rpcperf_p999", value=89120, type=MetricType.GAUGE,
                help="99.9th percentile of latency in rpc-perf"),
-        Metric("rpc_perf_p99", value=86436, type=MetricType.GAUGE,
+        Metric("rpcperf_p99", value=86436, type=MetricType.GAUGE,
                help="99th percentile of latency in rpc-perf"),
-        Metric("rpc_perf_p90", value=775, type=MetricType.GAUGE,
+        Metric("rpcperf_p90", value=775, type=MetricType.GAUGE,
                help="90th percentile of latency in rpc-perf"),
-        Metric("rpc_perf_p50", value=389, type=MetricType.GAUGE,
+        Metric("rpcperf_p50", value=389, type=MetricType.GAUGE,
                help="50th percentile of latency in rpc-perf"),
-        Metric("rpc_perf_min", value=47, type=MetricType.GAUGE,
+        Metric("rpcperf_min", value=47, type=MetricType.GAUGE,
                help="min of latency in rpc-perf"),
-        Metric("rpc_perf_max", value=89657, type=MetricType.GAUGE,
+        Metric("rpcperf_max", value=89657, type=MetricType.GAUGE,
                help="max of latency in rpc-perf"),
-        Metric("rpc_perf_hit_rate", value=31.12, type=MetricType.GAUGE,
+        Metric("rpcperf_hit_rate", value=31.12, type=MetricType.GAUGE,
                help="Hit rate in rpc-perf"),
-        Metric("rpc_perf_success", value=100.00, type=MetricType.GAUGE,
+        Metric("rpcperf_success", value=100.00, type=MetricType.GAUGE,
                help="Success responses in rpc-perf"),
-        Metric("rpc_perf_rate", value=15823.74, type=MetricType.GAUGE,
+        Metric("rpcperf_rate", value=15823.74, type=MetricType.GAUGE,
                help="Rate in rpc-perf"),
     ]
-    assert expected == parse(input_, {})
+    assert expected == parse(input_, None, None, {}, 'rpcperf_')
