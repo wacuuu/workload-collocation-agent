@@ -61,7 +61,7 @@ class FailedDeliveryException(Exception):
 
 def get_current_time() -> str:
     """current time in unix epoch (miliseconds)"""
-    return str(int(time.time()) * 1000)
+    return str(int(time.time() * 1000))
 
 
 # Comes from prometheus python client:

@@ -48,7 +48,7 @@ def sample_metrics_unconvertable_to_PEF():
     ]
 
 
-@mock.patch('owca.storage.get_current_time', return_value='1531729598000')
+@mock.patch('time.time', return_value=1531729598.001)
 def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_metrics,
                                                  sample_metrics_with_quote,
                                                  sample_metrics_with_float_value):
@@ -57,11 +57,11 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
         msg == (
             '# HELP average_latency_miliseconds latency measured in miliseconds\n'
             '# TYPE average_latency_miliseconds counter\n'
-            'average_latency_miliseconds{node="slave_1",user="felidadae"} 8 1531729598000\n'
+            'average_latency_miliseconds{node="slave_1",user="felidadae"} 8 1531729598001\n'
             '\n'
             '# HELP percentile_99th_miliseconds 99th percentile in miliseconds\n'
             '# TYPE percentile_99th_miliseconds counter\n'
-            'percentile_99th_miliseconds{node="slave_1",user="felidadae"} 89 1531729598000\n'
+            'percentile_99th_miliseconds{node="slave_1",user="felidadae"} 89 1531729598001\n'
             '\n'
         )
     )
@@ -72,7 +72,7 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
             '# HELP average_latency_miliseconds latency measured in miliseconds\n'
             '# TYPE average_latency_miliseconds counter\n'
             'average_latency_miliseconds'  # next string the same line
-            '{node="slave_1 called \\"brave heart\\"",user="felidadae"} 8 1531729598000\n'
+            '{node="slave_1 called \\"brave heart\\"",user="felidadae"} 8 1531729598001\n'
             '\n'
         )
     )
@@ -83,7 +83,7 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
             '# HELP average_latency_miliseconds latency measured in miliseconds\n'
             '# TYPE average_latency_miliseconds counter\n'
             'average_latency_miliseconds'  # next string the same line
-            '{node="slave_1",user="felidadae"} 8.223 1531729598000\n'
+            '{node="slave_1",user="felidadae"} 8.223 1531729598001\n'
             '\n'
         )
     )
