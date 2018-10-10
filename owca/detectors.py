@@ -28,9 +28,9 @@ class ContendedResource(str, Enum):
 def _create_uuid_from_tasks_ids(task_ids: List[TaskId]):
     """Returns unique identifier based on combination of tasks_ids."""
     # Assumption here that, it is enough to just take
-    # 16bytes of 20 for unique different tasks combinations.
-    sha1 = hashlib.sha1(','.join(sorted(task_ids)).encode('utf-8')).digest()
-    return str(uuid.UUID(bytes=sha1[:16]))
+    # 16bytes of 64 for unique different tasks combinations.
+    sha256 = hashlib.sha256(','.join(sorted(task_ids)).encode('utf-8')).digest()
+    return str(uuid.UUID(bytes=sha256[:16]))
 
 
 class Anomaly(ABC):

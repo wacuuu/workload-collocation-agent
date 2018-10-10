@@ -29,7 +29,7 @@ class ExampleDetector(AnomalyDetector):
         # Based on hostname generate skew of phase for different hosts,
         # to simulate contention alerting firing from multiple sources at different time.
         if self.skew:
-            phase_skew = sum(hashlib.sha1(socket.gethostname().encode('UTF-8')).digest())
+            phase_skew = sum(hashlib.sha256(socket.gethostname().encode('UTF-8')).digest())
         else:
             phase_skew = 0
 

@@ -100,12 +100,13 @@ def test_sync_containers_state(cleanup_mock, sync_mock, PerfCoutners_mock, ResGr
 
 
 # We are mocking objects used by containers.
+@patch('owca.testing._create_uuid_from_tasks_ids', return_value='fake-uuid')
+@patch('owca.detectors._create_uuid_from_tasks_ids', return_value='fake-uuid')
 @patch('owca.runner.are_privileges_sufficient', return_value=True)
 @patch('owca.containers.ResGroup')
 @patch('owca.containers.PerfCounters')
 @patch('owca.containers.Cgroup.get_measurements', return_value=dict(cpu_usage=23))
-def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
-                                 ResGroup_mock, are_privileges_sufficient_mock):
+def test_runner_containers_state(*mocks):
     """Tests proper interaction between runner instance and functions for
     creating anomalies and calculating the desired state.
 
@@ -176,7 +177,7 @@ def test_runner_containers_state(get_measurements_mock, PerfCounters_mock,
     expected_anomaly_metrics = anomaly_metrics('task1', ['task2'])
     expected_anomaly_metrics.extend([
         metric('contention_related_metric',
-               labels={'uuid': 'c87600b2-c560-a177-2275-a6ad404feec8', 'type': 'anomaly'}),
+               labels={'uuid': 'fake-uuid', 'type': 'anomaly'}),
         metric('bar')
     ])
     anomalies_storage.store.assert_called_once_with(expected_anomaly_metrics)
