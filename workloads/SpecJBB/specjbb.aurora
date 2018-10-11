@@ -78,11 +78,13 @@ controller_cmd = ("{wrapper} --command '{command}' --prometheus_port {port} \
                              --kafka_topic {kafka_topic} --log_level DEBUG \
                              --metric_name_prefix 'specjbb_' \
                              --labels \"{labels}\" \
+                             --peak_load \"{peak_load}\" --load_metric_name \"const\" \
                              --slo {slo} --sli_metric_name specjbb_p99_total_purchase"
                  .format(wrapper=specjbb_wrapper, command=controller_cmd,
                          port=wrapper_prometheus_port, ip=load_generator_host_ip,
                          brokers=wrapper_kafka_brokers, log=wrapper_log_level,
-                         kafka_topic='owca_apms_specjbb', labels=wrapper_labels, slo=slo))
+                         kafka_topic='owca_apms_specjbb', labels=wrapper_labels, 
+                         peak_load=qps, slo=slo))
 
 # @TODO we should set max RAM assigned to JVM, but if set the job fails to run.
 injector_cmd = ("""
@@ -116,7 +118,7 @@ backend_task = SequentialTask(
 )
 
 # Common docker image.
-docker_image_mo = DockerImage(name="{}/serenity/specjbb".format(docker_registry), 
+docker_image_mo = DockerImage(name="{}/serenity/specjbb".format(docker_registry),
                               tag=specjbb_image_tag)
 environment = "staging" + env_uniq_id
 

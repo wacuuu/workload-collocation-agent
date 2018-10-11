@@ -23,9 +23,16 @@ def main(parse: ParseFunc = default_parse):
     # It is assumed that unknown arguments should be passed to workload.
     args = arg_parser.parse_args()
 
+    # Additional argparse checks.
+    if not ((args.load_metric_name is not None and args.peak_load is not None) or
+            (args.load_metric_name is None and args.peak_load is None)):
+        print("Both load_metric_name and peak_load have to be set, or none of them.")
+        exit(1)
+
     # Needs to be passed to parse_loop
     service_level_args = ServiceLevelArgs(args.slo, args.sli_metric_name,
-                                          args.inverse_sli_metric_value)
+                                          args.inverse_sli_metric_value,
+                                          args.peak_load, args.load_metric_name)
 
     # Configuring log
     logging.basicConfig(level=args.log_level)
@@ -153,8 +160,26 @@ def prepare_argument_parser():
         type=str
     )
     parser.add_argument(
+        '--peak_load',
+        help='Expected maximum load.',
+        default=None,
+        type=int
+    )
+    parser.add_argument(
+        '--load_metric_name',
+        help='Metric name parsed from the application stream '
+             'used as load level indicator. If set to `const` '
+             'the behaviour is slightly different: as real load were all the time '
+             'equal to peak_load (then load_normalized == 1).',
+        default=None,
+        type=str
+    )
+    parser.add_argument(
         '--slo',
-        help='Service level objective. Must be expressed in the same units as SLI.',
+        help='Service level objective. '
+             'Must be expressed in the same units as SLI. '
+             'Default value is +inf. '
+             'Being used only if sli_metric_name also defined.',
         default=float("inf"),
         type=float
     )
@@ -162,7 +187,7 @@ def prepare_argument_parser():
         '--sli_metric_name',
         help='Metric name parsed from the application stream '
              'used as service level indicator.',
-        default="",
+        default=None,
         type=str
     )
     parser.add_argument(

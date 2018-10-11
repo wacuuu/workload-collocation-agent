@@ -17,10 +17,10 @@ ycsb_target = os.environ.get('ycsb_target', '1000')
 # Number of YCSB threads.
 ycsb_thread_count = os.environ.get('ycsb_thread_count', '1')
 
-# ycsb_period and ycsb_amplitiude are used to generate non-constant number of QpS;
+# ycsb_period and ycsb_amplitude are used to generate non-constant number of QpS;
 # see: http://jwilson.coe.uga.edu/EMAT6680/Dunbar/Assignment1/sine_curves_KD.html.
 ycsb_period = os.environ.get('ycsb_period', '100')
-ycsb_amplitiude = os.environ.get('ycsb_amplitiude', '100')
+ycsb_amplitude = os.environ.get('ycsb_amplitude', '100')
 # Defaults to: https://docs.oracle.com/javase/7/docs/api/java/lang/Integer.html#MAX_VALUE
 ycsb_operation_count = os.environ.get('ycsb_operation_count', '2147483647')
 
@@ -31,7 +31,7 @@ application = os.environ.get('application', 'cassandra')
 # Workarounds for "force pull images" defect in Aurora.
 ycsb_image_tag = os.environ.get('ycsb_image_tag')
 
-# Docker image for cassandra. 
+# Docker image for cassandra.
 # By default we use cassandra docker image from dockerhub https://hub.docker.com/_/cassandra/.
 cassandra_image_tag = os.environ.get('cassandra_image_tag', '3.11.3')
 cassandra_image = os.environ.get('cassandra_image', 'cassandra')
@@ -114,9 +114,9 @@ jobs = [
                 "create keyspace ycsb WITH REPLICATION = {{'class' : 'SimpleStrategy', 'replication_factor': 1 }};" \
                 {cassandra_address} {cassandra_port} || true
             cqlsh --cqlversion 3.4.4 -k ycsb -e \
-                "create table usertable (y_id varchar primary key, field0 varchar, 
-                field1 varchar, field2 varchar, field3 varchar, field4 varchar, 
-                field5 varchar, field6 varchar, field7 varchar, field8 varchar, 
+                "create table usertable (y_id varchar primary key, field0 varchar,
+                field1 varchar, field2 varchar, field3 varchar, field4 varchar,
+                field5 varchar, field6 varchar, field7 varchar, field8 varchar,
                 field9 varchar);" \
                 {cassandra_address} {cassandra_port} || true
           """.format(cassandra_address=application_host_ip, cassandra_port=cassandra_port),
@@ -149,7 +149,7 @@ jobs = [
                         -p status.interval=1 \
                         -p threadcount={ycsb_thread_count} \
                         -p workload.peroid={ycsb_period} \
-                        -p workload.amplitude={ycsb_amplitiude} \
+                        -p workload.amplitude={ycsb_amplitude} \
                         -p workload.phase=0 \
                         -p operationcount={ycsb_operation_count}" \
                 --prometheus_port {prometheus_port} \
@@ -159,6 +159,7 @@ jobs = [
                 --kafka_topic {kafka_topic} \
                 --log_level {log_level} \
                 --labels "{labels}" \
+                --peak_load {peak_load} --load_metric_name "cassandra_ops_per_sec" \
                 --slo {slo} --sli_metric_name "cassandra_read_p9999"
           """.format(
             application_host_ip=application_host_ip,
@@ -166,14 +167,16 @@ jobs = [
             ycsb_target=ycsb_target,
             ycsb_thread_count=ycsb_thread_count,
             ycsb_period=ycsb_period,
-            ycsb_amplitiude=ycsb_amplitiude,
+            ycsb_amplitude=ycsb_amplitude,
             ycsb_operation_count=ycsb_operation_count,
             prometheus_port=wrapper_prometheus_port,
             prometheus_ip=load_generator_host_ip,
             kafka_brokers=wrapper_kafka_brokers,
             kafka_topic='owca_apms_cassandra',
             log_level=wrapper_log_level,
-            labels=str(wrapper_labels), slo=slo)
+            labels=str(wrapper_labels),
+            peak_load=str(int(ycsb_target)+int(ycsb_amplitude)),
+            slo=slo)
           )
       ],
     ),

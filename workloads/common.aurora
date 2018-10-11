@@ -32,8 +32,8 @@ wrapper_labels = {
 class AddMetadata:
 
     def __init__(self, labels):
-        self.labels = labels		
-    
+        self.labels = labels
+
     def pre_create_job(self, config):
         for label_nama, label_value in self.labels.items():
             config.add_metadata(label_nama, label_value)

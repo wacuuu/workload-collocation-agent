@@ -88,7 +88,9 @@ def kafka_store_with_retry(kafka_storage: KafkaStorage, metrics: List[Metric]):
 
 
 ServiceLevelArgs = collections.namedtuple(
-    'ServiceLevelArgs', ['slo', 'sli_metric_name', 'inverse_sli_metric_value'])
+    'ServiceLevelArgs',
+    ['slo', 'sli_metric_name', 'inverse_sli_metric_value',
+     'peak_load', 'load_metric_name'])
 
 
 def append_service_level_metrics(service_level_args: ServiceLevelArgs,
@@ -98,17 +100,35 @@ def append_service_level_metrics(service_level_args: ServiceLevelArgs,
         be appended to that list.
     """
     for metric in metrics:
-        if service_level_args.sli_metric_name == metric.name:
+        if (service_level_args.sli_metric_name is not None and
+                service_level_args.sli_metric_name == metric.name):
             if service_level_args.inverse_sli_metric_value:
                 value = 1.0/float(metric.value)
             else:
                 value = float(metric.value)
             log.debug(metric)
-            # send SLO metric only if SLI was found.
+            # Send `slo` metric only if SLI was found.
             metrics.append(Metric("slo", float(service_level_args.slo), labels=labels))
             metrics.append(Metric("sli", value, labels=labels))
-            metrics.append(Metric("sli_normalized", value/service_level_args.slo * 100,
+            metrics.append(Metric("sli_normalized", value/service_level_args.slo,
                                   labels=labels))
+
+        if (service_level_args.load_metric_name not in (None, "const") and
+                service_level_args.load_metric_name == metric.name):
+            value = float(metric.value)
+            peak_load = float(service_level_args.peak_load)
+            metrics.append(Metric("peak_load", float(service_level_args.peak_load), labels=labels))
+            metrics.append(Metric("load", value, labels=labels))
+            metrics.append(Metric("load_normalized", value/peak_load,
+                                  labels=labels))
+
+    # If set to `const` the behaviour is slightly different:
+    #   as real load were all the time equal to peak_load
+    #   (then load_normalized == 1).
+    if service_level_args.load_metric_name == "const":
+        metrics.append(Metric("peak_load", float(service_level_args.peak_load), labels=labels))
+        metrics.append(Metric("load", float(service_level_args.peak_load), labels=labels))
+        metrics.append(Metric("load_normalized", 1.0, labels=labels))
 
 
 def parse_loop(parse: Callable[[], List[Metric]], kafka_storage: KafkaStorage,

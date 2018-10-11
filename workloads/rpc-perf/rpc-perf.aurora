@@ -13,18 +13,21 @@ application_listen_port = os.environ.get('application_listen_port', 11211)
 # Type of application that you want to interact with ("redis" or "twemcache" or "rpc-perf").
 application = os.environ.get('application')
 
+# @TODO Variables rpcperf_rate|thread_count|period|amlitude|connections are not used
+#   in the code (their values are not injected into config files).
+#--
 # Number of requests per second to generate (default: 1000; if `rpcperf_amplitude` and `rpcperf_period` are set - maximum of a sine curve).
-rpcperf_rate = os.environ.get('rpcperf_rate', '1000')
-
+#rpcperf_rate = os.environ.get('rpcperf_rate', '1000')
+#--
 # Number of threads used to generate traffic.
-rpcperf_thread_count = os.environ.get('rpcperf_thread_count', '1')
-
+# rpcperf_thread_count = os.environ.get('rpcperf_thread_count', '1')
+#--
 # rpcperf_period and rpcperf_amplitiude are used to generate non-constant number of QpS; see: http://jwilson.coe.uga.edu/EMAT6680/Dunbar/Assignment1/sine_curves_KD.html
-rpcperf_period = os.environ.get('rpcperf_period', '100')
-rpcperf_amplitiude = os.environ.get('rpcperf_amplitiude', '100')
-
+# rpcperf_period = os.environ.get('rpcperf_period', '100')
+# rpcperf_amplitiude = os.environ.get('rpcperf_amplitiude', '100')
+#--
 # Number of connections per thread.
-rpcperf_connections = os.environ.get('rpcperf_connections', '1')
+#rpcperf_connections = os.environ.get('rpcperf_connections', '1')
 
 # rpc-perf Docker image tag.
 rpcperf_image_tag = os.environ.get('rpcperf_image_tag')  # Workaround for "force pull images" defect in Aurora.
@@ -40,13 +43,14 @@ slo_redis = os.environ.get('rpcperf_redis_slo')
 
 
 # name of a protocol used to generate load ("twemcache" or "redis")
-if application == 'twemcache': 
+if application == 'twemcache':
     rpcperf_protocol = 'memcache'
     slo = slo_twemcache
-if application == 'redis': 
+if application == 'redis':
     rpcperf_protocol = 'redis'
     slo = slo_redis
-sli_metric_name = "{application}_p99".format(application=application)
+sli_metric_name  = "{application}_p99".format(application=application)
+load_metric_name = "{application}_rate".format(application=application)
 
 # Add label for identification workload in prometheus.
 wrapper_labels["name"] = '%s--%s' % (application, workload_uniq_id)
@@ -127,7 +131,7 @@ jobs = [
         role=role,
         constraints=dict(own_ip=load_generator_host_ip),
         container=Mesos(image=DockerImage(
-            name=docker_registry + '/serenity/rpc-perf', 
+            name=docker_registry + '/serenity/rpc-perf',
             tag=rpcperf_image_tag,
         )),
         task=Task(
@@ -147,6 +151,7 @@ jobs = [
                         --metric_name_prefix "{application}_"
                         --kafka_topic {kafka_topic}
                         --kafka_brokers {kafka_brokers}
+                        --peak_load "{peak_load}" --load_metric_name "{load_metric_name}"
                         --slo {slo} --sli_metric_name "{sli_metric_name}"
                             """).format(
                                 protocol=rpcperf_protocol, ip=application_host_ip,
@@ -156,6 +161,8 @@ jobs = [
                                 kafka_topic='owca_apms_'+application,
                                 kafka_brokers=wrapper_kafka_brokers,
                                 application=application,
+                                load_metric_name=load_metric_name,
+                                peak_load=str(15000),
                                 slo=slo, sli_metric_name=sli_metric_name)
                 )
             ],

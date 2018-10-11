@@ -54,6 +54,7 @@ jobs = [
                             "--log_level {log_level} "
                             "--metric_name_prefix 'tensorflow_train_' "
                             "--slo {slo} --sli_metric_name tensorflow_train_images_processed --inverse_sli_metric_value "
+                            "--peak_load 1 --load_metric_name const "
                             "--labels \"{labels}\"".format(batch_size=tensorflow_train_batch_size,
                                                            epochs=tensorflow_train_epochs,
                                                            prometheus_port=wrapper_prometheus_port,
