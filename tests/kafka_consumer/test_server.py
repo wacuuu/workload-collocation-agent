@@ -16,7 +16,8 @@ from owca.kafka_consumer.server import (consume_one_message,
                                         create_kafka_consumer,
                                         create_kafka_consumers,
                                         http_get_handler,
-                                        append_with_max_size)
+                                        append_with_max_size,
+                                        convert_prometheus_to_influx_line_protocol)
 
 
 # To not pass to each call to below two functions parameter kafka_poll_timeout
@@ -122,3 +123,17 @@ def test_append_with_max_size():
     assert append_with_max_size(buf, 3, msg) == [4, 5, 6]
     assert append_with_max_size(buf, 1, msg) == [6]
     assert append_with_max_size(buf, 10, msg) == [1, 2, 3, 4, 5, 6]
+
+
+@pytest.mark.parametrize('prometheus_msg,influx_msg', (
+    ('', ''),
+    ('x 2 123', 'x,__name__=x value=2 123000'),
+    ('x 2.2 123', 'x,__name__=x value=2.2 123000'),
+    ('x{foo="bar"} 2 123', 'x,__name__=x,foo=bar value=2 123000'),
+    ('x{foo="bar",baz="goo"} 2 123', 'x,__name__=x,foo=bar,baz=goo value=2 123000'),
+    ('x{foo="bar some",baz="goo"} 2 123', r'x,__name__=x,foo=bar\ some,baz=goo value=2 123000'),
+    ('foo 2 123\n\n# ble\nbar 3 124',
+        'foo,__name__=foo value=2 123000\nbar,__name__=bar value=3 124000'),
+))
+def test_convert_to_influx_format(prometheus_msg, influx_msg):
+    assert influx_msg == convert_prometheus_to_influx_line_protocol(prometheus_msg)

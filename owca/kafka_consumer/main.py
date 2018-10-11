@@ -52,6 +52,11 @@ def main():
              "keeps N most recent messages per topic."
              "Otherwise (if set to 0) consume messsage synchronously in HTTP handler."
     )
+    parser.add_argument(
+        '--most_recent_influx_write_url', default=None, type=str,
+        help="If set every uncommented line message, will be parsed and replicated to given url"
+             "using influxdb prometheus flavored line protocol"
+    )
     args = parser.parse_args()
 
     logging.basicConfig(level=args.log_level)

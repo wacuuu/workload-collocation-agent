@@ -2,6 +2,7 @@ from functools import partial
 from typing import List, Dict
 import threading
 import logging
+import requests
 from socketserver import ThreadingMixIn
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -103,7 +104,9 @@ def append_with_max_size(buf, N, msg):
     return buf_copy
 
 
-def consume_messages_to_most_recent_buffer(topic_name, timeout, most_recent_count):
+def consume_messages_to_most_recent_buffer(topic_name, timeout,
+                                           most_recent_count,
+                                           influx_write_url):
     """Thread target to consume messages in a loop."""
     kafka_consumer = kafka_consumers[topic_name]
     while True:
@@ -113,8 +116,11 @@ def consume_messages_to_most_recent_buffer(topic_name, timeout, most_recent_coun
                 logging.debug('%s adding msg: %r', topic_name, msg)
                 most_recent_buffers[topic_name] = append_with_max_size(
                     most_recent_buffers[topic_name], most_recent_count, msg)
+                if influx_write_url:
+                    response = requests.post(
+                        influx_write_url, data=convert_prometheus_to_influx_line_protocol(msg))
+                    response.raise_for_status()
         except KafkaConsumptionException as e:
-            msg = str(e)
             logging.warning('Kafka exception: {!r}'.format(e))
 
 
@@ -236,8 +242,52 @@ def run_server(ip: str, port: int, args) -> None:
             most_recent_buffers[topic_name] = []
             t = threading.Thread(
                 target=consume_messages_to_most_recent_buffer,
-                args=(topic_name, timeout, args.most_recent_count))
+                args=(topic_name, timeout,
+                      args.most_recent_count, args.most_recent_influx_write_url))
             t.start()
 
     httpd = ThreadedHTTPServer(server_address, handler_class)
     httpd.serve_forever()
+
+
+def convert_prometheus_to_influx_line_protocol(prometheus_msg):
+    """Convert prometehus msg to influx line protocol. Understable by prometheus when influx
+    is used ad read storage.
+    """
+    if not prometheus_msg:
+        return ''
+
+    influx_lines = []
+
+    for prom_line in prometheus_msg.splitlines(keepends=False):
+        if prom_line.startswith('#') or not prom_line:
+            continue
+
+        ts_sep = prom_line.rindex(' ')
+        if '{' in prom_line:
+            start = prom_line.index('{')
+            name = prom_line[:start]
+            end = prom_line.rindex('}')
+            labels = prom_line[start+1:end]
+            labels = labels.replace(' ', '\\ ')  # escape spaces
+            labels = labels.replace('"', '')
+            value = prom_line[end+2:ts_sep]
+            ts = prom_line[ts_sep+1:]
+        else:
+            start = prom_line.index(' ')
+            name = prom_line[:start]
+            labels = ''
+            value = prom_line[start+1:ts_sep]
+            ts_sep = prom_line.rindex(' ')
+            ts = prom_line[ts_sep+1:]
+
+        influx_line = '{name},__name__={name}{labels} value={value} {ts}'.format(
+            name=name,
+            labels=','+labels if labels else '',
+            value=value,
+            ts=ts+'000'
+        )
+
+        influx_lines.append(influx_line)
+
+    return '\n'.join(influx_lines)
