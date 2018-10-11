@@ -15,24 +15,15 @@ import functools
 import inspect
 import io
 import logging
-import os
 import typing
-import warnings
 
 from ruamel import yaml
 
-_yaml = yaml.YAML(typ='safe')
-
-
 from owca import logger
 
-warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
-
+_yaml = yaml.YAML(typ='safe')
 
 log = logging.getLogger(__name__)
-
-
-logging.getLogger()
 
 ROOT_PATH = ''
 
@@ -147,7 +138,8 @@ def register(cls):
 
     # Just simply register new constructor for given cls.
     log.log(logger.TRACE, 'registered class %r' % (cls.__name__))
-    _yaml.constructor.add_constructor('!%s' % cls.__name__, functools.partial(_constructor, cls=cls))
+    _yaml.constructor.add_constructor('!%s' % cls.__name__,
+                                      functools.partial(_constructor, cls=cls))
     _registered_tags.add(cls.__name__)
     return cls
 

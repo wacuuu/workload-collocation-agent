@@ -6,7 +6,7 @@ from owca.mesos import MesosNode, sanitize_mesos_label
 from owca.containers import Container
 from owca import storage
 from owca import platforms
-from owca.metrics import Metric
+from owca.metrics import Metric, MetricType
 from owca.detectors import AnomalyDetector
 from owca.testing import anomaly_metrics, anomaly, task
 
@@ -106,6 +106,7 @@ def test_sync_containers_state(cleanup_mock, sync_mock, PerfCoutners_mock, ResGr
 @patch('owca.containers.ResGroup')
 @patch('owca.containers.PerfCounters')
 @patch('owca.containers.Cgroup.get_measurements', return_value=dict(cpu_usage=23))
+@patch('time.time', return_value=1234567890.123)
 def test_runner_containers_state(*mocks):
     """Tests proper interaction between runner instance and functions for
     creating anomalies and calculating the desired state.
@@ -168,17 +169,22 @@ def test_runner_containers_state(*mocks):
 
     # store() method was called twice:
     # 1. Before calling detect() to store state of the environment.
-    metrics_storage.store.assert_called_once_with(
-            [metric('platform-cpu-usage'),  # Store metrics from platform ...
+    metrics_storage.store.assert_called_once_with([
+             metric('platform-cpu-usage'),  # Store metrics from platform ...
              Metric(name='cpu_usage', value=23,
-                    labels=task_labels_sanitized_with_task_id)])  # and task
+                    labels=task_labels_sanitized_with_task_id),
+             Metric('owca_up', type=MetricType.COUNTER, value=1234567890.123),
+             Metric('owca_tasks', type=MetricType.GAUGE, value=1),
+    ])  # and task
 
     # 2. After calling detect to store information about detected anomalies.
     expected_anomaly_metrics = anomaly_metrics('task1', ['task2'])
     expected_anomaly_metrics.extend([
         metric('contention_related_metric',
                labels={'uuid': 'fake-uuid', 'type': 'anomaly'}),
-        metric('bar')
+        metric('bar'),
+        Metric('anomaly_count', type=MetricType.COUNTER, value=1),
+        Metric('anomaly_last_occurence', type=MetricType.COUNTER, value=1234567890.123),
     ])
     anomalies_storage.store.assert_called_once_with(expected_anomaly_metrics)
 

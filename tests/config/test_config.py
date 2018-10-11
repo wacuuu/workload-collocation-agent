@@ -60,6 +60,7 @@ def test_config_with_simple_classes():
     assert len(boo.items) == 2
     assert isinstance(boo.items[0], Item)
 
+
 def test_config_unsafe_object_creation():
 
     from ruamel import yaml
@@ -73,6 +74,5 @@ def test_config_unsafe_object_creation():
     assert isinstance(data['time'], calendar.Calendar)
 
     # With use safe version only to allow construct previosuly registered objects
-    with pytest.raises(config.ConfigLoadError, match='could not determine a constructor') as e:
+    with pytest.raises(config.ConfigLoadError, match='could not determine a constructor'):
         config.load_config(test_config_path)
-

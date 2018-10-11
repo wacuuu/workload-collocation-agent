@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import List, Dict, Optional
 import logging
 import time
 
@@ -13,7 +13,7 @@ from owca.containers import Container
 from owca.detectors import (TasksMeasurements, TasksResources,
                             TasksLabels, convert_anomalies_to_metrics)
 from owca.mesos import MesosTask, create_metrics, sanitize_mesos_label
-from owca.metrics import Metric
+from owca.metrics import Metric, MetricType
 from owca.resctrl import check_resctrl, cleanup_resctrl
 from owca.perf import are_privileges_sufficient
 
@@ -65,6 +65,8 @@ class DetectionRunner:
 
     def __post_init__(self):
         self.containers: Dict[MesosTask, Container] = {}
+        self.anomaly_counter: int = 0
+        self.anomaly_last_occurence: Optional[int] = None
 
     def wait_or_finish(self):
         """Decides how long one run takes and when to finish.
@@ -136,6 +138,12 @@ class DetectionRunner:
             # Keep sync of found tasks and internally managed containers.
             self._sync_containers_state(tasks)
 
+            # Owca internal metrics.
+            internal_metrics = [
+                Metric(name='owca_up', type=MetricType.COUNTER, value=time.time()),
+                Metric(name='owca_tasks', type=MetricType.GAUGE, value=len(tasks)),
+            ]
+
             # Platform information
             platform, platform_metrics, platform_labels = platforms.collect_platform_information()
 
@@ -143,7 +151,7 @@ class DetectionRunner:
             common_labels = dict(platform_labels, **self.extra_labels)
 
             # Update platform_metrics with common labels.
-            for metric in platform_metrics:
+            for metric in platform_metrics + internal_metrics:
                 metric.labels.update(common_labels)
 
             # Build labeled tasks_metrics and task_metrics_values.
@@ -174,7 +182,7 @@ class DetectionRunner:
                 tasks_resources[task.task_id] = task.resources
                 tasks_metrics += task_metrics
 
-            self.metrics_storage.store(platform_metrics + tasks_metrics)
+            self.metrics_storage.store(platform_metrics + tasks_metrics + internal_metrics)
 
             anomalies, extra_metrics = self.detector.detect(
                 platform, tasks_measurements, tasks_resources, tasks_labels)
@@ -192,11 +200,25 @@ class DetectionRunner:
                         tasks_labels.get(contended_task_id, {})
                     )
 
+            # Extra anomaly statistics
+            if len(anomalies):
+                self.anomaly_last_occurence = time.time()
+                self.anomaly_counter += len(anomalies)
+
+            statistics_metrics = [
+                Metric(name='anomaly_count', type=MetricType.COUNTER, value=self.anomaly_counter),
+            ]
+            if self.anomaly_last_occurence:
+                statistics_metrics.extend([
+                    Metric(name='anomaly_last_occurence', type=MetricType.COUNTER,
+                           value=self.anomaly_last_occurence),
+                ])
+
             # Update anomaly & extra metrics with common labels.
             for metric in anomaly_metrics + extra_metrics:
                 metric.labels.update(common_labels)
 
-            self.anomalies_storage.store(anomaly_metrics + extra_metrics)
+            self.anomalies_storage.store(anomaly_metrics + extra_metrics + statistics_metrics)
 
             if not self.wait_or_finish():
                 break
