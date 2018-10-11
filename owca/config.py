@@ -20,7 +20,9 @@ import typing
 import warnings
 
 from ruamel import yaml
-import ruamel
+
+_yaml = yaml.YAML(typ='safe')
+
 
 from owca import logger
 
@@ -29,6 +31,8 @@ warnings.simplefilter('ignore', yaml.error.UnsafeLoaderWarning)
 
 log = logging.getLogger(__name__)
 
+
+logging.getLogger()
 
 ROOT_PATH = ''
 
@@ -143,7 +147,7 @@ def register(cls):
 
     # Just simply register new constructor for given cls.
     log.log(logger.TRACE, 'registered class %r' % (cls.__name__))
-    yaml.add_constructor('!%s' % cls.__name__, functools.partial(_constructor, cls=cls))
+    _yaml.constructor.add_constructor('!%s' % cls.__name__, functools.partial(_constructor, cls=cls))
     _registered_tags.add(cls.__name__)
     return cls
 
@@ -151,7 +155,7 @@ def register(cls):
 def _parse(yaml_body: io.StringIO) -> Any:
     """Parses configuration from given yaml body and returns initialized object."""
     try:
-        return yaml.load(yaml_body, Loader=ruamel.yaml.Loader)
+        return _yaml.load(yaml_body)
     except yaml.constructor.ConstructorError as e:
         raise ConfigLoadError(
             '%s %s. ' % (e.problem, e.problem_mark) +
@@ -170,53 +174,3 @@ def load_config(filename: str) -> Any:
             return _parse(f)
     except FileNotFoundError as e:
         raise ConfigLoadError('Cannot find configuration file: %r' % filename)
-
-
-def _file_loader_constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node):
-    """This function is called, when a yaml node
-    is tagged as 'file'. It loads the yaml file
-    passed as the tag argument and places it under
-    the current node.
-
-    Module for loading nested config files
-
-    E.g.
-
-    ------------------------
-    File -> base.yaml
-
-    key1: 'value1'
-    key2: 1.2
-    key3: !file nested1.yaml
-    -------------------------
-
-    File -> nested1.yaml
-
-    nested_key1: 'nested_value'
-    another_nested_key: true
-    ------------------------
-
-    Result
-
-    key1: 'value1'
-    key2: 1.2
-    key3:
-    nested_key1: 'nested_value'
-    another_nested_key: true
-    """
-    filename = loader.construct_scalar(node)
-    log.debug('loading from file: %s', filename)
-    if filename == '':
-        raise ConfigLoadError('For a !file node a filename must be provided!%s', node.start_mark)
-
-    full_filename = os.path.join(os.path.dirname(loader.name), filename)
-
-    with open(full_filename) as f:
-        if not filename.endswith(('.yaml', '.yml')):
-            raise ConfigLoadError('Unsupported file %r%stype (use: YAML)!' % (
-                full_filename, node.start_mark))
-        content = yaml.load(f, Loader=loader.__class__)
-    return content
-
-
-yaml.add_constructor(u'!file', _file_loader_constructor)

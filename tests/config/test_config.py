@@ -1,3 +1,5 @@
+import pytest
+
 from owca import config
 from owca import testing
 
@@ -57,3 +59,20 @@ def test_config_with_simple_classes():
     assert boo.foo is foo
     assert len(boo.items) == 2
     assert isinstance(boo.items[0], Item)
+
+def test_config_unsafe_object_creation():
+
+    from ruamel import yaml
+    import calendar
+
+    test_config_path = testing.relative_module_path(__file__, 'test_config_unsafe.yaml')
+
+    # Unsafe default loader allows any python object initialization
+    data = yaml.load(open(test_config_path), Loader=yaml.Loader)
+    assert 'time' in data
+    assert isinstance(data['time'], calendar.Calendar)
+
+    # With use safe version only to allow construct previosuly registered objects
+    with pytest.raises(config.ConfigLoadError, match='could not determine a constructor') as e:
+        config.load_config(test_config_path)
+
