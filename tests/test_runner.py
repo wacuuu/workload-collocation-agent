@@ -151,12 +151,15 @@ def test_runner_containers_state(*mocks):
         )
     )
 
+    extra_labels = dict(el='ev')  # extra label with some extra value
+
     runner = DetectionRunner(
         node=node_mock,
         metrics_storage=metrics_storage,
         anomalies_storage=anomalies_storage,
         detector=detector_mock,
         rdt_enabled=False,
+        extra_labels=extra_labels,
     )
 
     # Mock to finish after one iteration.
@@ -170,21 +173,25 @@ def test_runner_containers_state(*mocks):
     # store() method was called twice:
     # 1. Before calling detect() to store state of the environment.
     metrics_storage.store.assert_called_once_with([
-             metric('platform-cpu-usage'),  # Store metrics from platform ...
+             metric('platform-cpu-usage', labels=extra_labels),  # Store metrics from platform ...
              Metric(name='cpu_usage', value=23,
-                    labels=task_labels_sanitized_with_task_id),
-             Metric('owca_up', type=MetricType.COUNTER, value=1234567890.123),
-             Metric('owca_tasks', type=MetricType.GAUGE, value=1),
+                    labels=dict(extra_labels, **task_labels_sanitized_with_task_id)),
+             Metric('owca_up', type=MetricType.COUNTER, value=1234567890.123, labels=extra_labels),
+             Metric('owca_tasks', type=MetricType.GAUGE, value=1, labels=extra_labels),
     ])  # and task
 
     # 2. After calling detect to store information about detected anomalies.
     expected_anomaly_metrics = anomaly_metrics('task1', ['task2'])
+    for m in expected_anomaly_metrics:
+        m.labels.update(extra_labels)
+
     expected_anomaly_metrics.extend([
         metric('contention_related_metric',
-               labels={'uuid': 'fake-uuid', 'type': 'anomaly'}),
-        metric('bar'),
-        Metric('anomaly_count', type=MetricType.COUNTER, value=1),
-        Metric('anomaly_last_occurence', type=MetricType.COUNTER, value=1234567890.123),
+               labels=dict({'uuid': 'fake-uuid', 'type': 'anomaly'}, **extra_labels)),
+        metric('bar', extra_labels),
+        Metric('anomaly_count', type=MetricType.COUNTER, value=1, labels=extra_labels),
+        Metric('anomaly_last_occurence', type=MetricType.COUNTER, value=1234567890.123, 
+               labels=extra_labels),
     ])
     anomalies_storage.store.assert_called_once_with(expected_anomaly_metrics)
 

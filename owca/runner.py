@@ -215,7 +215,7 @@ class DetectionRunner:
                 ])
 
             # Update anomaly & extra metrics with common labels.
-            for metric in anomaly_metrics + extra_metrics:
+            for metric in anomaly_metrics + extra_metrics + statistics_metrics:
                 metric.labels.update(common_labels)
 
             self.anomalies_storage.store(anomaly_metrics + extra_metrics + statistics_metrics)
