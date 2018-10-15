@@ -190,7 +190,7 @@ def test_runner_containers_state(*mocks):
                labels=dict({'uuid': 'fake-uuid', 'type': 'anomaly'}, **extra_labels)),
         metric('bar', extra_labels),
         Metric('anomaly_count', type=MetricType.COUNTER, value=1, labels=extra_labels),
-        Metric('anomaly_last_occurence', type=MetricType.COUNTER, value=1234567890.123, 
+        Metric('anomaly_last_occurence', type=MetricType.COUNTER, value=1234567890.123,
                labels=extra_labels),
     ])
     anomalies_storage.store.assert_called_once_with(expected_anomaly_metrics)
