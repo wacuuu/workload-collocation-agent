@@ -1,0 +1,61 @@
+import os
+
+include('../common.aurora')
+
+#----------------------------------------------------------------------------------------------------
+###
+# Params which can be modified by exporting environment variables.
+###
+
+tensorflow_inference_image_tag = os.environ.get('tensorflow_inference_image_tag')  # Workaround for "force pull images" defect in Aurora.
+#----------------------------------------------------------------------------------------------------
+
+
+# Add label for identification workload in prometheus.
+wrapper_labels["name"] = 'tensorflow_benchmark--%s' % workload_uniq_id
+wrapper_labels["load_generator"] = ""
+wrapper_labels["application"] = "tensorflow_benchmark_training"
+apms_kafka_topic_name="owca_apms_tensorflow_benchmark_training"
+
+# resources parameters
+cpu = 10
+ram = 50 * GB
+disk = 50 * GB
+
+# JOB definitions
+jobs = [
+    Job(
+        name='tensorflow_benchmark_training--%s' % workload_uniq_id,
+        cluster=cluster,
+        environment='staging' + env_uniq_id,
+        role=role,
+        enable_hooks=True,
+        constraints=dict(own_ip=application_host_ip),
+        container=Mesos(image=DockerImage(
+            name=docker_registry + '/serenity/tensorflow-benchmark', tag='latest',
+        )),
+        task=SequentialTask(
+            name='tensorflow_benchmark--%s' % workload_uniq_id,
+            resources=Resources(cpu=cpu, ram=ram, disk=disk),
+            processes=[
+                Process(
+                    name='tensorflow_benchmark_run',
+                    cmdline="/tensorflow_benchmark_training_wrapper.pex --command '/usr/bin/python3 -u /root/benchmarks/scripts/tf_cnn_benchmarks/tf_cnn_benchmarks.py --datasets_use_prefetch=True --batch_group_size=1 --device=cpu --data_format=NHWC --data_name=cifar10 --batch_size=1024 --model=resnet56 --train_dir=/saved_model/ --num_epochs=100 --num_intra_threads=10 --num_inter_threads=10' "
+                            "--prometheus_port {prometheus_port} "
+                            "--prometheus_ip '{prometheus_ip}' "
+                            "--metric_name_prefix 'tensorflow_benchmark_' "
+                            "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
+                            "--log_level {log_level} "
+                            "--labels \"{labels}\"".format(prometheus_port=wrapper_prometheus_port,
+                                                           prometheus_ip=application_host_ip,
+                                                           kafka_brokers=wrapper_kafka_brokers,
+                                                           log_level=wrapper_log_level,
+                                                           kafka_topic=apms_kafka_topic_name,
+                                                           labels=str(wrapper_labels))
+                )
+            ],
+        )
+    )
+]
+
+hooks = [AddMetadata(wrapper_labels)]

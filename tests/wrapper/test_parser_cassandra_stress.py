@@ -1,0 +1,34 @@
+from io import StringIO
+
+from owca.metrics import Metric, MetricType
+from owca.wrapper.parser_cassandra_stress import parse
+
+
+def test_parse():
+    input_ = StringIO(
+        "Results:"
+        "Op rate                   :   14,997 op/s  [WRITE: 14,997 op/s]"
+        "Partition rate            :   14,997 pk/s  [WRITE: 14,997 pk/s]"
+        "Row rate                  :   14,997 row/s [WRITE: 14,997 row/s]"
+        "Latency mean              :    1.9 ms [WRITE: 1.9 ms]"
+        "Latency median            :    0.3 ms [WRITE: 0.3 ms]"
+        "Latency 95th percentile   :    0.4 ms [WRITE: 0.4 ms]"
+        "Latency 99th percentile   :   74.0 ms [WRITE: 74.0 ms]"
+        "Latency 99.9th percentile :  146.8 ms [WRITE: 146.8 ms]"
+        "Latency max               :  160.2 ms [WRITE: 160.2 ms]"
+        "Total partitions          :  1,350,028 [WRITE: 1,350,028]"
+        "Total errors              :          0 [WRITE: 0]"
+        "Total GC count            : 0"
+        "Total GC memory           : 0.000 KiB"
+        "Total GC time             :    0.0 seconds"
+        "Avg GC time               :    NaN ms"
+        "StdDev GC time            :    0.0 ms"
+        "Total operation time      : 00:01:30"
+    )
+    expected = [
+        Metric('cassandra_stress_op_rate', value=14997, type=MetricType.GAUGE,
+               help="Cassandra Op Rate"),
+        Metric('cassandra_stress_p99', value=74.0, type=MetricType.GAUGE,
+               help="99th percentile of latency in Cassandra")
+    ]
+    assert expected == parse(input_, None, None, {}, 'cassandra_stress_')

@@ -1,0 +1,51 @@
+
+from io import TextIOWrapper
+from typing import List, Dict
+import re
+from owca.metrics import Metric, MetricType
+from owca.wrapper import wrapper_main
+
+EOF_line = "Stop-Mutilate-Now"
+
+
+def parse(input: TextIOWrapper, regexp: str, separator: str = None,
+          labels: Dict[str, str] = {}, metric_name_prefix: str = '') -> List[Metric]:
+    """Custom parse function for mutilate
+        #type       avg     std     min     5th    10th    90th    95th    99th
+        read      801.9   155.0   304.5   643.7   661.1  1017.8  1128.2  1386.5
+        update    804.6   157.8   539.4   643.4   661.2  1026.1  1136.1  1404.3
+        op_q        1.0     0.0     1.0     1.0     1.0     1.1     1.1     1.1
+
+        Total QPS = 159578.5 (1595835 / 10.0s)
+
+        Misses = 0 (0.0%)
+        Skipped TXs = 0 (0.0%)
+
+        RX  382849511 bytes :   36.5 MB/s
+        TX   67524708 bytes :    6.4 MB/s
+    """
+
+    new_metrics = []
+    new_line = input.readline()
+    if "read" in new_line:
+        read = re.search(r'read\s*[0-9]+\.[0-9]+[ ]*[0-9]' +
+                         '+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]' +
+                         '+[ ]*[0-9]+\.[0-9]+[ ]*([0-9]+\.[0-9]+)[ ]*[0-9]+\.[0-9]+[ ]*', new_line)
+        p95 = float(read.group(1))
+        new_metrics.append(Metric('memcached_read_p95', p95,
+                                  type=MetricType.GAUGE, labels=labels,
+                                  help="95th percentile of read latency in Memcached"))
+    if "Total QPS" in new_line:
+        read_qps = re.search(r'Total QPS = ([0-9]*\.[0-9])', new_line)
+        if read_qps is not None:
+            qps = float(read_qps.group(1))
+            new_metrics.append(Metric(
+                'memcached_qps', qps, type=MetricType.GAUGE,
+                labels=labels, help="QPS in Memcached"))
+    if EOF_line in new_line:
+        raise StopIteration
+    return new_metrics
+
+
+if __name__ == "__main__":
+    wrapper_main.main(parse)
