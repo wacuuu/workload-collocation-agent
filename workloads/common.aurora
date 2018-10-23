@@ -17,8 +17,6 @@ docker_registry = os.environ['docker_registry']
 
 # Wrapper variables:
 wrapper_kafka_brokers = os.environ['wrapper_kafka_brokers']
-wrapper_prometheus_port = os.environ.get('wrapper_prometheus_port', '9090')
-wrapper_prometheus_address= os.environ.get('wrapper_prometheus_address', '0.0.0.0')
 wrapper_log_level = os.environ.get('wrapper_log_level', 'DEBUG')
 # Here as dict, must be passed to wrapper as json string.
 #   Can be extended as desired in workload's aurora manifests.

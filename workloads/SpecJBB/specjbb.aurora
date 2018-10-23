@@ -72,8 +72,7 @@ controller_cmd = ("java -Dspecjbb.forkjoin.workers={} -Xms4g -Xmx4g -jar {} -m d
                   .format(cpu_backend, specjbb_jar, config_path))
 
 # Add wrapper to controller_cmd; specjbb prints data to stderr.
-controller_cmd = ("{wrapper} --command '{command}' --prometheus_port {port} \
-                             --prometheus_ip {ip} --stderr 0 \
+controller_cmd = ("{wrapper} --command '{command}' \
                              --kafka_brokers {brokers} --log_level DEBUG \
                              --kafka_topic {kafka_topic} --log_level DEBUG \
                              --metric_name_prefix 'specjbb_' \
@@ -81,10 +80,9 @@ controller_cmd = ("{wrapper} --command '{command}' --prometheus_port {port} \
                              --peak_load \"{peak_load}\" --load_metric_name \"const\" \
                              --slo {slo} --sli_metric_name specjbb_p99_total_purchase"
                  .format(wrapper=specjbb_wrapper, command=controller_cmd,
-                         port=wrapper_prometheus_port, ip=load_generator_host_ip,
-                         brokers=wrapper_kafka_brokers, log=wrapper_log_level,
-                         kafka_topic='owca_apms_specjbb', labels=wrapper_labels, 
-                         peak_load=qps, slo=slo))
+                         ip=load_generator_host_ip, brokers=wrapper_kafka_brokers,
+                         log=wrapper_log_level, kafka_topic='owca_apms_specjbb',
+                         labels=wrapper_labels, peak_load=qps, slo=slo))
 
 # @TODO we should set max RAM assigned to JVM, but if set the job fails to run.
 injector_cmd = ("""

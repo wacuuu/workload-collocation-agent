@@ -5,7 +5,7 @@ Workloads
 Description
 ===========
 
-This project consists of Dockerfiles and wrappers that allow to launch a workload and expose its metrics in Prometheus format over HTTP.
+This project consists of Dockerfiles and wrappers that allow to launch a workload and expose its metrics in Prometheus format over Kafka protocol.
 
 Building docker images
 ======================

@@ -203,7 +203,7 @@ stress-ng example:
 
 .. code-block:: sh
 
-    docker run -p 8080:8080 stress-ng-workload ./wrapper.pex --command "stress-ng -c 1" --log_level DEBUG --stderr 1 --prometheus_port 8080 --prometheus_ip 0.0.0.0 --labels "{'workload':'stress-ng','cores':'1'}"
+    docker run -p 8080:8080 stress-ng-workload ./wrapper.pex --command "stress-ng -c 1" --log_level DEBUG --stderr 1 --labels "{'workload':'stress-ng','cores':'1'}"
 
 Check for values with
 

@@ -54,13 +54,10 @@ jobs = [
                     name='mutilate_run',
 
                     cmdline="/usr/bin/mutilate_wrapper.pex --command '/mutilate/loop_mutilate.sh {loops} {mutilate_cmd}' "
-                            "--prometheus_port {prometheus_port} "
-                            "--prometheus_ip '{prometheus_ip}' "
                             "--metric_name_prefix 'mutilate_' "
                             "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
                             "--log_level {log_level} "
-                            "--labels \"{labels}\"".format(loops=loops,mutilate_cmd=mutilate_cmd,prometheus_port=wrapper_prometheus_port,
-                                                           prometheus_ip=load_generator_host_ip,
+                            "--labels \"{labels}\"".format(loops=loops,mutilate_cmd=mutilate_cmd,
                                                            kafka_brokers=wrapper_kafka_brokers,
                                                            log_level=wrapper_log_level,
                                                            kafka_topic=apms_kafka_topic_name,

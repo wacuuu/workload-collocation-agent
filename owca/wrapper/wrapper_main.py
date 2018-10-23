@@ -9,7 +9,6 @@ from functools import partial
 from owca.storage import KafkaStorage
 from owca.wrapper.parser import (default_parse, parse_loop, DEFAULT_REGEXP,
                                  ParseFunc, ServiceLevelArgs, append_service_level_metrics)
-from owca.wrapper.server import run_server
 from owca.platforms import get_owca_version
 
 log = logging.getLogger(__name__)
@@ -67,12 +66,7 @@ def main(parse: ParseFunc = default_parse):
     t = threading.Thread(target=parse_loop, args=(parse, kafka_storage,
                                                   append_service_level_metrics_func))
     t.start()
-    if args.ip != "":
-        # this blocks until it catches KeyboardInterrupt
-        run_server(ip=args.ip, port=args.port)
-    else:
-        # Wait for parser thread to terminate.
-        t.join()
+    t.join()
 
     # terminate all spawned processes
     workload_process.terminate()
@@ -80,20 +74,7 @@ def main(parse: ParseFunc = default_parse):
 
 def prepare_argument_parser():
     parser = argparse.ArgumentParser(
-        description='Wrapper that exposes APMs over HTTP using Prometheus format.'
-    )
-    parser.add_argument(
-        '--prometheus_port',
-        help='Port to be used to expose the metrics',
-        dest='port',
-        default=9000,
-        type=int)
-    parser.add_argument(
-        '--prometheus_ip',
-        help='IP used to expose the metrics',
-        dest='ip',
-        default='',
-        type=str
+        description='Wrapper that exposes APMs using Prometheus format.'
     )
     parser.add_argument(
         '--command',
