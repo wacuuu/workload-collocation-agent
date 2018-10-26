@@ -195,13 +195,13 @@ class MetricsRequestHandler(BaseHTTPRequestHandler):
             self.end_headers()
             try:
                 self.wfile.write(body)
-            except BrokenPipeError as e:
+            except BrokenPipeError:
                 logging.warn(
                     "BrokenPipeError Exception was raised while trying to\n"
                     "\twrite to socket. It is probably not dangerous and means\n"
                     "\tthat client sending http request stopped to wait\n"
                     "\tfor an answer.")
-            except ConnectionResetError as e:
+            except ConnectionResetError:
                 logging.warn("ConnectionResetError was raised.")
             except Exception as e:
                 logging.warn("Exception {} was raised".format(e))

@@ -29,8 +29,8 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
     new_line = input.readline()
     if "read" in new_line:
         read = re.search(r'read\s*[0-9]+\.[0-9]+[ ]*[0-9]' +
-                         '+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]' +
-                         '+[ ]*[0-9]+\.[0-9]+[ ]*([0-9]+\.[0-9]+)[ ]*[0-9]+\.[0-9]+[ ]*', new_line)
+                         r'+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]' +
+                         r'+[ ]*[0-9]+\.[0-9]+[ ]*([0-9]+\.[0-9]+)[ ]*[0-9]+\.[0-9]+[ ]*', new_line)
         p95 = float(read.group(1))
         new_metrics.append(Metric('memcached_read_p95', p95,
                                   type=MetricType.GAUGE, labels=labels,

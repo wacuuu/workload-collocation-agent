@@ -106,7 +106,7 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
             cls.__name__, id(instance), arguments)
     try:
         instance.__init__(**arguments)
-    except TypeError as e:
+    except TypeError:
         raise ConfigLoadError(
             'Cannot instantiate %r%s with arguments=%r (constructor signature is: %s)' % (
                 cls.__name__, node.start_mark, arguments, signature))
@@ -164,5 +164,5 @@ def load_config(filename: str) -> Any:
     try:
         with open(filename) as f:
             return _parse(f)
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         raise ConfigLoadError('Cannot find configuration file: %r' % filename)

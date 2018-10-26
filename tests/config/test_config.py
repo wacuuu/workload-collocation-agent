@@ -24,7 +24,7 @@ class Foo:
 
 @config.register
 class Boo:
-    def __init__(self, foo: Foo=None, items=None, nc: NewClass=None) -> None:
+    def __init__(self, foo: Foo = None, items=None, nc: NewClass = None) -> None:
         self.foo = foo
         self.items = items
         self.nc = nc
