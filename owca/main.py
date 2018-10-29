@@ -57,6 +57,8 @@ def main():
         configuration = config.load_config(args.config)
     except config.ConfigLoadError as e:
         log.error('Error: Cannot load config file %r: %s', args.config, e)
+        if log.getEffectiveLevel() <= logging.DEBUG:
+            log.exception('Detailed exception:')
         exit(1)
 
     # Configure loggers using configuration file.

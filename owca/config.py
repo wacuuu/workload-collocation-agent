@@ -16,6 +16,7 @@ import inspect
 import io
 import logging
 import typing
+from os.path import exists  # direct target import for mocking purposes in test_main
 
 from ruamel import yaml
 
@@ -106,10 +107,16 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
             cls.__name__, id(instance), arguments)
     try:
         instance.__init__(**arguments)
-    except TypeError:
+    except TypeError as e:
         raise ConfigLoadError(
             'Cannot instantiate %r%s with arguments=%r (constructor signature is: %s)' % (
-                cls.__name__, node.start_mark, arguments, signature))
+                cls.__name__, node.start_mark, arguments, signature)) from e
+    except Exception as e:
+        raise ConfigLoadError(
+            'Cannot instantiate %r%s with arguments=%r'
+            '(unexpected error=%s! run --log=debug for details)' % (
+                cls.__name__, node.start_mark, arguments, e)) from e
+
     log.log(logger.TRACE, '%s(0x%x)=%r', cls.__name__, id(instance), vars(instance))
 
 
@@ -152,7 +159,7 @@ def _parse(yaml_body: io.StringIO) -> Any:
         raise ConfigLoadError(
             '%s %s. ' % (e.problem, e.problem_mark) +
             'Available tags are: %s' % (', '.join(_registered_tags))
-        )
+        ) from e
 
 
 def load_config(filename: str) -> Any:
@@ -161,8 +168,7 @@ def load_config(filename: str) -> Any:
     :param filename: The base config file
     :returns deserialized objects from yaml
     """
-    try:
-        with open(filename) as f:
-            return _parse(f)
-    except FileNotFoundError:
+    if not exists(filename):
         raise ConfigLoadError('Cannot find configuration file: %r' % filename)
+    with open(filename) as f:
+        return _parse(f)

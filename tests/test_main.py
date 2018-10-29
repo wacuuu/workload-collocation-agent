@@ -95,6 +95,7 @@ mesos_tasks_mocks = [
 @mock.patch('sys.argv', ['owca', '-c', 'configs/see_yaml_config_variable_above.yaml',
                          '-r', 'example.external_package:ExampleDetector', '-l', 'trace'])
 @mock.patch('os.rmdir')
+@mock.patch('owca.config.exists', return_value=True)
 @mock.patch('owca.config.open', mock.mock_open(read_data=yaml_config))
 @mock.patch('owca.mesos.MesosNode.get_tasks', return_value=mesos_tasks_mocks)
 @mock.patch('owca.resctrl.ResGroup.sync')
