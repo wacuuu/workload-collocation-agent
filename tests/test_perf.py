@@ -262,35 +262,42 @@ def test_privileges_failed_capget(capget, read_paranoid):
         perf.are_privileges_sufficient()
 
 
-def no_cap_sys_admin(header, data):
+def no_cap_dac_override(header, data):
     # https://github.com/python/cpython/blob/v3.6.6/Modules/_ctypes/callproc.c#L521
     # Do not even ask how I managed to find it ;)
-    data._obj.effective = 20  # 20 & 21 != 21
+    data._obj.effective = 20  # 20 & 1 != 1
     return 0
 
 
-def cap_sys_admin(header, data):
+def cap_dac_override(header, data):
     # https://github.com/python/cpython/blob/v3.6.6/Modules/_ctypes/callproc.c#L521
-    data._obj.effective = 21  # 21 & 21 = 21
+    data._obj.effective = 1  # 1 & 1 = 1
     return 0
 
 
 @patch('os.geteuid', return_value=0)
 @patch('owca.perf._read_paranoid', return_value=2)
-@patch('owca.perf.LIBC.capget', side_effect=no_cap_sys_admin)
-def test_privileges_root(capget, read_paranoid, geteuid):
+@patch('owca.perf.LIBC.capget', side_effect=no_cap_dac_override)
+def test_privileges_root_no_capabilities_no_dac_no_paranoid(capget, read_paranoid, geteuid):
     assert perf.are_privileges_sufficient()
 
 
 @patch('os.geteuid', return_value=1000)
 @patch('owca.perf._read_paranoid', return_value=2)
-@patch('owca.perf.LIBC.capget', side_effect=cap_sys_admin)
-def test_privileges_capabilities(capget, read_paranoid, geteuid):
-    assert perf.are_privileges_sufficient()
+@patch('owca.perf.LIBC.capget', side_effect=cap_dac_override)
+def test_privileges_not_root_capabilities_no_dac_paranoid(capget, read_paranoid, geteuid):
+    assert not perf.are_privileges_sufficient()
 
 
 @patch('os.geteuid', return_value=1000)
 @patch('owca.perf._read_paranoid', return_value=0)
-@patch('owca.perf.LIBC.capget', side_effect=no_cap_sys_admin)
-def test_privileges_paranoid(capget, read_paranoid, geteuid):
+@patch('owca.perf.LIBC.capget', side_effect=no_cap_dac_override)
+def test_privileges_not_root_no_capabilities_no_dac_paranoid(capget, read_paranoid, geteuid):
+    assert not perf.are_privileges_sufficient()
+
+
+@patch('os.geteuid', return_value=1000)
+@patch('owca.perf._read_paranoid', return_value=0)
+@patch('owca.perf.LIBC.capget', side_effect=cap_dac_override)
+def test_privileges_not_root_capabilities_dac_paranoid(capget, read_paranoid, geteuid):
     assert perf.are_privileges_sufficient()

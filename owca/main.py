@@ -39,8 +39,19 @@ def main():
     parser.add_argument(
         '-v', '--version', action='version', version=platforms.get_owca_version(),
         help="Show version")
+    parser.add_argument(
+        '-0', '--root', help="Allow OWCA process to be run using root account",
+        dest='is_root_allowed', action='store_true')
 
     args = parser.parse_args()
+
+    # Do not allow to run OWCA with root privileges unless user indicates that it is intended.
+    uid = os.geteuid()
+    if uid == 0 and not args.is_root_allowed:
+        log.fatal("Do not run OWCA with root privileges. Consult documentation "
+                  "to understand what capabilities are required. If root account "
+                  "has to be used then set --root/-0 argument to override.")
+        exit(2)
 
     # Initialize logging subsystem from command line options.
     log_levels = logger.parse_loggers_from_list(args.levels)

@@ -17,8 +17,8 @@ ALLOW_CPU_EVENTS = 0
 
 # The constant and enums needs to be redefined in Python as ctypes does not allow to access them
 # as they are precompiler macros.
-# Value: https://elixir.bootlin.com/linux/v3.10.108/source/include/uapi/linux/capability.h#L263
-CAP_SYS_ADMIN = 21
+# Value: https://elixir.bootlin.com/linux/v3.10.108/source/include/uapi/linux/capability.h#L104
+CAP_DAC_OVERRIDE = 1
 
 # Version 3 does not seem to work and version 2 is deprecated.
 # See: http://man7.org/linux/man-pages/man2/capget.2.html#DESCRIPTION
@@ -266,10 +266,10 @@ def are_privileges_sufficient() -> bool:
     uid = os.geteuid()
     paranoid = _read_paranoid()
     capabilities = _get_capabilities()
-    has_cap_sys_admin = capabilities.effective & CAP_SYS_ADMIN == CAP_SYS_ADMIN
+    has_cap_dac_override = capabilities.effective & CAP_DAC_OVERRIDE == CAP_DAC_OVERRIDE
     log.debug("Determining privileges necessary to call perf_event_open - uid: {}, paranoid: {}, "
-              "CAP_SYS_ADMIN: {}".format(uid, paranoid, has_cap_sys_admin))
-    return uid == ROOT_UID or paranoid <= ALLOW_CPU_EVENTS or has_cap_sys_admin
+              "CAP_DAC_OVERRIDE: {}".format(uid, paranoid, has_cap_dac_override))
+    return uid == ROOT_UID or paranoid <= ALLOW_CPU_EVENTS and has_cap_dac_override
 
 
 def _get_capabilities():
