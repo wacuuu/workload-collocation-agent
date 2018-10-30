@@ -5,6 +5,7 @@ import os
 from owca import logger
 from owca.cgroups import BASE_SUBSYSTEM_PATH
 from owca.metrics import Measurements, MetricName
+from owca.security import SetEffectiveRootUid
 
 BASE_RESCTRL_PATH = '/sys/fs/resctrl'
 MON_GROUPS = 'mon_groups'
@@ -117,9 +118,10 @@ class ResGroup:
             try:
                 log.log(logger.TRACE, 'sync: Writings tasks for %r' % (self.resgroup_dir))
                 with open(self.resgroup_tasks, 'w') as f:
-                    for task in tasks.split():
-                        f.write(task)
-                        f.flush()
+                    with SetEffectiveRootUid():
+                        for task in tasks.split():
+                            f.write(task)
+                            f.flush()
             except ProcessLookupError:
                 log.warning('Could not write process pids to resctrl (%r). '
                             'Process probably does not exist. '

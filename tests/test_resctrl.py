@@ -19,7 +19,8 @@ def test_check_resctrl(*mock):
 @patch('owca.resctrl.log.warning')
 @patch('os.path.exists', return_value=True)
 @patch('os.makedirs')
-def test_sync(makedirs_mock, exists_mock, log_warning_mock):
+@patch('owca.resctrl.SetEffectiveRootUid')
+def test_sync(*args):
     resctrl_file_mock_simple_name = MagicMock()
     resctrl_file_mock_complex_name = MagicMock()
     open_mock = create_open_mock({
@@ -49,8 +50,8 @@ def test_sync(makedirs_mock, exists_mock, log_warning_mock):
 @patch('os.path.exists', return_value=True)
 @patch('os.makedirs', side_effect=OSError(errno.ENOSPC, "mock"))
 @patch('builtins.open', new=create_open_mock({
-        "/sys/fs/cgroup/cpu/ddd/tasks": "123",
-        }))
+    "/sys/fs/cgroup/cpu/ddd/tasks": "123",
+}))
 def test_sync_no_space_left_on_device(makedirs_mock, exists_mock, log_warning_mock):
     resgroup = ResGroup("/ddd")
     with pytest.raises(Exception, match='Limit of workloads reached'):
@@ -69,18 +70,20 @@ def test_sync_resctrl_not_mounted(exists_mock, log_warning_mock):
 @patch('owca.resctrl.log.warning')
 @patch('os.path.exists', return_value=True)
 @patch('os.makedirs')
-def test_sync_flush_exception(makedirs_mock, exists_mock, log_warning_mock):
+@patch('owca.resctrl.SetEffectiveRootUid')
+def test_sync_flush_exception(SetEffectiveRootUid_mock, makedirs_mock,
+                              exists_mock, log_warning_mock):
     resctrl_file_mock = MagicMock(  # open
-            return_value=MagicMock(
-                __enter__=MagicMock(  # __enter__
-                    return_value=MagicMock(
-                        write=MagicMock(  # write
-                            side_effect=ProcessLookupError
-                        )
+        return_value=MagicMock(
+            __enter__=MagicMock(  # __enter__
+                return_value=MagicMock(
+                    write=MagicMock(  # write
+                        side_effect=ProcessLookupError
                     )
                 )
             )
         )
+    )
     open_mock = create_open_mock({
         "/sys/fs/resctrl": "0",
         "/sys/fs/cgroup/cpu/ddd/tasks": "123",

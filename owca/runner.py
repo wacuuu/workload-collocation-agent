@@ -1,8 +1,8 @@
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional
 import logging
 import time
+from typing import List, Dict, Optional
 
+from dataclasses import dataclass, field
 
 from owca import detectors
 from owca import logger
@@ -15,14 +15,14 @@ from owca.detectors import (TasksMeasurements, TasksResources,
 from owca.mesos import MesosTask, create_metrics, sanitize_mesos_label
 from owca.metrics import Metric, MetricType
 from owca.resctrl import check_resctrl, cleanup_resctrl
-from owca.perf import are_privileges_sufficient
+from owca.security import are_privileges_sufficient
 
 log = logging.getLogger(__name__)
 
 
 def _calculate_desired_state(
         discovered_tasks: List[MesosTask], known_containers: List[Container]
-        ) -> (List[MesosTask], List[Container]):
+) -> (List[MesosTask], List[Container]):
     """Prepare desired state of system by comparing actual running Mesos tasks and already
     watched containers.
 
@@ -126,9 +126,10 @@ class DetectionRunner:
             cleanup_resctrl()
 
         if not are_privileges_sufficient():
-            log.critical("Impossible to use perf_event_open. You need to: be root; or adjust "
-                         "/proc/sys/kernel/perf_event_paranoid; or has CAP_SYS_ADMIN capability"
-                         " set. See man 2 perf_event_open for details.")
+            log.critical("Impossible to use perf_event_open. You need to: adjust "
+                         "/proc/sys/kernel/perf_event_paranoid; or has CAP_DAC_OVERRIDE capability"
+                         " set. You can run process as root too. See man 2 perf_event_open for "
+                         "details.")
             return
 
         while True:
