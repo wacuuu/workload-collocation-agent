@@ -108,7 +108,16 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
         # Only validate provided values (ignore defaults).
         if name in arguments:
             value = arguments[name]
-            if not isinstance(value, expected_type):
+            if isinstance(expected_type, typing.Union.__class__):
+                for union_expected_type in expected_type.__args__:
+                    if isinstance(value, union_expected_type):
+                        break
+                else:
+                    raise ConfigLoadError(
+                        'Value %r%s for field %r in class %r '
+                        'has improper type (got=%r expected=%r)!' %
+                        (value, node.start_mark, name, cls.__name__, type(value), expected_type))
+            elif not isinstance(value, expected_type):
                 raise ConfigLoadError(
                     'Value %r%s for field %r in class %r '
                     'has improper type (got=%r expected=%r)!' %

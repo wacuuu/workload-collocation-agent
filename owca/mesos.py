@@ -14,9 +14,10 @@
 
 
 from dataclasses import dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Union
 import urllib.parse
 import logging
+import os
 
 import requests
 
@@ -75,14 +76,26 @@ def find_cgroup(pid):
 @dataclass
 class MesosNode:
 
-    mesos_agent_endpoint = 'http://127.0.0.1:5051'
+    mesos_agent_endpoint: str = 'https://127.0.0.1:5051'
+    ssl_verify: Union[bool, str] = True  # requests: Can be used to pass cert CA bundle.
+
     METHOD = 'GET_STATE'
     api_path = '/api/v1'
+
+    def __post_init__(self):
+        if isinstance(self.ssl_verify, str):
+            if not os.path.exists(self.ssl_verify):
+                raise FileNotFoundError('cannot locate CA cert bundle file at %s for '
+                                        'verify SSL Mesos connection!' % self.ssl_verify)
 
     def get_tasks(self):
         """ only return running tasks """
         full_url = urllib.parse.urljoin(self.mesos_agent_endpoint, self.api_path)
-        r = requests.post(full_url, json=dict(type=self.METHOD))
+        r = requests.post(
+            full_url,
+            json=dict(type=self.METHOD),
+            verify=self.ssl_verify
+        )
         r.raise_for_status()
         state = r.json()
         tasks = []

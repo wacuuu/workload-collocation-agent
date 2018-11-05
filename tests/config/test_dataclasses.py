@@ -13,7 +13,7 @@
 # limitations under the License.
 
 
-from typing import List
+from typing import List, Union
 from dataclasses import dataclass, field
 
 import pytest
@@ -27,6 +27,7 @@ from owca import testing
 class DCExample:
     x: int
     y: str = 'bleblo'
+    d: Union[int, str] = 'notset'
     z: List[int] = field(default_factory=lambda: [1, 2, 3])
 
 
@@ -38,19 +39,22 @@ def test_dataclass():
     assert dc1.x == 5
     assert dc1.y == 'bleblo'
     assert dc1.z == [1, 2, 3]
+    assert dc1.d == 'asd'
 
     dc2 = data['dc2']
     assert dc2.x == 1
     assert dc2.y == 'newble'
     assert dc2.z == [3, 4, 5]
+    assert dc2.d == 4
 
 
 def test_invalid_dataclass():
     test_config_path = testing.relative_module_path(__file__, 'test_dataclasses_invalid.yaml')
-
-    with pytest.raises(config.ConfigLoadError) as e:
+    with pytest.raises(config.ConfigLoadError, match="has improper type"):
         config.load_config(test_config_path)
-        assert 'has imporper type' in str(e)
 
-    message = e.value.args[0]
-    assert "has improper type" in message
+
+def test_invalid_dataclass_union():
+    test_config_path = testing.relative_module_path(__file__, 'test_dataclasses_invalid_union.yaml')
+    with pytest.raises(config.ConfigLoadError, match="has improper type"):
+        config.load_config(test_config_path)

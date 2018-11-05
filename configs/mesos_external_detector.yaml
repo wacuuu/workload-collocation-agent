@@ -23,9 +23,6 @@ runner: !DetectionRunner
   # Requires registration with -r example.external_package:ExternalDetector
   detector: !ExampleDetector
 
-  # Run even without RDT available.
-  rdt_enabled: False
-
   # Decorate every metric with extra labels.
   extra_labels:
     env_id: "host"

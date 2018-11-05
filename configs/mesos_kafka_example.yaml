@@ -11,4 +11,3 @@ runner: !DetectionRunner
     topic: owca_anomalies
     max_timeout_in_seconds: 5.
   detector: !NOPAnomalyDetector
-  rdt_enabled: False
