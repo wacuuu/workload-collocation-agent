@@ -24,7 +24,7 @@ def test_parse():
         "180	images/sec: 74.9 +/- 0.5 (jitter = 8.9)    2.409"
     )
     expected = [
-        Metric('tensorflow_training_speed', value=74.9, type=MetricType.GAUGE,
-               help="Tensorflow Training Speed")
+        Metric('tensorflow_benchmark_training_speed', value=74.9, type=MetricType.GAUGE,
+               help="tensorflow benchmark training speed")
     ]
-    assert expected == parse(input_, None, None, {}, 'tensorflow_benchmark_training_')
+    assert expected == parse(input_, None, None, {}, 'tensorflow_benchmark_')

@@ -20,6 +20,7 @@ import re
 
 from owca.metrics import Metric, MetricType
 from owca.wrapper import wrapper_main
+from owca.wrapper.parser import readline_with_check
 
 EOF_line = "Stop-Cassandra-Stress-Now"
 
@@ -48,26 +49,20 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
     """
 
     new_metrics = []
-    new_line = input.readline()
-
+    new_line = readline_with_check(input, EOF_line)
     if "Op rate" in new_line:
         read_op_rate = re.search(r'Op rate[ ]*:[ ]*([0-9,]*) op/s', new_line)
         op_rate = float(''.join(read_op_rate.group(1).split(',')))
-        new_metrics.append(Metric('cassandra_stress_op_rate', op_rate,
+        new_metrics.append(Metric(metric_name_prefix + 'qps', op_rate,
                                   type=MetricType.GAUGE, labels=labels,
-                                  help="Cassandra Op Rate"))
-
+                                  help="QPS"))
     if "Latency 99th percentile" in new_line:
         read = re.search(
             r'Latency 99th percentile[ ]*:[ ]*([0-9]*\.[0-9]*) ms', new_line)
         p99 = float(read.group(1))
-        new_metrics.append(Metric('cassandra_stress_p99', p99,
+        new_metrics.append(Metric(metric_name_prefix + 'p99', p99,
                                   type=MetricType.GAUGE, labels=labels,
-                                  help="99th percentile of latency in Cassandra"))
-
-    if EOF_line in new_line:
-        raise StopIteration
-
+                                  help="99th percentile"))
     return new_metrics
 
 

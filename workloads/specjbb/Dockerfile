@@ -13,18 +13,24 @@
 # limitations under the License.
 
 
-from io import StringIO
+# Building SpecJBB
+FROM centos:7
 
-from owca.metrics import Metric, MetricType
-from owca.wrapper.parser_tensorflow_benchmark_prediction import parse
+RUN yum -y update
+RUN yum install -y epel-release && yum makecache
+RUN yum install -y java-1.8.0-openjdk-devel && yum install -y python36
 
+# add the specjbb to docker
+ADD workloads/specjbb/specjbb /home/
 
-def test_parse():
-    input_ = StringIO(
-        "580	248.7 examples/sec"
-    )
-    expected = [
-        Metric('tensorflow_benchmark_prediction_speed', value=248.7, type=MetricType.GAUGE,
-               help="tensorflow benchmark prediction speed")
-    ]
-    assert expected == parse(input_, None, None, {}, 'tensorflow_benchmark_')
+# add specjbb custom wrapper to docker
+ADD /dist/specjbb_wrapper.pex /usr/bin/specjbb_wrapper.pex
+
+# Note: will be ignored by mesos
+WORKDIR /home/specjbb
+
+# Notes:
+# path to main executable is:
+# /home/specjbb/spejbb2015.jar
+# path to wrapper is:
+# /usr/bin/specjbb_wrapper.pex

@@ -65,7 +65,8 @@ class LogStorage(Storage):
                 'prometheus exposition format; error: "{}" - skipping '.format(error_message)
             )
         else:
-            msg = convert_to_prometheus_exposition_format(metrics)
+            timestamp = get_current_time()
+            msg = convert_to_prometheus_exposition_format(metrics, timestamp)
             print(msg, file=self.output)
 
 
@@ -154,10 +155,9 @@ def group_metrics_by_name(metrics: List[Metric]) -> \
     return grouped
 
 
-def convert_to_prometheus_exposition_format(metrics: List[Metric]) -> str:
+def convert_to_prometheus_exposition_format(metrics: List[Metric], timestamp) -> str:
     """Convert metrics to the prometheus format."""
     output = []
-    curr_time_str = get_current_time()  # adds current timestamp
 
     grouped_metrics = group_metrics_by_name(metrics)
 
@@ -192,7 +192,7 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric]) -> str:
                 value_str = str(metric.value)
 
             output.append('{0}{1} {2} {3}\n'.format(metric.name, label_str,
-                                                    value_str, curr_time_str))
+                                                    value_str, timestamp))
         output.append('\n')
 
     return ''.join(output)
@@ -269,7 +269,8 @@ class KafkaStorage(Storage):
                       .format(error_message))
             raise UnconvertableToPrometheusExpositionFormat(error_message)
 
-        msg = convert_to_prometheus_exposition_format(metrics)
+        timestamp = get_current_time()
+        msg = convert_to_prometheus_exposition_format(metrics, timestamp)
         self.producer.produce(self.topic, msg.encode('utf-8'),
                               callback=self.callback_on_delivery)
 
@@ -294,6 +295,7 @@ class KafkaStorage(Storage):
                 "Message has failed to be writen to kafka. API error message: {}."
                 .format(error_from_callback__original_ref))
 
-        log.debug('message size=%i stored in kafka topic=%r', len(msg), self.topic)
+        log.debug('message size=%i with timestamp=%s stored in kafka topic=%r',
+                  len(msg), timestamp, self.topic)
 
         return  # the message has been send to kafka

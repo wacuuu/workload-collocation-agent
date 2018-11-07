@@ -20,5 +20,7 @@ config.sh
 config-*.sh
 /SpecJBB
 /dist
-/workloads/SpecJBB/specjbb/
 *.pyc
+/workloads/specjbb/specjbb
+run_workloads.retry
+.pex-build

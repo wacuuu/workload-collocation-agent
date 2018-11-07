@@ -1,0 +1,125 @@
+# Copyright (c) 2018 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
+import os
+import math
+
+include('../common.aurora')
+
+#----------------------------------------------------------------------------------------------------
+###
+# Params which can be modified by exporting environment variables.
+###
+
+# Note: for specjbb only controller port can be assigned manually:
+#   ports for backends and injectors are arbitrarily assigned.
+
+# Port on which listen controller.
+controller_host_ip = os.environ['controller_host_ip']
+communication_port = os.environ.get('communication_port', '42000')
+
+# Injection rate.
+qps = os.environ.get('qps', '1000')
+
+# Note:
+# there are many specjbb config params which can be set.
+# Please modify specjbb.config file to change them.
+#----------------------------------------------------------------------------------------------------
+
+
+# Variables which cannot be changed differently than just by editing this file.
+
+# Paths inside container.
+config_path = '/tmp/owca_config.raw'
+specjbb_jar = '/home/specjbb/specjbb2015.jar'
+specjbb_wrapper = '/usr/bin/specjbb_wrapper.pex'
+
+threads_count = int(math.ceil(cpu))
+
+# We don't have yet good way of copying config to mesos container:
+# here we just create it on the fly running shell commands inside container.
+with open('specjbb/specjbb.config', 'r') as fconfig:
+    config_content = "".join(fconfig.readlines())
+    config_content = config_content.format(qps=qps, controller_host_ip=controller_host_ip,
+                               controller_listen_port=communication_port,
+                               config_path=config_path, threads_count=threads_count)
+config_create_cmd = """
+cat >{config_path} <<EOF
+{config_content}
+EOF
+cat {config_path}
+""".format(config_path=config_path, config_content=config_content)
+
+# By specyfying the same group both in injector and backend
+#   we instruct a specjbb injector to communicate with
+#   the chosen backend.
+controller_cmd = ("java -Dspecjbb.forkjoin.workers={} -Xms4g -Xmx4g -jar {} -m distcontroller -p {}"
+                  .format(threads_count, specjbb_jar, config_path))
+
+# Add wrapper to controller_cmd; specjbb prints data to stderr.
+controller_cmd = ("{wrapper} --command '{command}' --stderr 0 \
+                             --kafka_brokers {brokers} --log_level DEBUG \
+                             --kafka_topic {kafka_topic} --log_level DEBUG \
+                             --metric_name_prefix 'specjbb_' \
+                             --labels \"{labels}\" \
+                             --peak_load \"{peak_load}\" --load_metric_name \"const\" \
+                             --slo {slo} --sli_metric_name specjbb_p99_total_purchase"
+                 .format(wrapper=specjbb_wrapper, command=controller_cmd,
+                         brokers=wrapper_kafka_brokers, log=wrapper_log_level,
+                         kafka_topic=wrapper_kafka_topic, labels=wrapper_labels, 
+                         peak_load=qps, slo=slo))
+
+# @TODO we should set max RAM assigned to JVM, but if set the job fails to run.
+injector_cmd = ("""
+    java -jar {jar} -m txinjector -p {config} -G GRP1 -J JVM_B"""
+    .format(jar=specjbb_jar, config=config_path))
+
+backend_cmd = ("""
+    java -Xms4g -Xmx4g -Xmn2g -XX:-UseBiasedLocking -XX:+UseParallelOldGC \
+        -jar {jar} -m backend -p {config} -G GRP1 -J JVM_A"""
+    .format(jar=specjbb_jar, config=config_path))
+
+config_create_process = Process(name='specjbb_build_config', cmdline=config_create_cmd)
+controller_process = Process(name='specjbb_controller',	cmdline=controller_cmd)
+injector_process= Process(name='specjbb_injector', cmdline=injector_cmd)
+backend_process = Process(name='specjbb_backend', cmdline=backend_cmd)
+
+controller_task = SequentialTask(
+    name = 'specjbb_controller--{}'.format(job_uniq_id),
+    processes = [config_create_process, controller_process],
+    resources = Resources(cpu=cpu, ram=ram, disk=disk)
+)
+injector_task = SequentialTask(
+    name = 'specjbb_injector--{}'.format(job_uniq_id),
+    processes = [config_create_process, injector_process],
+    resources = Resources(cpu=cpu, ram=ram, disk=disk)
+)
+backend_task = SequentialTask(
+    name = 'specjbb_backend--{}'.format(job_uniq_id),
+    processes = [config_create_process, backend_process],
+    resources = Resources(cpu=cpu, ram=ram, disk=disk)
+)
+
+jobs = [
+    WorkloadService(
+        name='specjbb--controller--{}'.format(job_uniq_id),
+        task=controller_task),
+    WorkloadService(
+        name='specjbb--injector--{}'.format(job_uniq_id),
+        task=injector_task),
+    WorkloadService(
+        name='specjbb--backend--{}'.format(job_uniq_id),
+        task=backend_task),
+]

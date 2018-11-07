@@ -1,0 +1,142 @@
+# This is a template inventory for run_workloads.yaml ansible playbook. 
+# The file matches an imaginary setup of mesos cluster, which constists of:
+# - four mesos-slave nodes,
+#   - two on which applications will be run:    10.10.10.1  10.10.10.2,
+#   - two on which load generators will be run: 10.10.10.11 10.10.10.12,
+# - utility node with kafka and docker registry:10.10.10.99
+# Let's assume also that docker registry contains needed 
+# images tagged with `testing_setup`.
+
+application_hosts:
+  hosts:
+    10.10.10.1:
+      env_uniq_id: 1
+      load_generator_host_ip: 10.10.10.11
+
+    10.10.10.2:
+      env_uniq_id: 2
+      load_generator_host_ip: 10.10.10.12
+      # Overwrite choosen keys.
+      workloads:
+        cassandra_ycsb: {'count': 1, 'resources': {'cpu', 0.1}}
+        cassandra_stress: {'count': 0}
+        redis_rpc_perf: {'count': 0}
+        twemcache_rpc_perf: {'count': 0}
+        twemcache_mutilate: {'count': 0}
+        specjbb: {'count': 1}
+        tensorflow_train: {'count': 0}
+        tensorflow_inference: {'count': 0}
+        tensorflow_benchmark_prediction: {'count': 0}
+        tensorflow_benchmark_train: {'count': 0}
+
+  vars:
+    # Variables for setting ansible.
+    ansible_connection: local
+    ansible_ssh_user: root
+    ansible_user: root
+
+    # Global variables to run workloads.
+    cluster: example
+    role: root
+    image_tag: testing_setup
+
+    wrapper_kafka_brokers: 10.10.10.99
+    docker_registry: 10.10.10.99:80
+
+    default_resources:
+      cpu: 1
+      ram: 1
+      disk: 1
+
+    # Per workload parameters.
+    workloads:
+      cassandra_ycsb:
+        count: 1
+        slo: 2500
+        jmx_port: 7199
+        communication_port: 9042
+        labels:
+          workload_kind:
+        cassandra:
+          image_name: cassandra
+          image_tag: 3.11.3
+        ycsb:
+
+      cassandra_stress:
+        count: 1
+        communication_port: 9142
+        jmx_port: 7299
+        slo: 1000
+        cassandra:
+          image_name: cassandra
+          image_tag: 3.11.3
+        cassandra_stress:
+
+      redis_rpc_perf:
+        labels:
+            foo: bar
+        count: 1
+        slo: 100000
+        communication_port: 6789
+        redis:
+          image_name: centos/redis
+          image_tag: latest
+        rpc_perf:
+
+      twemcache_rpc_perf:
+        count: 1
+        slo: 100000
+        communication_port: 11211
+        twemcache:
+        rpc_perf:
+          resources:
+            cpu: 0.5
+            ram: 2
+            disk: 2
+
+      twemcache_mutilate:
+        count: 1
+        slo: 3200
+        communication_port: 11311
+        twemcache:
+        mutilate:
+          resources:
+            cpu: 0.5
+            ram: 1
+            disk: 1
+
+      specjbb:
+        count: 1
+        slo: 26000000
+        communication_port: 42000
+        backend:
+        injector:
+        controller:
+
+      tensorflow_inference:
+        count: 1
+        slo: 2 # in seconds (maximum time to process a single image)
+        resources:
+          cpu: 1
+          ram: 2
+          disk: 2
+
+      tensorflow_train:
+        count: 1
+        slo: 0.5
+
+      tensorflow_benchmark_train:
+        count: 1
+        slo: 0.03
+        resources:
+          cpu: 10
+          ram: 50
+          disk: 30
+
+      tensorflow_benchmark_prediction:
+        count: 1
+        slo: 0.03
+        resources:
+          cpu: 10
+          ram: 50
+          disk: 30

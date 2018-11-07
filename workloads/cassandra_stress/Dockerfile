@@ -13,27 +13,21 @@
 # limitations under the License.
 
 
-FROM ubuntu:trusty
-
-RUN apt-get update && apt-get install -qy scons libevent-dev gengetopt libzmq-dev git g++
-
+FROM cassandra
 RUN ln -sfn /usr/bin/python2 /usr/bin/python
+RUN apt-get update && apt-get -y upgrade
+RUN apt -y install build-essential
+RUN apt -y install libssl-dev zlib1g-dev libncurses5-dev libncursesw5-dev libreadline-dev libsqlite3-dev
+RUN apt -y install libgdbm-dev libdb5.3-dev libbz2-dev libexpat1-dev liblzma-dev tk-dev
 RUN apt -y install wget
-RUN apt-get -y install zlib1g-dev build-essential
-
-WORKDIR /opt
-RUN wget https://www.python.org/ftp/python/3.6.6/Python-3.6.6.tgz
-RUN tar -xvf Python-3.6.6.tgz
-WORKDIR /opt/Python-3.6.6
-RUN ./configure
-RUN make
-RUN make install
-
+RUN wget https://www.python.org/ftp/python/3.6.6/Python-3.6.6.tar.xz
+RUN tar xf Python-3.6.6.tar.xz
+WORKDIR /Python-3.6.6
+RUN ./configure --enable-optimizations
+RUN make -j 8
+RUN make altinstall
 WORKDIR /
-RUN git clone https://github.com/Bplotka/mutilate.git
+ADD /dist/cassandra_stress_wrapper.pex /usr/bin/cassandra_stress_wrapper.pex
+RUN mkdir -p /stress
 
-WORKDIR mutilate
-
-RUN git checkout masterless && scons
-
-ADD /dist/mutilate_wrapper.pex /usr/bin/mutilate_wrapper.pex
+RUN apt-get install -y netcat

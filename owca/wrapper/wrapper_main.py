@@ -49,7 +49,9 @@ def main(parse: ParseFunc = default_parse):
                                           args.peak_load, args.load_metric_name)
 
     # Configuring log
-    logging.basicConfig(level=args.log_level)
+    logging.basicConfig(
+        level=args.log_level,
+        format="%(asctime)-15s %(levelname)s %(module)s %(message)s")
     log.debug("Logger configured with {0}".format(args.log_level))
     log.info("Starting wrapper version {}".format(get_owca_version()))
 
@@ -59,7 +61,9 @@ def main(parse: ParseFunc = default_parse):
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE,
                                         universal_newlines=True,
-                                        bufsize=1)
+                                        bufsize=1,
+                                        shell=args.subprocess_shell,
+                                        )
     input = workload_process.stderr if args.stderr else workload_process.stdout
 
     labels = ast.literal_eval(args.labels)
@@ -190,6 +194,12 @@ def prepare_argument_parser():
         '--inverse_sli_metric_value',
         help='Add this flag if value of a metric used to calculate service ' +
              'level indicator should be inversed.',
+        action='store_true',
+        default=False,
+    )
+    parser.add_argument(
+        '--subprocess_shell',
+        help='Run subprocess command with full shell support.',
         action='store_true',
         default=False,
     )

@@ -41,9 +41,9 @@ def test_parse():
         "Total operation time      : 00:01:30"
     )
     expected = [
-        Metric('cassandra_stress_op_rate', value=14997, type=MetricType.GAUGE,
-               help="Cassandra Op Rate"),
-        Metric('cassandra_stress_p99', value=74.0, type=MetricType.GAUGE,
-               help="99th percentile of latency in Cassandra")
+        Metric('cassandra_qps', value=14997, type=MetricType.GAUGE,
+               help="QPS"),
+        Metric('cassandra_p99', value=74.0, type=MetricType.GAUGE,
+               help="99th percentile")
     ]
-    assert expected == parse(input_, None, None, {}, 'cassandra_stress_')
+    assert expected == parse(input_, None, None, {}, 'cassandra_')

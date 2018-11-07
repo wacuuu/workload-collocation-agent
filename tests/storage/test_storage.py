@@ -67,7 +67,8 @@ def sample_metrics_unconvertable_to_PEF():
 def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_metrics,
                                                  sample_metrics_with_quote,
                                                  sample_metrics_with_float_value):
-    msg = storage.convert_to_prometheus_exposition_format(sample_metrics)
+    timestamp = storage.get_current_time()
+    msg = storage.convert_to_prometheus_exposition_format(sample_metrics, timestamp)
     assert(
         msg == (
             '# HELP average_latency_miliseconds latency measured in miliseconds\n'
@@ -81,7 +82,7 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
         )
     )
 
-    msg = storage.convert_to_prometheus_exposition_format(sample_metrics_with_quote)
+    msg = storage.convert_to_prometheus_exposition_format(sample_metrics_with_quote, timestamp)
     assert(
         msg == (
             '# HELP average_latency_miliseconds latency measured in miliseconds\n'
@@ -92,7 +93,8 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
         )
     )
 
-    msg = storage.convert_to_prometheus_exposition_format(sample_metrics_with_float_value)
+    msg = storage.convert_to_prometheus_exposition_format(sample_metrics_with_float_value,
+                                                          timestamp)
     assert(
         msg == (
             '# HELP average_latency_miliseconds latency measured in miliseconds\n'
@@ -167,7 +169,8 @@ def test_grouping_metrics_by_metadata(sample_metrics_mixed):
 def test_convert_to_prometheus_exposition_format_grouped_case(
         mock_get_current_time, sample_metrics_mixed
 ):
-    msg = storage.convert_to_prometheus_exposition_format(sample_metrics_mixed)
+    msg = storage.convert_to_prometheus_exposition_format(sample_metrics_mixed,
+                                                          storage.get_current_time())
     assert msg == '''# HELP bar bar-help
 bar 89 1531729598000
 

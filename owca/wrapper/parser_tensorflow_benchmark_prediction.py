@@ -31,15 +31,14 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
     """
 
     new_metrics = []
-    log.debug(input)
     new_line = readline_with_check(input)
 
     if "examples/sec" in new_line:
         read = re.search(r'[0-9]*\t([0-9]*\.[0-9]*)[ ]*examples\/sec', new_line)
         p99 = float(read.group(1))
-        new_metrics.append(Metric('tensorflow_prediction_speed', p99,
+        new_metrics.append(Metric(metric_name_prefix + 'prediction_speed', p99,
                                   type=MetricType.GAUGE, labels=labels,
-                                  help="Tensorflow Prediction Speed"))
+                                  help="tensorflow benchmark prediction speed"))
 
     return new_metrics
 

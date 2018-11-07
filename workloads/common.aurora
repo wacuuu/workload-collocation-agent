@@ -14,32 +14,79 @@
 
 
 import textwrap
+import os
+import json
 
-# Common for all workloads.
+### Common environment variables for all workloads.
 
-# Variables of meaning in accordance with shell command:
-# $ aurora job create {cluster}/{role}/staging_{env_uniq_id}/{workload_uniq_id}
+# Workload idenfitication
+workload_name = os.environ['workload_name']
+job_uniq_id = os.environ['job_uniq_id']
+job_name = os.environ['job_name']
+
+application = os.environ['application']
+load_generator = os.environ.get('load_generator', None)
+
+# Cluster job key identification.
 cluster = os.environ.get('cluster', 'example')
 role = os.environ.get('role', os.environ['USER'])
 env_uniq_id = os.environ['env_uniq_id']
-workload_uniq_id = os.environ.get('workload_uniq_id')  # can return None
 
-# Note: for workloads like tensorflow ignore load_generator_host_ip.
+environment = 'staging' + env_uniq_id
+
+# For workloads like tensorflow ignore load_generator_host_ip is ignored.
 application_host_ip = os.environ['application_host_ip']
 load_generator_host_ip = os.environ['load_generator_host_ip']
+own_ip = os.environ['own_ip']
 
-docker_registry = os.environ['docker_registry']
+# Performance related variables
+slo = os.environ.get('slo', "inf") # optional: default to inf
+
+# Docker image.
+image_tag = os.environ['image_tag']
+image_name = os.environ['image_name']
+print 'image_tag:', image_tag
+print 'image_name:', image_name
+
+# Resources:
+cpu = float(os.environ.get('cpu', 1))
+ram = float(os.environ.get('ram', 1)) * GB
+disk = float(os.environ.get('disk', 1)) * GB
+
 
 # Wrapper variables:
-wrapper_kafka_brokers = os.environ['wrapper_kafka_brokers']
+wrapper_kafka_brokers = os.environ.get('wrapper_kafka_brokers', '')
+wrapper_kafka_topic = os.environ.get('wrapper_kafka_topic', '')
 wrapper_log_level = os.environ.get('wrapper_log_level', 'DEBUG')
 # Here as dict, must be passed to wrapper as json string.
 #   Can be extended as desired in workload's aurora manifests.
+extra_labels = json.loads(os.environ.get('labels', '{}'))
 wrapper_labels = {
-    'workload_uniq_id': workload_uniq_id,
+    'workload_name': workload_name,
+    'name': workload_name, # not to break compability
+    'application': application,
+    'load_generator': load_generator,
+    'job_uniq_id': job_uniq_id,
     'env_uniq_id': env_uniq_id,
-    'own_ip': application_host_ip,
+    'own_ip': own_ip,
+    'application_host_ip': application_host_ip,
+    'load_generator_host_ip': load_generator_host_ip,
 }
+wrapper_labels.update(extra_labels)
+
+# For debug purposes.
+print 'job_uniq_id:', job_uniq_id
+print 'job_name:', job_name
+print 'workload_name:', workload_name
+print 'application:', application
+print 'load_generator:', load_generator
+print 'application_host_ip:', application_host_ip
+print 'load_generator_host_ip:', load_generator_host_ip
+print 'own_ip:', own_ip
+print 'slo:', slo
+print 'cpu:', cpu
+print 'ram:', ram
+print 'disk:', disk
 
 #Pre 0.20 way of adding metadata
 class AddMetadata:
@@ -54,3 +101,18 @@ class AddMetadata:
 
 def dedent(s):
     return textwrap.dedent(s).replace('\n', ' ')
+
+WorkloadService = Service(
+    constraints=dict(own_ip=own_ip),
+    name=job_name,
+    cluster=cluster,
+    environment=environment,
+    role=role,
+    enable_hooks=True,
+    container=Mesos(image=DockerImage(
+        name=image_name, tag=image_tag,
+    )),
+)
+
+
+hooks = [AddMetadata(wrapper_labels)]

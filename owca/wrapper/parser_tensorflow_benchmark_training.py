@@ -32,16 +32,15 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
     """
 
     new_metrics = []
-    log.debug(input)
     new_line = readline_with_check(input)
 
     if "images/sec" in new_line:
         read = re.search(r'[0-9]*\timages\/sec:[ ]*([0-9]*\.[0-9]*)', new_line)
         p99 = float(read.group(1))
 
-        new_metrics.append(Metric('tensorflow_training_speed', p99,
+        new_metrics.append(Metric(metric_name_prefix + 'training_speed', p99,
                                   type=MetricType.GAUGE, labels=labels,
-                                  help="Tensorflow Training Speed"))
+                                  help="tensorflow benchmark training speed"))
 
     return new_metrics
 

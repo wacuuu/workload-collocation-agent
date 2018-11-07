@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 from io import TextIOWrapper
 from typing import List, Dict
 import re
 from owca.metrics import Metric, MetricType
 from owca.wrapper import wrapper_main
+from owca.wrapper.parser import readline_with_check
 
 EOF_line = "Stop-Mutilate-Now"
 
@@ -40,24 +40,24 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
     """
 
     new_metrics = []
-    new_line = input.readline()
+    new_line = readline_with_check(input, EOF_line)
     if "read" in new_line:
         read = re.search(r'read\s*[0-9]+\.[0-9]+[ ]*[0-9]' +
                          r'+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]' +
-                         r'+[ ]*[0-9]+\.[0-9]+[ ]*([0-9]+\.[0-9]+)[ ]*[0-9]+\.[0-9]+[ ]*', new_line)
+                         r'+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*([0-9]+\.[0-9]+)[ ]*',
+                         new_line)
         p95 = float(read.group(1))
-        new_metrics.append(Metric('memcached_read_p95', p95,
-                                  type=MetricType.GAUGE, labels=labels,
-                                  help="95th percentile of read latency in Memcached"))
+        new_metrics.append(
+            Metric(metric_name_prefix + 'read_p99', p95,
+                   type=MetricType.GAUGE, labels=labels,
+                   help="99th percentile of read latency"))
     if "Total QPS" in new_line:
         read_qps = re.search(r'Total QPS = ([0-9]*\.[0-9])', new_line)
         if read_qps is not None:
             qps = float(read_qps.group(1))
             new_metrics.append(Metric(
-                'memcached_qps', qps, type=MetricType.GAUGE,
-                labels=labels, help="QPS in Memcached"))
-    if EOF_line in new_line:
-        raise StopIteration
+                metric_name_prefix + 'qps', qps, type=MetricType.GAUGE,
+                labels=labels, help="QPS"))
     return new_metrics
 
 

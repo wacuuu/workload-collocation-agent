@@ -22,64 +22,47 @@ include('../common.aurora')
 # Params which can be modified by exporting environment variables.
 ###
 
-mutilate_image_tag = os.environ.get('mutilate_image_tag')  # Workaround for "force pull images" defect in Aurora.
+communication_port = os.environ.get('communication_port', '11211')
 #----------------------------------------------------------------------------------------------------
 
 
-# Add label for identification workload in prometheus.
-wrapper_labels["name"] = 'mutilate--%s' % workload_uniq_id
-wrapper_labels["load_generator"] = ""
-wrapper_labels["application"] = "mutilate"
-apms_kafka_topic_name="owca_apms_mutilate"
+QPS=350000
+mutilate_cmd='"while true; do /mutilate/mutilate -s %s:%s -Q %d --time=90 --update=0.01 --threads=8 -C 24; done"'%(
+    application_host_ip, communication_port, QPS
+)
 
-# configure loops and command
-loops=200000
-
-# for i in {1..100}; do  ./mutilate -s 10.3.88.118 --time=60 -Q 40000 --update=0.01 --threads=8 -C 24;done
-
-mutilate_cmd='"'+'/mutilate/mutilate -s %s -Q 350000 --time=90 --update=0.01  --threads=8 -C 24'%application_host_ip+'"'
-
-# resources parameters
-cpu = 8
-ram = 10 * GB
-disk = 20 * GB
-# server ip
-
-# JOB definitions
 jobs = [
-    Job(
-        name='mutilate--%s' % workload_uniq_id,
-        cluster=cluster,
-        environment='staging' + env_uniq_id,
-        role=role,
-        enable_hooks=True,
-        constraints=dict(own_ip=load_generator_host_ip),
-        container=Mesos(image=DockerImage(
-            name=docker_registry + '/serenity/mutilate', tag='latest',
-        )),
-        task=SequentialTask(
-            name='mutilate--%s' % workload_uniq_id,
-            resources=Resources(cpu=cpu, ram=ram, disk=disk),
-            processes=[
- 		Process(
-			name='mutilate_warmup',
-			cmdline='/mutilate/mutilate -s %s --time=30 -R 40000 --update=1 --threads=4 -C 4' % application_host_ip
-		),
-                Process(
-                    name='mutilate_run',
-
-                    cmdline="/usr/bin/mutilate_wrapper.pex --command '/mutilate/loop_mutilate.sh {loops} {mutilate_cmd}' "
-                            "--metric_name_prefix 'mutilate_' "
-                            "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
-                            "--log_level {log_level} "
-                            "--labels \"{labels}\"".format(loops=loops,mutilate_cmd=mutilate_cmd,
-                                                           kafka_brokers=wrapper_kafka_brokers,
-                                                           log_level=wrapper_log_level,
-                                                           kafka_topic=apms_kafka_topic_name,
-                                                           labels=str(wrapper_labels)))
-            ],
+  WorkloadService(
+    task=SequentialTask(
+      name=job_name,
+      resources=Resources(cpu=cpu, ram=ram, disk=disk),
+      processes=[
+        Process(
+          name='mutilate_warmup',
+        cmdline='/mutilate/mutilate -s %s:%s --time=30 -R 40000 --update=1 --threads=4 -C 4' % (
+            application_host_ip, communication_port),
+        ),
+        Process(
+          name='mutilate_run',
+          cmdline="/usr/bin/mutilate_wrapper.pex --command '{mutilate_cmd}' "
+              "--metric_name_prefix {metric_name_prefix} "
+              "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
+              "--log_level {log_level} "
+              "--slo {slo} --sli_metric_name {application}_read_p95 "
+              "--peak_load {peak_load} --load_metric_name {application}_qps "
+              "--subprocess_shell "
+              "--labels \"{labels}\"".format(
+                  mutilate_cmd=mutilate_cmd,
+                  application=application,
+                  metric_name_prefix=application + "_",
+                  kafka_brokers=wrapper_kafka_brokers,
+                  kafka_topic=wrapper_kafka_topic,
+                  log_level=wrapper_log_level,
+                  labels=wrapper_labels, 
+                  slo=str(4000), peak_load=str(QPS)
+              )
         )
+      ],
     )
+  )
 ]
-
-hooks = [AddMetadata(wrapper_labels)]

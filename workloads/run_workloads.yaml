@@ -1,0 +1,304 @@
+#####################################################################################
+# Description:
+# Playbook to run workloads on a cluster.
+# We use lazy evaluation to shorten notation, but unfortunately
+# making it harder to understand the code.
+#####################################################################################
+
+
+- name: Recreate workloads
+  hosts: application_hosts
+  gather_facts: no
+  strategy: free
+
+  vars:
+    job_name: "{{workload_name}}--{{job_id}}--{{job_uniq_id}}"
+    job_key: "{{cluster}}/{{role}}/staging{{env_uniq_id}}/{{job_name}}"
+    aurora_file: "{{job_id}}/{{job_id}}.aurora"
+    create_job_command: "aurora job create {{job_key}} {{aurora_file}}"
+
+    # Note: search for resources in workload[job_id]['resources'], otherwise use default value.
+    resources: "{{workload[job_id].resources if (workload[job_id].resources is defined) else default_resources}}"
+    workload: "{{workloads[workload_name] if workload_name in workloads else dict(count=0) }}"
+
+    # By default image_name is {{docker_registry}}/owca/{{job_id}}
+    #   However, the image_name can be ovewritten on job level.
+    #   The same with image_tag
+    image_prefix: "owca"
+    image_subname: "{{job_id}}"
+    # Note: prefixing name with underscore as otherwise we would have infinite recursion.
+    image_tag_: "{{workload[job_id].image_tag
+                  if workload[job_id] is defined and workload[job_id].image_name is defined else
+                  image_tag}}"
+    image_name: "{{workload[job_id].image_name
+                  if workload[job_id] is defined and workload[job_id].image_name is defined
+                  else docker_registry + '/' + image_prefix + '/' + image_subname}}"
+
+    # Incrementing communication port for multiple instances of the same workload.
+    communication_port: "{{workload.communication_port | int + item }}"
+
+    application_host_ip: "{{inventory_hostname}}"
+
+    instances_iterator: "{{ range(0, workload.count)|list}}"
+
+  environment:
+    job_key: "{{job_key}}"
+    job_name: "{{job_name}}"
+    role: "{{role}}"
+    application_host_ip: "{{application_host_ip}}"
+    load_generator_host_ip: "{{load_generator_host_ip}}"
+    own_ip: "{{own_ip}}"
+    wrapper_kafka_brokers: "{{wrapper_kafka_brokers}}"
+    wrapper_kafka_topic: "owca_workloads_{{workload_name}}"
+    env_uniq_id: "{{env_uniq_id}}"
+    image_name: "{{image_name}}"
+    image_tag: "{{image_tag_}}"
+    labels: "{{workload.labels | default({}) | to_json }}"
+
+    cpu: "{{resources.cpu}}"
+    ram: "{{resources.ram}}"
+    disk: "{{resources.disk}}"
+    job_uniq_id: "{{job_uniq_id}}"
+
+    communication_port: "{{communication_port}}"
+
+    # Required for metadata labels
+    workload_name: "{{workload_name}}"
+    application: "{{application}}"
+    load_generator: "{{load_generator}}"
+
+    slo: "{{workload.get('slo')}}"
+
+
+  tasks:
+    - name: Clean jobs
+      shell: "aurora job list {{cluster}}/{{role}}/staging{{env_uniq_id}} |
+              xargs --no-run-if-empty -n 1 -P0 aurora job killall"
+      delegate_to: localhost
+      tags: clean_jobs
+
+
+    - name: Create cassandra/ycsb workload
+      vars:
+        workload_name: cassandra_ycsb
+        job_uniq_id: "{{communication_port}}"
+        application: cassandra
+        load_generator: ycsb
+      block:
+      - name: Create cassandra for ycsb
+        vars:
+          job_id: cassandra
+          image_name: cassandra
+          image_tag: 3.11.3
+          own_ip: "{{application_host_ip}}"
+        environment:
+          jmx_port: "{{workload.jmx_port + item}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      - name: Create ycsb for cassandra
+        vars:
+          job_id: ycsb
+          own_ip: "{{load_generator_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      delegate_to: localhost
+      tags: cassandra_ycsb
+
+
+    - name: Create cassandra/stress workload
+      vars:
+        workload_name: cassandra_stress
+        job_uniq_id: "{{communication_port}}"
+        application: cassandra
+        load_generator: cassandra_stress
+      block:
+      - name: Create cassandra for stress
+        vars:
+          job_id: cassandra
+          own_ip: "{{application_host_ip}}"
+        environment:
+          jmx_port: "{{workload.jmx_port + item}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      - name: Create cassandra_stress
+        vars:
+          job_id: cassandra_stress
+          own_ip: "{{load_generator_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      delegate_to: localhost
+      tags: cassandra_stress
+
+
+    - name: Create redis/rpc-pef workload
+      vars:
+        workload_name: redis_rpc_perf
+        job_uniq_id: "{{communication_port}}"
+        application: redis
+        load_generator: rpc_perf
+      block:
+      - name: Create redis
+        vars:
+          job_id: redis
+          own_ip: "{{application_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      - name: Create rpc-perf for redis
+        vars:
+          job_id: rpc_perf
+          own_ip: "{{load_generator_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      delegate_to: localhost
+      tags: redis_rpc_perf
+
+
+    - name: Create twemcache/rpc-pef workload
+      vars:
+        workload_name: twemcache_rpc_perf
+        job_uniq_id: "{{communication_port}}"
+        application: twemcache
+        load_generator: rpc_perf
+      block:
+      - name: Create twemcache for rpc-perf
+        vars:
+          job_id: twemcache
+          own_ip: "{{application_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      - name: Create rpc-perf for twemcache
+        vars:
+          job_id: rpc_perf
+          own_ip: "{{load_generator_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      delegate_to: localhost
+      tags: twemcache_rpc_perf
+
+
+    - name: Create twemcache/mutilate workload
+      vars:
+        workload_name: twemcache_mutilate
+        job_uniq_id: "{{communication_port}}"
+        application: twemcache
+        load_generator: mutilate
+      block:
+      - name: Create twemcache for mutilate
+        vars:
+          job_id: twemcache
+          own_ip: "{{application_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      - name: Create mutilate for twemcache
+        vars:
+          job_id: mutilate
+          own_ip: "{{load_generator_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      delegate_to: localhost
+      tags: twemcache_mutilate
+
+
+    - name: Create specjbb workload
+      vars:
+        workload_name: specjbb
+        job_uniq_id: "{{communication_port}}"
+        aurora_file: specjbb/specjbb.aurora
+        image_subname: specjbb
+        application: specjbb
+        load_generator: specjbb
+      environment:
+        controller_host_ip: "{{load_generator_host_ip}}"
+      block:
+      - name: Create specjbb backends
+        vars:
+          job_id: backend
+          own_ip: "{{application_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      - name: Create specjbb injectors
+        vars:
+          job_id: injector
+          own_ip: "{{load_generator_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      - name: Create specjbb controllers
+        vars:
+          job_id: controller
+          own_ip: "{{load_generator_host_ip}}"
+        command: "{{create_job_command}}"
+        loop: "{{instances_iterator}}"
+      delegate_to: localhost
+      tags: specjbb
+
+
+    - name: Create tensorflow/inference workload
+      vars:
+        workload_name: tensorflow_inference
+        job_uniq_id: "{{item}}"
+        application: tensorflow
+        load_generator: inference
+        job_id: tensorflow_inference
+        job_name: "tensorflow_inference--{{job_uniq_id}}"
+        resources: "{{workload.resources | default(default_resources)}}"
+        own_ip: "{{application_host_ip}}"
+        communication_port: 0
+      delegate_to: localhost
+      tags: tensorflow_inference
+      command: "{{create_job_command}}"
+      loop: "{{instances_iterator}}"
+
+
+    - name: Create tensorflow/train workload
+      vars:
+        workload_name: tensorflow_train
+        job_uniq_id: "{{item}}"
+        application: tensorflow
+        load_generator: train
+        job_id: tensorflow_train
+        job_name: "tensorflow_train--{{job_uniq_id}}"
+        resources: "{{workload.resources | default(default_resources)}}"
+        own_ip: "{{application_host_ip}}"
+        communication_port: 0
+      delegate_to: localhost
+      tags: tensorflow_train
+      command: "{{create_job_command}}"
+      loop: "{{instances_iterator}}"
+
+
+    - name: Create tensorflow-benchmark/train workload
+      vars:
+        workload_name: tensorflow_benchmark_train
+        job_uniq_id: "{{item}}"
+        application: tensorflow
+        aurora_file: tensorflow_benchmark/tensorflow-benchmark-training.aurora
+        load_generator: benchmark_train
+        resources: "{{workload.resources | default(default_resources)}}"
+        job_id: tensorflow_benchmark_train
+        image_subname: tensorflow_benchmark
+        job_name: "tensorflow_benchmark_train--{{job_uniq_id}}"
+        own_ip: "{{application_host_ip}}"
+        communication_port: 0
+      delegate_to: localhost
+      tags: tensorflow_benchmark_train
+      command: "{{create_job_command}}"
+      loop: "{{instances_iterator}}"
+
+
+    - name: Create tensorflow-benchmark/prediction workload
+      vars:
+        workload_name: tensorflow_benchmark_prediction
+        job_uniq_id: "{{item}}"
+        application: tensorflow
+        aurora_file: tensorflow_benchmark/tensorflow-benchmark-prediction.aurora
+        load_generator: benchmark_prediction
+        resources: "{{workload.resources | default(default_resources)}}"
+        job_id: tensorflow_benchmark_prediction
+        image_subname: tensorflow_benchmark
+        job_name: "tensorflow_benchmark_prediction--{{job_uniq_id}}"
+        own_ip: "{{application_host_ip}}"
+        communication_port: 0
+      delegate_to: localhost
+      tags: tensorflow_benchmark_prediction
+      command: "{{create_job_command}}"
+      loop: "{{instances_iterator}}"

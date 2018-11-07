@@ -20,12 +20,12 @@ pipeline {
               steps {
                   sh '''
                     cd $JENKINS_HOME/workspace/OWCA-production/
-                    cp $HOME/.kaggle/kaggle.json $JENKINS_HOME/workspace/OWCA-production/workloads/tensorflow-inference/
-                    cp $HOME/.kaggle/kaggle.json $JENKINS_HOME/workspace/OWCA-production/workloads/tensorflow-train/
-                    mkdir -p $JENKINS_HOME/workspace/OWCA-production/workloads/SpecJBB/specjbb
-                    DOCKERFILES=`cd $JENKINS_HOME/workspace/OWCA-production && find . -name Dockerfile`
+                    cp $HOME/.kaggle/kaggle.json $JENKINS_HOME/workspace/OWCA-production/workloads/tensorflow_inference/
+                    cp $HOME/.kaggle/kaggle.json $JENKINS_HOME/workspace/OWCA-production/workloads/tensorflow_train/
+                    mkdir -p $JENKINS_HOME/workspace/OWCA-production/workloads/specjbb/specjbb
+                    cd $JENKINS_HOME/workspace/OWCA-production
+                    DOCKERFILES=`find . -name Dockerfile`
                     for dockfile in $DOCKERFILES; do docker build -f $dockfile -t `echo $dockfile | cut -d / -f 2 | tr '[:upper:]' '[:lower:]'` .; done
- 
                   '''
               }
           }

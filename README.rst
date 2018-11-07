@@ -61,10 +61,16 @@ Building executable binary (distribution)
 
 .. code:: shell-session
 
-   tox -e package
+   tox -e owca_package
 
 
 Results in single distributable and executable binary in ``dist/owca.pex``.
+
+When rebuilding you can reuse existing pex build cache, to speedup building process.
+
+.. code-block:: shell
+
+    PEX_OPTIONS='--no-pypi -f .pex-build' tox -e owca_package
 
 
 Configuration
@@ -262,7 +268,7 @@ in a form like this:
 
 .. code-block:: shell
 
-    ./dist/owca.pex -l debug -l example:info
+    ./dist/owca.pex -l debug -l example:info -l prm:debug
 
 Those will configure ``owca`` module to debug level and ``example`` module to info level.
 

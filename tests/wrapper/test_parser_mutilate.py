@@ -35,9 +35,9 @@ def test_parse():
         "TX   67524708 bytes :    6.4 MB/s"
     )
     expected = [
-        Metric('memcached_read_p95', value=1128.2, type=MetricType.GAUGE,
-               help="95th percentile of read latency in Memcached"),
-        Metric('memcached_qps', value=159578.5, type=MetricType.GAUGE,
-               help="QPS in Memcached")
+        Metric('twemcache_read_p99', value=1386.5, type=MetricType.GAUGE,
+               help="99th percentile of read latency"),
+        Metric('twemcache_qps', value=159578.5, type=MetricType.GAUGE,
+               help="QPS")
     ]
-    assert expected == parse(input_, None, None, {}, 'mutilate_')
+    assert expected == parse(input_, None, None, {}, 'twemcache_')

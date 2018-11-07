@@ -35,9 +35,8 @@ DEFAULT_REGEXP = r"(?P<name>\w+?)=(?P<value>\d+?.?\d*)"
 MAX_ATTEMPTS = 5
 
 
-def readline_with_check(input: TextIOWrapper) -> str:
+def readline_with_check(input: TextIOWrapper, EOF_line='') -> str:
     """Additionally check if EOF."""
-    EOF_line = ''
     new_line = input.readline()
     # Print to stdout read lines from subprocess stdout or stderr.
     print(new_line, end='')
