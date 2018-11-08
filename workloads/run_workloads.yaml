@@ -72,6 +72,23 @@
 
   tasks:
     - name: Clean jobs
+      # Compatbility with Ansible 2.7
+      # Fill all normally required parameters for workload that 
+      # make no sense for this task.
+      vars:
+        workload_name:  
+        image_tag_:
+        image_name:
+        resources:
+          cpu:
+          ram:
+          disk:
+        application:
+        load_generator: 
+        communication_port: 
+        own_ip: 
+        job_id: 
+        job_uniq_id: 
       shell: "aurora job list {{cluster}}/{{role}}/staging{{env_uniq_id}} |
               xargs --no-run-if-empty -n 1 -P0 aurora job killall"
       delegate_to: localhost
