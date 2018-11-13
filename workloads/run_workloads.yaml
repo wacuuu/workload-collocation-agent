@@ -112,12 +112,14 @@
           jmx_port: "{{workload.jmx_port + item}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: cassandra_ycsb--cassandra
       - name: Create ycsb for cassandra
         vars:
           job_id: ycsb
           own_ip: "{{load_generator_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: cassandra_ycsb--ycsb
       delegate_to: localhost
       tags: cassandra_ycsb
 
@@ -137,12 +139,14 @@
           jmx_port: "{{workload.jmx_port + item}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: cassandra_stress--cassandra
       - name: Create cassandra_stress
         vars:
           job_id: cassandra_stress
           own_ip: "{{load_generator_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: cassandra_stress--stress
       delegate_to: localhost
       tags: cassandra_stress
 
@@ -160,12 +164,14 @@
           own_ip: "{{application_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: redis_rpc_perf--redis
       - name: Create rpc-perf for redis
         vars:
           job_id: rpc_perf
           own_ip: "{{load_generator_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: redis_rpc_perf--rpc_perf
       delegate_to: localhost
       tags: redis_rpc_perf
 
@@ -183,12 +189,14 @@
           own_ip: "{{application_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: twemcache_rpc_perf--twemcache
       - name: Create rpc-perf for twemcache
         vars:
           job_id: rpc_perf
           own_ip: "{{load_generator_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: twemcache_rpc_perf--rpc_perf
       delegate_to: localhost
       tags: twemcache_rpc_perf
 
@@ -206,12 +214,14 @@
           own_ip: "{{application_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: twemcache_mutilate--twemcache
       - name: Create mutilate for twemcache
         vars:
           job_id: mutilate
           own_ip: "{{load_generator_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: twemcache_mutilate--mutilate
       delegate_to: localhost
       tags: twemcache_mutilate
 
@@ -233,18 +243,21 @@
           own_ip: "{{application_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: specjbb--backend
       - name: Create specjbb injectors
         vars:
           job_id: injector
           own_ip: "{{load_generator_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: specjbb--injector
       - name: Create specjbb controllers
         vars:
           job_id: controller
           own_ip: "{{load_generator_host_ip}}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
+        tags: specjbb--controller
       delegate_to: localhost
       tags: specjbb
 
