@@ -48,7 +48,7 @@ jobs = [
               "--metric_name_prefix {metric_name_prefix} "
               "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
               "--log_level {log_level} "
-              "--slo {slo} --sli_metric_name {application}_read_p95 "
+              "--slo {slo} --sli_metric_name {application}_read_p99 "
               "--peak_load {peak_load} --load_metric_name {application}_qps "
               "--subprocess_shell "
               "--labels \"{labels}\"".format(
