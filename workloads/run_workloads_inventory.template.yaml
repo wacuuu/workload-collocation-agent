@@ -88,6 +88,8 @@ application_hosts:
         slo: 100000
         communication_port: 11211
         twemcache:
+          threads: 1
+          max_memory: 1234
         rpc_perf:
           resources:
             cpu: 0.5

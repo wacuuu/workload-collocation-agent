@@ -22,6 +22,11 @@ include('../common.aurora')
 
 # Port that stressed application listens on.
 communication_port = os.environ.get('communication_port', 11211)
+
+# twemcache worker threads count
+twemcache_threads = os.environ.get('twemcache_threads', 1)
+twemcache_max_memory = os.environ.get('twemcache_max_memory', 1024)
+
 #----------------------------------------------------------------------------------------------------
 
 jobs = [
@@ -33,11 +38,13 @@ jobs = [
                 Process(
                     name='twemcache',
                     cmdline=
-                        "twemcache --prealloc --hash-power=20 --max-memory=1024 "
+                        "twemcache --prealloc --hash-power=20 --max-memory={twemcache_max_memory} "
                             "--port={communication_port} --eviction-strategy=2 --verbosity=4 "
-                            "--threads=1 --backlog=128 -u twemcache "
+                            "--threads={twemcache_threads} --backlog=128 -u twemcache "
                             "--maximize-core-limit --slab-size=1048576 ".format(
-                                    communication_port=communication_port
+                                    communication_port=communication_port,
+                                    twemcache_threads=twemcache_threads,
+                                    twemcache_max_memory=twemcache_max_memory,
                             )
                 ),
             ],

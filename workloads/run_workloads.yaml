@@ -187,6 +187,9 @@
         vars:
           job_id: twemcache
           own_ip: "{{application_host_ip}}"
+        environment:
+          twemcache_threads: "{{workload[job_id].threads | default(1) }}"
+          twemcache_max_memory: "{{workload[job_id].max_memory | default(1024) }}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
         tags: twemcache_rpc_perf--twemcache
@@ -212,6 +215,9 @@
         vars:
           job_id: twemcache
           own_ip: "{{application_host_ip}}"
+        environment:
+          twemcache_threads: "{{workload[job_id].threads | default(1) }}"
+          twemcache_max_memory: "{{workload[job_id].max_memory | default(1024) }}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
         tags: twemcache_mutilate--twemcache
