@@ -201,6 +201,9 @@ into common.aurora parameteres:
             cpu: 8                              # cpu
             disk: 4                             # disk
         ycsb:
+          env:                                  # any value passed here will be passed directly to aurora job (using environment variables)
+            ycsb_target: 2000                   # check ycsb.aurora file for description of available parameters
+            ycsb_thread_count: 8                            
           resources:
             cpu: 1.5                            # cpu
 

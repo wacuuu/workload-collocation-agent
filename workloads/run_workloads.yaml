@@ -89,7 +89,7 @@
         own_ip: 
         job_id: 
         job_uniq_id: 
-      shell: "aurora job list {{cluster}}/{{role}}/staging{{env_uniq_id}} |
+      shell: "aurora job list {{cluster}}/{{role}}/staging{{env_uniq_id}}{{'/'+kill_job_name if kill_job_name is defined else ''}} |
               xargs --no-run-if-empty -n 1 -P0 aurora job killall"
       delegate_to: localhost
       tags: clean_jobs
@@ -101,6 +101,7 @@
         job_uniq_id: "{{communication_port}}"
         application: cassandra
         load_generator: ycsb
+      environment: "{{workload[job_id].env | default({}) }}"
       block:
       - name: Create cassandra for ycsb
         vars:
@@ -130,6 +131,7 @@
         job_uniq_id: "{{communication_port}}"
         application: cassandra
         load_generator: cassandra_stress
+      environment: "{{workload[job_id].env | default({}) }}"
       block:
       - name: Create cassandra for stress
         vars:
@@ -157,6 +159,7 @@
         job_uniq_id: "{{communication_port}}"
         application: redis
         load_generator: rpc_perf
+      environment: "{{workload[job_id].env | default({}) }}"
       block:
       - name: Create redis
         vars:
@@ -182,14 +185,12 @@
         job_uniq_id: "{{communication_port}}"
         application: twemcache
         load_generator: rpc_perf
+      environment: "{{workload[job_id].env | default({}) }}"
       block:
       - name: Create twemcache for rpc-perf
         vars:
           job_id: twemcache
           own_ip: "{{application_host_ip}}"
-        environment:
-          twemcache_threads: "{{workload[job_id].threads | default(1) }}"
-          twemcache_max_memory: "{{workload[job_id].max_memory | default(1024) }}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
         tags: twemcache_rpc_perf--twemcache
@@ -210,14 +211,12 @@
         job_uniq_id: "{{communication_port}}"
         application: twemcache
         load_generator: mutilate
+      environment: "{{workload[job_id].env | default({}) }}"
       block:
       - name: Create twemcache for mutilate
         vars:
           job_id: twemcache
           own_ip: "{{application_host_ip}}"
-        environment:
-          twemcache_threads: "{{workload[job_id].threads | default(1) }}"
-          twemcache_max_memory: "{{workload[job_id].max_memory | default(1024) }}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
         tags: twemcache_mutilate--twemcache
@@ -247,6 +246,7 @@
         vars:
           job_id: backend
           own_ip: "{{application_host_ip}}"
+        environment: "{{workload[job_id].env | default({}) }}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
         tags: specjbb--backend
@@ -254,6 +254,7 @@
         vars:
           job_id: injector
           own_ip: "{{load_generator_host_ip}}"
+        environment: "{{workload[job_id].env | default({}) }}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
         tags: specjbb--injector
@@ -261,6 +262,7 @@
         vars:
           job_id: controller
           own_ip: "{{load_generator_host_ip}}"
+        environment: "{{workload[job_id].env | default({}) }}"
         command: "{{create_job_command}}"
         loop: "{{instances_iterator}}"
         tags: specjbb--controller
@@ -279,6 +281,7 @@
         resources: "{{workload.resources | default(default_resources)}}"
         own_ip: "{{application_host_ip}}"
         communication_port: 0
+      environment: "{{workload.env | default({}) }}"
       delegate_to: localhost
       tags: tensorflow_inference
       command: "{{create_job_command}}"
@@ -296,6 +299,7 @@
         resources: "{{workload.resources | default(default_resources)}}"
         own_ip: "{{application_host_ip}}"
         communication_port: 0
+      environment: "{{workload.env | default({}) }}"
       delegate_to: localhost
       tags: tensorflow_train
       command: "{{create_job_command}}"
@@ -315,6 +319,7 @@
         job_name: "tensorflow_benchmark_train--{{job_uniq_id}}"
         own_ip: "{{application_host_ip}}"
         communication_port: 0
+      environment: "{{workload.env | default({}) }}"
       delegate_to: localhost
       tags: tensorflow_benchmark_train
       command: "{{create_job_command}}"
@@ -334,6 +339,7 @@
         job_name: "tensorflow_benchmark_prediction--{{job_uniq_id}}"
         own_ip: "{{application_host_ip}}"
         communication_port: 0
+      environment: "{{workload.env | default({}) }}"
       delegate_to: localhost
       tags: tensorflow_benchmark_prediction
       command: "{{create_job_command}}"

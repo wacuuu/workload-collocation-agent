@@ -24,8 +24,8 @@ include('../common.aurora')
 communication_port = os.environ.get('communication_port', 11211)
 
 # twemcache worker threads count
-twemcache_threads = os.environ.get('twemcache_threads', 1)
-twemcache_max_memory = os.environ.get('twemcache_max_memory', 1024)
+worker_threads = int(os.environ.get('worker_threads') or 1)
+max_memory = int(os.environ.get('max_memory') or 1024)
 
 #----------------------------------------------------------------------------------------------------
 
@@ -38,13 +38,13 @@ jobs = [
                 Process(
                     name='twemcache',
                     cmdline=
-                        "twemcache --prealloc --hash-power=20 --max-memory={twemcache_max_memory} "
+                        "twemcache --prealloc --hash-power=20 --max-memory={max_memory} "
                             "--port={communication_port} --eviction-strategy=2 --verbosity=4 "
-                            "--threads={twemcache_threads} --backlog=128 -u twemcache "
+                            "--threads={worker_threads} --backlog=128 -u twemcache "
                             "--maximize-core-limit --slab-size=1048576 ".format(
                                     communication_port=communication_port,
-                                    twemcache_threads=twemcache_threads,
-                                    twemcache_max_memory=twemcache_max_memory,
+                                    worker_threads=worker_threads,
+                                    max_memory=max_memory,
                             )
                 ),
             ],

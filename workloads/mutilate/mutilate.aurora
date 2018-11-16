@@ -22,13 +22,18 @@ include('../common.aurora')
 # Params which can be modified by exporting environment variables.
 ###
 
-communication_port = os.environ.get('communication_port', '11211')
+communication_port = int(os.environ.get('communication_port') or 11211)
+qps = int(os.environ.get('qps') or 350000)
+sli_percentile = int(os.environ.get('sli_percentile') or 99)
+time = int(os.environ.get('time') or 90)
+threads = int(os.environ.get('threads') or 8)
+connections = int(os.environ.get('connections') or 24)
+warmup_time = int(os.environ.get('warmup_time') or 30)
 #----------------------------------------------------------------------------------------------------
 
 
-QPS=350000
-mutilate_cmd='"while true; do /mutilate/mutilate -s %s:%s -Q %d --time=90 --update=0.01 --threads=8 -C 24; done"'%(
-    application_host_ip, communication_port, QPS
+mutilate_cmd='"while true; do /mutilate/mutilate -s %s:%s -Q %d --time=%s --update=0.01 --threads=%d -C %d; done"'%(
+    application_host_ip, communication_port, qps, time, threads, connections,
 )
 
 jobs = [
@@ -39,8 +44,8 @@ jobs = [
       processes=[
         Process(
           name='mutilate_warmup',
-        cmdline='/mutilate/mutilate -s %s:%s --time=30 -R 40000 --update=1 --threads=4 -C 4' % (
-            application_host_ip, communication_port),
+            cmdline='/mutilate/mutilate -s %s:%s --time=%d -R 40000 --update=1 --threads=4 -C 4' % (
+            application_host_ip, communication_port, warmup_time),
         ),
         Process(
           name='mutilate_run',
@@ -48,7 +53,7 @@ jobs = [
               "--metric_name_prefix {metric_name_prefix} "
               "--stderr 0 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} "
               "--log_level {log_level} "
-              "--slo {slo} --sli_metric_name {application}_read_p99 "
+              "--slo {slo} --sli_metric_name {application}_read_p{sli_percentile} "
               "--peak_load {peak_load} --load_metric_name {application}_qps "
               "--subprocess_shell "
               "--labels \"{labels}\"".format(
@@ -59,10 +64,11 @@ jobs = [
                   kafka_topic=wrapper_kafka_topic,
                   log_level=wrapper_log_level,
                   labels=wrapper_labels, 
-                  slo=str(4000), peak_load=str(QPS)
+                  slo=str(slo), peak_load=qps,
+                  sli_percentile=sli_percentile,
               )
         )
-      ],
+      ]
     )
   )
 ]
