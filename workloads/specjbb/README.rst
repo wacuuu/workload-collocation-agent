@@ -1,5 +1,9 @@
+##################################################################################
+This software is pre-production and should not be deployed to production servers.
+##################################################################################
+
 SpecJBB
-=======
+========
 User guide for specjbb: https://www.spec.org/jbb2015/docs/userguide.pdf
 
 
