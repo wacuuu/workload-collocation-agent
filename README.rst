@@ -20,7 +20,7 @@ Development installation & running tests.
 
 .. code:: shell-session
 
-   git clone https://github.intel.com/serenity/owca
+   git clone https://github.com/intel/owca
    cd owca
 
 
