@@ -2,6 +2,9 @@
 This software is pre-production and should not be deployed to production servers.
 ##################################################################################
 
+.. image:: https://travis-ci.com/intel/owca.svg?branch=master
+    :target: https://travis-ci.com/intel/owca
+
 =====================================================
 OWCA - Orchestration-Aware Workload Collocation Agent
 =====================================================
