@@ -28,7 +28,7 @@ setup(
         'Topic :: System :: Distributed Computing',
     ],
     install_requires=[
-          'requests==2.19.1',
+          'requests==2.20.1',
           'ruamel.yaml==0.15.37',
           'colorlog==3.1.4',
           'logging-tree==1.7',
