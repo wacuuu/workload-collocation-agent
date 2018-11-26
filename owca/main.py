@@ -28,7 +28,7 @@ from owca import config
 from owca import logger
 from owca import platforms
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('owca.main')
 
 
 def main():
@@ -42,9 +42,9 @@ def main():
         '--log-level',
         help='Log level for modules (by default for owca) in [module:]level form,'
              'where level can be one of: CRITICAL,ERROR,WARNING,INFO,DEBUG,TRACE'
-             'Example -l debug -l example:debug'
+             'Example -l debug -l example:debug. Defaults to owca:INFO.'
              'Can be overridden at runtime with config.yaml "loggers" section.',
-        default=['info'],
+        default=[],
         action='append',
         dest='levels',
     )
@@ -70,6 +70,7 @@ def main():
 
     # Initialize logging subsystem from command line options.
     log_levels = logger.parse_loggers_from_list(args.levels)
+    log_levels.setdefault(logger.DEFAULT_MODULE, 'info')
     logger.configure_loggers_from_dict(log_levels)
 
     log.warn('This software is pre-production and should not be deployed to production servers.')
