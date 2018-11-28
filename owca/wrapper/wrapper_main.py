@@ -21,7 +21,8 @@ import shlex
 import threading
 from functools import partial
 
-from owca.storage import KafkaStorage
+from owca.storage import KafkaStorage, LogStorage
+from owca.logger import TRACE
 from owca.wrapper.parser import (default_parse, parse_loop, DEFAULT_REGEXP,
                                  ParseFunc, ServiceLevelArgs, append_service_level_metrics)
 from owca.platforms import get_owca_version
@@ -50,7 +51,7 @@ def main(parse: ParseFunc = default_parse):
 
     # Configuring log
     logging.basicConfig(
-        level=args.log_level,
+        level=TRACE if args.log_level == 'TRACE' else args.log_level,
         format="%(asctime)-15s %(levelname)s %(module)s %(message)s")
     log.debug("Logger configured with {0}".format(args.log_level))
     log.info("Starting wrapper version {}".format(get_owca_version()))
@@ -80,7 +81,7 @@ def main(parse: ParseFunc = default_parse):
                                      max_timeout_in_seconds=5.0,
                                      topic=args.kafka_topic)
     else:
-        kafka_storage = None
+        kafka_storage = LogStorage(args.storage_output_filename)
 
     t = threading.Thread(target=parse_loop, args=(parse, kafka_storage,
                                                   append_service_level_metrics_func))
@@ -135,7 +136,7 @@ def prepare_argument_parser():
         help='Logging level',
         dest='log_level',
         default='ERROR',
-        choices=['ERROR', 'WARNING', 'INFO', 'DEBUG'],
+        choices=['ERROR', 'WARNING', 'INFO', 'DEBUG', 'TRACE'],
         type=str)
     parser.add_argument(
         '--labels',
@@ -157,6 +158,13 @@ def prepare_argument_parser():
         help='Kafka messages topic, passed to KafkaStorage',
         dest='kafka_topic',
         default='owca_apms',
+        type=str
+    )
+    parser.add_argument(
+        '--storage_output_filename',
+        help='When Kafka storage is not used, allows to redirect metrics to file',
+        dest='storage_output_filename',
+        default=None,
         type=str
     )
     parser.add_argument(

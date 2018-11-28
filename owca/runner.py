@@ -16,12 +16,12 @@
 import logging
 import time
 from typing import List, Dict, Optional
+from abc import ABC, abstractmethod
 
 from dataclasses import dataclass, field
 
-from owca import detectors
+from owca import detectors, nodes
 from owca import logger
-from owca import mesos
 from owca import platforms
 from owca import storage
 from owca.containers import Container
@@ -65,12 +65,20 @@ def _calculate_desired_state(
     return new_tasks, containers_to_delete
 
 
+class Runner(ABC):
+    """Base class for main loop run that is started by main entrypoint."""
+
+    @abstractmethod
+    def run(self):
+        ...
+
+
 @dataclass
-class DetectionRunner:
+class DetectionRunner(Runner):
     """Watch over tasks running on this cluster on this node, collect observation
     and report externally (using storage) detected anomalies.
     """
-    node: mesos.MesosNode
+    node: nodes.Node
     metrics_storage: storage.Storage
     anomalies_storage: storage.Storage
     detector: detectors.AnomalyDetector

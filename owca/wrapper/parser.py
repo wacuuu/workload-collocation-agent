@@ -68,7 +68,8 @@ def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
     new_line = readline_with_check(input)
     if separator is not None:
         # With separator, first we read the whole block of output until the separator appears
-        while new_line != separator and not new_line == '':
+
+        while not re.match(separator, new_line) and not new_line == '':
             input_lines.append(new_line)
             new_line = readline_with_check(input)
         log.debug("Found separator in {0}".format(new_line))
@@ -79,7 +80,7 @@ def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
     for metric in list(found_metrics):
         metric = metric.groupdict()
         new_metrics.append(Metric(metric_name_prefix+metric['name'], float(metric['value']),
-                                  type=MetricType.COUNTER, labels=labels))
+                                  labels=labels))
     return new_metrics
 
 
@@ -122,10 +123,31 @@ def append_service_level_metrics(service_level_args: ServiceLevelArgs,
                 value = float(metric.value)
             log.debug(metric)
             # Send `slo` metric only if SLI was found.
-            metrics.append(Metric("slo", float(service_level_args.slo), labels=labels))
-            metrics.append(Metric("sli", value, labels=labels))
-            metrics.append(Metric("sli_normalized", value/service_level_args.slo,
-                                  labels=labels))
+            metrics.append(Metric(
+                "slo",
+                float(service_level_args.slo),
+                labels=labels,
+                type=MetricType.GAUGE,
+                help='Service Level Objective based on %s metric' %
+                     service_level_args.sli_metric_name,
+            ))
+            metrics.append(Metric(
+                "sli",
+                value,
+                labels=labels,
+                type=MetricType.GAUGE,
+                help='Service Level Indicator based on %s metric' %
+                     service_level_args.sli_metric_name,
+            ))
+            metrics.append(Metric(
+                "sli_normalized",
+                value/service_level_args.slo,
+                labels=labels,
+                type=MetricType.GAUGE,
+                help='Normalized Service Level Indicator based on %s metric and SLO' %
+                     service_level_args.sli_metric_name,
+
+            ))
 
         if (service_level_args.load_metric_name not in (None, "const") and
                 service_level_args.load_metric_name == metric.name):

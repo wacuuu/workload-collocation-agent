@@ -1,9 +1,8 @@
-##################################################################################
-This software is pre-production and should not be deployed to production servers.
-##################################################################################
-
+=============================
 Tensorflow inference workload
 =============================
+
+**This software is pre-production and should not be deployed to production servers.**
 
 Runs prediction on images using the resnet50 neural net with pre-trained weights.
 Used dataset comes from https://www.kaggle.com/moltean/fruits

@@ -67,7 +67,8 @@ class LogStorage(Storage):
         else:
             timestamp = get_current_time()
             msg = convert_to_prometheus_exposition_format(metrics, timestamp)
-            print(msg, file=self.output)
+            log.log(logger.TRACE, 'Dump of metrics (text format): %r', msg)
+            print(msg, file=self.output, flush=True)
 
 
 class FailedDeliveryException(Exception):

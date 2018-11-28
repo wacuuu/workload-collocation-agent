@@ -17,7 +17,7 @@ import pytest
 from unittest.mock import patch, Mock, call
 from io import StringIO
 
-from owca.metrics import Metric, MetricType
+from owca.metrics import Metric
 from owca.storage import FailedDeliveryException
 from owca.wrapper.parser import (default_parse, kafka_store_with_retry,
                                  DEFAULT_REGEXP, MAX_ATTEMPTS, readline_with_check)
@@ -26,19 +26,19 @@ from owca.wrapper.parser import (default_parse, kafka_store_with_retry,
 @pytest.mark.parametrize("input,separator,expected", [
     (StringIO("x=4 y=5 \n"
               "x=2 y=6"), None,
-     [Metric("mp_x", 4.0, type=MetricType.COUNTER), Metric("mp_y", 5.0, type=MetricType.COUNTER)]),
+     [Metric("mp_x", 4.0), Metric("mp_y", 5.0)]),
     (StringIO("x=4 y=5 \n"
               "z=2 w=6 \n"
               "---"), "---",
-     [Metric("mp_x", 4.0, type=MetricType.COUNTER), Metric("mp_y", 5.0, type=MetricType.COUNTER),
-      Metric("mp_z", 2.0, type=MetricType.COUNTER), Metric("mp_w", 6.0, type=MetricType.COUNTER)]),
+     [Metric("mp_x", 4.0), Metric("mp_y", 5.0),
+      Metric("mp_z", 2.0), Metric("mp_w", 6.0)]),
     (StringIO("Metrics: x=4.5 y=5.4 \n"
               "z=1.337,w=6.66 \n"
               "---"), "---",
-     [Metric("mp_x", 4.5, type=MetricType.COUNTER),
-      Metric("mp_y", 5.4, type=MetricType.COUNTER),
-      Metric("mp_z", 1.337, type=MetricType.COUNTER),
-      Metric("mp_w", 6.66, type=MetricType.COUNTER)]),
+     [Metric("mp_x", 4.5),
+      Metric("mp_y", 5.4),
+      Metric("mp_z", 1.337),
+      Metric("mp_w", 6.66)]),
 ])
 def test_default_parse(input, separator, expected):
     assert default_parse(input, DEFAULT_REGEXP, separator, metric_name_prefix='mp_') == expected

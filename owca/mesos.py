@@ -22,9 +22,8 @@ import os
 import requests
 
 # Mesos tasks id
+from owca.nodes import Node, TaskId
 from owca.metrics import Measurements, Metric
-
-TaskId = str
 
 
 MESOS_TASK_STATE_RUNNING = 'TASK_RUNNING'
@@ -34,7 +33,8 @@ log = logging.getLogger(__name__)
 
 
 @dataclass
-class MesosTask:
+class MesosTask:  # implements nodes.Task but abstractclasses cannot be implemented by dataclasses
+
     name: str
 
     executor_pid: int
@@ -74,7 +74,7 @@ def find_cgroup(pid):
 
 
 @dataclass
-class MesosNode:
+class MesosNode(Node):
 
     mesos_agent_endpoint: str = 'https://127.0.0.1:5051'
     ssl_verify: Union[bool, str] = True  # requests: Can be used to pass cert CA bundle.
