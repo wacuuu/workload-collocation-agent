@@ -34,6 +34,8 @@ The diagram below puts OWCA in context of an example Mesos cluster and monitorin
 .. image:: docs/context.png
 
 
+See `OWCA Architecture 1.5.pdf`_ for futher details.
+
 
 Getting started
 ===============
@@ -66,8 +68,8 @@ OWCA is targeted at and tested on Centos 7.5.
 Configuration
 =============
 
-OWCA introduces simple but extensible mechanism to inject dependencies into classes.
-into complete software stack. OWCA main control loop is based on ``Runner`` base class that implements
+OWCA introduces simple but extensible mechanism to inject dependencies into classes and build complete software stack of components. 
+OWCA main control loop is based on ``Runner`` base class that implements
 single ``run`` blocking method. Depending on ``Runner`` class used, the OWCA is run in different execution mode (e.g. detection,
 allocation).
 
@@ -135,4 +137,7 @@ Further reading
 - `Wrappers guide <docs/wrappers.rst>`_
 - `Logging configuration <docs/logging.rst>`_
 - `Supported workloads and definitions </workloads>`_
+- `OWCA Architecture 1.5.pdf`_
+
+.. _`OWCA Architecture 1.5.pdf`: docs/OWCA_Architecture_v1.5.pdf
 
