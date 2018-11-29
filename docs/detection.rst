@@ -28,8 +28,9 @@ You can configure system to detect and report anomalies in following way in ``co
 
     runner: !DetectionRunner
       node: !MesosNode
-      storage: !KafkaStorage                    # used for storing all inputs and outputs
-      delay: 1.                                 # [s]
+      metrics_storage: !KafkaStorage            # used for storing all inputs of detection algorithm
+      anomalies_storage: !KafkaStorage          # used for storing all outputs of detection algorithm
+      action_delay: 1.                          # [s]
       detector: !ContentionAnomalyDetector      # implementation of abstract AnomalyDetector class
         example_config_int: 1
         example_config_list: [1, 4]
@@ -44,7 +45,8 @@ You can configure system to detect and report anomalies in following way in ``co
         def detect(self,
                     platform: Platform,
                     tasks_measurements: TasksMeasurements,
-                    tasks_resources: TasksResources
+                    tasks_resources: TasksResources,
+                    tasks_labels: TasksLabels,
                     ) -> (List[Anomaly], List[Metric]):
             ...
 
@@ -62,6 +64,7 @@ Example implementation:
         def detect(self, platform: Platform,
                          tasks_measurements: TasksMeasurements,
                          tasks_resources: TasksResources,
+                         tasks_labels: TasksLabels,
                          ) -> (List[Anomaly], List[Metric]):
             return [], []
 

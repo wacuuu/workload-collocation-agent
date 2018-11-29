@@ -6,6 +6,7 @@ Index of documents
 
 - `Installation guide <install.rst>`_
 - `Detection API <detection.rst>`_
+- `Allocation API <allocation.rst>`_
 - `Development guide <development.rst>`_
 - `External detector example <external_detector_example.rst>`_
 - `Wrappers guide <wrappers.rst>`_
