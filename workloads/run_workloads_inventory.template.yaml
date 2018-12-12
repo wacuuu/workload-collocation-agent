@@ -57,8 +57,6 @@ application_hosts:
           slo: 2500
           jmx_port: 7199
           communication_port: 9042
-          labels:
-            workload_kind:
           cassandra:
             image_name: cassandra
             image_tag: 3.11.3
