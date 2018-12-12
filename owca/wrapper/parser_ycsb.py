@@ -50,7 +50,7 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
 
     if "current ops" in new_line:
         operations_and_ops = \
-            re.search(r'(?P<ops_per_sec>\d+.\d+) current ops\/sec', new_line).groupdict()
+            re.search(r'(?P<ops_per_sec>\d+(\.\d+)?) current ops\/sec', new_line).groupdict()
         ops_per_sec = float(operations_and_ops['ops_per_sec'])
         new_metrics.append(Metric(metric_name_prefix + 'ops_per_sec', ops_per_sec,
                                   type=MetricType.GAUGE, labels=labels,
