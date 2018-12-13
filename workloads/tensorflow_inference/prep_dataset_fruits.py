@@ -18,7 +18,8 @@ import os.path
 import kaggle
 
 '''
-Downloads Moltean's fruits dataset using kaggle module (install with 'pip install -r requirements.txt')
+Downloads Moltean's fruits dataset using kaggle module
+(install with 'pip install -r requirements.txt')
 if dataset zip file is not found.
 '''
 

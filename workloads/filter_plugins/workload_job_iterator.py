@@ -31,10 +31,10 @@ def workload_job_iterator(workloads_versions, job_id):
                 r.append({'workload_instance_index': workload_instance_index,
                           'workload_version_name': workload_version_name,
                           'job_replica_index': job_replica_index})
-            i+=1
+            i += 1
     return r
 
 
 class FilterModule(object):
     def filters(self):
-        return { 'workload_job_iterator': workload_job_iterator }
+        return {'workload_job_iterator': workload_job_iterator}
