@@ -1,9 +1,8 @@
-##################################################################################
-This software is pre-production and should not be deployed to production servers.
-##################################################################################
-
+============================
 Tensorflow training workload
 ============================
+
+**This software is pre-production and should not be deployed to production servers.**
 
 Runs training of a neural net with the resnet50 architecture. Exposes a metric of the total number
 of images processed during the training from the start of the workload.

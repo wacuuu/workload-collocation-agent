@@ -1,10 +1,10 @@
-##################################################################################
-This software is pre-production and should not be deployed to production servers.
-##################################################################################
-
 =========
 Workloads
 =========
+
+**This software is pre-production and should not be deployed to production servers.**
+
+.. contents:: Table of Contents
 
 Description
 ===========
