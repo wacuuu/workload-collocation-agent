@@ -25,6 +25,12 @@ EOF_line = "Stop-Mutilate-Now"
 def parse(input: TextIOWrapper, regexp: str, separator: str = None,
           labels: Dict[str, str] = {}, metric_name_prefix: str = '') -> List[Metric]:
     """Custom parse function for mutilate
+        -for scan mode
+        #type       avg     min     1st     5th    10th    90th    95th    99th      QPS   target
+        read       76.3   346.3    21.1    23.5    24.5    34.3    38.7  2056.6   1002.0     1000
+
+
+        -for Q mode (run with -Q)
         #type       avg     std     min     5th    10th    90th    95th    99th
         read      801.9   155.0   304.5   643.7   661.1  1017.8  1128.2  1386.5
         update    804.6   157.8   539.4   643.4   661.2  1026.1  1136.1  1404.3
@@ -38,24 +44,45 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
         RX  382849511 bytes :   36.5 MB/s
         TX   67524708 bytes :    6.4 MB/s
     """
-
+    SCAN_MODE_COLUMNS = 11
     new_metrics = []
     new_line = readline_with_check(input, EOF_line)
-    if "read" in new_line:
-        read = re.search(r'read\s*[0-9]+\.[0-9]+[ ]*[0-9]' +
-                         r'+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]+[ ]*[0-9]+\.[0-9]' +
-                         r'+[ ]*[0-9]+\.[0-9]+[ ]*([0-9]+\.[0-9]+)[ ]*([0-9]+\.[0-9]+)[ ]*',
-                         new_line)
-        p95 = float(read.group(1))
-        p99 = float(read.group(2))
+    line = new_line.split()
+    scan_prefix = 'scan_'
+    if "read" in line:
+        if len(line) != SCAN_MODE_COLUMNS:
+            scan_prefix = ''
+        else:
+            qps = float(line[9])
+            new_metrics.append(Metric(
+                metric_name_prefix + scan_prefix + 'qps', qps,
+                type=MetricType.GAUGE, labels=labels, help="QPS"
+            ))
+
+        avg = float(line[1])
         new_metrics.append(
-            Metric(metric_name_prefix + 'read_p95', p95,
+            Metric(metric_name_prefix + scan_prefix + 'read_avg', avg,
+                   type=MetricType.GAUGE, labels=labels,
+                   help="Average"))
+
+        p90 = float(line[6])
+        new_metrics.append(
+            Metric(metric_name_prefix + scan_prefix + 'read_p90', p90,
+                   type=MetricType.GAUGE, labels=labels,
+                   help="90th percentile of read latency"))
+
+        p95 = float(line[7])
+        new_metrics.append(
+            Metric(metric_name_prefix + scan_prefix + 'read_p95', p95,
                    type=MetricType.GAUGE, labels=labels,
                    help="95th percentile of read latency"))
+
+        p99 = float(line[8])
         new_metrics.append(
-            Metric(metric_name_prefix + 'read_p99', p99,
+            Metric(metric_name_prefix + scan_prefix + 'read_p99', p99,
                    type=MetricType.GAUGE, labels=labels,
                    help="99th percentile of read latency"))
+
     if "Total QPS" in new_line:
         read_qps = re.search(r'Total QPS = ([0-9]*\.[0-9])', new_line)
         if read_qps is not None:
