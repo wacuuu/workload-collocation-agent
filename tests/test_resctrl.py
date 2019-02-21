@@ -14,7 +14,7 @@
 
 
 import errno
-from unittest.mock import call, MagicMock, patch
+from unittest.mock import call, MagicMock, patch, Mock
 
 import pytest
 
@@ -51,14 +51,14 @@ def test_sync(*args):
         resgroup.sync()
         resctrl_file_mock_simple_name.assert_called_once_with(
             '/sys/fs/resctrl/mon_groups/ddd/tasks', 'w')
-        resctrl_file_mock_simple_name.assert_has_calls([call().__enter__().write('123')])
+        resctrl_file_mock_simple_name.assert_has_calls([call().write('123')])
     with patch('builtins.open', open_mock):
         cgroup_path = "/ddd/ddd"
         resgroup = ResGroup(cgroup_path)
         resgroup.sync()
         resctrl_file_mock_complex_name.assert_called_once_with(
             '/sys/fs/resctrl/mon_groups/ddd-ddd/tasks', 'w')
-        resctrl_file_mock_complex_name.assert_has_calls([call().__enter__().write('123')])
+        resctrl_file_mock_complex_name.assert_has_calls([call().write('123')])
 
 
 @patch('owca.resctrl.log.warning')
@@ -88,14 +88,10 @@ def test_sync_resctrl_not_mounted(exists_mock, log_warning_mock):
 @patch('owca.resctrl.SetEffectiveRootUid')
 def test_sync_flush_exception(SetEffectiveRootUid_mock, makedirs_mock,
                               exists_mock, log_warning_mock):
-    resctrl_file_mock = MagicMock(  # open
-        return_value=MagicMock(
-            __enter__=MagicMock(  # __enter__
-                return_value=MagicMock(
-                    write=MagicMock(  # write
-                        side_effect=ProcessLookupError
-                    )
-                )
+    resctrl_file_mock = Mock(  # open function
+        return_value=Mock(  # handler
+            write=Mock(  # write
+                side_effect=ProcessLookupError
             )
         )
     )

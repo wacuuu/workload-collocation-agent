@@ -32,7 +32,6 @@ MON_L3_00 = 'mon_L3_00'
 MBM_TOTAL = 'mbm_total_bytes'
 LLC_OCCUPANCY = 'llc_occupancy'
 
-
 log = logging.getLogger(__name__)
 
 
@@ -130,31 +129,42 @@ class ResGroup:
                     raise Exception("Limit of workloads reached! (Oot of available CLoSes/RMIDs!)")
                 raise
 
-            try:
-                log.log(logger.TRACE, 'sync: Writings tasks for %r' % (self.resgroup_dir))
-                with open(self.resgroup_tasks, 'w') as f:
-                    with SetEffectiveRootUid():
-                        for task in tasks.split():
-                            f.write(task)
-                            f.flush()
-            except ProcessLookupError:
-                log.warning('Could not write process pids to resctrl (%r). '
-                            'Process probably does not exist. '
-                            'Restarting synchronization (attempt=%d).'
-                            % (self.resgroup_dir, attempt))
-                attempt += 1
-                continue
+            log.log(logger.TRACE, 'sync: Writings tasks for %r' % (self.resgroup_dir))
+            with SetEffectiveRootUid():
+                try:
+                    f = open(self.resgroup_tasks, 'w')
+                    for task in tasks.split():
+                        f.write(task)
+                        f.flush()
+                    log.log(logger.TRACE,
+                            'sync: Successful synchronization for %r - breaking' %
+                            self.resgroup_dir)
+                    break
+                except ProcessLookupError:
+                    # Handle race based exceptions when writing to tasks file.
+                    log.warning('Could not write process pids to resctrl (%r). '
+                                'Process probably does not exist. '
+                                'Restarting synchronization (attempt=%d).'
+                                % (self.resgroup_dir, attempt))
+                finally:
+                    # Handle the case that we have already write invalid pid
+                    # but we can observe that during flush. Close tries to flush writes
+                    # again with already invalid pid in buffer.
+                    try:
+                        f.close()
+                    except OSError:
+                        # Note: handle/fd will be released automatically after returning from
+                        # function!
+                        log.warning('Could not close file - ignoring!')
 
-            log.log(logger.TRACE,
-                    'sync: Succesful synchronization for %r - braking' % self.resgroup_dir)
-            break
-
-        else:
+            # In any case other than successful flush, retry ...
+            attempt += 1
+        else:  # There was no break - we exhausted number of retries...
             log.warning('sync: Unsuccessful synchronization attempts. Ignoring.')
             return
 
         log.log(logger.TRACE,
-                'sync: Succesful synchronization for %r - returning' % self.resgroup_dir)
+                'sync: Successful synchronization for %r - returning' % self.resgroup_dir)
 
     def get_measurements(self) -> Measurements:
         """
