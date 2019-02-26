@@ -32,7 +32,7 @@ application_version_name = os.environ.get('application_version_name', workload_v
 
 # Cluster job key identification.
 cluster = os.environ.get('cluster', 'example')
-role = os.environ.get('role', os.environ['USER'])
+role = os.environ.get('role', os.environ.get('USER', 'root'))
 env_uniq_id = os.environ['env_uniq_id']
 
 environment = 'staging' + env_uniq_id
