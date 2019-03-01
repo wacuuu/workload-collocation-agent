@@ -13,18 +13,23 @@
 # limitations under the License.
 
 
-from typing import List
 import logging
+import pprint
+from typing import List, Optional, Dict
 
 from dataclasses import dataclass
 
-from owca.resctrl import ResGroup
+from owca import logger
+from owca import resctrl
+from owca.allocators import AllocationConfiguration, TaskAllocations
 from owca.cgroups import Cgroup
-from owca.perf import PerfCounters
 from owca.metrics import Measurements, MetricName
-
+from owca.nodes import Task
+from owca.perf import PerfCounters
+from owca.resctrl import ResGroup
 
 log = logging.getLogger(__name__)
+
 DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES,
                   MetricName.CACHE_MISSES, MetricName.MEMSTALL)
 
@@ -39,36 +44,199 @@ def flatten_measurements(measurements: List[Measurements]):
     return all_measurements_flat
 
 
+def _sanitize_cgroup_path(cgroup_path):
+    assert cgroup_path.startswith('/'), 'Provide cgroup_path with leading /'
+    # cgroup path without leading '/'
+    relative_cgroup_path = cgroup_path[1:]
+    # Resctrl group is flat so flatten then cgroup hierarchy.
+    return relative_cgroup_path.replace('/', '-')
+
+
 @dataclass
 class Container:
-
     cgroup_path: str
+    platform_cpus: int
+    resgroup: ResGroup = None
+    allocation_configuration: Optional[AllocationConfiguration] = None
     rdt_enabled: bool = True
+    rdt_mb_control_enabled: bool = False
+    container_name: str = None  # defaults to faltten value of provided cgroup_path
 
     def __post_init__(self):
-        self.cgroup = Cgroup(self.cgroup_path)
+        self.cgroup = Cgroup(
+            self.cgroup_path,
+            platform_cpus=self.platform_cpus,
+            allocation_configuration=self.allocation_configuration,
+        )
+        self.container_name = (self.container_name or
+                               _sanitize_cgroup_path(self.cgroup_path))
         self.perf_counters = PerfCounters(self.cgroup_path, event_names=DEFAULT_EVENTS)
-        self.resgroup = ResGroup(self.cgroup_path) if self.rdt_enabled else None
 
     def sync(self):
+        """Called every iteration to keep pids of cgroup and resctrl in sync."""
         if self.rdt_enabled:
-            self.resgroup.sync()
+            self.resgroup.add_pids(self.cgroup.get_pids(), mongroup_name=self.container_name)
 
     def get_measurements(self) -> Measurements:
         try:
             return flatten_measurements([
                 self.cgroup.get_measurements(),
-                self.resgroup.get_measurements() if self.rdt_enabled else {},
+                self.resgroup.get_measurements(self.container_name) if self.rdt_enabled else {},
                 self.perf_counters.get_measurements(),
             ])
         except FileNotFoundError:
-            log.debug('Could not read measurements for container %s. '
-                      'Probably the mesos container has died during the current runner iteration.',
-                      self.cgroup_path)
+            log.warning('Could not read measurements for container %s. '
+                        'Probably the mesos container has died during '
+                        'the current runner iteration.',
+                        self.cgroup_path)
             # Returning empty measurements.
             return {}
 
     def cleanup(self):
-        if self.rdt_enabled:
-            self.resgroup.cleanup()
         self.perf_counters.cleanup()
+        if self.rdt_enabled:
+            self.resgroup.remove(self.container_name)
+
+    def get_allocations(self) -> TaskAllocations:
+        # In only detect mode, without allocation configuration return nothing.
+        if not self.allocation_configuration:
+            return {}
+        allocations: TaskAllocations = dict()
+        allocations.update(self.cgroup.get_allocations())
+        if self.rdt_enabled:
+            allocations.update(self.resgroup.get_allocations())
+
+        log.debug('allocations on task=%r from resgroup=%r allocations:\n%s',
+                  self.container_name, self.resgroup, pprint.pformat(allocations))
+
+        return allocations
+
+
+class ContainerManager:
+    """Responsible for synchronizing state between found orchestration software tasks,
+    their containers and resctrl system.
+    """
+
+    def __init__(self, rdt_enabled: bool, rdt_mb_control_enabled: bool, platform_cpus: int,
+                 allocation_configuration: Optional[AllocationConfiguration]):
+        self.containers: Dict[Task, Container] = {}
+        self.rdt_enabled = rdt_enabled
+        self.rdt_mb_control_enabled = rdt_mb_control_enabled
+        self.platform_cpus = platform_cpus
+        self.allocation_configuration = allocation_configuration
+
+    def sync_containers_state(self, tasks) -> Dict[Task, Container]:
+        """Syncs state of ContainerManager with a system by removing orphaned containers,
+        and creating containers for newly arrived tasks, and synchronizing containers' state.
+
+        Function is responsible for cleaning and initializing stateful subsystems such as:
+        - perf counters: opens file descriptors for counters,
+        - resctrl (ResGroups): creates and manages directories in resctrl filesystem and scarce
+            "closid" hardware identifiers
+
+        Can throw OutOfClosidsException.
+        """
+
+        # Find difference between discovered tasks and already watched containers.
+        new_tasks, containers_to_cleanup = _find_new_and_dead_tasks(
+            tasks, list(self.containers.values()))
+
+        if containers_to_cleanup:
+            log.debug('sync_containers_state: cleaning up %d containers',
+                      len(containers_to_cleanup))
+            log.log(logger.TRACE, 'sync_containers_state: containers_to_cleanup=%r',
+                    containers_to_cleanup)
+
+            # Clean up and remove orphaned containers.
+            for container_to_cleanup in containers_to_cleanup:
+                container_to_cleanup.cleanup()
+
+        # Recreate self.containers.
+        self.containers = {task: container
+                           for task, container in self.containers.items()
+                           if task in tasks}
+
+        if new_tasks:
+            log.debug('sync_containers_state: found %d new tasks', len(new_tasks))
+            log.log(logger.TRACE, 'sync_containers_state: new_tasks=%r', new_tasks)
+
+        # Prepare state of currently assigned resgroups
+        # and remove some orphaned resgroups
+        if self.rdt_enabled:
+            mon_groups_relation = resctrl.read_mon_groups_relation()
+            log.debug('mon_groups_relation (before cleanup): %s',
+                      pprint.pformat(mon_groups_relation))
+            resctrl.clean_taskless_groups(mon_groups_relation)
+
+            mon_groups_relation = resctrl.read_mon_groups_relation()
+            log.debug('mon_groups_relation (after cleanup): %s',
+                      pprint.pformat(mon_groups_relation))
+
+            # Calculate inverse relation of container_name
+            # to res_group name based on mon_groups_relations
+            container_name_to_ctrl_group = {}
+            for ctrl_group, container_names in mon_groups_relation.items():
+                for container_name in container_names:
+                    container_name_to_ctrl_group[container_name] = ctrl_group
+            log.debug('container_name_to_ctrl_group: %s',
+                      pprint.pformat(container_name_to_ctrl_group))
+
+        # Create new containers and store them.
+        for new_task in new_tasks:
+            container = Container(
+                new_task.cgroup_path,
+                rdt_enabled=self.rdt_enabled,
+                rdt_mb_control_enabled=self.rdt_mb_control_enabled,
+                platform_cpus=self.platform_cpus,
+                allocation_configuration=self.allocation_configuration,
+            )
+            self.containers[new_task] = container
+
+        # Sync "state" of individual containers.
+        # Note: only the pids are synchronized, not the allocations.
+        for container in self.containers.values():
+            if self.rdt_enabled:
+                if container.container_name in container_name_to_ctrl_group:
+                    resgroup_name = container_name_to_ctrl_group[container.container_name]
+                    container.resgroup = ResGroup(name=resgroup_name)
+                else:
+                    # Every newly detected containers is first assigned to root group.
+                    container.resgroup = ResGroup(name='')
+            container.sync()
+
+        return self.containers
+
+    def cleanup(self):
+        for container in self.containers.values():
+            container.cleanup()
+
+
+def _find_new_and_dead_tasks(
+        discovered_tasks: List[Task], known_containers: List[Container]
+) -> (List[Task], List[Container]):
+    """Returns the of newly discovered tasks and containers without tasks,
+    by comparing running tasks against list of known containers.
+
+    Assumptions:
+    * One-to-one relationship between task and container
+    * cgroup_path for task and container need to be identical to establish the relationship
+    * cgroup_path is unique for each task
+
+    :returns
+    - list of tasks to start watching
+    - orphaned containers to clean up
+    """
+    discovered_task_cgroup_paths = {task.cgroup_path for task in discovered_tasks}
+    containers_cgroup_paths = {container.cgroup_path for container in known_containers}
+
+    # Filter out containers which are still running according to Mesos agent.
+    # In other words pick orphaned containers.
+    containers_to_delete = [container for container in known_containers
+                            if container.cgroup_path not in discovered_task_cgroup_paths]
+
+    # Filter out tasks which are monitored using "Container abstraction".
+    # In other words pick new, not yet monitored tasks.
+    new_tasks = [task for task in discovered_tasks
+                 if task.cgroup_path not in containers_cgroup_paths]
+
+    return new_tasks, containers_to_delete
