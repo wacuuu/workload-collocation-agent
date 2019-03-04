@@ -102,8 +102,9 @@ class AddMetadata:
         self.labels = labels
 
     def pre_create_job(self, config):
-        for label_nama, label_value in self.labels.items():
-            config.add_metadata(label_nama, label_value)
+        for label_name, label_value in self.labels.items():
+            print 'adding Aurora metadata {name} with value: {value}'.format(name=label_name, value=label_value)
+            config.add_metadata(label_name, label_value)
         return config
 
 def dedent(s):
