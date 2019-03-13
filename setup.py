@@ -28,12 +28,13 @@ setup(
         'Topic :: System :: Distributed Computing',
     ],
     install_requires=[
-          'requests==2.21.0',         # 2018.12.10
-          'ruamel.yaml==0.15.89',     # 2019.02.27
-          'colorlog==4.0.2',          # 2018.12.14
-          'logging-tree==1.8',        # 2018.08.05
-          'dataclasses==0.6',         # 2018.05.18
-          'confluent-kafka==1.0.0rc1' # 2018.10.31
+          'requests==2.21.0',          # 2018.12.10
+          'ruamel.yaml==0.15.89',      # 2019.02.27
+          'colorlog==4.0.2',           # 2018.12.14
+          'logging-tree==1.8',         # 2018.08.05
+          'dataclasses==0.6',          # 2018.05.18
+          'confluent-kafka==1.0.0rc1', # 2018.10.31
+          'setuptools==40.8.0'         # 2019.02.05
     ],
     tests_require=[
           'pytest==4.3.0'           # 2019.02.18
