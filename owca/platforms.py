@@ -11,14 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
 import logging
 import os
 import re
 import socket
 import time
-import logging
 from typing import List, Dict, Set, Tuple, Optional
 
 from dataclasses import dataclass
@@ -246,9 +243,11 @@ def collect_topology_information() -> (int, int, int):
 
 def _collect_rdt_information() -> RDTInformation:
     """Returns rdt information values."""
+
     def _read_value(subpath):
         with open(os.path.join('/sys/fs/resctrl/', subpath)) as f:
             return f.read().strip()
+
     cbm_mask = _read_value('info/L3/cbm_mask')
     min_cbm_bits = _read_value('info/L3/min_cbm_bits')
     num_closids = int(_read_value('info/L3/num_closids'))
