@@ -19,7 +19,11 @@ import socket
 import time
 import logging
 from typing import List, Dict, Set, Tuple
-from pkg_resources import get_distribution, DistributionNotFound
+try:
+    from pkg_resources import get_distribution, DistributionNotFound
+except ImportError:
+    # When running from pex use vendored library from pex.
+    from pex.vendor._vendored.setuptools.pkg_resources import get_distribution, DistributionNotFound
 
 from dataclasses import dataclass
 
