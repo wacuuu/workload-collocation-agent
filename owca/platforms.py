@@ -18,10 +18,16 @@ import os
 import re
 import socket
 import time
+import logging
 from typing import List, Dict, Set, Tuple, Optional
 
 from dataclasses import dataclass
-from pkg_resources import DistributionNotFound, get_distribution
+
+try:
+    from pkg_resources import get_distribution, DistributionNotFound
+except ImportError:
+    # When running from pex use vendored library from pex.
+    from pex.vendor._vendored.setuptools.pkg_resources import get_distribution, DistributionNotFound
 
 from owca.metrics import Metric, MetricName
 
