@@ -215,15 +215,7 @@ class DetectionRunner(Runner):
             log.debug('Anomalies detected: %d', len(anomalies))
 
             # Note: anomaly metrics include metrics found in ContentionAnomaly.metrics.
-            anomaly_metrics = convert_anomalies_to_metrics(anomalies)
-
-            for anomaly_metric in anomaly_metrics:
-                # Extra labels for anomaly metrics for information about task.
-                if 'contended_task_id' in anomaly_metric.labels:  # Only for anomaly metrics.
-                    contended_task_id = anomaly_metric.labels['contended_task_id']
-                    anomaly_metric.labels.update(
-                        tasks_labels.get(contended_task_id, {})
-                    )
+            anomaly_metrics = convert_anomalies_to_metrics(anomalies, tasks_labels)
 
             # Extra anomaly statistics
             if len(anomalies):
