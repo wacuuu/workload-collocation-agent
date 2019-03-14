@@ -130,22 +130,38 @@ def test_runner_containers_state(*mocks):
     """
 
     # Task labels
-    task_labels = {
+    t1_task_labels = {
         'org.apache.aurora.metadata.application': 'redis',
         'org.apache.aurora.metadata.load_generator': 'rpc-perf',
         'org.apache.aurora.metadata.name': 'redis--6792',
+        'org.apache.aurora.metadata.workload_instance': 'first workload',
     }
-    task_labels_sanitized = {
+    t1_task_labels_sanitized = {
         sanitize_mesos_label(label_key): label_value
         for label_key, label_value
-        in task_labels.items()
+        in t1_task_labels.items()
     }
-    task_labels_sanitized_with_task_id = {'task_id': 'task-id-/t1'}
-    task_labels_sanitized_with_task_id.update(task_labels_sanitized)
+    t1_task_labels_sanitized_with_task_id = {'task_id': 'task-id-/t1'}
+    t1_task_labels_sanitized_with_task_id.update(t1_task_labels_sanitized)
+
+    t2_task_labels = {
+        'org.apache.aurora.metadata.application': 'redis',
+        'org.apache.aurora.metadata.load_generator': 'rpc-perf',
+        'org.apache.aurora.metadata.name': 'redis--6793',
+        'org.apache.aurora.metadata.workload_instance': 'second workload',
+    }
+    t2_task_labels_sanitized = {
+        sanitize_mesos_label(label_key): label_value
+        for label_key, label_value
+        in t2_task_labels.items()
+    }
+    t2_task_labels_sanitized_with_task_id = {'task_id': 'task-id-/t2'}
+    t2_task_labels_sanitized_with_task_id.update(t2_task_labels_sanitized)
 
     # Node mock
     node_mock = Mock(spec=MesosNode, get_tasks=Mock(return_value=[
-        task('/t1', resources=dict(cpus=8.), labels=task_labels)]))
+        task('/t1', resources=dict(cpus=8.), labels=t1_task_labels),
+        task('/t2', resources=dict(cpus=8.), labels=t2_task_labels)]))
 
     # Storage mocks
     metrics_storage = Mock(spec=storage.Storage, store=Mock())
@@ -157,7 +173,7 @@ def test_runner_containers_state(*mocks):
         detect=Mock(
             return_value=(
                 [anomaly(
-                    'task1', ['task2'], metrics=[
+                    'task-id-/t1', ['task-id-/t2'], metrics=[
                         metric('contention_related_metric')
                     ]
                 )],  # one anomaly + related metric
@@ -190,13 +206,21 @@ def test_runner_containers_state(*mocks):
     metrics_storage.store.assert_called_once_with([
              metric('platform-cpu-usage', labels=extra_labels),  # Store metrics from platform ...
              Metric(name='cpu_usage', value=23,
-                    labels=dict(extra_labels, **task_labels_sanitized_with_task_id)),
+                    labels=dict(extra_labels, **t1_task_labels_sanitized_with_task_id)),
+             Metric(name='cpu_usage', value=23,
+                    labels=dict(extra_labels, **t2_task_labels_sanitized_with_task_id)),
              Metric('owca_up', type=MetricType.COUNTER, value=1234567890.123, labels=extra_labels),
-             Metric('owca_tasks', type=MetricType.GAUGE, value=1, labels=extra_labels),
+             Metric('owca_tasks', type=MetricType.GAUGE, value=2, labels=extra_labels),
     ])  # and task
 
     # 2. After calling detect to store information about detected anomalies.
-    expected_anomaly_metrics = anomaly_metrics('task1', ['task2'])
+    expected_anomaly_metrics =\
+        anomaly_metrics(
+            'task-id-/t1',
+            ['task-id-/t2'],
+            {'task-id-/t1': 'first workload', 'task-id-/t2': 'second workload'},
+            {'task-id-/t1': t1_task_labels_sanitized_with_task_id,
+             'task-id-/t2': t2_task_labels_sanitized_with_task_id})
     for m in expected_anomaly_metrics:
         m.labels.update(extra_labels)
 
@@ -213,13 +237,17 @@ def test_runner_containers_state(*mocks):
     # Check that detector was called with proper arguments.
     detector_mock.detect.assert_called_once_with(
         platform_mock,
-        {'task-id-/t1': {'cpu_usage': 23}},
-        {'task-id-/t1': {'cpus': 8}},
-        {'task-id-/t1': task_labels_sanitized_with_task_id}
+        {'task-id-/t1': {'cpu_usage': 23},
+         'task-id-/t2': {'cpu_usage': 23}},
+        {'task-id-/t1': {'cpus': 8},
+         'task-id-/t2': {'cpus': 8}},
+        {'task-id-/t1': t1_task_labels_sanitized_with_task_id,
+         'task-id-/t2': t2_task_labels_sanitized_with_task_id}
     )
 
     # assert expected state (new container based on first task /t1)
-    assert (runner.containers ==
-            {task('/t1', resources=dict(cpus=8.), labels=task_labels): container('/t1')})
+    assert runner.containers ==\
+        {task('/t1', resources=dict(cpus=8.), labels=t1_task_labels): container('/t1'),
+            task('/t2', resources=dict(cpus=8.), labels=t2_task_labels): container('/t2')}
 
     runner.wait_or_finish.assert_called_once()

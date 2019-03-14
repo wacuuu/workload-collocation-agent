@@ -26,6 +26,11 @@ from owca.platforms import Platform
 
 
 # Mapping from task to its measurements.
+WORKLOAD_NOT_FOUND = 'workload not found'
+LABEL_CONTENDING_WORKLOAD_INSTANCE = 'contending_workload_instance'
+LABEL_WORKLOAD_INSTANCE = 'workload_instance'
+LABEL_CONTENDING_TASK_ID = 'contending_task_id'
+LABEL_CONTENDED_TASK_ID = 'contended_task_id'
 TasksMeasurements = Dict[TaskId, Measurements]
 TasksResources = Dict[TaskId, Dict[str, float]]
 TasksLabels = Dict[TaskId, Dict[str, str]]
@@ -161,12 +166,27 @@ class NOPAnomalyDetector(AnomalyDetector):
         return [], []
 
 
-def convert_anomalies_to_metrics(anomalies: List[Anomaly]) -> List[Metric]:
+def convert_anomalies_to_metrics(
+        anomalies: List[Anomaly],
+        tasks_labels: TasksLabels) -> List[Metric]:
     """Takes anomalies on input and convert them to something that can be
     stored persistently adding help/type fields and labels.
     """
-    metrics = []
+    anomaly_metrics = []
     for anomaly in anomalies:
-        metrics.extend(anomaly.generate_metrics())
+        anomaly_metrics.extend(anomaly.generate_metrics())
 
-    return metrics
+    for anomaly_metric in anomaly_metrics:
+        # Extra labels for anomaly metrics for information about task.
+        if LABEL_CONTENDED_TASK_ID in anomaly_metric.labels:  # Only for anomaly metrics.
+            contended_task_id = anomaly_metric.labels[LABEL_CONTENDED_TASK_ID]
+            anomaly_metric.labels.update(
+                tasks_labels.get(contended_task_id, {})
+            )
+        if LABEL_CONTENDING_TASK_ID in anomaly_metric.labels:
+            contending_task_id = anomaly_metric.labels[LABEL_CONTENDING_TASK_ID]
+            anomaly_metric.labels[LABEL_CONTENDING_WORKLOAD_INSTANCE] =\
+                tasks_labels.get(contending_task_id, {}).\
+                get(LABEL_WORKLOAD_INSTANCE, WORKLOAD_NOT_FOUND)
+
+    return anomaly_metrics
