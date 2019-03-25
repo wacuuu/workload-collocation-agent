@@ -54,9 +54,9 @@ def test_find_new_and_dead_tasks(
     assert containers_to_delete == expected_containers_to_delete
 
 
-@patch('owca.containers.ResGroup.add_pids')
+@patch('owca.resctrl.ResGroup.add_pids')
 @patch('owca.resctrl.clean_taskless_groups')
-@patch('owca.containers.PerfCounters')
+@patch('owca.perf.PerfCounters')
 @patch('owca.containers.Container.sync')
 @patch('owca.platforms.collect_topology_information', return_value=(1, 1, 1))
 @pytest.mark.parametrize(
@@ -90,7 +90,7 @@ def test_sync_containers_state(platform_mock, sync_mock,
 
     # Prepare internal state used by sync_containers_state function - mock.
     # Use list for copying to have original list.
-    containers_manager.containers = dict(existing_containers)
+    containers_manager._containers = dict(existing_containers)
 
     # Call it.
     with patch('owca.resctrl.read_mon_groups_relation', return_value=mon_groups_relation):

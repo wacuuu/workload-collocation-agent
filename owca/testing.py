@@ -14,17 +14,21 @@
 
 
 """Module for independent simple helper functions."""
-
+import functools
 import os
 from typing import List, Dict, Union, Optional
 from unittest.mock import mock_open, Mock, patch
 
+from owca import platforms
 from owca.allocators import AllocationConfiguration
 from owca.containers import Container
-from owca.detectors import ContendedResource, ContentionAnomaly, _create_uuid_from_tasks_ids
-from owca.nodes import TaskId, Task
+from owca.detectors import ContendedResource, ContentionAnomaly, LABEL_WORKLOAD_INSTANCE, \
+    _create_uuid_from_tasks_ids
 from owca.metrics import Metric, MetricType
+from owca.nodes import TaskId, Task
+from owca.platforms import RDTInformation
 from owca.resctrl import ResGroup
+from owca.runners import Runner
 
 
 def relative_module_path(module_file, relative_path):
@@ -80,13 +84,18 @@ def anomaly_metrics(contended_task_id: TaskId, contending_task_ids: List[TaskId]
     metrics = []
     for task_id in contending_task_ids:
         uuid = _create_uuid_from_tasks_ids(contending_task_ids + [contended_task_id])
-        metric = Metric(name='anomaly', value=1,
-                        labels=dict(contended_task_id=contended_task_id, contending_task_id=task_id,
-                                    resource=ContendedResource.MEMORY_BW, uuid=uuid,
-                                    type='contention',
-                                    contending_workload_instance=contending_workload_instances[
-                                        task_id], workload_instance=contending_workload_instances[
-                                            contended_task_id]), type=MetricType.COUNTER)
+        metric = Metric(
+            name='anomaly',
+            value=1,
+            labels=dict(
+                contended_task_id=contended_task_id,
+                contending_task_id=task_id,
+                resource=ContendedResource.MEMORY_BW, uuid=uuid,
+                type='contention',
+                contending_workload_instance=contending_workload_instances[task_id],
+                workload_instance=contending_workload_instances[contended_task_id]
+            ),
+            type=MetricType.COUNTER)
         if contended_task_id in labels:
             metric.labels.update(labels[contended_task_id])
         metrics.append(metric)
@@ -119,7 +128,7 @@ def task(cgroup_path, labels=None, resources=None):
 
 def container(cgroup_path, resgroup_name=None, with_config=False):
     """Helper method to create container with patched subsystems."""
-    with patch('owca.containers.ResGroup'), patch('owca.containers.PerfCounters'):
+    with patch('owca.resctrl.ResGroup'), patch('owca.perf.PerfCounters'):
         return Container(
             cgroup_path,
             rdt_enabled=False, platform_cpus=1,
@@ -128,9 +137,12 @@ def container(cgroup_path, resgroup_name=None, with_config=False):
         )
 
 
-def metric(name, labels=None):
+DEFAULT_METRIC_VALUE = 1234
+
+
+def metric(name, labels=None, value=DEFAULT_METRIC_VALUE):
     """Helper method to create metric with default values. Value is ignored during tests."""
-    return Metric(name=name, value=1234, labels=labels or {})
+    return Metric(name=name, value=value, labels=labels or {})
 
 
 def allocation_metric(allocation_type, value, **labels):
@@ -147,6 +159,80 @@ def allocation_metric(allocation_type, value, **labels):
         value=value,
         labels=labels
     )
+
+
+class DummyRunner(Runner):
+
+    def run(self):
+        return 0
+
+
+platform_mock = Mock(
+    spec=platforms.Platform,
+    sockets=1,
+    rdt_information=RDTInformation(
+        cbm_mask='fffff',
+        min_cbm_bits='1',
+        rdt_mb_control_enabled=False,
+        num_closids=2,
+        mb_bandwidth_gran=None,
+        mb_min_bandwidth=None,
+    ))
+
+
+def redis_task_with_default_labels(task_id):
+    """Returns task instance and its labels."""
+    task_labels = {
+        'org.apache.aurora.metadata.load_generator': 'rpc-perf-%s' % task_id,
+        'org.apache.aurora.metadata.name': 'redis-6792-%s' % task_id,
+        LABEL_WORKLOAD_INSTANCE: 'redis_6792_%s' % task_id
+    }
+    return task('/%s' % task_id, resources=dict(cpus=8.), labels=task_labels)
+
+
+TASK_CPU_USAGE = 23
+OWCA_MEMORY_USAGE = 100
+
+
+def prepare_runner_patches(func):
+    """Decorator to be used from runner tests.
+
+    The idea behind this is to use proper classes and objects for Cgroup, Resctrl and others
+    because they carry necessary information (in properties), but to cut off OS touching calls.
+
+    Decorator is responsible for mocking all objects used by runner from perspective of:
+    - resources: Cgroup, PerfCounters, ResGroup,
+    - resctrl filesystem: check_resctrl, read_mon_groups_relation,
+    - platform: collect_platform_information, collect_platform_topology,
+    - other OS related calls: getrusage, are_privileges_sufficient
+
+    It is not mocking runners internals like ContainerManager or Container classes
+    to make sure that there is proper interaction between those classes.
+    """
+
+    @functools.wraps(func)
+    def _decorated_function(*args, **kwargs):
+        with patch('owca.cgroups.Cgroup.get_pids', return_value=['123']), \
+             patch('owca.cgroups.Cgroup.set_quota'), \
+             patch('owca.cgroups.Cgroup.set_shares'), \
+             patch('owca.cgroups.Cgroup.get_measurements',
+                   return_value=dict(cpu_usage=TASK_CPU_USAGE)), \
+             patch('owca.resctrl.ResGroup.add_pids'), \
+             patch('owca.resctrl.ResGroup.get_measurements'), \
+             patch('owca.resctrl.ResGroup.get_mon_groups'), \
+             patch('owca.resctrl.ResGroup.remove'), \
+             patch('owca.resctrl.ResGroup.write_schemata'), \
+             patch('owca.resctrl.read_mon_groups_relation', return_value={'': []}), \
+             patch('owca.resctrl.check_resctrl', return_value=True), \
+             patch('owca.perf.PerfCounters'), \
+             patch('owca.platforms.collect_platform_information',
+                   return_value=(platform_mock, [metric('platform-cpu-usage')], {})), \
+             patch('owca.platforms.collect_topology_information', return_value=(1, 1, 1)), \
+             patch('owca.security.are_privileges_sufficient', return_value=True), \
+             patch('resource.getrusage', return_value=Mock(ru_maxrss=OWCA_MEMORY_USAGE)):
+            func(*args, **kwargs)
+
+    return _decorated_function
 
 
 def assert_subdict(got_dict: dict, expected_subdict: dict):
