@@ -100,7 +100,17 @@ You can run without building a distribution like this:
 
 .. code-block:: shell
     
-    sudo env PYTHONPATH=. `which python3.6` owca/main.py -c configs/mesos_example.yaml --root
+    python3.6 -mpipenv shell
+    sudo env PYTHONPATH=. `which python` owca/main.py --root -c configs/extra/static_measurements.yaml
+
+
+Using example allocator:
+
+
+.. code-block:: shell
+
+    python3.6 -mpipenv shell
+    sudo env PYTHONPATH=. `which python` owca/main.py --root -c configs/extra/static_allocator.yaml
 
 Fast distribution rebuild
 -------------------------

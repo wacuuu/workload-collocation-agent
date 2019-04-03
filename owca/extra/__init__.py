@@ -11,13 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-# Basic minimal configuration to dump metrics on stderr with NOPAnomaly detector
-runner: !DetectionRunner
-  node: !MesosNode
-    mesos_agent_endpoint: 'http://127.0.0.1:5051'
-  action_delay: 1.
-  metrics_storage: !LogStorage
-  anomalies_storage: !LogStorage
-  detector: !NOPAnomalyDetector
