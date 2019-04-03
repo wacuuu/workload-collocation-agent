@@ -13,11 +13,19 @@
 # limitations under the License.
 
 
-# Basic minimal configuration to dump metrics on stderr with NOPAnomaly detector
-runner: !DetectionRunner
-  node: !MesosNode
-    mesos_agent_endpoint: 'http://127.0.0.1:5051'
-  action_delay: 1.
-  metrics_storage: !LogStorage
-  anomalies_storage: !LogStorage
-  detector: !NOPAnomalyDetector
+from unittest.mock import Mock
+
+from owca.storage import MetricPackage, Storage
+from owca.testing import metric
+
+
+def test_metrics_package():
+    m1 = metric('average_latency_miliseconds')
+    storage = Mock(spec=Storage)
+    mp = MetricPackage(storage)
+    mp.add_metrics([m1])
+    mp.send(dict(foo='label_val'))
+    assert storage.store.call_count == 1
+    assert storage.store.call_args_list[0][0][0] == [
+        metric('average_latency_miliseconds', labels=dict(foo='label_val'))
+    ]

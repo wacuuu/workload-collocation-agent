@@ -11,18 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-# Example of configuration to store metrics in dedicated Kafka topic.
-runner: !DetectionRunner
-  node: !MesosNode
-  action_delay: 1.
-  metrics_storage: !KafkaStorage
-    topic: owca_metrics
-    max_timeout_in_seconds: 5.
-    extra_config: 
-      debug: broker,topic,msg
-  anomalies_storage: !KafkaStorage
-    topic: owca_anomalies
-    max_timeout_in_seconds: 5.
-  detector: !NOPAnomalyDetector

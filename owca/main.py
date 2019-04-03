@@ -27,12 +27,12 @@ from owca import components
 from owca import config
 from owca import logger
 from owca import platforms
+from owca.runners import Runner
 
 log = logging.getLogger('owca.main')
 
 
 def main():
-
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-c', '--config',
@@ -73,7 +73,7 @@ def main():
     log_levels.setdefault(logger.DEFAULT_MODULE, 'info')
     logger.configure_loggers_from_dict(log_levels)
 
-    log.warn('This software is pre-production and should not be deployed to production servers.')
+    log.warning('This software is pre-production and should not be deployed to production servers.')
     log.debug('started PID=%r', os.getpid())
     log.info('Version owca: %s', platforms.get_owca_version())
 
@@ -89,6 +89,10 @@ def main():
             log.exception('Detailed exception:')
         exit(1)
 
+    # TODO: replace with proper validation base on config._assure_type
+    assert isinstance(configuration, dict), 'Improper config! - expected dict'
+    assert 'runner' in configuration, 'Improper config - missing runner instance!'
+
     # Configure loggers using configuration file.
     if 'loggers' in configuration:
         log_levels_config = configuration['loggers']
@@ -97,7 +101,7 @@ def main():
                       'log level got "%r" instead!' % log_levels_config)
             exit(1)
         # Merge config from cmd line and config file.
-        # Overide config file values with values provided from command line.
+        # Overwrite config file values with values provided from command line.
         log_levels = dict(log_levels, **log_levels_config)
         logger.configure_loggers_from_dict(log_levels)
 
@@ -110,9 +114,11 @@ def main():
 
     # Extract main loop component.
     runner = configuration['runner']
+    assert isinstance(runner, Runner), 'Improper config - expected runner type!'
 
     # Prepare and run the "main loop".
-    runner.run()
+    exit_code = runner.run()
+    exit(exit_code)
 
 
 if __name__ == '__main__':
