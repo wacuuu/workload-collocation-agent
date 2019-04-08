@@ -63,8 +63,13 @@ def find_cgroup(pid):
 @dataclass
 class MesosNode(Node):
     mesos_agent_endpoint: str = 'https://127.0.0.1:5051'
-    ssl_verify: Union[bool, str] = True  # requests: Can be used to pass cert CA bundle.
-    timeout: float = 5.  # request timeout in seconds
+
+    # A flag of python requests library to enable ssl_verify or pass CA bundle:
+    # https://github.com/kennethreitz/requests/blob/5c1f72e80a7d7ac129631ea5b0c34c7876bc6ed7/requests/api.py#L41
+    ssl_verify: Union[bool, str] = True
+
+    # Timeout to access mesos agent.
+    timeout: float = 5.
 
     METHOD = 'GET_STATE'
     api_path = '/api/v1'
@@ -123,6 +128,7 @@ class MesosNode(Node):
                     name=launched_task['name'],
                     executor_pid=executor_pid,
                     cgroup_path=cgroup_path,
+                    subcgroups_paths=[],
                     container_id=last_status['container_status']['container_id']['value'],
                     task_id=last_status['task_id']['value'],
                     agent_id=last_status['agent_id']['value'],
