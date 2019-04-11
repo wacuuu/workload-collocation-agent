@@ -31,9 +31,10 @@ import inspect
 import io
 import logging
 import typing
-from os.path import exists  # direct target import for mocking purposes in test_main
+from os.path import exists, isabs, split  # direct target import for mocking purposes in test_main
 from ruamel import yaml
 from typing import Any
+from urllib.parse import urlparse
 
 from owca import logger
 
@@ -61,6 +62,112 @@ class WeakValidationError(ValidationError):
     - re-raise ValidationError exception
     - just print log.warning.
     """
+
+
+class SemanticType:
+    """Represents user input in different types."""
+    def __init__(self, base_types):
+        self.base_types = base_types
+
+    def assure(self, value):
+        for base_type in self.base_types:
+            if isinstance(value, base_type):
+                break
+        else:
+            raise ValidationError('Invalid type: {}. Type must be one of '
+                                  'the following: {}'.format(type(value),
+                                                             self.base_types))
+
+
+class Str(SemanticType):
+    """Represents str user input"""
+    def __init__(self, max_size=400):
+        super().__init__([str])
+        self.max_size = max_size
+
+    def assure(self, value):
+        """Validates str input"""
+        super().assure(value)
+
+        length = len(value)
+        if length > self.max_size:
+            raise ValidationError('Given str is too long. '
+                                  'Max allowed length is {}. '
+                                  'Got {}'.format(self.max_size, length))
+
+
+class Url(Str):
+    """Represents url user input"""
+    def __init__(self, is_path_obligatory=False,
+                 supported_schemes=('http', 'https')):
+        """
+        :param is_path_obligatory: when `True` url must contain a path
+        :param supported_schemes: schemes supported in url
+        """
+        super().__init__()
+        self.is_path_obligatory = is_path_obligatory
+        self.supported_schemes = supported_schemes
+
+    def assure(self, value):
+        """Validates url input"""
+        super().assure(value)
+
+        url = urlparse(value)
+        if url.scheme not in self.supported_schemes:
+            raise ValidationError('Invalid url. Got: {}. '
+                                  'Use one of supported schemes: '
+                                  '{}'.format(url.scheme, self.supported_schemes))
+
+        if not url.netloc:
+            raise ValidationError('Invalid url. Netloc can\'t be empty.')
+
+        if self.is_path_obligatory and not url.path:
+            raise ValidationError('Invalid url. Path can\'t be empty when '
+                                  '`is_path_obligatory` is set to True.')
+
+
+class Numeric(SemanticType):
+    """Represents numeric user input"""
+    def __init__(self, min_value, max_value):
+        super().__init__([int, float])
+        self.min_value = min_value
+        self.max_value = max_value
+
+    def assure(self, value):
+        """Validates numeric input"""
+        super().assure(value)
+        if value < self.min_value:
+            raise ValidationError(
+                'Minimum value is {}. Got {}.'.format(self.min_value, value))
+        elif value > self.max_value:
+            raise ValidationError(
+                'Maximum value is {}. Got {}.'.format(self.max_value, value))
+
+
+class Path(Str):
+    """Represents path user input"""
+    def __init__(self, absolute=False):
+        super().__init__()
+        self.absolute = absolute
+
+    def assure(self, value):
+        """Validates path input"""
+        super().assure(value)
+
+        if self.absolute and not isabs(value):
+            raise ValidationError('`absolute` option is set to True meaning '
+                                  'absolute path is obligatory. Use absolute '
+                                  'path or turn off `absolute` option by '
+                                  'setting it to False.')
+
+        split_value = split(value)
+        while split_value[0] != '' and split_value[1] != '':
+            if '..' in split_value:
+                raise ValidationError('You are trying to access parent '
+                                      'directory by using \'..\' expression'
+                                      ' which is not allowed. Try using '
+                                      'absolute path instead.')
+            split_value = split(split_value[0])
 
 
 def _assure_list_type(value: list, expected_type):
@@ -158,6 +265,11 @@ def _assure_type(value, expected_type):
     # Handle union type.
     if isinstance(expected_type, enum.Enum.__class__):
         _assure_enum_type(value, expected_type)
+        return
+
+    # Handle Semantic type.
+    if isinstance(expected_type, SemanticType):
+        expected_type.assure(value)
         return
 
     # Handle simple types.
