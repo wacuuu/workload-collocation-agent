@@ -19,6 +19,7 @@ from dataclasses import dataclass
 from owca.allocations import AllocationValue, InvalidAllocations, LabelsUpdater
 from owca.allocators import RDTAllocation
 from owca.metrics import Metric, MetricType
+from owca.platforms import RDTInformation
 from owca.resctrl import ResGroup
 
 log = logging.getLogger(__name__)
@@ -64,9 +65,7 @@ class RDTAllocationValue(AllocationValue):
     resgroup: ResGroup
     get_pids: Callable[[], List[str]]  # Used as pid provider
     platform_sockets: int
-    rdt_mb_control_enabled: bool
-    rdt_cbm_mask: str
-    rdt_min_cbm_bits: str
+    rdt_information: RDTInformation
     rdt_groups: RDTGroups
     common_labels: Dict[str, str]
     source_resgroup: Optional[ResGroup] = None  # if not none try to _cleanup it at the end
@@ -89,9 +88,7 @@ class RDTAllocationValue(AllocationValue):
             get_pids=self.get_pids,
             resgroup=resgroup if resgroup is not None else self.resgroup,
             platform_sockets=self.platform_sockets,
-            rdt_mb_control_enabled=self.rdt_mb_control_enabled,
-            rdt_cbm_mask=self.rdt_cbm_mask,
-            rdt_min_cbm_bits=self.rdt_min_cbm_bits,
+            rdt_information=self.rdt_information,
             source_resgroup=source_resgroup,
             rdt_groups=self.rdt_groups,
             common_labels=self.common_labels
@@ -239,12 +236,15 @@ class RDTAllocationValue(AllocationValue):
     def validate(self):
         """Check L3 mask according platform.rdt_ features."""
         if self.rdt_allocation.l3:
+            if not self.rdt_information.rdt_cache_control_enabled:
+                raise InvalidAllocations('Allocator requested RDT cache allocation but '
+                                         'RDT cache control is not enabled!')
             validate_l3_string(self.rdt_allocation.l3,
                                self.platform_sockets,
-                               self.rdt_cbm_mask,
-                               self.rdt_min_cbm_bits)
+                               self.rdt_information.cbm_mask,
+                               self.rdt_information.min_cbm_bits)
         if self.rdt_allocation.mb:
-            if self.rdt_mb_control_enabled is False:
+            if not self.rdt_information.rdt_mb_control_enabled:
                 raise InvalidAllocations('Allocator requested RDT MB allocation but '
                                          'RDT memory bandwidth is not enabled!')
             validate_mb_string(self.rdt_allocation.mb,
@@ -274,9 +274,11 @@ class RDTAllocationValue(AllocationValue):
         # Now update the schemata file.
         if self.rdt_groups.should_perform_schemata_write(self):
             lines = []
-            if self.rdt_allocation.l3:
+            if self.rdt_allocation.l3 and \
+                    self.rdt_information.rdt_cache_control_enabled:
                 lines.append(self.rdt_allocation.l3)
-            if self.rdt_allocation.mb and self.rdt_mb_control_enabled:
+            if self.rdt_allocation.mb and \
+                    self.rdt_information.rdt_mb_control_enabled:
                 lines.append(self.rdt_allocation.mb)
             if lines:
                 log.debug('resctrl: perform_allocations update schemata in %r', self.resgroup.name)

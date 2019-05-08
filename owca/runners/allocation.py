@@ -106,9 +106,7 @@ class TasksAllocationsValues(AllocationsDict):
                     container.get_resgroup(),
                     container.get_pids,
                     platform.sockets,
-                    platform.rdt_information.rdt_mb_control_enabled,
-                    platform.rdt_information.cbm_mask,
-                    platform.rdt_information.min_cbm_bits,
+                    platform.rdt_information,
                     common_labels=common_labels,
                     rdt_groups=rdt_groups,
                 )
@@ -123,7 +121,7 @@ class TasksAllocationsValues(AllocationsDict):
             else:
                 container = task_id_to_containers[task_id]
                 # Check consistency of container with RDT state.
-                assert container._rdt_enabled == rdt_enabled
+                assert (container._rdt_information is not None) == rdt_enabled
                 container_labels = dict(container_name=container.get_name(), task=task_id)
                 allocation_value = TaskAllocationsValues.create(
                     task_allocations, container, registry, container_labels)
@@ -169,8 +167,10 @@ class AllocationRunner(MeasurementRunner):
             (defaults to 1 second)
         rdt_enabled: enables or disabled support for RDT monitoring and allocation
             (defaults to None(auto) based on platform capabilities)
-        rdt_mb_control_enabled: enables or disables support for RDT memory bandwidth
-            (defaults to None(auto) based on platform capabilities) allocation
+        rdt_mb_control_required: indicates that MB control is required,
+            if the platform does not support this feature the OWCA will exit
+        rdt_cache_control_required: indicates tha L3 control is required,
+            if the platform does not support this feature the OWCA will exit
         extra_labels: additional labels attached to every metric
             (defaults to empty dict)
         allocation_configuration: allows fine grained control over allocations
@@ -192,7 +192,8 @@ class AllocationRunner(MeasurementRunner):
             allocations_storage: storage.Storage = DEFAULT_STORAGE,
             action_delay: Numeric(0, 60) = 1.,  # [s]
             rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
-            rdt_mb_control_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
+            rdt_mb_control_required: bool = False,
+            rdt_cache_control_required: bool = False,
             extra_labels: Dict[Str, Str] = None,
             allocation_configuration: Optional[AllocationConfiguration] = None,
             remove_all_resctrl_groups: bool = False,
@@ -209,7 +210,8 @@ class AllocationRunner(MeasurementRunner):
         # Allocation specific.
         self._allocator = allocator
         self._allocations_storage = allocations_storage
-        self._rdt_mb_control_enabled = rdt_mb_control_enabled  # Override False from superclass.
+        self._rdt_mb_control_required = rdt_mb_control_required  # Override False from superclass.
+        self._rdt_cache_control_required = rdt_cache_control_required
 
         # Anomaly.
         self._anomalies_storage = anomalies_storage
@@ -224,35 +226,36 @@ class AllocationRunner(MeasurementRunner):
     def _initialize_rdt(self) -> bool:
         platform, _, _ = platforms.collect_platform_information()
 
-        if self._rdt_mb_control_enabled and not platform.rdt_information.rdt_mb_control_enabled:
-            # Some wanted unavailable feature - halt.
-            log.error('RDT memory bandwidth enabled but allocation is not supported by platform!')
+        # Cache control check.
+        if self._rdt_cache_control_required and \
+                not platform.rdt_information.rdt_cache_control_enabled:
+            # Wanted unavailable feature - halt
+            log.error('RDT cache control enabled but is not supported by platform!')
             return False
 
-        elif self._rdt_mb_control_enabled is None:
-            # Auto detection of rdt mb control.
-            self._rdt_mb_control_enabled = platform.rdt_information.rdt_mb_control_enabled
+        # MB control check.
+        if self._rdt_mb_control_required and \
+                not platform.rdt_information.rdt_mb_control_enabled:
+            # Some wanted unavailable feature - halt.
+            log.error('RDT memory bandwidth enabled but '
+                      'allocation is not supported by platform!')
+            return False
 
+        # Prepare initial values for L3, MB...
         root_rdt_l3, root_rdt_mb = resctrl.get_max_rdt_values(
             platform.rdt_information.cbm_mask,
-            platform.sockets
+            platform.sockets,
+            platform.rdt_information.rdt_mb_control_enabled,
+            platform.rdt_information.rdt_cache_control_enabled
         )
-        # override max values with values from allocation configuration
-        if self._allocation_configuration.default_rdt_l3 is not None:
-            root_rdt_l3 = self._allocation_configuration.default_rdt_l3
-        if self._allocation_configuration.default_rdt_mb is not None:
-            root_rdt_mb = self._allocation_configuration.default_rdt_mb
 
-        # Do not set mb default value if feature is not available
-        # (only for case that was auto detected)
-        if platform.rdt_information.rdt_mb_control_enabled is False:
-            root_rdt_mb = None
-            log.warning('RDT enabled, but memory bandwidth control '
-                        'is not supported by platform - disabling.')
-        else:
-            # not enabled - so do not set it
-            if not self._rdt_mb_control_enabled:
-                root_rdt_mb = None
+        # ...override max values with values from allocation configuration
+        if self._allocation_configuration.default_rdt_l3 is not None and \
+                platform.rdt_information.rdt_cache_control_enabled:
+            root_rdt_l3 = self._allocation_configuration.default_rdt_l3
+        if self._allocation_configuration.default_rdt_mb is not None and \
+                platform.rdt_information.rdt_mb_control_enabled:
+            root_rdt_mb = self._allocation_configuration.default_rdt_mb
 
         try:
             if root_rdt_l3 is not None:
@@ -325,7 +328,8 @@ class AllocationRunner(MeasurementRunner):
         # Handle allocations: perform allocations based on changeset.
         if allocations_changeset_values:
             log.debug('Allocations changeset: %s', allocations_changeset_values)
-            log.info('Performing allocations on %d tasks.', len(allocations_changeset_values))
+            log.info('Performing allocations on %d tasks.', len(
+                allocations_changeset_values))
             allocations_changeset_values.perform_allocations()
 
         # Prepare anomaly metrics.

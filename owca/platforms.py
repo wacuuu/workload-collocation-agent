@@ -65,12 +65,31 @@ def get_cpu_model():
 
 @dataclass
 class RDTInformation:
-    cbm_mask: Optional[str]  # based on /sys/fs/resctrl/info/L3/cbm_mask
-    min_cbm_bits: Optional[str]  # based on /sys/fs/resctrl/info/L3/min_cbm_bits
-    rdt_mb_control_enabled: bool  # based on 'MB:' in /sys/fs/resctrl/info/L3/cbm_mask
-    num_closids: Optional[int]  # based on /sys/fs/resctrl/info/L3/num_closids
+    # Reflects state of the system.
+
+    # Monitoring.
+    rdt_mb_monitoring_enabled: bool     # based on /sys/fs/resctrl/mon_data/mon_MB_00
+    rdt_cache_monitoring_enabled: bool  # based on /sys/fs/resctrl/mon_data/mon_L3_00
+
+    # Allocation.
+    rdt_mb_control_enabled: bool      # based on 'MB:' in /sys/fs/resctrl/schemata
+    rdt_cache_control_enabled: bool   # based on 'L3:' in /sys/fs/resctrl/schemata
+
+    # Cache control read-only parameters. Available only if CAT control
+    # is supported by platform,otherwise set to None.
+    cbm_mask: Optional[str]           # based on /sys/fs/resctrl/info/L3/cbm_mask
+    min_cbm_bits: Optional[str]       # based on /sys/fs/resctrl/info/L3/min_cbm_bits
+    num_closids: Optional[int]        # based on /sys/fs/resctrl/info/L3/num_closids
+
+    # MB control read-only parameters.
     mb_bandwidth_gran: Optional[int]  # based on /sys/fs/resctrl/info/MB/bandwidth_gran
-    mb_min_bandwidth: Optional[int]  # based on /sys/fs/resctrl/info/MB/bandwidth_gran
+    mb_min_bandwidth: Optional[int]   # based on /sys/fs/resctrl/info/MB/bandwidth_gran
+
+    def is_control_enabled(self):
+        return self.rdt_mb_control_enabled or self.rdt_cache_control_enabled
+
+    def is_monitoring_enabled(self):
+        return self.rdt_mb_monitoring_enabled or self.rdt_cache_monitoring_enabled
 
 
 @dataclass
@@ -92,8 +111,7 @@ class Platform:
     # [unix timestamp] Recorded timestamp of finishing data gathering (as returned from time.time)
     timestamp: float
 
-    # rdt information
-    rdt_information: RDTInformation
+    rdt_information: Optional[RDTInformation]
 
 
 def create_metrics(platform: Platform) -> List[Metric]:
@@ -257,28 +275,54 @@ def collect_topology_information() -> (int, int, int):
     return nr_of_online_cpus, nr_of_cores, nr_of_sockets
 
 
+BASE_RESCTRL_PATH = '/sys/fs/resctrl'
+MON_DATA = 'mon_data'
+MON_L3_00 = 'mon_L3_00'
+MBM_TOTAL = 'mbm_total_bytes'
+
+
 def _collect_rdt_information() -> RDTInformation:
-    """Returns rdt information values."""
+    """Returns rdt information values.
+    Assumes resctrl is already mounted.
+    """
+
+    rdt_cat_monitoring_enabled = os.path.exists('/sys/fs/resctrl/mon_data/mon_L3_00')
+    rdt_mb_monitoring_enabled = os.path.exists('/sys/fs/resctrl/mon_data/mon_MB_00')
 
     def _read_value(subpath):
         with open(os.path.join('/sys/fs/resctrl/', subpath)) as f:
             return f.read().strip()
 
-    cbm_mask = _read_value('info/L3/cbm_mask')
-    min_cbm_bits = _read_value('info/L3/min_cbm_bits')
-    num_closids = int(_read_value('info/L3/num_closids'))
     schemata_body = _read_value('schemata')
+
+    rdt_cache_control_enabled = 'L3' in schemata_body
+    if rdt_cache_control_enabled:
+        cbm_mask = _read_value('info/L3/cbm_mask')
+        min_cbm_bits = _read_value('info/L3/min_cbm_bits')
+        num_closids = int(_read_value('info/L3/num_closids'))
+    else:
+        cbm_mask, min_cbm_bits, num_closids = None, None, None
+
     rdt_mb_control_enabled = 'MB:' in schemata_body
     if rdt_mb_control_enabled:
         mb_bandwidth_gran = int(_read_value('info/MB/bandwidth_gran'))
         mb_min_bandwidth = int(_read_value('info/MB/min_bandwidth'))
         mb_num_closids = int(_read_value('info/MB/num_closids'))
-        num_closids = min(num_closids, mb_num_closids)
     else:
-        mb_bandwidth_gran, mb_min_bandwidth = None, None
+        mb_bandwidth_gran, mb_min_bandwidth, mb_num_closids = None, None, None
 
-    return RDTInformation(cbm_mask, min_cbm_bits, rdt_mb_control_enabled, num_closids,
-                          mb_bandwidth_gran, mb_min_bandwidth)
+    if rdt_cache_control_enabled and rdt_mb_control_enabled:
+        num_closids = min(num_closids, mb_num_closids)
+
+    return RDTInformation(rdt_cat_monitoring_enabled,
+                          rdt_mb_monitoring_enabled,
+                          rdt_mb_control_enabled,
+                          rdt_cache_control_enabled,
+                          cbm_mask,
+                          min_cbm_bits,
+                          num_closids,
+                          mb_bandwidth_gran,
+                          mb_min_bandwidth)
 
 
 @profiler.profile_duration(name='collect_platform_information')
@@ -301,7 +345,7 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     if rdt_enabled:
         rdt_information = _collect_rdt_information()
     else:
-        rdt_information = RDTInformation(None, None, False, 0, 0, 0)
+        rdt_information = None
 
     # Dynamic information
     cpus_usage = parse_proc_stat(read_proc_stat())

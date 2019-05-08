@@ -129,8 +129,10 @@ def task(cgroup_path, labels=None, resources=None, subcgroups_paths=None):
     )
 
 
-def container(cgroup_path, subcgroups_paths=None, with_config=False, should_patch=True,
-              resgroup_name='', rdt_enabled=True, rdt_mb_control_enabled=True) \
+def container(cgroup_path, subcgroups_paths=None, with_config=False,
+              should_patch=True, resgroup_name='',
+              rdt_enabled=True, rdt_mb_control_enabled=True,
+              rdt_cache_control_enabled=True) \
               -> ContainerInterface:
     """Helper method to create Container or ContainerSet
         (depends if subcgroups_paths is empty or not),
@@ -146,14 +148,17 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False, should_patc
                 platform_cpus=1,
                 allocation_configuration=AllocationConfiguration() if with_config else None,
                 resgroup=ResGroup(name=resgroup_name) if rdt_enabled else None,
-                rdt_enabled=rdt_enabled, rdt_mb_control_enabled=rdt_mb_control_enabled,
-                event_names=DEFAULT_EVENTS
-            )
+                rdt_information=RDTInformation(
+                    True, True, rdt_mb_control_enabled,
+                    rdt_cache_control_enabled, '0', '0', 0, 0, 0),
+                event_names=DEFAULT_EVENTS)
         else:
             return Container(
                 cgroup_path=cgroup_path,
-                rdt_enabled=rdt_enabled, platform_cpus=1,
-                rdt_mb_control_enabled=True,
+                platform_cpus=1,
+                rdt_information=RDTInformation(True, True,
+                                               True, True, '0', '0',
+                                               0, 0, 0),
                 allocation_configuration=AllocationConfiguration() if with_config else None,
                 resgroup=ResGroup(name=resgroup_name) if rdt_enabled else None,
                 event_names=DEFAULT_EVENTS
@@ -202,6 +207,9 @@ platform_mock = Mock(
     rdt_information=RDTInformation(
         cbm_mask='fffff',
         min_cbm_bits='1',
+        rdt_cache_monitoring_enabled=True,
+        rdt_cache_control_enabled=True,
+        rdt_mb_monitoring_enabled=True,
         rdt_mb_control_enabled=True,
         num_closids=2,
         mb_bandwidth_gran=None,

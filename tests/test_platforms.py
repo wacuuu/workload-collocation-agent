@@ -104,11 +104,12 @@ def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks)
     "/sys/fs/resctrl/info/MB/bandwidth_gran": "10",
     "/sys/fs/resctrl/info/MB/min_bandwidth": "20",
     "/sys/fs/resctrl/info/MB/num_closids": "8",
-    "/sys/fs/resctrl/schemata": "MB:0=100",
+    "/sys/fs/resctrl/schemata": "MB:0=100\nL3:0=fffff",
     "/proc/stat": "parsed value mocked below",
     "/proc/meminfo": "parsed value mocked below",
     "/proc/cpuinfo": "model name : intel xeon"
 }))
+@patch('owca.platforms.os.path.exists', return_value=True)
 @patch('owca.platforms.get_owca_version', return_value="0.1")
 @patch('socket.gethostname', return_value="test_host")
 @patch('owca.platforms.parse_proc_meminfo', return_value=1337)
@@ -118,7 +119,7 @@ def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks)
 def test_collect_platform_information(*mocks):
     assert collect_platform_information() == (
         Platform(1, 1, 2, {0: 100, 1: 200}, 1337, 1536071557.123456,
-                 RDTInformation('fffff', '2', True, 8, 10, 20)),
+                 RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20)),
         [
             Metric.create_metric_with_metadata(
                 name=MetricName.MEM_USAGE, value=1337

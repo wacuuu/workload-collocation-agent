@@ -97,7 +97,7 @@ def test_clean_resctrl(exists_mock, isdir_mock, rmdir_mock, listdir_mock):
     )
 )
 def test_get_max_rdt_values(cbm_mask, platform_sockets, expected_max_rdt_l3, expected_max_rdt_mb):
-    got_max_rdt_l3, got_max_rdt_mb = get_max_rdt_values(cbm_mask, platform_sockets)
+    got_max_rdt_l3, got_max_rdt_mb = get_max_rdt_values(cbm_mask, platform_sockets, True, True)
     assert got_max_rdt_l3 == expected_max_rdt_l3
     assert got_max_rdt_mb == expected_max_rdt_mb
 

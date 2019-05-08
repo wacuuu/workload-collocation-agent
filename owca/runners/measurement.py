@@ -75,7 +75,10 @@ class MeasurementRunner(Runner):
         self._metrics_storage = metrics_storage
         self._action_delay = action_delay
         self._rdt_enabled = rdt_enabled
-        self._rdt_mb_control_enabled = False  # Disabled by default, to be override by subclasses.
+        # Disabled by default, to be overridden by subclasses.
+        self._rdt_mb_control_required = False
+        # Disabled by default, to overridden by subclasses.
+        self._rdt_cache_control_required = False
         self._extra_labels = extra_labels or dict()
         self._finish = False  # Guard to stop iterations.
         self._last_iteration = time.time()  # Used internally by wait function.
@@ -107,6 +110,7 @@ class MeasurementRunner(Runner):
             return 1
 
         # Initialization (auto discovery Intel RDT features).
+
         rdt_available = resctrl.check_resctrl()
         if self._rdt_enabled is None:
             self._rdt_enabled = rdt_available
@@ -117,15 +121,24 @@ class MeasurementRunner(Runner):
 
         if self._rdt_enabled:
             # Resctrl is enabled and available, call a placeholder to allow further initialization.
-            rat_initialization_ok = self._initialize_rdt()
-            if not rat_initialization_ok:
+            rdt_initialization_ok = self._initialize_rdt()
+            if not rdt_initialization_ok:
                 return 1
 
-        # Post pone the container manager initialization after rdt checks were performed.
+        # Postpone the container manager initialization after rdt checks were performed.
         platform_cpus, _, platform_sockets = platforms.collect_topology_information()
+
+        platform, _, _ = platforms.collect_platform_information(self._rdt_enabled)
+        rdt_information = platform.rdt_information
+
+        # We currently do not support RDT without monitoring.
+        if self._rdt_enabled and not rdt_information.is_monitoring_enabled():
+            log.error('RDT monitoring is required - please enable CAT '
+                      'or MBM with kernel parameters!')
+            return 1
+
         self._containers_manager = ContainerManager(
-            self._rdt_enabled,
-            rdt_mb_control_enabled=self._rdt_enabled and self._rdt_mb_control_enabled,
+            rdt_information=rdt_information,
             platform_cpus=platform_cpus,
             allocation_configuration=self._allocation_configuration,
             event_names=self._event_names,

@@ -61,7 +61,8 @@ def test_resgroup_sync_no_space_left_on_device(makedirs_mock, exists_mock, log_w
 @patch('os.listdir', return_value=['1', '2'])
 def test_get_measurements(*mock):
     resgroup = ResGroup(name=RESCTRL_ROOT_NAME)
-    assert {'memory_bandwidth': 2, 'llc_occupancy': 2} == resgroup.get_measurements('best_efforts')
+    assert {'memory_bandwidth': 2, 'llc_occupancy': 2} == \
+        resgroup.get_measurements('best_efforts', True, True)
 
 
 @patch('owca.resctrl.SetEffectiveRootUid')

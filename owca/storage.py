@@ -129,7 +129,7 @@ _METRIC_LABEL_NAME_RE = re.compile(r'^[a-zA-Z_][a-zA-Z0-9_]*$')
 _RESERVED_METRIC_LABEL_NAME_RE = re.compile(r'^__.*$')
 
 
-class UnconvertableToPrometheusExpositionFormat(Exception):
+class InconvertibleToPrometheusExpositionFormat(Exception):
     pass
 
 
@@ -140,8 +140,8 @@ def is_convertable_to_prometheus_exposition_format(metrics: List[Metric]) -> (bo
     and only allow to set type to gauge and counter.
 
     Returns:
-        Tuple with 1) boolean flag whether the metrics are convertable (True if they are)
-        2) in case of not being convertable error message explaining the cause, otherwise
+        Tuple with 1) boolean flag whether the metrics are convertible (True if they are)
+        2) in case of not being convertible error message explaining the cause, otherwise
         empty string.
     """
     for metric in metrics:
@@ -302,7 +302,7 @@ class KafkaStorage(Storage):
         the message (metrics) are delivered to the kafka.
 
         Raises:
-            * UnconvertableToPrometheusExpositionFormat - if metrics are not convertable
+            * InconvertibleToPrometheusExpositionFormat - if metrics are not convertible
                 into prometheus exposition format.
             * FailedDeliveryException - if a message could not be written to kafka.
         """
@@ -311,12 +311,12 @@ class KafkaStorage(Storage):
             log.warning('Empty list of metrics, store is skipped!')
             return
 
-        is_convertable, error_message = is_convertable_to_prometheus_exposition_format(metrics)
-        if not is_convertable:
+        is_convertible, error_message = is_convertable_to_prometheus_exposition_format(metrics)
+        if not is_convertible:
             log.error('KafkaStorage failed to convert metrics into'
                       'prometheus exposition format; error: "{}"'
                       .format(error_message))
-            raise UnconvertableToPrometheusExpositionFormat(error_message)
+            raise InconvertibleToPrometheusExpositionFormat(error_message)
 
         timestamp = get_current_time()
 
@@ -329,13 +329,13 @@ class KafkaStorage(Storage):
         # check if timeout expired
         if r > 0:
             raise FailedDeliveryException(
-                "Maximum timeout {} for sending message has passed out.".format(
+                "Maximum timeout {} for sending message had passed.".format(
                     self.max_timeout_in_seconds))
 
         # check if any failed to be delivered
         if self.error_from_callback is not None:
-            # before reseting self.error_from_callback we
-            # assign the original value to seperate value
+            # before resetting self.error_from_callback we
+            # assign the original value to separate value
             # to pass it to exception
             error_from_callback__original_ref = self.error_from_callback
             self.error_from_callback = None
@@ -351,7 +351,7 @@ class KafkaStorage(Storage):
 
 
 class MetricPackage:
-    """Wraps storage to pack metrics from diffrent sources and apply common labels
+    """Wraps storage to pack metrics from different sources and apply common labels
     before send."""
 
     def __init__(self, storage: Storage):

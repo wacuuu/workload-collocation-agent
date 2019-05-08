@@ -184,7 +184,8 @@ class ResGroup:
             log.log(logger.TRACE, 'resctrl: rmdir(%r)', dir_to_remove)
             os.rmdir(dir_to_remove)
 
-    def get_measurements(self, mongroup_name) -> Measurements:
+    def get_measurements(self, mongroup_name, mb_monitoring_enabled,
+                         cache_monitoring_enabled) -> Measurements:
         """
         mbm_total: Memory bandwidth - type: counter, unit: [bytes]
         :return: Dictionary containing memory bandwidth
@@ -200,12 +201,19 @@ class ResGroup:
         # Iterate over sockets to gather data:
         for socket_dir in os.listdir(os.path.join(self.fullpath,
                                                   MON_GROUPS, mongroup_name, MON_DATA)):
-            with open(_get_event_file(socket_dir, MBM_TOTAL)) as mbm_total_file:
-                mbm_total += int(mbm_total_file.read())
-            with open(_get_event_file(socket_dir, LLC_OCCUPANCY)) as llc_occupancy_file:
-                llc_occupancy += int(llc_occupancy_file.read())
+            if mb_monitoring_enabled:
+                with open(_get_event_file(socket_dir, MBM_TOTAL)) as mbm_total_file:
+                    mbm_total += int(mbm_total_file.read())
+            if cache_monitoring_enabled:
+                with open(_get_event_file(socket_dir, LLC_OCCUPANCY)) as llc_occupancy_file:
+                    llc_occupancy += int(llc_occupancy_file.read())
 
-        return {MetricName.MEM_BW: mbm_total, MetricName.LLC_OCCUPANCY: llc_occupancy}
+        measurements = {}
+        if mb_monitoring_enabled:
+            measurements[MetricName.MEM_BW] = mbm_total
+        if cache_monitoring_enabled:
+            measurements[MetricName.LLC_OCCUPANCY] = llc_occupancy
+        return measurements
 
     def get_allocations(self) -> TaskAllocations:
         """Return TaskAllocations representing allocation for RDT resource."""
@@ -297,7 +305,9 @@ def cleanup_resctrl(root_rdt_l3: Optional[str], root_rdt_mb: Optional[str], rese
                 raise InvalidAllocations('Cannot set MB allocation for default group: %s' % e)
 
 
-def get_max_rdt_values(cbm_mask: str, platform_sockets: int) -> Tuple[str, str]:
+def get_max_rdt_values(cbm_mask: str, platform_sockets: int,
+                       rdt_mb_control_enabled, rdt_cache_control_enabled) \
+                       -> Tuple[Optional[str], Optional[str]]:
     """Calculated default maximum values for memory bandwidth and cache allocation
     based on cbm_max and number of sockets.
     returns (max_rdt_l3, max_rdt_mb) matching the platform.
@@ -310,7 +320,10 @@ def get_max_rdt_values(cbm_mask: str, platform_sockets: int) -> Tuple[str, str]:
         max_rdt_l3.append('%i=%s' % (dom_id, cbm_mask))
         max_rdt_mb.append('%i=100' % dom_id)
 
-    return 'L3:' + ';'.join(max_rdt_l3), 'MB:' + ';'.join(max_rdt_mb)
+    max_rdt_l3 = 'L3:' + ';'.join(max_rdt_l3) if rdt_cache_control_enabled else None
+    max_rdt_mb = 'MB:' + ';'.join(max_rdt_mb) if rdt_mb_control_enabled else None
+
+    return max_rdt_l3, max_rdt_mb
 
 
 def check_resctrl():
@@ -326,15 +339,6 @@ def check_resctrl():
     except IOError as e:
         log.log(TRACE, 'Error: Failed to open %s: %s', resctrl_tasks, e)
         log.debug('Resctrl not mounted. ')
-        return False
-
-    mon_data = os.path.join(BASE_RESCTRL_PATH, MON_DATA, MON_L3_00, MBM_TOTAL)
-    try:
-        with open(mon_data):
-            pass
-    except IOError as e:
-        log.log(TRACE, 'Error: Failed to open %s: %s', mon_data, e)
-        log.debug('Resctrl does not support Memory Bandwidth Monitoring.')
         return False
 
     return True

@@ -19,6 +19,7 @@ import pytest
 from owca import storage
 from owca.containers import Container
 from owca.mesos import MesosNode
+from owca.platforms import RDTInformation
 from owca.runners.measurement import MeasurementRunner, _build_tasks_metrics, _prepare_tasks_data
 from owca.testing import assert_metric, redis_task_with_default_labels, prepare_runner_patches, \
     TASK_CPU_USAGE, OWCA_MEMORY_USAGE, metric, DEFAULT_METRIC_VALUE, task
@@ -76,9 +77,10 @@ def test_build_tasks_metrics(tasks_labels, tasks_measurements, expected_metrics)
 @patch('owca.perf.PerfCounters')
 @patch('owca.containers.Container.get_measurements', Mock(return_value={'cpu_usage': 13}))
 def test_prepare_tasks_data(*mocks):
+    rdt_information = RDTInformation(True, True, True, True, '0', '0', 0, 0, 0)
     containers = {
         task('/t1', labels={'label_key': 'label_value'}, resources={'cpu': 3}):
-            Container('/t1', 1)
+            Container('/t1', 1, rdt_information)
     }
 
     tasks_measurements, tasks_resources, tasks_labels = _prepare_tasks_data(containers)

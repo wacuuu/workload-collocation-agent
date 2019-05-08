@@ -19,6 +19,7 @@ import pytest
 from owca.containers import ContainerSet, Container, \
     ContainerManager, ContainerInterface, _find_new_and_dead_tasks
 from owca.cgroups import Cgroup
+from owca.platforms import RDTInformation
 from owca.perf import PerfCounters
 from owca.resctrl import ResGroup
 from owca.testing import task, container
@@ -140,7 +141,8 @@ def test_sync_containers_state(_, get_pids_mock, sync_mock, perf_counters_mock,
     expected_running_containers = {task(t, subcgroups_paths=subcgroups): container(c, subcgroups)
                                    for t, c in expected_running_containers_.items()}
 
-    containers_manager = ContainerManager(rdt_enabled=True, rdt_mb_control_enabled=False,
+    rdt_information = RDTInformation(True, True, True, True, 'fff', '1', 0, 0, 0)
+    containers_manager = ContainerManager(rdt_information=rdt_information,
                                           platform_cpus=1,
                                           allocation_configuration=AllocationConfiguration(),
                                           event_names=[],
