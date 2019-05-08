@@ -17,10 +17,10 @@ from unittest.mock import patch
 
 import pytest
 
-from owca.metrics import Metric, MetricName
-from owca.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
+from wca.metrics import Metric, MetricName
+from wca.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
     collect_topology_information, collect_platform_information, RDTInformation
-from owca.testing import create_open_mock
+from wca.testing import create_open_mock
 
 
 @pytest.mark.parametrize("raw_meminfo_output,expected", [
@@ -109,12 +109,12 @@ def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks)
     "/proc/meminfo": "parsed value mocked below",
     "/proc/cpuinfo": "model name : intel xeon"
 }))
-@patch('owca.platforms.os.path.exists', return_value=True)
-@patch('owca.platforms.get_owca_version', return_value="0.1")
+@patch('wca.platforms.os.path.exists', return_value=True)
+@patch('wca.platforms.get_wca_version', return_value="0.1")
 @patch('socket.gethostname', return_value="test_host")
-@patch('owca.platforms.parse_proc_meminfo', return_value=1337)
-@patch('owca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
-@patch('owca.platforms.collect_topology_information', return_value=(2, 1, 1))
+@patch('wca.platforms.parse_proc_meminfo', return_value=1337)
+@patch('wca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
+@patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1))
 @patch('time.time', return_value=1536071557.123456)
 def test_collect_platform_information(*mocks):
     assert collect_platform_information() == (
@@ -132,5 +132,5 @@ def test_collect_platform_information(*mocks):
             ),
         ],
         {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
-         "owca_version": "0.1", "cpu_model": "intel xeon"}
+         "wca_version": "0.1", "cpu_model": "intel xeon"}
     )

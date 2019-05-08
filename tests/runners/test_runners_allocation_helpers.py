@@ -16,18 +16,19 @@ from unittest.mock import patch
 
 import pytest
 
-from owca.allocations import InvalidAllocations
-from owca.allocators import AllocationType, RDTAllocation, AllocationConfiguration
-from owca.cgroups import Cgroup
-from owca.containers import Container
-from owca.platforms import RDTInformation
-from owca.resctrl import ResGroup
-from owca.resctrl_allocations import RDTGroups, RDTAllocationValue
-from owca.runners.allocation import (TasksAllocationsValues, TaskAllocationsValues,
-                                     AllocationRunner,
-                                     validate_shares_allocation_for_kubernetes)
-from owca.testing import allocation_metric, task, container
-from owca.testing import platform_mock
+from wca.allocations import InvalidAllocations
+from wca.allocators import AllocationType, RDTAllocation, AllocationConfiguration
+from wca.cgroups import Cgroup
+from wca.containers import Container
+from wca.platforms import RDTInformation
+from wca.resctrl import ResGroup
+from wca.resctrl_allocations import RDTGroups, RDTAllocationValue
+from wca.runners.allocation import (TasksAllocationsValues,
+                                    TaskAllocationsValues,
+                                    AllocationRunner,
+                                    validate_shares_allocation_for_kubernetes)
+from wca.testing import allocation_metric, task, container
+from wca.testing import platform_mock
 
 
 @pytest.mark.parametrize('tasks_allocations, expected_metrics', (
@@ -223,8 +224,8 @@ def test_unique_rdt_allocations(tasks_allocations, expected_resgroup_reallocatio
     allocations_values = TasksAllocationsValues.create(
         True, tasks_allocations, containers, platform_mock)
     allocations_values.validate()
-    with patch('owca.resctrl.ResGroup.write_schemata') as mock, \
-            patch('owca.cgroups.Cgroup._write'), patch('owca.cgroups.Cgroup._read'):
+    with patch('wca.resctrl.ResGroup.write_schemata') as mock, \
+            patch('wca.cgroups.Cgroup._write'), patch('wca.cgroups.Cgroup._read'):
         allocations_values.perform_allocations()
         assert mock.call_count == expected_resgroup_reallocation_count
 
@@ -258,8 +259,8 @@ def test_unique_rdt_allocations(tasks_allocations, expected_resgroup_reallocatio
         ('L3:0=00f', 'wrong mb', True, True, True, True, 'wrong', True, None),
     ]
 )
-@patch('owca.resctrl.cleanup_resctrl')
-@patch('owca.platforms.collect_platform_information', return_value=(platform_mock, [], {}))
+@patch('wca.resctrl.cleanup_resctrl')
+@patch('wca.platforms.collect_platform_information', return_value=(platform_mock, [], {}))
 def test_rdt_initialize(rdt_max_values_mock, cleanup_resctrl_mock,
                         default_rdt_l3, default_rdt_mb,
                         config_rdt_mb_control_enabled,
@@ -287,7 +288,7 @@ def test_rdt_initialize(rdt_max_values_mock, cleanup_resctrl_mock,
         allocation_configuration=allocation_configuration,
     )
 
-    with patch('owca.testing.platform_mock.rdt_information', Mock(
+    with patch('wca.testing.platform_mock.rdt_information', Mock(
             spec=RDTInformation,
             cbm_mask='fff', min_cbm_bits='2',
             rdt_mb_control_enabled=platform_rdt_mb_control_enabled,
@@ -303,8 +304,8 @@ def test_rdt_initialize(rdt_max_values_mock, cleanup_resctrl_mock,
         assert cleanup_resctrl_mock.call_count == 0
 
 
-@patch('owca.runners.allocation.have_tasks_qos_label', return_value=True)
-@patch('owca.runners.allocation.are_all_tasks_of_single_qos', return_value=False)
+@patch('wca.runners.allocation.have_tasks_qos_label', return_value=True)
+@patch('wca.runners.allocation.are_all_tasks_of_single_qos', return_value=False)
 @pytest.mark.parametrize(
     'allocations, should_raise_exception',
     (

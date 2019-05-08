@@ -17,13 +17,13 @@ from unittest.mock import patch, mock_open, call
 
 import pytest
 
-from owca.allocations import InvalidAllocations
-from owca.allocators import RDTAllocation
-from owca.platforms import RDTInformation
-from owca.resctrl import ResGroup
-from owca.resctrl_allocations import RDTAllocationValue, RDTGroups, _parse_schemata_file_row, \
+from wca.allocations import InvalidAllocations
+from wca.allocators import RDTAllocation
+from wca.platforms import RDTInformation
+from wca.resctrl import ResGroup
+from wca.resctrl_allocations import RDTAllocationValue, RDTGroups, _parse_schemata_file_row, \
     _count_enabled_bits, check_cbm_mask, _is_rdt_suballocation_changed, _validate_domains
-from owca.testing import create_open_mock, allocation_metric
+from wca.testing import create_open_mock, allocation_metric
 
 
 @pytest.mark.parametrize(
