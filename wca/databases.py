@@ -148,7 +148,7 @@ class EtcdDatabase(Database):
     hosts: List[str]
     ssl_verify: Union[bool, str] = True  # requests: Can be used to pass cert CA bundle.
     timeout: float = 5.0  # request timeout in seconds (tries another host)
-    api_path = '/v3alpha'
+    api_path: str = '/v3alpha'
     client_cert_path: str = None
     client_key_path: str = None
 
