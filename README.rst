@@ -29,12 +29,13 @@ An externally provided algorithm is responsible for allocating resources or anom
 and the algorithm exchange information about current resource usage, isolation actuations or detected
 anomalies. WCA stores information about detected anomalies, resource allocation and platform utilization metrics to a remote storage such as Kafka.
 
-The diagram below puts WCA in context of an example Mesos cluster and monitoring infrastructure:
+The diagram below puts WCA in context of a cluster and monitoring infrastructure:
 
 .. image:: docs/context.png
 
+For context regarding Mesos see `this document <docs/mesos.rst>`_ and for Kubernetes see `this document <docs/kubernetes.rst>`_.
 
-See `WCA Architecture 1.5.pdf`_ for further details.
+See `WCA Architecture 1.7.pdf`_ for further details.
 
 
 Getting started
@@ -205,7 +206,7 @@ Further reading
 - `Kubernetes integration <docs/kubernetes.rst>`_
 - `Logging configuration <docs/logging.rst>`_
 - `Supported workloads and definitions </workloads>`_
-- `WCA Architecture 1.5.pdf`_
+- `WCA Architecture 1.7.pdf`_
 
-.. _`WCA Architecture 1.5.pdf`: docs/WCA_Architecture_v1.5.pdf
+.. _`WCA Architecture 1.7.pdf`: docs/WCA_Architecture_v1.7.pdf
 
