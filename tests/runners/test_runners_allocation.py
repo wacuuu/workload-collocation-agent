@@ -78,13 +78,28 @@ def test_allocation_runner(
     # Check allocation metrics ...
     got_allocations_metrics = runner._allocations_storage.store.call_args[0][0]
     # ... generic allocation metrics ...
-    assert_metric(got_allocations_metrics, 'allocations_count', expected_metric_value=1)
-    assert_metric(got_allocations_metrics, 'allocations_errors', expected_metric_value=0)
-    assert_metric(got_allocations_metrics, 'allocation_duration')
+    assert_metric(got_allocations_metrics,
+                  'allocations_count',
+                  dict(extra_labels='extra_value'),
+                  expected_metric_value=1)
+    assert_metric(got_allocations_metrics,
+                  'allocations_errors',
+                  dict(extra_labels='extra_value'),
+                  expected_metric_value=0)
+    assert_metric(got_allocations_metrics,
+                  'allocation_duration',
+                  dict(extra_labels='extra_value'))
     # ... and allocation metrics for task t1.
-    assert_metric(got_allocations_metrics, 'allocation_cpu_quota', dict(task=t1.task_id), 0.5)
-    assert_metric(got_allocations_metrics, 'allocation_rdt_l3_cache_ways', dict(task=t1.task_id), 4)
-    assert_metric(got_allocations_metrics, 'allocation_rdt_l3_mask', dict(task=t1.task_id), 15)
+    assert_metric(got_allocations_metrics,
+                  'allocation_cpu_quota',
+                  dict(task=t1.task_id,
+                       extra_labels='extra_value'), 0.5)
+    assert_metric(got_allocations_metrics,
+                  'allocation_rdt_l3_cache_ways',
+                  dict(task=t1.task_id, extra_labels='extra_value'), 4)
+    assert_metric(got_allocations_metrics,
+                  'allocation_rdt_l3_mask',
+                  dict(task=t1.task_id, extra_labels='extra_value'), 15)
 
     ############################
     # Second run (two tasks, one allocation)
