@@ -212,8 +212,8 @@ platform_mock = Mock(
         rdt_mb_monitoring_enabled=True,
         rdt_mb_control_enabled=True,
         num_closids=2,
-        mb_bandwidth_gran=None,
-        mb_min_bandwidth=None,
+        mb_bandwidth_gran=0,
+        mb_min_bandwidth=0,
     ))
 
 

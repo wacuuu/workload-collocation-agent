@@ -265,7 +265,8 @@ class AllocationRunner(MeasurementRunner):
                                    platform.rdt_information.min_cbm_bits)
 
             if root_rdt_mb is not None:
-                validate_mb_string(root_rdt_mb, platform.sockets)
+                validate_mb_string(root_rdt_mb, platform.sockets,
+                                   platform.rdt_information.mb_min_bandwidth)
 
             resctrl.cleanup_resctrl(root_rdt_l3, root_rdt_mb, self._remove_all_resctrl_groups)
         except InvalidAllocations as e:
