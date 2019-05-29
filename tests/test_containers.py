@@ -154,6 +154,7 @@ def test_sync_containers_state(_, get_pids_mock, sync_mock, perf_counters_mock,
     rdt_information = RDTInformation(True, True, True, True, 'fff', '1', 0, 0, 0)
     containers_manager = ContainerManager(rdt_information=rdt_information,
                                           platform_cpus=1,
+                                          platform_sockets=1,
                                           allocation_configuration=AllocationConfiguration(),
                                           event_names=[],
                                           )

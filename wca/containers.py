@@ -102,6 +102,7 @@ class ContainerInterface(ABC):
 class ContainerSet(ContainerInterface):
     def __init__(self,
                  cgroup_path: str, cgroup_paths: List[str], platform_cpus: int,
+                 platform_sockets: int,
                  rdt_information: Optional[RDTInformation],
                  allocation_configuration: Optional[AllocationConfiguration] = None,
                  resgroup: ResGroup = None,
@@ -119,6 +120,7 @@ class ContainerSet(ContainerInterface):
         self._cgroup = cgroups.Cgroup(
             cgroup_path=self._cgroup_path,
             platform_cpus=platform_cpus,
+            platform_sockets=platform_sockets,
             allocation_configuration=allocation_configuration)
 
         # Create Cgroup objects for children.
@@ -128,6 +130,7 @@ class ContainerSet(ContainerInterface):
                 cgroup_path=cgroup_path,
                 rdt_information=None,
                 platform_cpus=platform_cpus,
+                platform_sockets=platform_sockets,
                 allocation_configuration=allocation_configuration,
                 event_names=event_names,
                 enable_derived_metrics=enable_derived_metrics,
@@ -206,6 +209,7 @@ class ContainerSet(ContainerInterface):
 
 class Container(ContainerInterface):
     def __init__(self, cgroup_path: str, platform_cpus: int,
+                 platform_sockets: int,
                  rdt_information: Optional[RDTInformation],
                  resgroup: ResGroup = None,
                  allocation_configuration:
@@ -222,6 +226,7 @@ class Container(ContainerInterface):
         self._cgroup = cgroups.Cgroup(
             cgroup_path=self._cgroup_path,
             platform_cpus=platform_cpus,
+            platform_sockets=platform_sockets,
             allocation_configuration=allocation_configuration)
 
         self._derived_metrics_generator = None
@@ -320,12 +325,13 @@ class ContainerManager:
     their containers and resctrl system. """
 
     def __init__(self, rdt_information: Optional[RDTInformation], platform_cpus: int,
+                 platform_sockets: int,
                  allocation_configuration: Optional[AllocationConfiguration],
                  event_names: List[str], enable_derived_metrics: bool = False):
         self.containers: Dict[Task, ContainerInterface] = {}
         self._rdt_information = rdt_information
-
         self._platform_cpus = platform_cpus
+        self._platform_sockets = platform_sockets
         self._allocation_configuration = allocation_configuration
         self._event_names = event_names
         self._enable_derived_metrics = enable_derived_metrics
@@ -340,6 +346,7 @@ class ContainerManager:
                 cgroup_paths=task.subcgroups_paths,
                 rdt_information=self._rdt_information,
                 platform_cpus=self._platform_cpus,
+                platform_sockets=self._platform_sockets,
                 allocation_configuration=self._allocation_configuration,
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
@@ -349,6 +356,7 @@ class ContainerManager:
                 cgroup_path=task.cgroup_path,
                 rdt_information=self._rdt_information,
                 platform_cpus=self._platform_cpus,
+                platform_sockets=self._platform_sockets,
                 allocation_configuration=self._allocation_configuration,
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
