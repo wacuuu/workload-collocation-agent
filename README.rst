@@ -64,10 +64,10 @@ WCA is targeted at and tested on Centos 7.5.
     sudo mkdir /sys/fs/cgroups/{cpu,cpuacct,perf_event}/task1
 
     # Example of running agent in measurments-only mode with predefined static list of tasks
-    sudo dist/wca.pex --config configs/extra/static_measurements.yaml --root
+    sudo dist/wca.pex --config /etc/wca/configs/extra/static_measurements.yaml --root
 
     # Example of static allocation with predefined rules on predefined list of tasks.
-    sudo dist/wca.pex --config configs/extra/static_allocator.yaml --root
+    sudo dist/wca.pex --config /etc/wca/configs/extra/static_allocator.yaml --root
 
 
 Running those commands outputs metrics in Prometheus format to standard error like this:

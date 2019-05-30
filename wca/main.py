@@ -81,6 +81,12 @@ def main():
     # Register internal & external components.
     components.register_components(extra_components=args.components)
 
+    if not os.path.isabs(args.config):
+        log.error(
+            'Error: The config path \'%s\' is not valid. The path must be absolute.'
+            % args.config)
+        exit(1)
+
     # Initialize all necessary objects.
     try:
         configuration = config.load_config(args.config)
