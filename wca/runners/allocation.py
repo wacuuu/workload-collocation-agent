@@ -22,10 +22,10 @@ from wca.allocators import TasksAllocations, AllocationConfiguration, Allocation
     TaskAllocations, RDTAllocation
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
         CPUSetAllocationValue
-from wca.config import Numeric, Str
+from wca.config import Numeric, Str, assure_type
 from wca.containers import ContainerInterface, Container
 from wca.detectors import convert_anomalies_to_metrics, \
-    update_anomalies_metrics_with_task_information
+    update_anomalies_metrics_with_task_information, Anomaly
 from wca.kubernetes import have_tasks_qos_label, are_all_tasks_of_single_qos
 from wca.metrics import Metric, MetricType
 from wca.nodes import Task
@@ -295,6 +295,9 @@ class AllocationRunner(MeasurementRunner):
             current_allocations)
         allocate_duration = time.time() - allocate_start
 
+        # Validate callback output
+        _validate_allocate_return_vals(new_allocations, anomalies, extra_metrics)
+
         log.debug('Anomalies detected: %d', len(anomalies))
         log.debug('Current allocations: %s', current_allocations)
 
@@ -392,3 +395,10 @@ def _get_allocations_statistics_metrics(allocations_count, allocations_errors, a
         ])
 
     return metrics
+
+
+def _validate_allocate_return_vals(
+        tasks: TasksAllocations, anomalies: List[Anomaly], metrics: List[Metric]):
+    assure_type(tasks, TasksAllocations)
+    assure_type(anomalies, List[Anomaly])
+    assure_type(metrics, List[Metric])
