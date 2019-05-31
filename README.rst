@@ -162,6 +162,7 @@ Components
 Following built-in components are available (stable API):
 
 - `MesosNode <wca/mesos.py#L64>`_ provides workload discovery on Mesos cluster node where `mesos containerizer <http://mesos.apache.org/documentation/latest/mesos-containerizer/>`_ is used (see the docs `here <docs/mesos.rst>`_)
+- `KubernetesNode <wca/kubernetes.py#L64>`_ provides workload discovery on Kubernetes cluster node (see the docs `here <docs/kubernetes.rst>`_)
 - `MeasurementRunner <wca/runners/measurement.py#L36>`_ implements simple loop that reads state of the system, encodes this information as metrics and stores them,
 - `DetectionRunner <wca/runners/detection.py#L52>`_ extends ``MeasurementRunner`` and additionally implements anomaly detection callback and encodes anomalies as metrics to enable alerting and analysis. See `Detection API <docs/detection.rst>`_ for more details.
 - `AllocationRunner <wca/runners/allocation.py#L127>`_ extends ``MeasurementRunner`` and additionally implements resource allocation callback. See `Allocation API <docs/allocation.rst>`_ for more details .
