@@ -266,15 +266,7 @@ class Container(ContainerInterface):
 
     def get_measurements(self) -> Measurements:
         # Cgroup measurements
-        try:
-            cgroup_measurements = self._cgroup.get_measurements()
-        except FileNotFoundError:
-            log.warning('Could not read measurements for container %s. '
-                        'Probably the mesos container has died during '
-                        'the current runner iteration.',
-                        self._cgroup_path)
-            # Returning empty measurements.
-            cgroup_measurements = {}
+        cgroup_measurements = self._cgroup.get_measurements()
 
         # Perf events measurements
         if self._event_names:

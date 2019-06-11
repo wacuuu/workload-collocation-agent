@@ -199,14 +199,19 @@ class ResGroup:
                                 MON_DATA, socket_dir, event_name)
 
         # Iterate over sockets to gather data:
-        for socket_dir in os.listdir(os.path.join(self.fullpath,
-                                                  MON_GROUPS, mongroup_name, MON_DATA)):
-            if mb_monitoring_enabled:
-                with open(_get_event_file(socket_dir, MBM_TOTAL)) as mbm_total_file:
-                    mbm_total += int(mbm_total_file.read())
-            if cache_monitoring_enabled:
-                with open(_get_event_file(socket_dir, LLC_OCCUPANCY)) as llc_occupancy_file:
-                    llc_occupancy += int(llc_occupancy_file.read())
+        try:
+            for socket_dir in os.listdir(os.path.join(self.fullpath,
+                                                      MON_GROUPS, mongroup_name, MON_DATA)):
+                if mb_monitoring_enabled:
+                    with open(_get_event_file(socket_dir, MBM_TOTAL)) as mbm_total_file:
+                        mbm_total += int(mbm_total_file.read())
+                if cache_monitoring_enabled:
+                    with open(_get_event_file(socket_dir, LLC_OCCUPANCY)) as llc_occupancy_file:
+                        llc_occupancy += int(llc_occupancy_file.read())
+        except FileNotFoundError:
+            log.warning("Could not read measurements from rdt - ignored! "
+                        "rdt group was not found (race detected)")
+            return {}
 
         measurements = {}
         if mb_monitoring_enabled:
