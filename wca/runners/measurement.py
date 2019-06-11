@@ -23,7 +23,7 @@ from wca.allocators import AllocationConfiguration
 from wca.config import Numeric, Str
 from wca.containers import ContainerManager, Container
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels
-from wca.logger import trace
+from wca.logger import trace, get_logging_metrics
 from wca.mesos import create_metrics, sanitize_mesos_label
 from wca.metrics import Metric, MetricType, MetricName
 from wca.nodes import Task
@@ -182,6 +182,7 @@ class MeasurementRunner(Runner):
         metrics_package.add_metrics(platform_metrics)
         metrics_package.add_metrics(tasks_metrics)
         metrics_package.add_metrics(profiling.profiler.get_metrics())
+        metrics_package.add_metrics(get_logging_metrics())
         metrics_package.send(common_labels)
 
     def run(self) -> int:
