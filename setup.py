@@ -17,10 +17,13 @@ import json
 
 install_requires = ['%s%s' % (name, spec['version'])
                     for name, spec in
-                    json.load(open('Pipfile.lock'))['default'].items()
-                    ]
+                    json.load(open('Pipfile.lock'))['default'].items()]
+packages = ['wca', 'wca.extra', 'wca.runners']
 
+print("Install requires:")
 print(install_requires)
+print("Packages bundled:")
+print(packages)
 
 setup(
     name='wca',
@@ -35,7 +38,7 @@ setup(
         'Topic :: System :: Distributed Computing',
     ],
     install_requires=install_requires,
-    packages=find_packages(),
+    packages=packages,
     python_requires=">=3.6",
     use_scm_version=True,
 )

@@ -16,8 +16,8 @@ from io import TextIOWrapper
 from typing import List, Dict
 import re
 from wca.metrics import Metric, MetricType
-from wca.wrapper import wrapper_main
-from wca.wrapper.parser import readline_with_check
+from wrapper import wrapper_main
+from wrapper.parser import readline_with_check
 
 EOF_line = "Stop-Mutilate-Now"
 

@@ -1,6 +1,6 @@
 tests:
-  - test_case_name1:	
-    tasks: 
+  - test_case_name1:
+    tasks:
       - /wcatask1
       - /wcatask2
 
@@ -15,7 +15,7 @@ tests:
       - !FileCheck
         path: /sys/fs/cgroup/cpu/wcatask1/cpu.shares
         line: '10000'
-        subvalue: '100'  
+        subvalue: '100'
       - !FileCheck
         path: /sys/fs/cgroup/cpuset/wcatask1/cpuset.cpus
         line: '0-3'
@@ -26,8 +26,8 @@ tests:
         name: anomaly_count
         value: 0
 
-  - test_case_name2:	
-    tasks: 
+  - test_case_name2:
+    tasks:
       - /wcatask2
       - /wcatask4
 
@@ -36,7 +36,7 @@ tests:
         - name: Example second rule
           allocations:
             cpu_quota: 1.0
-            cpu_shares: 20 
+            cpu_shares: 20
             cpu_set: '1,2,4-5'
     checks:
       - !FileCheck

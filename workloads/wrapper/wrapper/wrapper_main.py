@@ -23,8 +23,8 @@ from functools import partial
 
 from wca.storage import KafkaStorage, LogStorage
 from wca.logger import TRACE
-from wca.wrapper.parser import (default_parse, parse_loop, DEFAULT_REGEXP,
-                                ParseFunc, ServiceLevelArgs, append_service_level_metrics)
+from wrapper.parser import (default_parse, parse_loop, DEFAULT_REGEXP,
+                            ParseFunc, ServiceLevelArgs, append_service_level_metrics)
 from wca.platforms import get_wca_version
 
 log = logging.getLogger(__name__)
@@ -216,7 +216,7 @@ def prepare_argument_parser():
 
 def debug():
     """Debug hook to allow entering debug mode in compiled pex.
-    Run it as PEX_MODULE=wca.wrapper.wrapper_main:debug
+    Run it as PEX_MODULE=wrapper.wrapper_main:debug
     """
     import warnings
     try:
