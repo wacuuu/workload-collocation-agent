@@ -218,6 +218,7 @@ Further reading
 - `Security policy <SECURITY.md>`_
 - `Configuration examples for Kubernetes and Mesos <configs/>`_
 - `Other examples (e.g. how to add new component) <example/>`_
+- `Extending WCA <docs/extending.rst>`_
 
 .. _`WCA Architecture 1.7.pdf`: docs/WCA_Architecture_v1.7.pdf
 
