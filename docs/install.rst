@@ -127,6 +127,11 @@ All dependencies of the class must be available in currently used `PYTHONPATH`.
 
 You can use ``example.external_package:ExampleDetector`` that is already bundled within ``dist/wca.pex`` file.
 
+:note: Running wca with dedicated "wca" user is more secure, but requires enabling perf counters to be used by non-root users.
+       You need to reconfigure ``perf_event_paranoid`` sysctl paramter like this:
+       ``sudo sysctl -w kernel.perf_event_paranoid=-1`` or for persistent mode modify ``/etc/sysctl.conf`` and set
+       ``kernel.perf_event_paranoid = -1``. Mode about perf_event_paranoid `here <https://www.kernel.org/doc/Documentation/sysctl/kernel.txt>`_
+
 It is recommended to build a pex file with external component and its dependencies bundled. See `prm plugin from platform-resource-manager 
 <https://github.com/intel/platform-resource-manager/tree/master/prm>`_ as an example of such an approach.
 
