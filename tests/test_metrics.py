@@ -15,7 +15,8 @@
 
 import pytest
 
-from wca.mesos import create_metrics, sanitize_mesos_label
+from wca.runners.measurement import sanitize_label
+from wca.mesos import create_metrics
 from wca.metrics import Metric, merge_measurements
 
 
@@ -25,7 +26,7 @@ from wca.metrics import Metric, merge_measurements
     ('some.dots.found', 'some_dots_found'),
 ))
 def test_sanitize_labels(label_key, expected_label_key):
-    assert sanitize_mesos_label(label_key) == expected_label_key
+    assert sanitize_label(label_key) == expected_label_key
 
 
 @pytest.mark.parametrize('task_measurements,expected_metrics', (

@@ -161,24 +161,6 @@ class MesosNode(Node):
         return tasks
 
 
-MESOS_LABELS_PREFIXES_TO_DROP = ('org.apache.', 'aurora.metadata.')
-
-
-def sanitize_mesos_label(label_key):
-    """Removes unwanted prefixes from Aurora & Mesos e.g. 'org.apache.aurora'
-    and replaces invalid characters like "." with underscore.
-    """
-    # Drop unwanted prefixes
-    for unwanted_prefix in MESOS_LABELS_PREFIXES_TO_DROP:
-        if label_key.startswith(unwanted_prefix):
-            label_key = label_key.replace(unwanted_prefix, '')
-
-    # Prometheus labels cannot contain ".".
-    label_key = label_key.replace('.', '_')
-
-    return label_key
-
-
 def create_metrics(task_measurements: Measurements) -> List[Metric]:
     """Prepare a list of metrics for a mesos tasks based on provided measurements
     applying common_labels.

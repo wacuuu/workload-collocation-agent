@@ -24,7 +24,7 @@ from wca.config import Numeric, Str
 from wca.containers import ContainerManager, Container
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels
 from wca.logger import trace, get_logging_metrics
-from wca.mesos import create_metrics, sanitize_mesos_label
+from wca.mesos import create_metrics
 from wca.metrics import Metric, MetricType, MetricName
 from wca.nodes import Task
 from wca.profiling import profiler
@@ -154,6 +154,13 @@ class MeasurementRunner(Runner):
         tasks = self._node.get_tasks()
         log.debug('Tasks detected: %d', len(tasks))
 
+        for task in tasks:
+            sanitized_labels = dict()
+            for label_key, label_value in task.labels.items():
+                sanitized_labels.update({sanitize_label(label_key):
+                                         label_value})
+            task.labels = sanitized_labels
+
         # Keep sync of found tasks and internally managed containers.
         containers = self._containers_manager.sync_containers_state(tasks)
 
@@ -236,7 +243,7 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
 
         # Prepare tasks labels based on tasks metadata labels and task id.
         task_labels = {
-            sanitize_mesos_label(label_key): label_value
+            sanitize_label(label_key): label_value
             for label_key, label_value
             in task.labels.items()
         }
@@ -285,3 +292,21 @@ def _get_internal_metrics(tasks: List[Task]) -> List[Metric]:
     ]
 
     return metrics
+
+
+MESOS_LABELS_PREFIXES_TO_DROP = ('org.apache.', 'aurora.metadata.')
+
+
+def sanitize_label(label_key):
+    """Removes unwanted prefixes from Aurora & Mesos e.g. 'org.apache.aurora'
+    and replaces invalid characters like "." with underscore.
+    """
+    # Drop unwanted prefixes
+    for unwanted_prefix in MESOS_LABELS_PREFIXES_TO_DROP:
+        if label_key.startswith(unwanted_prefix):
+            label_key = label_key.replace(unwanted_prefix, '')
+
+    # Prometheus labels cannot contain ".".
+    label_key = label_key.replace('.', '_')
+
+    return label_key
