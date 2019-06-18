@@ -19,6 +19,8 @@ following items:
 - git
 - pip
 - pipenv 
+- make
+- which (required by pipenv)
 - source code of wca
 
 Building executable binary (distribution)

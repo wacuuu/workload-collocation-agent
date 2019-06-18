@@ -6,18 +6,18 @@ Development guide
 
 .. contents:: Table of Contents
 
-Please follow rules from `contributing guide <contributing.rst>`.
+Please follow rules from `contributing guide <contributing.rst>`_ .
 
 Preparing developer environment
 -------------------------------
 
-1. Install `epel-release` repository:
+1. Install `epel-release` repository and basic developer tools:
 
 .. code-block:: shell
 
-    yum install epel-release
+    yum install epel-release make git which
 
-Note: that on production system, you should use Python 3.6 as describe `here <install.rst>`.
+Note: that on production system, you should use Python 3.6 as describe `here <install.rst>`_.
 
 2. Install Python 3.6:
 
@@ -42,7 +42,9 @@ WCA uses `pipenv <https://pipenv.readthedocs.io/en/latest/>`_ to create python v
 
     pip install --user pipenv
 
-See `pragmatic installation of pipenv`_ for more details on installing pipenv.
+See `pragmatic installation of pipenv`_ for more details on installing pipenv. 
+
+:note: Further commands assume that `pipenv` command is available in `$PATH`, please follow the guide `pragmatic installation of pipenv`_ how to do this (on Linux: added `~/.local/bin` to `$PATH` environment variable)
 
 .. _`pragmatic installation of pipenv`: https://docs.pipenv.org/install/#pragmatic-installation-of-pipenv
 
