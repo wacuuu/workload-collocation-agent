@@ -195,7 +195,6 @@ Expected output is:
 .. code-block:: shell
 
     # from WCA:
-    2019-06-14 21:51:17,859 WARNING  {MainThread} [http_storage] timeout!
     2019-06-14 21:51:17,862 INFO     {MainThread} [http_storage] sending!
 
     # from socat:
@@ -266,7 +265,7 @@ Depending on ``Runner`` component, different kinds of metrics are produced and s
 
    - number of resource allocations performed during last iteration,
    - details about performed allocations like: number of CPU shares or CPU quota or cache allocation,
-   - more details `here <docs/allocation.rst#taskallocations-metrics>`_
+   - more details `here <allocation.rst#taskallocations-metrics>`_
 
 Note that it is possible by using `YAML anchors and aliases <https://yaml.org/refcard.html>`_ to configure that the same instance of ``Storage`` should be used to store all kinds of metrics:
 
@@ -297,7 +296,7 @@ use `PEX <https://github.com/pantsbuild/pex>`_ file to package all source code i
 
 .. code-block:: shell
 
-    pex -D example/hello_world_runner_with_dateutil.py  python-dateutil==2.8.0 -o hello_world.pex -v
+    pex -D example python-dateutil==2.8.0 -o hello_world.pex -v
 
 
 where ``example/hello_world_runner_with_dateutil.py``:
