@@ -58,9 +58,11 @@ corresponding storage classes.
                 (defaults to 1 second)
             rdt_enabled: enables or disabled support for RDT monitoring and allocation
                 (defaults to None(auto) based on platform capabilities)
-            rdt_mb_control_enabled: enables or disables support for RDT memory bandwidth
-                (defaults to None(auto) based on platform capabilities) allocation
-            extra_labels: additional labels attached to every metrics
+            rdt_mb_control_required: indicates that MB control is required,
+                if the platform does not support this feature the WCA will exit
+            rdt_cache_control_required: indicates tha L3 control is required,
+                if the platform does not support this feature the WCA will exit
+            extra_labels: additional labels attached to every metric
                 (defaults to empty dict)
             allocation_configuration: allows fine grained control over allocations
                 (defaults to AllocationConfiguration() instance)
@@ -78,11 +80,12 @@ corresponding storage classes.
                 allocator: Allocator,
                 metrics_storage: storage.Storage = DEFAULT_STORAGE,
                 anomalies_storage: storage.Storage = DEFAULT_STORAGE,
-                allocations_storage: storage.Storage = DEFAULT_STORAGE,  
+                allocations_storage: storage.Storage = DEFAULT_STORAGE,
                 action_delay: Numeric(0, 60) = 1.,  # [s]
                 rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
-                rdt_mb_control_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
-                extra_labels: Dict[str, str] = None,
+                rdt_mb_control_required: bool = False,
+                rdt_cache_control_required: bool = False,
+                extra_labels: Dict[Str, Str] = None,
                 allocation_configuration: Optional[AllocationConfiguration] = None,
                 remove_all_resctrl_groups: bool = False,
                 event_names: Optional[List[str]] = None,
@@ -97,22 +100,21 @@ corresponding storage classes.
 
     @dataclass
     class AllocationConfiguration:
-
         # Default value for cpu.cpu_period [ms] (used as denominator).
-        cpu_quota_period: int = 1000
+        cpu_quota_period: Numeric(1000, 1000000) = 1000
 
-        # Multiplier of AllocationType.CPU_SHARES allocation value. 
+        # Multiplier of AllocationType.CPU_SHARES allocation value.
         # E.g. setting 'CPU_SHARES' to 2.0 will set 2000 shares effectively
         # in cgroup cpu controller.
-        cpu_shares_unit: int = 1000
+        cpu_shares_unit: Numeric(1000, 1000000) = 1000
 
         # Default resource allocation for last level cache (L3) and memory bandwidth
         # for root RDT group.
         # Root RDT group is used as default group for all tasks, unless explicitly reconfigured by
-        # allocator. 
+        # allocator.
         # `None` (the default value) means no limit (effectively set to maximum available value).
-        default_rdt_l3: str = None
-        default_rdt_mb: str = None
+        default_rdt_l3: Str = None
+        default_rdt_mb: Str = None
 
 ``Allocator``
 --------------------------------------------------------------------
@@ -144,6 +146,7 @@ Both ``TaskAllocations`` and ``TasksAllocations`` structures are simple python d
         QUOTA = 'cpu_quota'
         SHARES = 'cpu_shares'
         RDT = 'rdt'
+        CPUSET = 'cpu_set'
 
     TaskId = str
     TaskAllocations = Dict[AllocationType, Union[float, int, RDTAllocation]]
@@ -195,6 +198,7 @@ Following built-in allocations types are supported:
 - ``cpu_quota`` - CPU Bandwidth Control called quota (normalized),
 - ``cpu_shares`` - CPU shares for Linux CFS (normalized),
 - ``rdt`` - Intel RDT resources.
+- ``cpu_set`` - **experimental** support for cpu pinning(requires specific isolator for Mesos)
 
 cpu_quota
 ^^^^^^^^^
@@ -295,8 +299,17 @@ Note that the configured values are passed as is to resctrl filesystem without v
 Refer to `Kernel x86/intel_rdt_ui.txt <https://www.kernel.org/doc/Documentation/x86/intel_rdt_ui.txt>`_ document for further reference.
 
 
+cpu_set
+^^^^^^^
+**Experimental** support for cpu pinning:
+
+- requires specific isolator for Mesos
+- may conflict with ``cpu manager`` feature in Kubernetes
+
+TODO: example configuration
+
 Extended topology information
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+-----------------------------
 
 Platform object will provide enough information to be able to construct raw configuration for rdt resources, including:
 
