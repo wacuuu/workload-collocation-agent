@@ -51,18 +51,21 @@ WCA is targeted at and tested on Centos 7.5.
 
     # Install required software.
     sudo yum install epel-release -y
-    sudo yum install git python36 -y
+    sudo yum install git python36 make which -y
     python3.6 -m ensurepip --user
     python3.6 -m pip install --user pipenv
+    export PATH=$PATH:~/.local/bin
 
     # Clone the repository & build.
     git clone https://github.com/intel/workload-collocation-agent
     cd workload-collocation-agent
+    
+    export LC_ALL=en_US.utf8 #required for centos docker image
     make venv
     make wca_package
 
     # Prepare tasks manually (only cgroups are required)
-    sudo mkdir /sys/fs/cgroups/{cpu,cpuacct,perf_event}/task1
+    sudo mkdir /sys/fs/cgroup/{cpu,cpuacct,perf_event}/task1
 
     # Example of running agent in measurements-only mode with predefined static list of tasks
     sudo dist/wca.pex --config $PWD/configs/extra/static_measurements.yaml --root
