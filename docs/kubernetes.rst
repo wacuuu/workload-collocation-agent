@@ -19,6 +19,9 @@ Kubernetes supported features
 - Monitoring
 - Allocation
 
+
+:Note: In allocation mode, because of Kubernetes internal reconcillation  loop for resource managment (`--sync-frequency <https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/>`_ defaults to 60s), it is required from Allocator class to repeat desired allocations in every iteration. This will be fixed in future versions.
+
 Kubernetes restrictions
 ==================
 
