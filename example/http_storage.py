@@ -19,6 +19,6 @@ class HTTPStorage(Storage):
                 json={metric.name: metric.value for metric in metrics},
                 timeout=1
             )
-        except requests.exceptions.ReadTimeout:
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
             log.warning('timeout!')
             pass
