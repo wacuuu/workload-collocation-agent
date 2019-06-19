@@ -137,7 +137,7 @@ You can use ``wca.allocators:NOPAllocator`` that is already bundled within ``dis
 It is recommended to build a pex file with external component and its dependencies bundled. See `prm plugin from platform-resource-manager 
 <https://github.com/intel/platform-resource-manager/tree/master/prm>`_ as an example of such an approach.
 
-See an `example configuration file <../configs/mesos/mesos_example_allocator.yaml>`_ to be used with ``NOPAllocator``:
+Config ``/etc/wca/wca_config.yml`` must exists. See an `example configuration file <../configs/mesos/mesos_example_allocator.yaml>`_ to be used with ``NOPAllocator``:
 
 .. code-block:: yaml
 
@@ -166,7 +166,6 @@ Apply following changes to the file above:
 
 - ``$KAFKA_BROKER`` must be replaced with IP address of Kafka broker,
 - ``$HOST_IP`` may be replaced with host IP address to tag all metrics originating from WCA process
-- ``$PATH`` may be replaced with path to aurora client key and certificate
 
 Following configuration is required in order to use ``MesosNode`` component to discover new tasks:
 
