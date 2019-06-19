@@ -63,6 +63,32 @@ def test_measurements_runner(subcgroups):
                   expected_metric_value=cpu_usage)
 
 
+@prepare_runner_patches
+@patch('wca.runners.measurement.time.sleep')
+def test_measurements_wait(sleep_mock):
+    with patch('time.time', return_value=1):
+        runner = MeasurementRunner(
+            node=Mock(spec=MesosNode,
+                      get_tasks=Mock(return_value=[])),
+            metrics_storage=Mock(spec=storage.Storage, store=Mock()),
+            rdt_enabled=False,
+            extra_labels={}
+        )
+
+        runner._initialize()
+        runner._iterate()
+        sleep_mock.assert_called_once_with(1.0)
+
+    with patch('time.time', return_value=1.3):
+        runner._iterate()
+        sleep_mock.assert_called_with(0.7)
+        assert runner._last_iteration == 1.3
+
+    with patch('time.time', return_value=2.5):
+        runner._iterate()
+        sleep_mock.assert_called_with(0)
+
+
 @pytest.mark.parametrize('tasks_labels, tasks_measurements, expected_metrics', [
     ({}, {}, []),
     ({'t1_task_id': {'app': 'redis'}}, {}, []),

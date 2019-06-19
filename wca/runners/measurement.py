@@ -93,10 +93,10 @@ class MeasurementRunner(Runner):
         """
         now = time.time()
         iteration_duration = now - self._last_iteration
-        self._last_iteration = now
 
         residual_time = max(0., self._action_delay - iteration_duration)
         time.sleep(residual_time)
+        self._last_iteration = time.time()
 
     def _initialize(self) -> Optional[int]:
         """Check privileges, RDT availability and prepare internal state.
