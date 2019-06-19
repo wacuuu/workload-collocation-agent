@@ -123,11 +123,11 @@ Please use following `template <../configs/systemd-unit/wca.service>`_ as system
 
 where:
 
-``$EXTRA_COMPONENT`` should be replaced with name of a class e.g. ``example.external_package:ExampleDetector``.
+``$EXTRA_COMPONENT`` should be replaced with name of a class e.g. ``wca.allocators:NOPAllocator``.
 Class name must comply with `pkg_resources <https://setuptools.readthedocs.io/en/latest/pkg_resources.html#id2>`_ format.
 All dependencies of the class must be available in currently used `PYTHONPATH`.
 
-You can use ``example.external_package:ExampleDetector`` that is already bundled within ``dist/wca.pex`` file.
+You can use ``wca.allocators:NOPAllocator`` that is already bundled within ``dist/wca.pex`` file and does not have to be registered(if you decide to use it remove registration from `wca.service` file).
 
 :note: Running wca with dedicated "wca" user is more secure, but requires enabling perf counters to be used by non-root users.
        You need to reconfigure ``perf_event_paranoid`` sysctl paramter like this:
@@ -137,18 +137,14 @@ You can use ``example.external_package:ExampleDetector`` that is already bundled
 It is recommended to build a pex file with external component and its dependencies bundled. See `prm plugin from platform-resource-manager 
 <https://github.com/intel/platform-resource-manager/tree/master/prm>`_ as an example of such an approach.
 
-See an `example configuration file <../configs/mesos/mesos_external_detector.yaml>`_ to be used with ``ExampleDetector``:
+See an `example configuration file <../configs/mesos/mesos_example_allocator.yaml>`_ to be used with ``NOPAllocator``:
 
 .. code-block:: yaml
 
-    runner: !DetectionRunner
+    runner: !AllocationRunner
         node: !MesosNode
             mesos_agent_endpoint: 'http://127.0.0.1:5051'
             timeout: 5
-            ssl: !SSL
-                server_verify: True
-                client_cert_path: "$PATH/apiserver-aurora-client.crt"
-                client_key_path: "$PATH/apiserver-aurora-client.key"
 
         action_delay: 1.
 
@@ -160,9 +156,7 @@ See an `example configuration file <../configs/mesos/mesos_external_detector.yam
             topic: wca_anomalies
             max_timeout_in_seconds: 5.
 
-        # Example use of external component.
-        # Requires registration with -r example.external_package:ExampleDetector
-        detector: !ExampleDetector
+        allocator: !NOPAllocator
 
         # Decorate every metric with extra labels.
         extra_labels:
