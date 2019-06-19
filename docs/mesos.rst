@@ -58,12 +58,14 @@ Please refer to `example configuration file for mesos <../configs/mesos/mesos_ex
 
     @dataclass
     class MesosNode(Node):
-        mesos_agent_endpoint: str = 'https://127.0.0.1:5051'
-
-        # A flag of python requests library to enable ssl_verify or pass CA bundle:
-        # https://github.com/kennethreitz/requests/blob/5c1f72e80a7d7ac129631ea5b0c34c7876bc6ed7/requests/api.py#L41
-        ssl_verify: Union[bool, str] = True
+        mesos_agent_endpoint: Url = 'https://127.0.0.1:5051'
 
         # Timeout to access mesos agent.
-        timeout: float = 5.
+        timeout: Numeric(1, 60) = 5.  # [s]
+
+        # https://github.com/kennethreitz/requests/blob/5c1f72e80a7d7ac129631ea5b0c34c7876bc6ed7/requests/api.py#L41
+        ssl: Optional[SSL] = None
+
+        METHOD = 'GET_STATE'
+        api_path = '/api/v1'
 
