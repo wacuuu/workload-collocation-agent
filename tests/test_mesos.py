@@ -17,6 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
+from wca.config import ValidationError
 from wca.mesos import MesosNode, MesosTask
 from tests.testing import create_json_fixture_mock
 
@@ -59,3 +60,13 @@ def test_not_enough_data_in_response(json_mock):
         node = MesosNode()
         tasks = node.get_tasks()
         assert len(tasks) == 0
+
+
+@patch('wca.mesos.find_cgroup', return_value='mesos/120-123')
+@pytest.mark.parametrize(
+    "json_mock", [create_json_fixture_mock('mesos_invalid_response', __file__)])
+def test_invalid_data_in_response(find_cgroup_mock, json_mock):
+    with patch('requests.post', return_value=json_mock):
+        node = MesosNode()
+        with pytest.raises(ValidationError):
+            node.get_tasks()
