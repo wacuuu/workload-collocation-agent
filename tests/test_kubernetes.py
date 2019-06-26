@@ -15,6 +15,7 @@
 import pytest
 from unittest.mock import patch
 
+from wca.config import ValidationError
 from wca.kubernetes import KubernetesNode, KubernetesTask, _calculate_pod_resources, \
     _build_cgroup_path, are_all_tasks_of_single_qos, QOS_LABELNAME
 from tests.testing import create_json_fixture_mock
@@ -80,6 +81,15 @@ def test_get_tasks_not_all_ready(get_mock):
     node = KubernetesNode()
     tasks = node.get_tasks()
     assert len(tasks) == 0
+
+
+@patch(
+        'requests.get',
+        return_value=create_json_fixture_mock('kubelet_invalid_pods_response', __file__))
+def test_invalid_kubelet_response(get_mock):
+    node = KubernetesNode()
+    with pytest.raises(ValidationError):
+        node.get_tasks()
 
 
 def test_calculate_resources_empty():

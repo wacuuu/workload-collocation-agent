@@ -14,7 +14,7 @@
 
 from enum import Enum
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 import os
 from urllib.parse import urljoin
 import logging
@@ -23,7 +23,7 @@ import requests
 from wca import logger
 from wca.config import assure_type, Numeric, Url, Str
 from wca.metrics import MetricName
-from wca.nodes import Node, Task
+from wca.nodes import Node, Task, TaskId
 from wca.security import SSL
 
 DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.CACHE_MISSES)
@@ -36,6 +36,12 @@ class KubernetesTask(Task):
     qos: str
 
     def __post_init__(self):
+        assure_type(self.name, str)
+        assure_type(self.task_id, TaskId)
+        assure_type(self.cgroup_path, str)
+        assure_type(self.subcgroups_paths, List[str])
+        assure_type(self.labels, Dict[str, str])
+        assure_type(self.resources, Dict[str, Union[float, int, str]])
         assure_type(self.qos, str)
 
     def __hash__(self):
