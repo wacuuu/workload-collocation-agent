@@ -120,20 +120,10 @@ class SSL:
 
     def __post_init__(self):
 
-        if self.client_cert_path:
-            client_cert_filename = os.path.basename(self.client_cert_path)
-            client_cert_extension = os.path.splitext(client_cert_filename)[1]
-
-            if client_cert_extension == '.pem':
-                # .pem file consists both client cert and key data so ignore client_key_path.
-                return
-            else:
-                if not self.client_key_path:
-                    raise ValidationError(
-                        'Client certiticate provided but without client private key!')
-        elif self.client_key_path:
+        if self.client_key_path and not self.client_cert_path:
             # There is only client key path, that is wrong, throw error.
-            raise ValidationError('Client private key provided but without certificate path!')
+            raise ValidationError(
+                    'Provided client key without certificate!')
 
     def get_client_certs(self):
         """Return client cert and key path.
