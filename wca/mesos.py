@@ -15,14 +15,14 @@
 
 import logging
 import urllib.parse
-from typing import List, Optional
+from typing import List, Optional, Dict, Union
 
 import requests
 from dataclasses import dataclass
 
 from wca.config import assure_type, Numeric, Url
 from wca.metrics import Measurements, Metric
-from wca.nodes import Node, Task
+from wca.nodes import Node, Task, TaskId
 from wca.security import SSL
 
 MESOS_TASK_STATE_RUNNING = 'TASK_RUNNING'
@@ -45,6 +45,12 @@ class MesosTask(Task):
     agent_id: str
 
     def __post_init__(self):
+        assure_type(self.name, str)
+        assure_type(self.task_id, TaskId)
+        assure_type(self.cgroup_path, str)
+        assure_type(self.subcgroups_paths, List[str])
+        assure_type(self.labels, Dict[str, str])
+        assure_type(self.resources, Dict[str, Union[float, int, str]])
         assure_type(self.executor_pid, int)
         assure_type(self.container_id, str)
         assure_type(self.executor_id, str)

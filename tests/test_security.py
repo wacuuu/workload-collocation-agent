@@ -96,25 +96,25 @@ def test_privileges_not_root_capabilities_no_dac_paranoid_setuid(capget, read_pa
     assert not wca.security.are_privileges_sufficient(True)
 
 
-def test_ssl_raise_error_if_only_client_key_is_provided():
+def test_ssl_error_only_client_key():
+    """Tests that SSL throws ValidationError when only client key path is provided."""
     with pytest.raises(ValidationError):
         wca.security.SSL(client_key_path='/key')
 
 
-def test_ssl_raise_error_if_only_client_cert_is_provided():
-    with pytest.raises(ValidationError):
-        wca.security.SSL(client_cert_path='/cert')
-
-
-def test_ssl_not_raise_error_when_client_pem_file_is_provided():
+def test_ssl_accept_single_file():
+    """Tests that SSL accepts single file with client certificate and key."""
     wca.security.SSL(client_cert_path='/cert.pem')
 
 
-def test_ssl_get_client_certs_return_path_to_client_pem_file():
+def test_ssl_get_client_certs_single_file():
+    """Tests that get_client_certs() returns file path with client certificate and key."""
     ssl = wca.security.SSL(client_cert_path='/cert.pem')
+    assert ssl.client_key_path is None
     assert ssl.get_client_certs() == '/cert.pem'
 
 
-def test_ssl_get_client_certs_return_tuple_with_client_key_and_cert_paths():
+def test_ssl_get_client_certs_tuple():
+    """Tests that get_client_certs() returns tuple with client certificate and key paths."""
     ssl = wca.security.SSL(client_cert_path='/cert', client_key_path='/key')
     assert ssl.get_client_certs() == ('/cert', '/key')
