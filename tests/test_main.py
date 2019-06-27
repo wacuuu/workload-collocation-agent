@@ -12,8 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 
-from unittest import mock
+from unittest.mock import Mock, mock_open, patch
+
 
 from wca import main
 
@@ -22,15 +24,16 @@ runner: !DummyRunner
 '''
 
 
-@mock.patch('sys.argv', ['wca', '-c',
-                         '/etc/configs/see_yaml_config_variable_above.yaml',
-                         '-r', 'tests.testing:DummyRunner', '-l', 'critical',
-                         '--root'])
-@mock.patch('os.rmdir')
-@mock.patch('wca.config.exists', return_value=True)
-@mock.patch('wca.config.open', mock.mock_open(read_data=yaml_config))
-@mock.patch('wca.perf.PerfCounters')
-@mock.patch('wca.main.exit')
+@patch('sys.argv', ['wca', '-c',
+                    '/etc/configs/see_yaml_config_variable_above.yaml',
+                    '-r', 'tests.testing:DummyRunner', '-l', 'critical',
+                    '--root'])
+@patch('os.rmdir')
+@patch('wca.config.exists', return_value=True)
+@patch('wca.config.open', mock_open(read_data=yaml_config))
+@patch('wca.perf.PerfCounters')
+@patch('wca.main.exit')
+@patch('os.stat', return_value=Mock(st_size=35, st_uid=0, st_mode=700))
 def test_main(*mocks):
     main.main()
 
@@ -41,18 +44,19 @@ runner: !DummyRunner
 '''
 
 
-@mock.patch('wca.main.log.error')
-@mock.patch('sys.argv', ['wca', '-c',
-                         '/etc/configs/see_yaml_config_variable_above.yaml',
-                         '-r', 'tests.testing:DummyRunner', '-l', 'critical',
-                         '--root'])
-@mock.patch('os.rmdir')
-@mock.patch('wca.config.exists', return_value=True)
-@mock.patch('wca.config.open', mock.mock_open(
+@patch('wca.main.log.error')
+@patch('sys.argv', ['wca', '-c',
+                    '/etc/configs/see_yaml_config_variable_above.yaml',
+                    '-r', 'tests.testing:DummyRunner', '-l', 'critical',
+                    '--root'])
+@patch('os.rmdir')
+@patch('wca.config.exists', return_value=True)
+@patch('wca.config.open', mock_open(
     read_data=yaml_config_unknown_field))
-@mock.patch('wca.perf.PerfCounters')
-@mock.patch('wca.main.exit')
-def test_main_unknown_field(mock_exit, perf_counters, mock_rmdir,
+@patch('wca.perf.PerfCounters')
+@patch('wca.main.exit')
+@patch('wca.main.valid_config_file')
+def test_main_unknown_field(mock_valid_config_file, mock_exit, perf_counters, mock_rmdir,
                             mock_argv, mock_log_error):
     main.main()
     mock_log_error.assert_called_once_with('Error: Unknown field in '
@@ -61,16 +65,38 @@ def test_main_unknown_field(mock_exit, perf_counters, mock_rmdir,
                                            '\'runner\'')
 
 
-@mock.patch('wca.main.log.error')
-@mock.patch('sys.argv', ['wca', '-c',
-                         'configs/see_yaml_config_variable_above.yaml',
-                         '-r', 'tests.testing:DummyRunner', '-l', 'critical',
-                         '--root'])
-@mock.patch('wca.config.exists', return_value=True)
-@mock.patch('wca.config.open', mock.mock_open(read_data=yaml_config))
-@mock.patch('wca.main.exit')
-def test_main_not_absolute_path(mock_exit, mock_argv, mock_log_error):
-    main.main()
-    mock_log_error.assert_called_once_with(
+@patch('wca.main.log.error')
+@patch('wca.main.exit')
+@patch('os.stat', return_value=Mock(st_size=35, st_uid=os.geteuid(), st_mode=384))
+def test_main_valid_config_file_not_absolute_path(os_stat, mock_exit, mock_log_error):
+
+    main.valid_config_file('configs/see_yaml_config_variable_above.yaml')
+
+    mock_log_error.assert_called_with(
         'Error: The config path \'configs/see_yaml_config_variable_above.yaml\' is not valid. '
         'The path must be absolute.')
+
+
+@patch('wca.main.log.error')
+@patch('wca.main.exit')
+@patch('os.stat', return_value=Mock(st_size=35, st_uid=123123, st_mode=384))
+def test_main_valid_config_file_wrong_user(os_stat, mock_exit, mock_log_error):
+
+    main.valid_config_file('/etc/configs/see_yaml_config_variable_above.yaml')
+
+    mock_log_error.assert_called_with(
+        'Error: The config \'/etc/configs/see_yaml_config_variable_above.yaml\' is not valid. '
+        'User is not owner of the config or is not root.')
+
+
+@patch('wca.main.log.error')
+@patch('wca.main.exit')
+@patch('os.stat', return_value=Mock(st_size=35, st_uid=os.geteuid(), st_mode=511))
+def test_main_valid_config_file_wrong_acl(os_stat, mock_exit, mock_log_error):
+    # st_mode=511 - All can read, write and exec
+
+    main.valid_config_file('/etc/configs/see_yaml_config_variable_above.yaml')
+
+    mock_log_error.assert_called_with(
+        'Error: The config \'/etc/configs/see_yaml_config_variable_above.yaml\' is not valid. '
+        'It does not have correct ACLs. Only owner should be able to write.')

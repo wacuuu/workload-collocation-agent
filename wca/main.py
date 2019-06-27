@@ -22,6 +22,7 @@ and start main loop from Runner.
 import argparse
 import logging
 import os
+import stat
 
 from wca import components
 from wca import config
@@ -31,6 +32,35 @@ from wca.config import assure_type
 from wca.runners import Runner
 
 log = logging.getLogger('wca.main')
+
+
+def valid_config_file(config):
+
+    if not os.path.isabs(config):
+        log.error(
+            'Error: The config path \'%s\' is not valid. The path must be absolute.'
+            % config)
+        exit(1)
+
+    file_owner_uid = os.stat(config).st_uid
+    user_uid = os.getuid()
+    if user_uid != file_owner_uid and user_uid != 0:
+        log.error(
+            'Error: The config \'%s\' is not valid. User is not owner of the config or is not root.'
+            % config)
+        exit(1)
+
+    mode = stat.S_IMODE(os.stat(config).st_mode)
+    rwx_r = (stat.S_IEXEC | stat.S_IWRITE | stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+    rwx = (stat.S_IEXEC | stat.S_IWRITE | stat.S_IREAD)
+    rw_r = (stat.S_IWRITE | stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+    rw = (stat.S_IWRITE | stat.S_IREAD)
+    if mode != rwx_r and mode != rwx and mode != rw_r and mode != rw:
+        log.error(
+            'Error: The config \'%s\' is not valid. It does not have correct ACLs. '
+            'Only owner should be able to write.'
+            % config)
+        exit(1)
 
 
 def main():
@@ -81,11 +111,7 @@ def main():
     # Register internal & external components.
     components.register_components(extra_components=args.components)
 
-    if not os.path.isabs(args.config):
-        log.error(
-            'Error: The config path \'%s\' is not valid. The path must be absolute.'
-            % args.config)
-        exit(1)
+    valid_config_file(args.config)
 
     # Initialize all necessary objects.
     try:
