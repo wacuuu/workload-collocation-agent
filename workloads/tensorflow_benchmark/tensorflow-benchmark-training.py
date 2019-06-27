@@ -31,11 +31,11 @@ command.append(
     "--slo {slo} --sli_metric_name tensorflow_benchmark_training_speed "
     "--inverse_sli_metric_value "
     "--peak_load 1 --load_metric_name const "
-    "--labels \"{labels}\"".format(
+    "--labels '{labels}'".format(
                 kafka_brokers=wrapper_kafka_brokers,
                 log_level=wrapper_log_level,
                 kafka_topic=wrapper_kafka_topic,
-                labels=wrapper_labels, slo=slo))
+                labels=json.dumps(wrapper_labels), slo=slo))
 
 
 json_format = json.dumps(pod)

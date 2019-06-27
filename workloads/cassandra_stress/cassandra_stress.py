@@ -72,12 +72,12 @@ cmd = """/usr/bin/cassandra_stress_wrapper.pex \
 --peak_load {peak_load} --load_metric_name {load_metric_name} \
 --slo {slo} --sli_metric_name {sli_metric_name}  \
 --subprocess_shell  \
---labels \"{labels}\"""".format(
+--labels '{labels}'""".format(
     cassandra_stress_cmd=cassandra_stress_cmd,
     kafka_brokers=wrapper_kafka_brokers,
     log_level=wrapper_log_level,
     kafka_topic=wrapper_kafka_topic,
-    labels=wrapper_labels,
+    labels=json.dumps(wrapper_labels),
     slo=slo, sli_metric_name="cassandra_p99",
     # @TODO peak_load should match cassandra_stress parameters
     peak_load=10000, load_metric_name="cassandra_qps")

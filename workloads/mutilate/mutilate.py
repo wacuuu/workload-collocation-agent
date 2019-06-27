@@ -61,14 +61,14 @@ mutilate_run_cmd = """/usr/bin/mutilate_wrapper.pex --command '{mutilate_cmd}' \
 --slo {slo} --sli_metric_name {application}_read_p{sli_percentile} \
 --peak_load {peak_load} --load_metric_name {application}_qps \
 --subprocess_shell \
---labels \"{labels}\"""".format(
+--labels '{labels}'""".format(
     mutilate_cmd=mutilate_cmd,
     application=application,
     metric_name_prefix=application + "_",
     kafka_brokers=wrapper_kafka_brokers,
     kafka_topic=wrapper_kafka_topic,
     log_level=wrapper_log_level,
-    labels=wrapper_labels,
+    labels=json.dumps(wrapper_labels),
     slo=str(slo), peak_load=qps,
     sli_percentile=sli_percentile)
 

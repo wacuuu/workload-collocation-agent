@@ -69,7 +69,7 @@ jobs = [
                         --command "rpc-perf --config /etc/rpc-perf.toml -p {protocol} --server {ip}:{port}"
                         --log_level {log_level}
                         --stderr 0
-                        --labels "{labels}"
+                        --labels '{labels}'
                         --metric_name_prefix "{application}_"
                         --kafka_topic {kafka_topic}
                         --kafka_brokers {kafka_brokers}
@@ -78,7 +78,8 @@ jobs = [
                             """).format(
                                 protocol=rpcperf_protocol, ip=application_host_ip,
                                 port=communication_port,
-                                log_level=wrapper_log_level, labels=wrapper_labels,
+                                log_level=wrapper_log_level,
+                                labels=json.dumps(wrapper_labels),
                                 kafka_topic=wrapper_kafka_topic,
                                 kafka_brokers=wrapper_kafka_brokers,
                                 application=application,

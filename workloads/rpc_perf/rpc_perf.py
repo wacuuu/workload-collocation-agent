@@ -14,7 +14,7 @@
 
 
 import os
-from common import application, application_host_ip, command, dedent, json, \
+from common import application, application_host_ip, command, json, \
     pod, wrapper_kafka_brokers, wrapper_log_level, wrapper_kafka_topic, \
     wrapper_labels, slo
 
@@ -64,22 +64,22 @@ else:
 sli_metric_name = "{application}_p99".format(application=application)
 load_metric_name = "{application}_rate".format(application=application)
 
-cmd = dedent("""rpc_perf_wrapper.pex \
+cmd = ("""rpc_perf_wrapper.pex \
 --command 'rpc-perf --config /etc/rpc-perf.toml -p {protocol} \
 --server {ip}:{port}' \
 --log_level {log_level} \
 --stderr 0 \
---labels '{labels}' \
---metric_name_prefix '{application}_'
---kafka_topic {kafka_topic}
---kafka_brokers {kafka_brokers}
---peak_load '{peak_load}' --load_metric_name '{load_metric_name}'
+--labels '{labels}'
+--metric_name_prefix '{application}_' \
+--kafka_topic {kafka_topic} \
+--kafka_brokers {kafka_brokers} \
+--peak_load '{peak_load}' --load_metric_name '{load_metric_name}' \
 --slo {slo} --sli_metric_name '{sli_metric_name}'
 """).format(protocol=rpcperf_protocol,
             ip=application_host_ip,
             port=communication_port,
             log_level=wrapper_log_level,
-            labels=wrapper_labels,
+            labels=json.dumps(wrapper_labels),
             kafka_topic=wrapper_kafka_topic,
             kafka_brokers=wrapper_kafka_brokers,
             application=application,

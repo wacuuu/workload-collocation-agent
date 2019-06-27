@@ -36,14 +36,14 @@ stress_ng_run_cmd = """/usr/bin/stress_ng_wrapper.pex --command '{stress_ng_cmd}
 --stderr 1 --kafka_brokers '{kafka_brokers}' --kafka_topic {kafka_topic} \
 --log_level {log_level} \
 --subprocess_shell \
---labels \"{labels}\"""".format(
+--labels '{labels}'""".format(
     stress_ng_cmd=stress_ng_cmd,
     application=application,
     metric_name_prefix=application + "_",
     kafka_brokers=wrapper_kafka_brokers,
     kafka_topic=wrapper_kafka_topic,
     log_level=wrapper_log_level,
-    labels=wrapper_labels)
+    labels=json.dumps(wrapper_labels))
 
 command.append(stress_ng_run_cmd)
 

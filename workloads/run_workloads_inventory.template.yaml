@@ -73,6 +73,7 @@ application_hosts:
           cassandra:
             image_name: cassandra
             image_tag: 3.11.3
+          # On Mesos, role must be: root
           ycsb:
 
       cassandra_stress:

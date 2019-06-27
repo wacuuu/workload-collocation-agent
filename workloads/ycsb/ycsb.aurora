@@ -114,7 +114,7 @@ jobs = [
                 --stderr 1 --kafka_brokers "{kafka_brokers}" \
                 --kafka_topic {kafka_topic} \
                 --log_level {log_level} \
-                --labels "{labels}" \
+                --labels '{labels}' \
                 --peak_load {peak_load} --load_metric_name "cassandra_ops_per_sec" \
                 --slo {slo} --sli_metric_name "cassandra_read_p9999"
           """.format(
@@ -128,7 +128,7 @@ jobs = [
             kafka_brokers=wrapper_kafka_brokers,
             kafka_topic=wrapper_kafka_topic,
             log_level=wrapper_log_level,
-            labels=str(wrapper_labels),
+            labels=json.dumps(wrapper_labels),
             peak_load=str(int(ycsb_target)+int(ycsb_amplitude)),
             slo=slo)
           )
