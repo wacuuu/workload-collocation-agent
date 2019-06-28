@@ -14,7 +14,7 @@ confluent-kafka = "==1.0.0rc1"        # 2018.11.31  - cannot be upgraded to 1.0.
 kazoo = "==2.6.1"                     # 2019.01.22
 
 [dev-packages]
-pex = "==1.6.7"                       # 2019.05.14
+pex = "==1.6.8"                       # 2019.05.14
 pytest = "==4.6.3"                    # 2019.06.11
 pytest-cov = "==2.7.1"                # 2019.05.03
 flake8 = "==3.7.7"                    # 2019.02.25
