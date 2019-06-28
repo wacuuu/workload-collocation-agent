@@ -34,6 +34,14 @@ pipeline {
                 archiveArtifacts(artifacts: "dist/**")
             }
         }
+	stage("Check code with bandit") {
+	    steps {
+		sh '''
+		  make bandit bandit_pex
+	        '''
+                archiveArtifacts(artifacts: "wca-bandit.html, wca-pex-bandit.html")
+	   }
+	}
         stage("Build and push Workload Collocation Agent Docker image") {
             steps {
                 sh '''

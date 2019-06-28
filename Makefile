@@ -1,5 +1,5 @@
 # Do not really on artifacts created by make for all targets.
-.PHONY: all venv flake8 bandit unit wca_package wrapper_package clean tests check dist
+.PHONY: all venv flake8 bandit unit wca_package bandit_pex wrapper_package clean tests check dist
 
 all: venv check dist
 
@@ -14,7 +14,13 @@ flake8:
 
 bandit: 
 	@echo Checking code with bandit.
-	pipenv run bandit -r wca -s B101
+	pipenv run bandit -r wca -s B101 -f html -o wca-bandit.html
+
+bandit_pex:
+	@echo Checking pex with bandit.
+	unzip dist/wca.pex -d dist/wca-pex-bandit
+	pipenv run bandit -r dist/wca-pex-bandit/.deps -s B101 -f html -o wca-pex-bandit.html || true
+	rm -rf dist/wca-pex-bandit
 
 unit: 
 	@echo Running unit tests.
@@ -47,7 +53,7 @@ wrapper_package:
 	pipenv run pex . -D workloads/wrapper -v -R component-licenses --cache-dir=.pex-build $(PEX_OPTIONS) -o dist/stress_ng_wrapper.pex -m wrapper.parser_stress_ng
 	./dist/wrapper.pex --help >/dev/null
 
-check: flake8 bandit unit
+check: flake8 unit
 
 dist: wca_package wrapper_package
 
