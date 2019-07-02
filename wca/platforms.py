@@ -41,10 +41,10 @@ def get_wca_version():
     try:
         version = get_distribution('wca').version
     except DistributionNotFound:
-        log.warning("Version is not available. "
-                    "Probably egg-info directory does not exist"
-                    "(which is required for pkg_resources module "
-                    "to find the version).")
+        # log.warning("Version is not available. "
+        #             "Probably egg-info directory does not exist"
+        #             "(which is required for pkg_resources module "
+        #             "to find the version).")
         return "unknown_version"
 
     return version

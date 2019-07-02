@@ -69,6 +69,7 @@ class MeasurementRunner(Runner):
             event_names: List[str] = None,
             enable_derived_metrics: bool = False,
             _allocation_configuration: Optional[AllocationConfiguration] = None,
+            wss_reset_interval: int = 0,
     ):
 
         self._node = node
@@ -85,6 +86,7 @@ class MeasurementRunner(Runner):
         self._allocation_configuration = _allocation_configuration
         self._event_names = event_names or DEFAULT_EVENTS
         self._enable_derived_metrics = enable_derived_metrics
+        self._wss_reset_interval = wss_reset_interval
 
     @profiler.profile_duration(name='sleep')
     def _wait(self):
@@ -143,6 +145,7 @@ class MeasurementRunner(Runner):
             allocation_configuration=self._allocation_configuration,
             event_names=self._event_names,
             enable_derived_metrics=self._enable_derived_metrics,
+            wss_reset_interval=self._wss_reset_interval,
         )
         return None
 

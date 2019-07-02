@@ -1,0 +1,26 @@
+loggers: {}
+  #wca.wss: debug
+runner: !DetectionRunner
+  action_delay: 5.0
+  event_names:
+    - memstalls__ra310  # Cycles while memory subsystem has an outstanding
+    - mem_load_retired_local_pmm__rd180   # Retired load instructions with local Optane DC
+                                          # persistent memory as the data source
+                                          # and the data request missed L3
+    - mem_load_retired_local_dram__rd301
+  wss_reset_interval: 1
+  node: !StaticNode
+    tasks:
+      - task1
+      - task2
+  detector: !K8SExtenderDetector
+  metrics_storage: !FilterStorage
+    storage: !LogStorage
+      #  output_filename: 'metrics.prom'
+      #  overwrite: true
+    filter:
+      - wss
+  anomalies_storage: !LogStorage
+    output_filename: 'anomalies.prom'
+    overwrite: true
+  enable_derived_metrics: true

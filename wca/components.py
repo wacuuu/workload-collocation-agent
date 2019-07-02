@@ -24,7 +24,7 @@ except ImportError:
 from wca.runners import detection
 from wca.runners import allocation
 from wca.runners import measurement
-from wca.extra import static_allocator
+from wca.extra import static_allocator, k8s_extender
 from wca import config
 from wca import detectors
 from wca import allocators
@@ -42,12 +42,14 @@ def register_components(extra_components: List[str]):
     config.register(kubernetes.KubernetesNode)
     config.register(storage.LogStorage)
     config.register(storage.KafkaStorage)
+    config.register(storage.FilterStorage)
     config.register(detectors.NOPAnomalyDetector)
     config.register(allocators.NOPAllocator)
     config.register(allocators.AllocationConfiguration)
     config.register(kubernetes.CgroupDriverType)
     config.register(static_node.StaticNode)
     config.register(static_allocator.StaticAllocator)
+    config.register(k8s_extender.K8SExtenderDetector)
 
     for component in extra_components:
         # Load external class ignored its requirements.

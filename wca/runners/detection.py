@@ -83,11 +83,14 @@ class DetectionRunner(MeasurementRunner):
             extra_labels: Dict[Str, Str] = None,
             event_names: Optional[List[str]] = None,
             enable_derived_metrics: bool = False,
-    ):
+            wss_reset_interval: int = 0,
+        ):
         super().__init__(node, metrics_storage,
                          action_delay, rdt_enabled,
                          extra_labels, event_names,
-                         enable_derived_metrics)
+                         enable_derived_metrics,
+                         wss_reset_interval=wss_reset_interval,
+                         )
         self._detector = detector
 
         # Anomaly.

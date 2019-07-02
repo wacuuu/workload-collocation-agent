@@ -200,13 +200,16 @@ class AllocationRunner(MeasurementRunner):
             remove_all_resctrl_groups: bool = False,
             event_names: Optional[List[str]] = None,
             enable_derived_metrics: bool = False,
+            wss_reset_interval: int = 0,
     ):
 
         self._allocation_configuration = allocation_configuration or AllocationConfiguration()
 
         super().__init__(node, metrics_storage, action_delay, rdt_enabled,
                          extra_labels, _allocation_configuration=self._allocation_configuration,
-                         event_names=event_names, enable_derived_metrics=enable_derived_metrics)
+                         event_names=event_names, enable_derived_metrics=enable_derived_metrics,
+                         wss_reset_interval=wss_reset_interval,
+                         )
 
         # Allocation specific.
         self._allocator = allocator

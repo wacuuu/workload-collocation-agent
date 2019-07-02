@@ -244,7 +244,7 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
             else:
                 output.append('{0}{1} {2}\n'.format(metric.name, label_str, value_str))
 
-        output.append('\n')
+        # output.append('\n')
 
     return ''.join(output)
 
@@ -368,3 +368,18 @@ class MetricPackage:
             for metric in self.metrics:
                 metric.labels.update(common_labels)
         self.storage.store(self.metrics)
+
+@dataclass
+class FilterStorage(Storage):
+
+    storage: Storage
+    filter: Optional[List[str]] = None
+
+    def store(self, metrics):
+        if self.filter is not None:
+            metrics = list(filter(lambda metric: metric.name in self.filter, metrics))
+        self.storage.store(metrics)
+
+
+
+

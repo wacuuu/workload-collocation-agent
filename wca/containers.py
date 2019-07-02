@@ -18,7 +18,7 @@ import pprint
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict
 
-from wca import cgroups
+from wca import cgroups, wss
 from wca import logger
 from wca import perf
 from wca import resctrl
@@ -105,7 +105,8 @@ class ContainerSet(ContainerInterface):
                  allocation_configuration: Optional[AllocationConfiguration] = None,
                  resgroup: ResGroup = None,
                  event_names: List[str] = None,
-                 enable_derived_metrics: bool = False
+                 enable_derived_metrics: bool = False,
+                 wss_reset_interval: int = 0,
                  ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
@@ -130,6 +131,7 @@ class ContainerSet(ContainerInterface):
                 allocation_configuration=allocation_configuration,
                 event_names=event_names,
                 enable_derived_metrics=enable_derived_metrics,
+                wss_reset_interval=wss_reset_interval,
             )
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
@@ -210,7 +212,8 @@ class Container(ContainerInterface):
                  allocation_configuration:
                  Optional[AllocationConfiguration] = None,
                  event_names: List[str] = None,
-                 enable_derived_metrics: bool = False):
+                 enable_derived_metrics: bool = False,
+                 wss_reset_interval: int = 0):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
         self._allocation_configuration = allocation_configuration
@@ -223,12 +226,19 @@ class Container(ContainerInterface):
             platform_cpus=platform_cpus,
             allocation_configuration=allocation_configuration)
 
+        if wss_reset_interval > 0:
+            self.wss = wss.WSS(self.get_pids, wss_reset_interval)
+        else:
+            self.wss = None
+
         self._derived_metrics_generator = None
         if self._event_names:
             self._perf_counters = perf.PerfCounters(self._cgroup_path, event_names=event_names)
             if enable_derived_metrics:
                 self._derived_metrics_generator = DerivedMetricsGenerator(
                     event_names, self._perf_counters.get_measurements)
+
+
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
         """Returns empty list as Container class cannot have subcontainers -
@@ -290,10 +300,16 @@ class Container(ContainerInterface):
         else:
             rdt_measurements = {}
 
+        if self.wss:
+            wss_measurements = self.wss.get_measurements()
+        else:
+            wss_measurements = {}
+
         return flatten_measurements([
             cgroup_measurements,
             rdt_measurements,
             perf_measurements,
+            wss_measurements,
         ])
 
     def cleanup(self):
@@ -320,7 +336,9 @@ class ContainerManager:
 
     def __init__(self, rdt_information: Optional[RDTInformation], platform_cpus: int,
                  allocation_configuration: Optional[AllocationConfiguration],
-                 event_names: List[str], enable_derived_metrics: bool = False):
+                 event_names: List[str], enable_derived_metrics: bool = False,
+                 wss_reset_interval: int = 0,
+                 ):
         self.containers: Dict[Task, ContainerInterface] = {}
         self._rdt_information = rdt_information
 
@@ -328,6 +346,7 @@ class ContainerManager:
         self._allocation_configuration = allocation_configuration
         self._event_names = event_names
         self._enable_derived_metrics = enable_derived_metrics
+        self._wss_reset_interval = wss_reset_interval
 
     def _create_container(self, task: Task) -> ContainerInterface:
         """Check whether the task groups multiple containers,
@@ -342,6 +361,7 @@ class ContainerManager:
                 allocation_configuration=self._allocation_configuration,
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
+                wss_reset_interval=self._wss_reset_interval,
             )
         else:
             container = Container(
@@ -351,6 +371,7 @@ class ContainerManager:
                 allocation_configuration=self._allocation_configuration,
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
+                wss_reset_interval=self._wss_reset_interval,
             )
         return container
 
