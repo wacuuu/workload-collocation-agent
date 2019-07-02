@@ -1,7 +1,7 @@
 loggers: {}
   #wca.wss: debug
 runner: !DetectionRunner
-  action_delay: 5.0
+  action_delay: 1.0
   event_names:
     - memstalls__ra310  # Cycles while memory subsystem has an outstanding
     - mem_load_retired_local_pmm__rd180   # Retired load instructions with local Optane DC
@@ -20,6 +20,9 @@ runner: !DetectionRunner
       #  overwrite: true
     filter:
       - wss
+      - memstalls__ra310
+      - mem_load_retired_local_pmm__rd180
+      - mem_load_retired_local_dram__rd301
   anomalies_storage: !LogStorage
     output_filename: 'anomalies.prom'
     overwrite: true
