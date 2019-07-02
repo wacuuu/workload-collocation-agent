@@ -22,14 +22,45 @@ and start main loop from Runner.
 import argparse
 import logging
 import os
+import stat
 
 from wca import components
 from wca import config
 from wca import logger
 from wca import platforms
+from wca.config import assure_type
 from wca.runners import Runner
 
 log = logging.getLogger('wca.main')
+
+
+def valid_config_file(config):
+
+    if not os.path.isabs(config):
+        log.error(
+            'Error: The config path \'%s\' is not valid. The path must be absolute.'
+            % config)
+        exit(1)
+
+    file_owner_uid = os.stat(config).st_uid
+    user_uid = os.getuid()
+    if user_uid != file_owner_uid and user_uid != 0:
+        log.error(
+            'Error: The config \'%s\' is not valid. User is not owner of the config or is not root.'
+            % config)
+        exit(1)
+
+    mode = stat.S_IMODE(os.stat(config).st_mode)
+    rwx_r = (stat.S_IEXEC | stat.S_IWRITE | stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+    rwx = (stat.S_IEXEC | stat.S_IWRITE | stat.S_IREAD)
+    rw_r = (stat.S_IWRITE | stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
+    rw = (stat.S_IWRITE | stat.S_IREAD)
+    if mode != rwx_r and mode != rwx and mode != rw_r and mode != rw:
+        log.error(
+            'Error: The config \'%s\' is not valid. It does not have correct ACLs. '
+            'Only owner should be able to write.'
+            % config)
+        exit(1)
 
 
 def main():
@@ -80,6 +111,8 @@ def main():
     # Register internal & external components.
     components.register_components(extra_components=args.components)
 
+    valid_config_file(args.config)
+
     # Initialize all necessary objects.
     try:
         configuration = config.load_config(args.config)
@@ -96,8 +129,7 @@ def main():
                       '\'runner\''.format(key))
             exit(1)
 
-    # TODO: replace with proper validation base on config._assure_type
-    assert isinstance(configuration, dict), 'Improper config! - expected dict'
+    assure_type(configuration, dict)
     assert 'runner' in configuration, 'Improper config - missing runner instance!'
 
     # Configure loggers using configuration file.
@@ -121,7 +153,7 @@ def main():
 
     # Extract main loop component.
     runner = configuration['runner']
-    assert isinstance(runner, Runner), 'Improper config - expected runner type!'
+    assure_type(runner, Runner)
 
     # Prepare and run the "main loop".
     exit_code = runner.run()

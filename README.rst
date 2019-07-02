@@ -2,7 +2,7 @@
 WCA - Workload Collocation Agent
 =====================================================
 
-.. image:: https://travis-ci.com/intel/wca.svg?branch=master
+.. image:: https://travis-ci.com/intel/workload-collocation-agent.svg?branch=master
     :target: https://travis-ci.com/intel/workload-collocation-agent
 
 .. contents:: Table of Contents
@@ -12,8 +12,8 @@ WCA - Workload Collocation Agent
 Introduction
 ============
 
-Workload Collocation Agent goal is to reduce interference between collocated tasks and increase tasks density while ensuring the quality of
-service for high priority tasks. Chosen approach is to enable real-time resource isolation management
+Workload Collocation Agent's goal is to reduce interference between collocated tasks and increase tasks density while ensuring the quality of
+service for high priority tasks. Chosen approach allows to enable real-time resource isolation management
 to ensure that high priority jobs meet their Service Level Objective (SLO) and best-effort jobs
 effectively utilize as many idle resources as possible.
 
@@ -29,12 +29,13 @@ An externally provided algorithm is responsible for allocating resources or anom
 and the algorithm exchange information about current resource usage, isolation actuations or detected
 anomalies. WCA stores information about detected anomalies, resource allocation and platform utilization metrics to a remote storage such as Kafka.
 
-The diagram below puts WCA in context of an example Mesos cluster and monitoring infrastructure:
+The diagram below puts WCA in context of a cluster and monitoring infrastructure:
 
 .. image:: docs/context.png
 
+For context regarding Mesos see `this document <docs/mesos.rst>`_ and for Kubernetes see `this document <docs/kubernetes.rst>`_.
 
-See `WCA Architecture 1.5.pdf`_ for further details.
+See `WCA Architecture 1.7.pdf`_ for further details.
 
 
 Getting started
@@ -50,23 +51,27 @@ WCA is targeted at and tested on Centos 7.5.
 
     # Install required software.
     sudo yum install epel-release -y
-    sudo yum install git python36 -y
+    sudo yum install git python36 make which -y
     python3.6 -m ensurepip --user
     python3.6 -m pip install --user pipenv
+    export PATH=$PATH:~/.local/bin
 
     # Clone the repository & build.
     git clone https://github.com/intel/workload-collocation-agent
     cd workload-collocation-agent
+    
+    export LC_ALL=en_US.utf8 #required for centos docker image
     make venv
+    make wca_package
 
     # Prepare tasks manually (only cgroups are required)
-    sudo mkdir /sys/fs/cgroups/{cpu,cpuacct,perf_event}/task1
+    sudo mkdir /sys/fs/cgroup/{cpu,cpuacct,perf_event}/task1
 
-    # Example of running agent in measurments-only mode with predefined static list of tasks
-    sudo dist/wca.pex --config configs/extra/static_measurements.yaml --root
+    # Example of running agent in measurements-only mode with predefined static list of tasks
+    sudo dist/wca.pex --config $PWD/configs/extra/static_measurements.yaml --root
 
     # Example of static allocation with predefined rules on predefined list of tasks.
-    sudo dist/wca.pex --config configs/extra/static_allocator.yaml --root
+    sudo dist/wca.pex --config $PWD/configs/extra/static_allocator.yaml --root
 
 
 Running those commands outputs metrics in Prometheus format to standard error like this:
@@ -101,7 +106,7 @@ Running those commands outputs metrics in Prometheus format to standard error li
     wca_up{cores="4",cpus="8",host="gklab-126-081",wca_version="0.1.dev655+g586f259.d20190401",sockets="1"} 1554139418.146581 1554139418146
 
 
-If reconfigured to use other built-in components you can easily:
+When reconfigured, other built-in components allow to:
 
 - store those metrics in Kafka, 
 - integrate with Mesos or Kubernetes, 
@@ -127,7 +132,7 @@ Available runners:
   regular and configurable intervals. See `allocation API <docs/allocation.rst>`_ for details.
 
 Conceptually ``Runner`` reads a state of the system (both metrics and workloads),
-passes the information to external component (an algorithm), logs the algorithm input and output using implementation of  `Storage <wca/storage.py>`_
+passes the information to external component (an algorithm), logs the algorithm input and output using implementation of  `Storage <wca/storage.py#L40>`_
 and allocates resources if instructed.
 
 Following snippet is an example configuration of a runner:
@@ -139,7 +144,7 @@ Following snippet is an example configuration of a runner:
         callback_component: !ClassImplementingCallback
         storage: !SomeStorage
 
-After starting WCA with the above mentioned configuration, an instance of the class ``SomeRunner`` will be created. The instance's properties will be set to:
+After starting WCA with the above configuration, an instance of the class ``SomeRunner`` will be created. The instance's properties will be set to:
 
 - ``node`` - to an instance of ``SomeNode``
 - ``callback_component`` - to an instance of ``ClassImplementingCallback``
@@ -149,7 +154,8 @@ Configuration mechanism allows to:
 
 - Create and configure complex python objects (e.g. ``DetectionRunner``, ``MesosNode``, ``KafkaStorage``) using `YAML tags`_.
 - Inject dependencies (with type checking support) into constructed objects using `dataclasses <https://docs.python.org/3/library/dataclasses.html>`_ annotations.
-- Register external classes using ``-r`` command line argument or by using ``wca.config.register`` decorator API.
+- Register external classes using ``-r`` command line argument or by using ``wca.config.register`` decorator API. This allows to extend WCA with new functionalities 
+  (more information `here <docs/extending.rst>`_) and is used to provide external components with e.g. anomaly logic like `Platform Resource Manager <https://github.com/intel/platform-resource-manager/tree/master/prm>`_.
 
 .. _`YAML tags`: http://yaml.org/spec/1.2/spec.html#id2764295
 
@@ -160,23 +166,28 @@ Components
 
 Following built-in components are available (stable API):
 
-- `MesosNode <wca/mesos.py#L64>`_ provides workload discovery on Mesos cluster node where `mesos containerizer <http://mesos.apache.org/documentation/latest/mesos-containerizer/>`_ is used (see the docs `here <docs/mesos.rst>`_)
-- `MeasurementRunner <wca/runners/measurement.py#L36>`_ implements simple loop that reads state of the system, encodes this information as metrics and stores them,
-- `DetectionRunner <wca/runners/detection.py#L52>`_ extends ``MeasurementRunner`` and additionally implements anomaly detection callback and encodes anomalies as metrics to enable alerting and analysis. See `Detection API <docs/detection.rst>`_ for more details.
-- `AllocationRunner <wca/runners/allocation.py#L127>`_ extends ``MeasurementRunner`` and additionally implements resource allocation callback. See `Allocation API <docs/allocation.rst>`_ for more details .
+- `MesosNode <wca/mesos.py#L76>`_ provides workload discovery on Mesos cluster node where `mesos containerizer <http://mesos.apache.org/documentation/latest/mesos-containerizer/>`_ is used (see the docs `here <docs/mesos.rst>`_)
+- `KubernetesNode <wca/kubernetes.py#L71>`_ provides workload discovery on Kubernetes cluster node (see the docs `here <docs/kubernetes.rst>`_)
+- `MeasurementRunner <wca/runners/measurement.py#L42>`_ implements simple loop that reads state of the system, encodes this information as metrics and stores them,
+- `DetectionRunner <wca/runners/detection.py#L59>`_ extends ``MeasurementRunner`` and additionally implements anomaly detection callback and encodes anomalies as metrics to enable alerting and analysis. See `Detection API <docs/detection.rst>`_ for more details.
+- `AllocationRunner <wca/runners/allocation.py#L155>`_ extends ``MeasurementRunner`` and additionally implements resource allocation callback. See `Allocation API <docs/allocation.rst>`_ for more details.
 - `NOPAnomalyDetector <wca/detectors.py#L164>`_ dummy "no operation" detector that returns no metrics, nor anomalies. See `Detection API <docs/detection.rst>`_ for more details.
-- `NOPAllocator <wca/allocators.py#L95>`_ dummy "no operation" detector that returns no metrics, nor anomalies. See `Detection API <docs/detection.rst>`_ for more details.
-- `KafkaStorage <wca/storage.py#L213>`_ logs metrics to  `Kafka streaming platform <https://kafka.apache.org/>`_ using configurable topics
-- `LogStorage <wca/storage.py#L46>`_ logs metrics to standard error or to a file at configurable location.
+- `NOPAllocator <wca/allocators.py#L98>`_ dummy "no operation" allocator that returns no metrics, nor anomalies and does not configure resources. See `Detection API <docs/detection.rst>`_ for more details.
+- `KafkaStorage <wca/storage.py#L253>`_ logs metrics to `Kafka streaming platform <https://kafka.apache.org/>`_ using configurable topics.
+- `LogStorage <wca/storage.py#L49>`_ logs metrics to standard error or to a file at configurable location.
+- `SSL <wca/security.py#L116>`_ to enabled secure communication with external components (more information `here <docs/ssl.rst>`_).
 
 Following built-in components are available as provisional API:
 
-- `StaticNode <wca/extra/static_node.py>`_ to support static list of tasks (does not require full orchestration software stack),
-- `StaticAllocator <wca/extra/static_allocator.py>`_ to support simple rules based logic for resource allocation.
+- `StaticNode <wca/extra/static_node.py#L28>`_ to support static list of tasks (does not require full orchestration software stack),
+- `StaticAllocator <wca/extra/static_allocator.py#L108>`_ to support simple rules based logic for resource allocation.
 
-Third-party components:
+Officially supported third-party components:
 
 - `Intel "Platform Resource Manager" plugin <https://github.com/intel/platform-resource-manager/tree/master/prm>`_ - machine learning based component for both anomaly detection and allocation.
+
+:Warning: Note that, those components are run as ordinary python class, without any isolation and with process's privileges so there is no built-in protection against malicious external components.  
+          For **security** reasons, **please use only built-in and officially supported components**. More about security `here <SECURITY.md>`_.
 
 
 Workloads
@@ -205,7 +216,12 @@ Further reading
 - `Kubernetes integration <docs/kubernetes.rst>`_
 - `Logging configuration <docs/logging.rst>`_
 - `Supported workloads and definitions </workloads>`_
-- `WCA Architecture 1.5.pdf`_
+- `WCA Architecture 1.7.pdf`_
+- `Secure communication with SSL <docs/ssl.rst>`_
+- `Security policy <SECURITY.md>`_
+- `Configuration examples for Kubernetes and Mesos <configs/>`_
+- `Other examples (e.g. how to add new component) <example/>`_
+- `Extending WCA <docs/extending.rst>`_
 
-.. _`WCA Architecture 1.5.pdf`: docs/WCA_Architecture_v1.5.pdf
+.. _`WCA Architecture 1.7.pdf`: docs/WCA_Architecture_v1.7.pdf
 

@@ -12,7 +12,7 @@ Terminology
 - **Counter** type of metric - is a monotonically increasing counter,
 - **Gauge** type of metric - value that can arbitrarily go up and down,
 - **Task** represents single Mesos task, that matches single currently running Aurora job 
-  instance and is running in single Linux container (using Mesos containerizer)
+  instance and is running in single Linux container (using Mesos containerizer) or single Kubernetes pod
 
 Check `Prometheus metrics types`_ for further reference
 
@@ -21,7 +21,7 @@ Check `Prometheus metrics types`_ for further reference
 
 Supported orchestration systems
 -------------------------------
-We support both Mesos and Kubernetes (Kubernetes is currently supported only in the detect mode).
+We support both Mesos and Kubernetes.
 
 As a reference configuration file use one located in `configs`_ directory.
 
@@ -49,11 +49,13 @@ where ``ExampleAnomalyDetector`` class must implement following interface:
 
     class AnomalyDetector(ABC):
 
+        @abstractmethod
         def detect(self,
-                    platform: Platform,
-                    tasks_measurements: TasksMeasurements,
-                    tasks_resources: TasksResources
-                    ) -> (List[Anomaly], List[Metric]):
+                   platform: Platform,
+                   tasks_measurements: TasksMeasurements,
+                   tasks_resources: TasksResources,
+                   tasks_labels: TasksLabels
+        ) -> (List[Anomaly], List[Metric]):
             ...
 
 
@@ -143,6 +145,9 @@ This is example of how to ``Platform`` instance looks like on two sockets "Intel
         cores = 28,
         cpus = 56,
 
+        # Additional information about platform.
+        cpu_model = "Intel(R) Xeon(R) CPU E5-2660 v4"
+
         # Utilization
         cpus_usage = {
             0: 4412451, 
@@ -162,12 +167,19 @@ This is example of how to ``Platform`` instance looks like on two sockets "Intel
 
     MetricValue = Union[float, int]
 
-    class MetricName(Enum, str):
+    class MetricName(str, Enum):
         INSTRUCTIONS = 'instructions'
         CYCLES = 'cycles'
-        LLC_MISSES = 'cache_misses'
-        CPU_USAGE = 'cpu_usage'  # cpuacct.usage (total kernel and user space) in [ns]
-        MEM_BW = 'memory_bandwidth' # counter like [bytes]
+        CACHE_MISSES = 'cache_misses'
+        CACHE_REFERENCES = 'cache_references'
+        CPU_USAGE_PER_CPU = 'cpu_usage_per_cpu'
+        CPU_USAGE_PER_TASK = 'cpu_usage_per_task'
+        MEM_BW = 'memory_bandwidth'
+        LLC_OCCUPANCY = 'llc_occupancy'
+        MEM_USAGE = 'memory_usage'
+        MEMSTALL = 'stalls_mem_load'
+        SCALING_FACTOR_AVG = 'scaling_factor_avg'
+        SCALING_FACTOR_MAX = 'scaling_factor_max'
 
     class MetricType(Enum, str):
         GAUGE = 'gauge'      # arbitrary value (can go up and down)
@@ -199,14 +211,14 @@ by task definition as defined in used orechstrator.
 
     # Example:
     tasks_measurements = {
-        'ppalucki-devel-cassandra-0-f096985b-1f1e-4f94-b0b7-4728f5b476b2': {
+        'user-devel-cassandra-0-f096985b-1f1e-4f94-b0b7-4728f5b476b2': {
             MetricName.INSTRUCTIONS: 12343141,
             MetricName.CYCLES: 2310124321,
             MetricName.LLC_MISSES: 21212312,
             MetricName.CPU_USAGE: 21212312,
             MetricName.MEM_BW: 21212312,
         },
-        'ppalucki-devel-memcached-0-31db8f56-ea82-4404-8b58-baac8054900b': {
+        'user-devel-memcached-0-31db8f56-ea82-4404-8b58-baac8054900b': {
             MetricName.INSTRUCTIONS: 24233234,
             MetricName.CYCLES: 3110124321,
             MetricName.LLC_MISSES: 3293314311,
@@ -216,7 +228,7 @@ by task definition as defined in used orechstrator.
     }
 
     tasks_resources = {
-        'ppalucki-devel-cassandra-0-f096985b-1f1e-4f94-b0b7-4728f5b476b2': {
+        'user-devel-cassandra-0-f096985b-1f1e-4f94-b0b7-4728f5b476b2': {
             'cpus': 8.0,
             'mem': 2000.0,
             'disk': 8000.0,
@@ -244,16 +256,16 @@ The context depends on type of anomaly. The only supported subtype is ``Contenti
 
 .. code:: python
 
-    class ContendedResource(Enum, str):
-
+    class ContendedResource(str, Enum):
         MEMORY_BW = 'memory bandwidth'
         LLC = 'cache'
         CPUS = 'cpus'
+        TDP = 'thermal design power'
+        UNKN = 'unknown resource'
 
 
     @dataclass
-    class ContentionAnomaly:
-        
+    class ContentionAnomaly(Anomaly):
         resource: ContendedResource
         contended_task_id: TaskId
         contending_task_ids: List[TaskId]
@@ -261,12 +273,8 @@ The context depends on type of anomaly. The only supported subtype is ``Contenti
         # List of metrics describing context of contention
         metrics: List[Metric]
 
-        # Type of anomaly (will be uses to label anomaly metrics)
+        # Type of anomaly (will be used to label anomaly metrics)
         anomaly_type = 'contention'
-
-        @property
-        def uuid(self) -> str:
-            """Globally unique identifier based only on tasks ids. Represents unique combination of tasks."""
 
             
 ``Anomaly`` creation example
@@ -311,20 +319,20 @@ Example message stored in Kafka using Prometheus exposition format:
 
     # HELP instructions The total number of instructions executed by task.
     # TYPE instructions counter
-    instructions{task_id="ppaluc-devel-memacache-0-sasd-cccc",sockets="2",cores="8",host="igk-016"} 123123123 1395066363000
-    instructions{task_id="ppaluc-devel-cassandra-2-aaaa-bbbb",sockets="2",cores="8",host="igk-016"} 123123123 1395066363000
+    instructions{task_id="user-devel-memacache-0-sasd-cccc",sockets="2",cores="8",host="igk-016"} 123123123 1395066363000
+    instructions{task_id="user-devel-cassandra-2-aaaa-bbbb",sockets="2",cores="8",host="igk-016"} 123123123 1395066363000
     ...
 
     # HELP cycles The total number of cycles executed by task.
     # TYPE cycles counter
-    cycles{task_id="ppaluc-devel-memacache-0-sasd-cccc",sockets="2",cores="8",host="igk-016"} 329331431 1395066363000
-    cycles{task_id="ppaluc-devel-cassandra-2-aaaa-bbbb",sockets="2",cores="8",host="igk-016"} 329331431 1395066363000
+    cycles{task_id="user-devel-memacache-0-sasd-cccc",sockets="2",cores="8",host="igk-016"} 329331431 1395066363000
+    cycles{task_id="user-devel-cassandra-2-aaaa-bbbb",sockets="2",cores="8",host="igk-016"} 329331431 1395066363000
     ...
 
     # HELP llc_misses The total number of instructions executed by task.
     # TYPE llc_misses counter
-    llc_misses{task_id="ppaluc-devel-memacache-0-sasd-cccc",sockets="2",cores="8",host="igk-016"} 1329331431 1395066363000
-    llc_misses{task_id="ppaluc-devel-cassandra-2-aaaa-bbbb",sockets="2",cores="8",host="igk-016"} 3293314311 1395066363000
+    llc_misses{task_id="user-devel-memacache-0-sasd-cccc",sockets="2",cores="8",host="igk-016"} 1329331431 1395066363000
+    llc_misses{task_id="user-devel-cassandra-2-aaaa-bbbb",sockets="2",cores="8",host="igk-016"} 3293314311 1395066363000
     ...
 
 

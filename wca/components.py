@@ -32,6 +32,7 @@ from wca import mesos
 from wca import kubernetes
 from wca import storage
 from wca.extra import static_node
+from wca import security
 
 
 def register_components(extra_components: List[str]):
@@ -49,6 +50,7 @@ def register_components(extra_components: List[str]):
     config.register(kubernetes.CgroupDriverType)
     config.register(static_node.StaticNode)
     config.register(static_allocator.StaticAllocator)
+    config.register(security.SSL)
     config.register(k8s_extender.K8SExtenderDetector)
 
     for component in extra_components:

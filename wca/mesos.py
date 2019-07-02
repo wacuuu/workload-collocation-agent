@@ -14,21 +14,26 @@
 
 
 import logging
-import os
 import urllib.parse
-from typing import List, Union
+from typing import List, Optional, Dict, Union
 
 import requests
 from dataclasses import dataclass
 
-from wca.config import Numeric, Path, Url
+from wca.config import assure_type, Numeric, Url
 from wca.metrics import Measurements, Metric
-from wca.nodes import Node, Task
+from wca.nodes import Node, Task, TaskId
+from wca.security import SSL
 
 MESOS_TASK_STATE_RUNNING = 'TASK_RUNNING'
 CGROUP_DEFAULT_SUBSYSTEM = 'cpu'
 
 log = logging.getLogger(__name__)
+
+
+class MesosCgroupNotFoundException(Exception):
+    """Raised when cannot find cgroup mesos path"""
+    pass
 
 
 @dataclass
@@ -38,6 +43,18 @@ class MesosTask(Task):
     container_id: str  # Mesos containerizer identifier "ID used to uniquely identify a container"
     executor_id: str
     agent_id: str
+
+    def __post_init__(self):
+        assure_type(self.name, str)
+        assure_type(self.task_id, TaskId)
+        assure_type(self.cgroup_path, str)
+        assure_type(self.subcgroups_paths, List[str])
+        assure_type(self.labels, Dict[str, str])
+        assure_type(self.resources, Dict[str, Union[float, int, str]])
+        assure_type(self.executor_pid, int)
+        assure_type(self.container_id, str)
+        assure_type(self.executor_id, str)
+        assure_type(self.agent_id, str)
 
     def __hash__(self):
         """Override __hash__ method from base class and call it explicitly to workaround
@@ -58,40 +75,42 @@ def find_cgroup(pid):
             if CGROUP_DEFAULT_SUBSYSTEM in subsystems:
                 return path
         else:
-            raise Exception(f'Cannot find cgroup mesos path for {pid}')
+            raise MesosCgroupNotFoundException
 
 
 @dataclass
 class MesosNode(Node):
     mesos_agent_endpoint: Url = 'https://127.0.0.1:5051'
 
-    # A flag of python requests library to enable ssl_verify or pass CA bundle:
-    # https://github.com/kennethreitz/requests/blob/5c1f72e80a7d7ac129631ea5b0c34c7876bc6ed7/requests/api.py#L41
-    ssl_verify: Union[bool, Path] = True
-
     # Timeout to access mesos agent.
     timeout: Numeric(1, 60) = 5.  # [s]
+
+    # https://github.com/kennethreitz/requests/blob/5c1f72e80a7d7ac129631ea5b0c34c7876bc6ed7/requests/api.py#L41
+    ssl: Optional[SSL] = None
 
     METHOD = 'GET_STATE'
     api_path = '/api/v1'
 
-    def __post_init__(self):
-        if isinstance(self.ssl_verify, str):
-            if not os.path.exists(self.ssl_verify):
-                raise FileNotFoundError('cannot locate CA cert bundle file at %s for '
-                                        'verify SSL Mesos connection!' % self.ssl_verify)
-
     def get_tasks(self):
         """ only return running tasks """
         full_url = urllib.parse.urljoin(self.mesos_agent_endpoint, self.api_path)
-        r = requests.post(
-            full_url,
-            json=dict(type=self.METHOD),
-            verify=self.ssl_verify,
-            timeout=self.timeout,
-        )
+
+        if self.ssl:
+            r = requests.post(
+                    full_url,
+                    json=dict(type=self.METHOD),
+                    timeout=self.timeout,
+                    verify=self.ssl.server_verify,
+                    cert=self.ssl.get_client_certs())
+        else:
+            r = requests.post(
+                    full_url,
+                    json=dict(type=self.METHOD),
+                    timeout=self.timeout)
+
         r.raise_for_status()
         state = r.json()
+
         tasks = []
 
         # Fast return path if there is no any launched tasks.
@@ -114,7 +133,13 @@ class MesosNode(Node):
                 continue
 
             executor_pid = last_status['container_status']['executor_pid']
-            cgroup_path = find_cgroup(executor_pid)
+
+            try:
+                cgroup_path = find_cgroup(executor_pid)
+            except MesosCgroupNotFoundException:
+                logging.warning(f'Cannot find pid/cgroup mesos path for {executor_pid}. '
+                                f'Ignoring task (inconsistent state returned from Mesos).')
+                continue
 
             labels = {label['key']: label['value'] for label in launched_task['labels']['labels']}
 
@@ -140,24 +165,6 @@ class MesosNode(Node):
             )
 
         return tasks
-
-
-MESOS_LABELS_PREFIXES_TO_DROP = ('org.apache.', 'aurora.metadata.')
-
-
-def sanitize_mesos_label(label_key):
-    """Removes unwanted prefixes from Aurora & Mesos e.g. 'org.apache.aurora'
-    and replaces invalid characters like "." with underscore.
-    """
-    # Drop unwanted prefixes
-    for unwanted_prefix in MESOS_LABELS_PREFIXES_TO_DROP:
-        if label_key.startswith(unwanted_prefix):
-            label_key = label_key.replace(unwanted_prefix, '')
-
-    # Prometheus labels cannot contain ".".
-    label_key = label_key.replace('.', '_')
-
-    return label_key
 
 
 def create_metrics(task_measurements: Measurements) -> List[Metric]:

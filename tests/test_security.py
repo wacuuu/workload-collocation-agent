@@ -14,7 +14,7 @@
 
 
 from unittest.mock import patch
-
+from wca.config import ValidationError
 import pytest
 
 import wca.security
@@ -94,3 +94,27 @@ def test_privileges_not_root_capabilities_dac_paranoid_no_setuid(capget, read_pa
 @patch('wca.security.LIBC.capget', side_effect=no_cap_dac_override_cap_setuid)
 def test_privileges_not_root_capabilities_no_dac_paranoid_setuid(capget, read_paranoid, geteuid):
     assert not wca.security.are_privileges_sufficient(True)
+
+
+def test_ssl_error_only_client_key():
+    """Tests that SSL throws ValidationError when only client key path is provided."""
+    with pytest.raises(ValidationError):
+        wca.security.SSL(client_key_path='/key')
+
+
+def test_ssl_accept_single_file():
+    """Tests that SSL accepts single file with client certificate and key."""
+    wca.security.SSL(client_cert_path='/cert.pem')
+
+
+def test_ssl_get_client_certs_single_file():
+    """Tests that get_client_certs() returns file path with client certificate and key."""
+    ssl = wca.security.SSL(client_cert_path='/cert.pem')
+    assert ssl.client_key_path is None
+    assert ssl.get_client_certs() == '/cert.pem'
+
+
+def test_ssl_get_client_certs_tuple():
+    """Tests that get_client_certs() returns tuple with client certificate and key paths."""
+    ssl = wca.security.SSL(client_cert_path='/cert', client_key_path='/key')
+    assert ssl.get_client_certs() == ('/cert', '/key')

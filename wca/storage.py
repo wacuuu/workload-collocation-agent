@@ -85,15 +85,16 @@ class LogStorage(Storage):
             self._output = sys.stderr
 
     def store(self, metrics):
-        log.debug('storing: %d', len(metrics))
+        log.debug('Storing %d metrics to %s.', len(metrics), self.output_filename)
         log.log(logger.TRACE, 'Dump of metrics: %r', metrics)
 
         is_convertable, error_message = is_convertable_to_prometheus_exposition_format(metrics)
         if not is_convertable:
-            log.warning(
-                'failed to convert metrics into'
-                'prometheus exposition format; error: "{}" - skipping '.format(error_message)
+            log.error(
+                'failed to convert metrics into '
+                'prometheus exposition format; error: "{}"'.format(error_message)
             )
+            raise InconvertibleToPrometheusExpositionFormat(error_message)
         else:
             if self.include_timestamp:
                 timestamp = get_current_time()

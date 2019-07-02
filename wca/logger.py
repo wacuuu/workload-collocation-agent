@@ -17,6 +17,9 @@ import logging
 import sys
 import time
 from typing import List, Dict
+from collections import Counter, defaultdict
+
+from wca.metrics import Metric, MetricType
 
 import colorlog
 
@@ -24,6 +27,37 @@ TRACE = 9
 DEFAULT_MODULE = 'wca'
 
 log = logging.getLogger(__name__)
+
+_module_record_counters = defaultdict(Counter)
+
+
+class CountingHandler(logging.Handler):
+    def __init__(self, counters: Dict[str, Counter]):
+        super().__init__()
+        self.counters = counters
+
+    def emit(self, record: logging.LogRecord):
+        self.counters[record.name][record.levelno] += 1
+
+
+def get_logging_metrics() -> List[Metric]:
+    metrics = []
+    for logger_name, counter in _module_record_counters.items():
+        metrics.extend([
+            Metric(
+                name="wca_warning_count",
+                type=MetricType.COUNTER,
+                value=counter[logging.WARNING],
+                labels={"module": logger_name}
+            ),
+            Metric(
+                name="wca_error_count",
+                type=MetricType.COUNTER,
+                value=counter[logging.ERROR],
+                labels={"module": logger_name}
+            ),
+        ])
+    return metrics
 
 
 def parse_loggers_from_list(log_levels_list: List[str]) -> Dict[str, str]:
@@ -68,8 +102,11 @@ def init_logging(level: str, package_name: str):
     handler = logging.StreamHandler(sys.stdout)
     handler.setFormatter(formatter)
 
+    counting_handler = CountingHandler(_module_record_counters)
+
     # Module scoped loggers add formatter handler and disable propagation.
     package_logger.addHandler(handler)
+    package_logger.addHandler(counting_handler)
     package_logger.propagate = False  # Because we have own handler.
     package_logger.setLevel(level)
 

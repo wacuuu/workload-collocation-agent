@@ -16,6 +16,7 @@
 """Module for independent simple helper functions."""
 
 import functools
+import json
 import os
 from typing import List, Dict, Union, Optional
 from unittest.mock import mock_open, Mock, patch
@@ -37,6 +38,14 @@ def relative_module_path(module_file, relative_path):
     """Returns path relative to current python module."""
     dir_path = os.path.dirname(os.path.realpath(module_file))
     return os.path.join(dir_path, relative_path)
+
+
+def create_json_fixture_mock(name, path=__file__, status_code=200):
+    """ Helper function to shorten the notation. """
+    return Mock(
+                json=Mock(return_value=json.load(
+                    open(relative_module_path(path, 'fixtures/' + name + '.json')))),
+                status_code=status_code,)
 
 
 def create_open_mock(paths: Dict[str, Mock]):
@@ -146,6 +155,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 cgroup_path=cgroup_path,
                 cgroup_paths=subcgroups_paths,
                 platform_cpus=1,
+                platform_sockets=1,
                 allocation_configuration=AllocationConfiguration() if with_config else None,
                 resgroup=ResGroup(name=resgroup_name) if rdt_enabled else None,
                 rdt_information=RDTInformation(
@@ -156,6 +166,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
             return Container(
                 cgroup_path=cgroup_path,
                 platform_cpus=1,
+                platform_sockets=1,
                 rdt_information=RDTInformation(True, True,
                                                True, True, '0', '0',
                                                0, 0, 0),
@@ -212,8 +223,8 @@ platform_mock = Mock(
         rdt_mb_monitoring_enabled=True,
         rdt_mb_control_enabled=True,
         num_closids=2,
-        mb_bandwidth_gran=None,
-        mb_min_bandwidth=None,
+        mb_bandwidth_gran=0,
+        mb_min_bandwidth=0,
     ))
 
 

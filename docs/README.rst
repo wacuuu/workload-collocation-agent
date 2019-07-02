@@ -15,4 +15,6 @@ Index of documents
 - `Prometheus integration <prometheus.rst>`_
 - `Kubernetes integration <mesos.rst>`_
 - `Mesos integration <prometheus.rst>`_
+- `Extending WCA <extending.rst>`_
+- `Secure transport guide <ssl.rst>`_
 

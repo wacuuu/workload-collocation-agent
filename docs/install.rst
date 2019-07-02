@@ -19,6 +19,8 @@ following items:
 - git
 - pip
 - pipenv 
+- make
+- which (required by pipenv)
 - source code of wca
 
 Building executable binary (distribution)
@@ -61,7 +63,7 @@ Should output::
 Alternative options for Python 3.6 installation 
 ----------------------------------------------
 
-To you simplify python interpreter management (no need to use ``scl`` tool as prefix), 
+To simplify python interpreter management (no need to use ``scl`` tool as prefix), 
 you can use Intel Distribution for Python according to `yum-based installation guide <https://software.intel.com/en-us/articles/installing-intel-free-libs-and-python-yum-repo>`_.
 or use community maintained third-party ``epel`` repository and install ``python36`` package from there::
 
@@ -94,7 +96,7 @@ Assumptions:
 - ``/var/lib/wca`` directory exists
 - ``wca`` user and group already exists
  
-Please use following `template <../configs/wca.service>`_ as systemd ``/etc/systemd/system/wca.service`` unit file::
+Please use following `template <../configs/systemd-unit/wca.service>`_ as systemd ``/etc/systemd/system/wca.service`` unit file::
 
     [Unit]
     Description=Workload Collocation Agent
@@ -121,38 +123,44 @@ Please use following `template <../configs/wca.service>`_ as systemd ``/etc/syst
 
 where:
 
-``$EXTRA_COMPONENT`` should be replaced with name of a class e.g. ``example.external_package:ExampleDetector``.
+``$EXTRA_COMPONENT`` should be replaced with name of a class e.g. ``wca.allocators:NOPAllocator``.
 Class name must comply with `pkg_resources <https://setuptools.readthedocs.io/en/latest/pkg_resources.html#id2>`_ format.
 All dependencies of the class must be available in currently used `PYTHONPATH`.
 
-You can use ``example.external_package:ExampleDetector`` that is already bundled within ``dist/wca.pex`` file.
+You can use ``wca.allocators:NOPAllocator`` that is already bundled within ``dist/wca.pex`` file and does not have to be registered(if you decide to use it remove registration from `wca.service` file).
+
+:note: Running wca with dedicated "wca" user is more secure, but requires enabling perf counters to be used by non-root users.
+       You need to reconfigure ``perf_event_paranoid`` sysctl paramter like this:
+       ``sudo sysctl -w kernel.perf_event_paranoid=-1`` or for persistent mode modify ``/etc/sysctl.conf`` and set
+       ``kernel.perf_event_paranoid = -1``. Mode about perf_event_paranoid `here <https://www.kernel.org/doc/Documentation/sysctl/kernel.txt>`_
 
 It is recommended to build a pex file with external component and its dependencies bundled. See `prm plugin from platform-resource-manager 
 <https://github.com/intel/platform-resource-manager/tree/master/prm>`_ as an example of such an approach.
 
-See an `example configuration file <configs/mesos_kafka_example.yaml>`_ to be used with ``ExampleDetector``:
+Config ``/etc/wca/wca_config.yml`` must exists. See an `example configuration file <../configs/mesos/mesos_example_allocator.yaml>`_ to be used with ``NOPAllocator``:
 
 .. code-block:: yaml
 
-    runner: !DetectionRunner
-      rdt_enabled: true
-      node: !MesosNode
-        ssl_verify: true
-        mesos_agent_endpoint: "https://127.0.0.1:5051"
-      action_delay: 1.
-      metrics_storage: !KafkaStorage
-        brokers_ips: ['$KAFKA_BROKER_IP:9092']
-        topic: "wca_metrics"
-        max_timeout_in_seconds: 5.
-      anomalies_storage: !KafkaStorage
-        brokers_ips: ['$KAFKA_BROKER_IP:9092']
-        topic: "wca_anomalies"
-        max_timeout_in_seconds: 5.
-      detector: !ExampleDetector
-        skew: true
-      extra_labels:
-        own_ip: "$HOST_IP"  # optional
+    runner: !AllocationRunner
+        node: !MesosNode
+            mesos_agent_endpoint: 'http://127.0.0.1:5051'
+            timeout: 5
 
+        action_delay: 1.
+
+        metrics_storage: !LogStorage
+            output_filename: '/tmp/output_anomalies.log'
+
+        anomalies_storage: !KafkaStorage
+            brokers_ips: ['$KAFKA_BROKER_IP:9092']
+            topic: wca_anomalies
+            max_timeout_in_seconds: 5.
+
+        allocator: !NOPAllocator
+
+        # Decorate every metric with extra labels.
+        extra_labels:
+            env_id: "$HOST_IP"
 
 Apply following changes to the file above:
 

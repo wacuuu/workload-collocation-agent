@@ -31,11 +31,12 @@ import inspect
 import io
 import ipaddress
 import logging
+import os
 import types
 import typing
 from os.path import exists, isabs, split  # direct target import for mocking purposes in test_main
 from ruamel import yaml
-from typing import Any
+from typing import Any, Optional
 from urllib.parse import urlparse
 
 from wca import logger
@@ -102,6 +103,13 @@ def assure_absolute_path(value):
                               'absolute path is obligatory. Use absolute '
                               'path or turn off `absolute` option by '
                               'setting it to False.')
+
+
+def assure_permission_path(value, permission):
+    if not os.access(value, permission):
+        raise ValidationError(
+                'file does not exist or cannot access to `{}` with permission `{}`'.format(
+                    value, permission))
 
 
 def assure_no_parent_directory_access(value):
@@ -215,10 +223,17 @@ class _PathType(type):
         if cls.absolute:
             assure_absolute_path(value)
 
+        if cls.mode:
+            assure_permission_path(value, cls.mode)
 
-def Path(absolute=False, max_size=400):
+
+def Path(absolute: Optional[bool] = False,
+         max_size: int = 400,
+         mode: Optional[int] = None  # Permission mode
+         ):
+
     return _PathType('Path', (_PathType, SemanticType),
-                     dict(absolute=absolute, max_size=max_size))
+                     dict(absolute=absolute, max_size=max_size, mode=mode))
 
 
 class _IpPort(type):
@@ -251,7 +266,7 @@ def _assure_list_type(value: list, expected_type):
         for idx, item in enumerate(value):
             # Recursion to inspect list elements.
             try:
-                _assure_type(item, expected_item_type)
+                assure_type(item, expected_item_type)
             except ValidationError as e:
                 raise ValidationError('invalid item in list at index %s: %s' % (idx, e)) \
                     from e
@@ -266,11 +281,11 @@ def _assure_dict_type(value: dict, expected_type):
         expected_key_type, expected_value_type = expected_type.__args__
         for key, item_value in value.items():
             try:
-                _assure_type(key, expected_key_type)
+                assure_type(key, expected_key_type)
             except ValidationError as e:
                 raise ValidationError('Invalid key=%r in dict: %s' % (key, e)) from e
             try:
-                _assure_type(item_value, expected_value_type)
+                assure_type(item_value, expected_value_type)
             except ValidationError as e:
                 raise ValidationError(
                     'invalid value %r in in dict at key %s: %s' % (
@@ -282,7 +297,7 @@ def _assure_union_type(value, expected_type):
     exceptions_raised = []
     for union_expected_type in expected_type.__args__:
         try:
-            _assure_type(value, union_expected_type)
+            assure_type(value, union_expected_type)
         except ValidationError as e:
             exceptions_raised.append(e)
             continue
@@ -314,7 +329,7 @@ def _assure_enum_type(value, expected_type):
         'improper value from enum kind (got=%r allowed=%r)!' % (value, allowed_enum_values))
 
 
-def _assure_type(value, expected_type):
+def assure_type(value, expected_type):
     """Should raise ValidationError based exception if value is not an instance of expected_type.
     """
     if expected_type == inspect.Parameter.empty:
@@ -411,7 +426,7 @@ def _constructor(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type, s
         if name in arguments:
             value = arguments[name]
             try:
-                _assure_type(value, expected_type)
+                assure_type(value, expected_type)
             except WeakValidationError as e:
                 msg = 'Invalid value %r%s for field %r in class %r: %s' % (
                     value, node.start_mark, name, cls.__name__, e)

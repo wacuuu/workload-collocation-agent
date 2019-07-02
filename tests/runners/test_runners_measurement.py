@@ -21,7 +21,7 @@ from wca.containers import Container
 from wca.mesos import MesosNode
 from wca.platforms import RDTInformation
 from wca.runners.measurement import MeasurementRunner, _build_tasks_metrics, _prepare_tasks_data
-from wca.testing import assert_metric, redis_task_with_default_labels, prepare_runner_patches, \
+from tests.testing import assert_metric, redis_task_with_default_labels, prepare_runner_patches, \
     TASK_CPU_USAGE, WCA_MEMORY_USAGE, metric, DEFAULT_METRIC_VALUE, task
 
 
@@ -63,6 +63,32 @@ def test_measurements_runner(subcgroups):
                   expected_metric_value=cpu_usage)
 
 
+@prepare_runner_patches
+@patch('wca.runners.measurement.time.sleep')
+def test_measurements_wait(sleep_mock):
+    with patch('time.time', return_value=1):
+        runner = MeasurementRunner(
+            node=Mock(spec=MesosNode,
+                      get_tasks=Mock(return_value=[])),
+            metrics_storage=Mock(spec=storage.Storage, store=Mock()),
+            rdt_enabled=False,
+            extra_labels={}
+        )
+
+        runner._initialize()
+        runner._iterate()
+        sleep_mock.assert_called_once_with(1.0)
+
+    with patch('time.time', return_value=1.3):
+        runner._iterate()
+        sleep_mock.assert_called_with(0.7)
+        assert runner._last_iteration == 1.3
+
+    with patch('time.time', return_value=2.5):
+        runner._iterate()
+        sleep_mock.assert_called_with(0)
+
+
 @pytest.mark.parametrize('tasks_labels, tasks_measurements, expected_metrics', [
     ({}, {}, []),
     ({'t1_task_id': {'app': 'redis'}}, {}, []),
@@ -80,7 +106,7 @@ def test_prepare_tasks_data(*mocks):
     rdt_information = RDTInformation(True, True, True, True, '0', '0', 0, 0, 0)
     containers = {
         task('/t1', labels={'label_key': 'label_value'}, resources={'cpu': 3}):
-            Container('/t1', 1, rdt_information)
+            Container('/t1', 1, 1, rdt_information)
     }
 
     tasks_measurements, tasks_resources, tasks_labels = _prepare_tasks_data(containers)
