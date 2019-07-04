@@ -13,7 +13,7 @@
 # limitations under the License.
 import time
 from enum import Enum
-from typing import Dict, Union, List, Tuple, Callable
+from typing import Dict, Union, List, Tuple, Callable, Optional
 
 from dataclasses import dataclass, field
 
@@ -190,7 +190,7 @@ def merge_measurements(measurements_list: List[Measurements]) -> \
     return summed_metrics
 
 
-class DerivedMetricsGenerator:
+class BaseDerivedMetricsGenerator:
     """ Calculate derived metrics based on predefined rules:
 
     ipc = instructions / cycles
@@ -199,9 +199,8 @@ class DerivedMetricsGenerator:
     cache_misses_per_kilo_instructions = cache_misses / (instructions/1000)
     """
 
-    def __init__(self, event_names, get_measurements_func: Callable[[], Measurements]):
+    def __init__(self, get_measurements_func: Callable[[], Measurements]):
         self._prev_measurements = None
-        self._event_names: List[MetricName] = event_names
         self._prev_ts = None
         self.get_measurements_func = get_measurements_func
 
@@ -216,42 +215,95 @@ class DerivedMetricsGenerator:
 
         now = time.time()
 
-        def metrics_available(*names):
-            return all(name in self._event_names and name in measurements
-                       and name in self._prev_measurements for name in names)
+        def available(*names):
+            return all(name in measurements and name in self._prev_measurements for name in names)
 
         def delta(*names):
-            return [measurements[name] - self._prev_measurements[name] for name in names]
+            if len(names) == 1:
+                name = names[0]
+                return measurements[name] - self._prev_measurements[name]
+            else:
+                return [measurements[name] - self._prev_measurements[name] for name in names]
 
         # if specific pairs are available calculate derived metrics
         if self._prev_measurements is not None:
             time_delta = now - self._prev_ts
-
-            if metrics_available(MetricName.INSTRUCTIONS, MetricName.CYCLES):
-                inst_delta, cycles_delta = delta(MetricName.INSTRUCTIONS,
-                                                 MetricName.CYCLES)
-                if cycles_delta > 0:
-                    measurements[DerivedMetricName.IPC] = float(inst_delta) / cycles_delta
-
-                if time_delta > 0:
-                    measurements[DerivedMetricName.IPS] = float(inst_delta) / time_delta
-
-            if metrics_available(MetricName.INSTRUCTIONS, MetricName.CACHE_MISSES):
-                inst_delta, cache_misses_delta = delta(MetricName.INSTRUCTIONS,
-                                                       MetricName.CACHE_MISSES)
-                if inst_delta > 0:
-                    measurements[DerivedMetricName.CACHE_MISSES_PER_KILO_INSTRUCTIONS] = \
-                        float(cache_misses_delta) * 1000 / inst_delta
-
-            if metrics_available(MetricName.CACHE_REFERENCES, MetricName.CACHE_MISSES):
-                cache_ref_delta, cache_misses_delta = delta(MetricName.CACHE_REFERENCES,
-                                                            MetricName.CACHE_MISSES)
-                if cache_ref_delta > 0:
-                    cache_hits_count = cache_ref_delta - cache_misses_delta
-                    measurements[DerivedMetricName.CACHE_HIT_RATIO] = (
-                            float(cache_hits_count) / cache_ref_delta)
+            self._derive(measurements, delta, available, time_delta)
 
         self._prev_measurements = measurements
         self._prev_ts = now
 
         return measurements
+
+    def _derive(self, measurements, delta, available, time_delta):
+        raise NotImplementedError
+
+
+class DefaultDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
+
+    def _derive(self, measurements, delta, available, time_delta):
+
+        if available(MetricName.INSTRUCTIONS, MetricName.CYCLES):
+            inst_delta, cycles_delta = delta(MetricName.INSTRUCTIONS,
+                                             MetricName.CYCLES)
+            if cycles_delta > 0:
+                measurements[DerivedMetricName.IPC] = float(inst_delta) / cycles_delta
+
+            if time_delta > 0:
+                measurements[DerivedMetricName.IPS] = float(inst_delta) / time_delta
+
+        if available(MetricName.INSTRUCTIONS, MetricName.CACHE_MISSES):
+            inst_delta, cache_misses_delta = delta(MetricName.INSTRUCTIONS,
+                                                   MetricName.CACHE_MISSES)
+            if inst_delta > 0:
+                measurements[DerivedMetricName.CACHE_MISSES_PER_KILO_INSTRUCTIONS] = \
+                    float(cache_misses_delta) * 1000 / inst_delta
+
+        if available(MetricName.CACHE_REFERENCES, MetricName.CACHE_MISSES):
+            cache_ref_delta, cache_misses_delta = delta(MetricName.CACHE_REFERENCES,
+                                                        MetricName.CACHE_MISSES)
+            if cache_ref_delta > 0:
+                cache_hits_count = cache_ref_delta - cache_misses_delta
+                measurements[DerivedMetricName.CACHE_HIT_RATIO] = (
+                        float(cache_hits_count) / cache_ref_delta)
+
+
+class BaseGeneratorFactory:
+    def create(self, get_measurements):
+        raise NotImplementedError
+
+
+def _derive_unbound(extra_metrics, measurements, delta, available, time_delta):
+    for extra_metric_name, code in extra_metrics.items():
+        context = dict(measurements)
+        context.update(dict(
+            delta=delta,
+            time_delta=time_delta,
+            available=available,
+        ))
+        try:
+            measurements[extra_metric_name] = eval(code, context, {})
+        except ZeroDivisionError:
+            pass
+
+
+class EvalBasedMetricsGenerator(BaseDerivedMetricsGenerator):
+
+    def __init__(self, get_measurements, extra_metrics):
+        super().__init__(get_measurements)
+        self.extra_metrics = extra_metrics
+
+    def _derive(self, measurements, delta, available, time_delta):
+        return _derive_unbound(self.extra_metrics, measurements, delta, available, time_delta)
+
+@dataclass
+class DefaultTaskDerivedMetricsGeneratorFactory(BaseGeneratorFactory):
+
+    extra_metrics: Optional[Dict[str, str]] = None
+
+    def create(self, get_measurements):
+        derived_generator = DefaultDerivedMetricsGenerator(get_measurements)
+        if self.extra_metrics:
+            return EvalBasedMetricsGenerator(derived_generator.get_measurements, self.extra_metrics)
+        else:
+            return derived_generator

@@ -33,6 +33,8 @@ from wca import kubernetes
 from wca import storage
 from wca.extra import static_node
 from wca import security
+from wca.metrics import DefaultTaskDerivedMetricsGeneratorFactory
+from wca.perf_pmu import DefaultPlatformDerivedMetricsGeneratorsFactory
 
 
 def register_components(extra_components: List[str]):
@@ -52,6 +54,8 @@ def register_components(extra_components: List[str]):
     config.register(static_allocator.StaticAllocator)
     config.register(security.SSL)
     config.register(k8s_extender.K8SExtenderDetector)
+    config.register(DefaultTaskDerivedMetricsGeneratorFactory)
+    config.register(DefaultPlatformDerivedMetricsGeneratorsFactory)
 
     for component in extra_components:
         # Load external class ignored its requirements.

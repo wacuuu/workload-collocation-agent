@@ -1,17 +1,22 @@
 import json
+import logging
 import os
 from collections import defaultdict
-from typing import List, Dict, BinaryIO
+from enum import Enum
+from typing import List, Dict, BinaryIO, Optional
 
 import ctypes
 from dataclasses import dataclass
 from wca import perf_const as pc
 
-from wca.metrics import Measurements
+from wca.metrics import Measurements, BaseDerivedMetricsGenerator, BaseGeneratorFactory, \
+    EvalBasedMetricsGenerator
 from wca.perf import _create_event_attributes, _perf_event_open, _create_file_from_fd, \
     _get_online_cpus, _parse_event_groups, _aggregate_measurements, LIBC
 import time
 
+
+log = logging.getLogger(__name__)
 
 @dataclass
 class Event:
@@ -153,31 +158,73 @@ class UncorePerfCounters:
             if LIBC.ioctl(group_event_leader_file.fileno(), pc.PERF_EVENT_IOC_ENABLE, 0) < 0:
                 raise OSError("Cannot enable perf counts")
 
+class UncoreMetricName(str, Enum):
+    PMM_BANDWIDTH_READ = 'pmm_bandwidth_read'
+    PMM_BANDWIDTH_WRITE = 'pmm_bandwidth_write'
+    CAS_COUNT_READ = 'cas_count_read'
+    CAS_COUNT_WRITE = 'cas_count_write'
 
-if __name__ == '__main__':
+UNCORE_IMC_EVENTS = [
+    Event(name=UncoreMetricName.PMM_BANDWIDTH_READ, event=0xe3),
+    Event(name=UncoreMetricName.PMM_BANDWIDTH_WRITE, event=0xe7),
+    Event(name=UncoreMetricName.CAS_COUNT_READ, event=0x04, umask=0x3),  # * 64 to get bytes
+    Event(name=UncoreMetricName.CAS_COUNT_WRITE, event=0x04, umask=0xc),  # * 64 to get bytes
+]
+
+def _discover_pmu_uncore_imc_config(events):
     from os.path import join
     base_path = '/sys/devices'
-
     imcs = [d for d in os.listdir(base_path) if d.startswith('uncore_imc_')]
     pmu_types = [int(open(join(base_path, imc, 'type')).read().rstrip()) for imc in imcs]
     pmu_cpus_set = set([open(join(base_path, imc, 'cpumask')).read().rstrip() for imc in imcs])
     assert len(pmu_cpus_set) == 1
     pmu_cpus_csv = list(pmu_cpus_set)[0]
     cpus = list(map(int, pmu_cpus_csv.split(',')))
+    pmu_events = {pmu: events for pmu in pmu_types}
+    return cpus, pmu_events
 
-    events = [
-        Event(name='pmm_bandwidth_read', event=0xe3),
-        Event(name='pmm_bandwidth_write', event=0xe7),
-        # does work because of group !!!
-        Event(name='cas_count_read', event=0x04, umask=0x3),
-        Event(name='cas_count_write', event=0x04, umask=0xc),
-    ]
+
+class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
+
+    def _derive(self, measurements, delta, available, time_delta):
+        scale = 64 / (1024*1024)
+        if available(UncoreMetricName.PMM_BANDWIDTH_WRITE, UncoreMetricName.PMM_BANDWIDTH_READ):
+            pmm_reads_delta, pmm_writes_delta = delta(UncoreMetricName.PMM_BANDWIDTH_READ, UncoreMetricName.PMM_BANDWIDTH_WRITE)
+            measurements['pmm_read_mb_per_second'] = pmm_reads_delta * scale / time_delta
+            measurements['pmm_write_mb_per_second'] = pmm_writes_delta * scale / time_delta
+            measurements['pmm_total_mb_per_second'] = measurements['pmm_read_mb_per_second'] + measurements['pmm_write_mb_per_second']
+        else:
+            log.warning('pmm metrics not available!')
+
+        cas_reads_delta, cas_writes_delta = delta(UncoreMetricName.CAS_COUNT_READ, UncoreMetricName.CAS_COUNT_WRITE)
+        measurements['dram_read_mb_per_second'] = cas_reads_delta * scale / time_delta
+        measurements['dram_write_mb_per_second'] = cas_writes_delta * scale / time_delta
+        measurements['dram_total_mb_per_second'] = measurements['dram_read_mb_per_second'] + measurements['dram_write_mb_per_second']
+
+
+@dataclass
+class DefaultPlatformDerivedMetricsGeneratorsFactory(BaseGeneratorFactory):
+
+    extra_metrics: Optional[Dict[str, str]] = None
+
+    def create(self, get_measurements):
+        uncore_generator = UncoreDerivedMetricsGenerator(get_measurements)
+        if self.extra_metrics:
+            return EvalBasedMetricsGenerator(uncore_generator.get_measurements, self.extra_metrics)
+        else:
+            return uncore_generator
+
+if __name__ == '__main__':
+    cpus, pmu_events = _discover_pmu_uncore_imc_config(UNCORE_IMC_EVENTS)
 
     upc = UncorePerfCounters(
         cpus=cpus,
-        pmu_events={pmu: events for pmu in pmu_types}
-
+        pmu_events=pmu_events
     )
+
+    udmg = UncoreDerivedMetricsGenerator(
+        list(UncoreMetricName.__members__.values()), upc.get_measurements)
+
     while True:
-        print(json.dumps(upc.get_measurements(), indent=4))
+        print(json.dumps(udmg.get_measurements(), indent=4))
         time.sleep(1)

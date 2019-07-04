@@ -23,7 +23,7 @@ from wca import logger
 from wca import perf
 from wca import resctrl
 from wca.allocators import AllocationConfiguration, TaskAllocations
-from wca.metrics import Measurements, merge_measurements, DerivedMetricsGenerator
+from wca.metrics import Measurements, merge_measurements, DefaultDerivedMetricsGenerator
 from wca.nodes import Task
 from wca.platforms import RDTInformation
 from wca.profiling import profiler
@@ -109,6 +109,7 @@ class ContainerSet(ContainerInterface):
                  event_names: List[str] = None,
                  enable_derived_metrics: bool = False,
                  wss_reset_interval: int = 0,
+                 task_derived_metrics_generators_factory = None,
                  ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
@@ -136,6 +137,7 @@ class ContainerSet(ContainerInterface):
                 event_names=event_names,
                 enable_derived_metrics=enable_derived_metrics,
                 wss_reset_interval=wss_reset_interval,
+                task_derived_metrics_generators_factory = task_derived_metrics_generators_factory,
             )
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
@@ -218,7 +220,9 @@ class Container(ContainerInterface):
                  Optional[AllocationConfiguration] = None,
                  event_names: List[str] = None,
                  enable_derived_metrics: bool = False,
-                 wss_reset_interval: int = 0):
+                 wss_reset_interval: int = 0,
+                 task_derived_metrics_generators_factory = None,
+                 ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
         self._allocation_configuration = allocation_configuration
@@ -241,8 +245,8 @@ class Container(ContainerInterface):
         if self._event_names:
             self._perf_counters = perf.PerfCounters(self._cgroup_path, event_names=event_names)
             if enable_derived_metrics:
-                self._derived_metrics_generator = DerivedMetricsGenerator(
-                    event_names, self._perf_counters.get_measurements)
+                task_derived_metrics_generators_factory = task_derived_metrics_generators_factory or DefaultDerivedMetricsGenerator
+                self._derived_metrics_generator = task_derived_metrics_generators_factory.create(self._perf_counters.get_measurements)
 
 
 
@@ -337,6 +341,7 @@ class ContainerManager:
                  allocation_configuration: Optional[AllocationConfiguration],
                  event_names: List[str], enable_derived_metrics: bool = False,
                  wss_reset_interval: int = 0,
+                 task_derived_metrics_generators_factory = None,
                  ):
         self.containers: Dict[Task, ContainerInterface] = {}
         self._rdt_information = rdt_information
@@ -346,6 +351,7 @@ class ContainerManager:
         self._event_names = event_names
         self._enable_derived_metrics = enable_derived_metrics
         self._wss_reset_interval = wss_reset_interval
+        self._task_derived_metrics_generators_factory = task_derived_metrics_generators_factory
 
     def _create_container(self, task: Task) -> ContainerInterface:
         """Check whether the task groups multiple containers,
@@ -362,6 +368,8 @@ class ContainerManager:
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
                 wss_reset_interval=self._wss_reset_interval,
+                task_derived_metrics_generators_factory=self._task_derived_metrics_generators_factory,
+
             )
         else:
             container = Container(
@@ -373,6 +381,7 @@ class ContainerManager:
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
                 wss_reset_interval=self._wss_reset_interval,
+                task_derived_metrics_generators_factory=self._task_derived_metrics_generators_factory,
             )
         return container
 

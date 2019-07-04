@@ -24,10 +24,13 @@ class WSS:
 
         referenced = 0
         for pid in pids:
-            with open('/proc/{}/smaps'.format(pid)) as f:
-                for line in f:
-                    if 'Referenced' in line:
-                        referenced += int(line.split('Referenced:')[1].split()[0])
+            try:
+                with open('/proc/{}/smaps'.format(pid)) as f:
+                    for line in f:
+                        if 'Referenced' in line:
+                            referenced += int(line.split('Referenced:')[1].split()[0])
+            except ProcessLookupError:
+                referenced = 0
         referenced = referenced / 1024  # scale as bytes
         measurements['wss'] = referenced
 
