@@ -285,6 +285,9 @@ def _derive_unbound(extra_metrics, measurements, delta, available, time_delta):
             measurements[extra_metric_name] = eval(code, context, {})
         except ZeroDivisionError:
             pass
+        except NameError as e:
+            log.warning('symbol %r unknown, metric %r ignored!', e.args, extra_metric_name)
+
 
 
 class EvalBasedMetricsGenerator(BaseDerivedMetricsGenerator):

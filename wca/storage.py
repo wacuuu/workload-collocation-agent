@@ -212,7 +212,7 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
     output = []
 
     grouped_metrics = group_metrics_by_name(metrics)
-
+    group_separator = ''
     for n, (metric_name, metrics) in enumerate(grouped_metrics):
         first_metric = metrics[0]
         if first_metric.help:
@@ -224,8 +224,10 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
             output.append('# TYPE {0} {1}\n'.format(first_metric.name, first_metric.type))
 
         if not first_metric.help and not first_metric.type:
-            group_separator = '\n' if n > 0 else ''
             output.append(group_separator)
+        else:
+            # reset group separator
+            group_separator = ''
 
         # Assert that all metrics with the same name have the same metadata.
         assert {metric.type for metric in metrics} == {first_metric.type}

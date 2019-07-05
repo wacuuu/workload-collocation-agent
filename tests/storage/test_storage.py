@@ -180,7 +180,6 @@ def test_convert_to_prometheus_exposition_format_grouped_case(
                                                           storage.get_current_time())
     assert msg == '''# HELP bar bar-help
 bar 89 1531729598000
-
 bar2 89 1531729598000
 
 # HELP foo foo-help

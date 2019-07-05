@@ -158,11 +158,13 @@ class UncorePerfCounters:
             if LIBC.ioctl(group_event_leader_file.fileno(), pc.PERF_EVENT_IOC_ENABLE, 0) < 0:
                 raise OSError("Cannot enable perf counts")
 
+
 class UncoreMetricName(str, Enum):
     PMM_BANDWIDTH_READ = 'pmm_bandwidth_read'
     PMM_BANDWIDTH_WRITE = 'pmm_bandwidth_write'
     CAS_COUNT_READ = 'cas_count_read'
     CAS_COUNT_WRITE = 'cas_count_write'
+
 
 UNCORE_IMC_EVENTS = [
     Event(name=UncoreMetricName.PMM_BANDWIDTH_READ, event=0xe3),
@@ -222,9 +224,12 @@ if __name__ == '__main__':
         pmu_events=pmu_events
     )
 
-    udmg = UncoreDerivedMetricsGenerator(
-        list(UncoreMetricName.__members__.values()), upc.get_measurements)
+    g = DefaultPlatformDerivedMetricsGeneratorsFactory(
+        extra_metrics=dict(
+            rw_ratio='cas_count_read/cas_count_write'
+        )
+    ).create(upc.get_measurements)
 
     while True:
-        print(json.dumps(udmg.get_measurements(), indent=4))
+        print(json.dumps(g.get_measurements(), indent=4))
         time.sleep(1)

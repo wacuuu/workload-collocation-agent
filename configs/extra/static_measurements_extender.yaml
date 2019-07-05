@@ -1,8 +1,10 @@
 loggers: {}
   #wca.wss: debug
 runner: !DetectionRunner
-  action_delay: 1.0
+  action_delay: 5.0
   event_names:
+    - instructions
+    - cycles
     - memstalls__ra310  # Cycles while memory subsystem has an outstanding
     - mem_load_retired_local_pmm__rd180   # Retired load instructions with local Optane DC persistent memory as the data source  and the data request missed L3
     - mem_load_retired_local_dram__rd301
@@ -12,10 +14,11 @@ runner: !DetectionRunner
   node: !StaticNode
     tasks:
       - task1
-      - task2
+#      - task2
   detector: !K8SExtenderDetector
   metrics_storage: !FilterStorage
     storage: !LogStorage
+      include_timestamp: false
       filter_labels:
         - task_id
       #  output_filename: 'metrics.prom'
@@ -23,24 +26,28 @@ runner: !DetectionRunner
     filter:
       - wss
       - memstalls__ra310
-#      - mem_load_retired_local_pmm__rd180
-#      - mem_load_retired_local_dram__rd301
-#      - ocr_all_reads_l3_miss_local_dram_any_snoop__rb701003f840007f7
-#      - ocr_all_reads_l3_miss_local_pmm_any_snoop__rb701003f804007f7
-#      - pmm_read_mb_per_second
-#      - pmm_write_mb_per_second
-#      - pmm_total_mb_per_second
-#      - dram_read_mb_per_second
-#      - dram_write_mb_per_second
-#      - dram_total_mb_per_second
+      - mem_load_retired_local_pmm__rd180
+      - mem_load_retired_local_dram__rd301
+      - ocr_all_reads_l3_miss_local_dram_any_snoop__rb701003f840007f7
+      - ocr_all_reads_l3_miss_local_pmm_any_snoop__rb701003f804007f7
+      - pmm_read_mb_per_second
+      - pmm_write_mb_per_second
+      - pmm_total_mb_per_second
+      - dram_read_mb_per_second
+      - dram_write_mb_per_second
+      - dram_total_mb_per_second
       - task_dram_hit
       - platform_dram_hit
+      - ips2
+      - ipc2
   anomalies_storage: !LogStorage
     output_filename: 'anomalies.prom'
     overwrite: true
   enable_derived_metrics: true
   task_derived_metrics_generators_factory: !DefaultTaskDerivedMetricsGeneratorFactory
     extra_metrics:
+      ips2: 'delta("instructions") / time_delta'
+      ipc2: 'delta("instructions") / delta("cycles")'
       task_dram_hit: 'mem_load_retired_local_dram__rd301 / (mem_load_retired_local_pmm__rd180 + mem_load_retired_local_dram__rd301)'
   platform_derived_metrics_generators_factory: !DefaultPlatformDerivedMetricsGeneratorsFactory
     extra_metrics:
