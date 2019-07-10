@@ -1,73 +1,79 @@
-import logging
-import socketserver
-
-import threading
-
-from wca.detectors import AnomalyDetector, TasksMeasurements, TasksResources, TasksLabels
-from wca.platforms import Platform
-from pprint import pprint
 import http.server
 import json
-from dataclasses import dataclass, asdict
+import logging
+import socketserver
 from typing import Dict, List
+
+from dataclasses import dataclass
+
 log = logging.getLogger(__name__)
+
+_PROMETHEUS_QUERY_PATH = "/api/v1/query"
+_PROMETHEUS_QUERY_RANGE_PATH = "/api/v1/query_range"
+_PROMETHEUS_URL_TPL = '{prometheus}{path}?query={name}'
+_PROMETHEUS_TIME_TPL = '&start={start}&end={end}&step=1s'
+_PROMETHEUS_TAG_TPL = '{key}="{value}"'
+
+
+def _build_prometheus_url(prometheus, name, tags=None, window_size=None, event_time=None):
+    tags = tags or dict()
+    path = _PROMETHEUS_QUERY_PATH
+    time_range = ''
+
+    # Some variables need to be overwritten for range queries.
+    if window_size and event_time:
+        offset = window_size / 2
+        time_range = _PROMETHEUS_TIME_TPL.format(
+            start=event_time - offset,
+            end=event_time + offset)
+        path = _PROMETHEUS_QUERY_RANGE_PATH
+
+    url = _PROMETHEUS_URL_TPL.format(
+        prometheus=prometheus,
+        path=path,
+        name=name,
+    )
+
+    # Prepare additional tags for query.
+    query_tags = []
+    for k, v in tags.items():
+        query_tags.append(_PROMETHEUS_TAG_TPL.format(key=k, value=v))
+    query_tags_str = ','.join(query_tags)
+
+    # Build final URL from all the components.
+    url = ''.join([url, "{", query_tags_str, "}", time_range])
+
+    return url
 
 
 @dataclass
 class ExtenderArgs:
-    Pod: Dict
-    Nodes: List
-    NodeNames: List
+    Nodes: List[Dict]
+    Pod: dict
+    NodeNames: List[str]
+
 
 # ExtenderFilterResult represents the results of a filter call to an extender
 @dataclass
 class ExtenderFilterResult:
-    # Filtered set of nodes where the pod can be scheduled; to be populated
-    # only if ExtenderConfig.NodeCacheCapable == false
-    Nodes: List#: *v1.NodeList
-    # Filtered set of nodes where the pod can be scheduled; to be populated
-    # only if ExtenderConfig.NodeCacheCapable == true
-    NodeNames: List #: *[]string
+    NodeNames: List[str]
     # Filtered out nodes where the pod can't be scheduled and the failure messages
-    FailedNodes: Dict#: FailedNodesMap
+    FailedNodes: Dict[str, str]
     # Error message indicating failure
     Error: str
 
 
-@dataclass
-class ExtenderBindingArgs:
-    # PodName is the name of the pod being bound
-    PodName: str
-    # PodNamespace is the namespace of the pod being bound
-    PodNamespace: str
-    # PodUID is the UID of the pod being bound
-    PodUID: int
-    # Node selected by the scheduler
-    Node: str
-
-
-
-
 class K8SHandler(http.server.BaseHTTPRequestHandler):
-
-    vars = 5
 
     def do_POST(self):
         content_length = int(self.headers['Content-Length'])
-        self.log_request()
-        try:
-            post_json = json.loads(self.rfile.read(content_length).decode())
-            pprint(post_json)
-        except Exception:
-            log.warning('cannot parse rfile!')
-            post_json = None
+        args = json.loads(self.rfile.read(content_length).decode())
+        extender_args = ExtenderArgs(**args)
 
         if self.path == "/api/scheduler/filter":
-            result = self._filter(args=post_json)
-        # elif self.path == "/api/scheduler/prioritize":
-        #     result = self._prioritize(args=post_json)
-        # elif self.path == "/api/scheduler/bind":
-        #     result = self._bind(args=post_json)
+            result_simple = self._filter(extender_args)
+        elif self.path == "/api/scheduler/prioritize":
+            result_simple = self._prioritize(extender_args)
         else:
             self.send_response(404)
             self.end_headers()
@@ -75,48 +81,38 @@ class K8SHandler(http.server.BaseHTTPRequestHandler):
 
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(self.serialize(result))
 
-    def _filter(self, args: ExtenderArgs) -> ExtenderFilterResult:
-        return None
+        result_as_json = json.dumps(result_simple).encode()
+        log.info('%s %s', self.path, result_as_json)
+        self.wfile.write(result_as_json)
 
-    # def _prioritize(self, args: ExtenderArgs) -> HostPriorityList:
-    #     pass
+    def _filter(self, extender_args):
+        return dict(
+            # NodeNames=[extender_args.NodeNames[0]],
+            NodeNames=extender_args.NodeNames,
+            # NodeNames=[],
+            FailedNodes={},
+            Error='',
+        )
 
-    # def _bind(self, args: ExtenderBindingArgs) -> ExtenderBindingResult:
-    #     pass
-
-    def serialize(self, obj):
-        # return json.dumps(asdict(obj)).encode()
-        return json.dumps(K8SHandler.vars).encode()
+    def _prioritize(self, extender_args: ExtenderArgs):
+        nodes = []
+        for score, nodename in enumerate(extender_args.NodeNames):
+            nodes.append(
+                dict(Host=nodename, Score=score * 20)
+            )
+        return nodes
 
 
 class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
+
 
 def start_server(port):
     with http.server.HTTPServer(('', port), K8SHandler) as httpd:
         log.info('serving at port: %s', port)
         httpd.serve_forever()
 
-@dataclass
-class K8SExtenderDetector(AnomalyDetector):
 
-    """Cyclic deterministic dummy anomaly detector."""
-    port = 12345
-
-    def __post_init__(self):
-        threading.Thread(target=start_server, args=(self.port,), daemon=True).start()
-
-    def detect(self,
-               platform: Platform,
-               tasks_measurements: TasksMeasurements,
-               tasks_resources: TasksResources,
-               tasks_labels: TasksLabels
-               ):
-        K8SHandler.vars = len(tasks_labels)
-        log.debug('vars=%s', K8SHandler.vars)
-        return [], []
-
-
-
+if __name__ == '__main__':
+    start_server(12345)

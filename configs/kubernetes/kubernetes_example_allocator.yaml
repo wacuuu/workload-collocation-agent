@@ -9,6 +9,7 @@ runner: !AllocationRunner
     cgroup_driver: cgroupfs
 
     # Fill needed PATH to key and certificate to access kubelet.
+    # Can be found at kubernetes master at /etc/kuberentes/pki as apiserver-kubelet-client.{key,crt}
     ssl: !SSL
       server_verify: True
       client_cert_path: "$PATH/apiserver-kubelet-client.crt"

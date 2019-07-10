@@ -219,6 +219,8 @@ class BaseDerivedMetricsGenerator:
             return all(name in measurements and name in self._prev_measurements for name in names)
 
         def delta(*names):
+            if not available(*names):
+                return 0
             if len(names) == 1:
                 name = names[0]
                 return measurements[name] - self._prev_measurements[name]

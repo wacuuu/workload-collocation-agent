@@ -1,0 +1,24 @@
+resources:
+- memcached/deploy.yaml
+- sysbench/deploy.yaml
+
+#namespace: default
+
+patchesStrategicMerge:
+- replicas.yaml
+
+patchesJson6902:
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: memcached
+  path: set_node14.yaml
+- target:
+    group: apps
+    version: v1
+    kind: Deployment
+    name: sysbench
+  path: set_node14.yaml
+
+

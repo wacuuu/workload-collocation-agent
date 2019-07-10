@@ -26,3 +26,5 @@ run_workloads.retry
 .pex-build
 unit_results.xml
 metrics.prom
+apiserver-kubelet-client.crt
+apiserver-kubelet-client.key

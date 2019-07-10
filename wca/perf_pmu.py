@@ -167,6 +167,7 @@ class UncoreMetricName(str, Enum):
 
 
 UNCORE_IMC_EVENTS = [
+    # https://github.com/opcm/pcm/blob/816dec444453c0e1253029e7faecfe1e024a071c/cpucounters.cpp#L3549
     Event(name=UncoreMetricName.PMM_BANDWIDTH_READ, event=0xe3),
     Event(name=UncoreMetricName.PMM_BANDWIDTH_WRITE, event=0xe7),
     Event(name=UncoreMetricName.CAS_COUNT_READ, event=0x04, umask=0x3),  # * 64 to get bytes
@@ -215,6 +216,7 @@ class DefaultPlatformDerivedMetricsGeneratorsFactory(BaseGeneratorFactory):
             return EvalBasedMetricsGenerator(uncore_generator.get_measurements, self.extra_metrics)
         else:
             return uncore_generator
+
 
 if __name__ == '__main__':
     cpus, pmu_events = _discover_pmu_uncore_imc_config(UNCORE_IMC_EVENTS)

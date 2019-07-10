@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: nodeexporter
+  namespace: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: nodeexporter
+  template:
+    metadata:
+      labels:
+        app: nodeexporter
+    spec:
+      hostNetwork: true
+
+      containers:
+        - name: nodeexporter
+          image: prom/node-exporter:v0.18.1
+          securityContext:
+            privileged: true
+            runAsUser: 0
+          args:
+            - --collector.textfile.directory=/textfiles
+            - --web.disable-exporter-metrics
+            - --no-collector.arp
+            - --no-collector.bcache
+            - --no-collector.bonding
+            - --no-collector.conntrack
+            - --no-collector.cpu
+            - --no-collector.cpufreq
+            - --no-collector.diskstats
+            - --no-collector.edac
+            - --no-collector.entropy
+            - --no-collector.filefd
+            - --no-collector.filesystem
+            - --no-collector.hwmon
+            - --no-collector.infiniband
+            - --no-collector.ipvs
+            - --no-collector.loadavg
+            - --no-collector.mdadm
+            - --no-collector.meminfo
+            - --no-collector.netclass
+            - --no-collector.netdev
+            - --no-collector.netstat
+            - --no-collector.nfs
+            - --no-collector.nfsd
+            - --no-collector.pressure
+            - --no-collector.sockstat
+            - --no-collector.stat
+            - --no-collector.time
+            - --no-collector.timex
+            - --no-collector.uname
+            - --no-collector.vmstat
+            - --no-collector.xfs
+            - --no-collector.zfs
+            - --log.level=debug
+          ports:
+            - containerPort: 9100
+              protocol: TCP
+          volumeMounts:
+            - name: textfiles
+              mountPath: /textfiles
+#            - name: dev
+#              mountPath: /host/dev
+#            - name: proc
+#              mountPath: /host/proc
+#            - name: sys
+#              mountPath: /host/sys
+#            - name: rootfs
+#              mountPath: /rootfs
+      volumes:
+        - name: textfiles
+          hostPath:
+            path: /home/ppalucki/wca_remote_pycharm/wca
+#        - name: proc
+#          hostPath:
+#            path: /proc
+#        - name: dev
+#          hostPath:
+#            path: /dev
+#        - name: sys
+#          hostPath:
+#            path: /sys
+#        - name: rootfs
+#          hostPath:
+#            path: /

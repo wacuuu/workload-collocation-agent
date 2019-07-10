@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sysbench
+  labels:
+    workload: sysbench
+spec:
+  selector:
+    matchLabels:
+      app: sysbench
+  template:
+    metadata:
+      labels:
+        app: sysbench
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: sysbench
+          env:
+            - name: THREADS
+              value: "2"
+            - name: MEM
+              value: "64G"
+          image: severalnines/sysbench
+          command:
+          - sh
+          - -c
+          - "taskset -c 20-39 sysbench --threads=$THREADS memory run --time=0 --memory-block-size=$MEM --memory-total-size=0"

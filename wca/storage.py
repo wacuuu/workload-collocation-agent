@@ -384,14 +384,13 @@ class MetricPackage:
 @dataclass
 class FilterStorage(Storage):
 
-    storage: Storage
+    storages: List[Storage]
     filter: Optional[List[str]] = None
 
     def store(self, metrics):
         if self.filter is not None:
             metrics = list(filter(lambda metric: metric.name in self.filter, metrics))
-        self.storage.store(metrics)
-
-
+        for storage in self.storages:
+            storage.store(metrics)
 
 

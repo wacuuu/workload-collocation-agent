@@ -1,0 +1,13 @@
+resources:
+- deploy.yaml
+
+namespace: monitoring
+
+commonLabels:
+  app: prometheus
+
+configMapGenerator:
+- name: prometheus-config
+  files:
+  - prometheus.yaml
+
