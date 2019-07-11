@@ -120,16 +120,17 @@ class Platform:
 
 def create_metrics(platform: Platform) -> List[Metric]:
     """Creates a list of Metric objects from data in Platform object"""
+    PLATFORM_PREFIX='platform__'
     platform_metrics = list()
     platform_metrics.append(
         Metric.create_metric_with_metadata(
-            name=MetricName.MEM_USAGE,
+            name=PLATFORM_PREFIX + MetricName.MEM_USAGE,
             value=platform.total_memory_used)
     )
     for cpu_id, cpu_usage in platform.cpus_usage.items():
         platform_metrics.append(
             Metric.create_metric_with_metadata(
-                name=MetricName.CPU_USAGE_PER_CPU,
+                name=PLATFORM_PREFIX + MetricName.CPU_USAGE_PER_CPU,
                 value=cpu_usage,
                 labels={"cpu": str(cpu_id)}
             )
@@ -138,7 +139,7 @@ def create_metrics(platform: Platform) -> List[Metric]:
     for metric_name, metric_value in platform.measurements.items():
         platform_metrics.append(
             Metric.create_metric_with_metadata(
-                name=metric_name,
+                name=PLATFORM_PREFIX + metric_name,
                 value=metric_value,
             )
         )

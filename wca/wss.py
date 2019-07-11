@@ -32,8 +32,8 @@ class WSS:
             except (ProcessLookupError, FileNotFoundError):
                 log.warning('pid does not exist for clearing refs - ignoring!')
                 referenced = 0
-        referenced = referenced / 1024  # scale as bytes
-        measurements['wss'] = referenced
+        referenced = referenced / 1024  # scale as mega bytes
+        measurements['wss_referenced_mb'] = referenced
 
         if self._cycle == self.reset_interval:
             for pid in pids:

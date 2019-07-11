@@ -33,6 +33,8 @@ spec:
               valueFrom: {configMapKeyRef: { name: memcached-config, key: value }}
             - name: mutilate_extra
               valueFrom: {configMapKeyRef: { name: memcached-config, key: mutilate_extra }}
+            - name: mutilate_cpus
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: mutilate_cpus }}
           command:
             - sh
             - -c

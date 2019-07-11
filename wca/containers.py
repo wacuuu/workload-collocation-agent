@@ -241,13 +241,23 @@ class Container(ContainerInterface):
         else:
             self.wss = None
 
-        self._derived_metrics_generator = None
         if self._event_names:
             self._perf_counters = perf.PerfCounters(self._cgroup_path, event_names=event_names)
-            if enable_derived_metrics:
-                task_derived_metrics_generators_factory = task_derived_metrics_generators_factory or DefaultDerivedMetricsGenerator
-                self._derived_metrics_generator = task_derived_metrics_generators_factory.create(self._perf_counters.get_measurements)
+        else:
+            self._perf_counters = None
 
+        self._derived_metrics_generator = None
+        if enable_derived_metrics:
+            task_derived_metrics_generators_factory = task_derived_metrics_generators_factory \
+                                                      or DefaultDerivedMetricsGenerator
+            self._derived_metrics_generator = task_derived_metrics_generators_factory.create(
+                self._get_measurements)
+
+    def get_measurements(self) -> Measurements:
+        if self._derived_metrics_generator is not None:
+            return self._derived_metrics_generator.get_measurements()
+        else:
+            return self._get_measurements()
 
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
@@ -278,18 +288,14 @@ class Container(ContainerInterface):
         if self._rdt_information:
             self._resgroup.add_pids(self._cgroup.get_pids(), mongroup_name=self._name)
 
-    def get_measurements(self) -> Measurements:
+    def _get_measurements(self) -> Measurements:
         # Cgroup measurements
         cgroup_measurements = self._cgroup.get_measurements()
 
         # Perf events measurements
         if self._event_names:
-            if self._derived_metrics_generator:
-                # derived metrics
-                perf_measurements = self._derived_metrics_generator.get_measurements()
-            else:
-                # raw counters only
-                perf_measurements = self._perf_counters.get_measurements()
+            # raw counters only
+            perf_measurements = self._perf_counters.get_measurements()
         else:
             perf_measurements = {}
 

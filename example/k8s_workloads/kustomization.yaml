@@ -67,7 +67,7 @@ configMapGenerator:
 - name: memcached-config
   literals:
   - mutilate_threads=5
-  - mutilate_cpus=0-19
+  - mutilate_cpus=0-1000
   - value=100000   # 100k
   - records=1000000 # 1M  = 100GB
   - memory=200000 # MB
@@ -75,14 +75,14 @@ configMapGenerator:
   - conns=1
   - time=15     # seconds
   - memcached_threads=4
-  - memcached_cpus=20-39
+  - memcached_cpus=0-1000
   - memcached_extra=
   - mutilate_extra=
 
 - name: redis-config
   literals:
-    - memtire_cpus=0-19
-    - redis_cpus=20-39
+    - memtire_cpus=0-1000
+    - redis_cpus=0-1000
     - datasize=1000
     - keymaximum=10000
     - ratio=1:1
@@ -92,11 +92,11 @@ configMapGenerator:
 - name: sysbench-config
   literals:
     - threads=4
-    - cpus=20-39
+    - cpus=0-1000
     - memory=64G
     - extra='--rate=1'
 
 - name: stress-config
   literals:
     - extra='--stream 1 --stream-l3-size=1G'
-    - cpus=0-39
+    - cpus=0-1000

@@ -30,6 +30,7 @@ class MetricName(str, Enum):
     CPU_USAGE_PER_CPU = 'cpu_usage_per_cpu'
     CPU_USAGE_PER_TASK = 'cpu_usage_per_task'
     MEM_BW = 'memory_bandwidth'
+    MEM_USAGE_PER_TASK = 'memory_usage_per_task_bytes'
     LLC_OCCUPANCY = 'llc_occupancy'
     MEM_USAGE = 'memory_usage'
     MEMSTALL = 'stalls_mem_load'
@@ -93,6 +94,10 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         MetricMetadata(
             MetricType.COUNTER,
             '[bytes] Total memory bandwidth using Memory Bandwidth Monitoring.'),
+    MetricName.MEM_USAGE_PER_TASK:
+        MetricMetadata(
+            MetricType.GAUGE,
+            '[bytes] Memory usage_in_bytes per tasks returned from cgroup memory subsystem.'),
     MetricName.LLC_OCCUPANCY:
         MetricMetadata(
             MetricType.GAUGE,
