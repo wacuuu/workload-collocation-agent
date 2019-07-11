@@ -99,7 +99,7 @@ class K8SHandler(http.server.BaseHTTPRequestHandler):
         nodes = []
         for score, nodename in enumerate(extender_args.NodeNames):
             nodes.append(
-                dict(Host=nodename, Score=score * 20)
+                dict(Host=nodename, Score=0)
             )
         return nodes
 
@@ -115,4 +115,5 @@ def start_server(port):
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
     start_server(12345)
