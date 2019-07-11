@@ -57,5 +57,5 @@ configMapGenerator:
 
 - name: stress-config
   literals:
-    - extra='--stream 1 --stream-l3-size=256G'
+    - extra='--stream 1 --stream-l3-size=256m'
     - cpus=0-1000
