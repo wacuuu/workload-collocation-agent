@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: memcached
+  labels:
+    workload: memcached
+spec:
+  serviceName: memcached
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: memcached
+  template:
+    metadata:
+      labels:
+        app: memcached
+    spec:
+      containers:
+        - name: mutilate
+          image: bplotka/mutilate
+          env:
+            - name: mutilate_threads
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: mutilate_threads }}
+            - name: qps
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: qps }}
+            - name: time
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: time }}
+            - name: conns
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: conns }}
+            - name: records
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: records }}
+            - name: value
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: value }}
+            - name: mutilate_extra
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: mutilate_extra }}
+          command:
+            - sh
+            - -c
+            - "./mutilate -T 1 -s 127.0.0.1:11211 --loadonly -r $records -V $value && \
+               taskset -c $mutilate_cpus ./mutilate -C $conns -T $mutilate_threads -t $time -s 127.0.0.1:11211 --noload --scan $qps:$qps:0 -r $records -V $value $mutilate_extra"
+
+        - name: memcached
+          env:
+            - name: memcached_threads
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: memcached_threads }}
+            - name: memcached_cpus
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: memcached_cpus }}
+            - name: memory
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: memory }}
+            - name: memcached_extra
+              valueFrom: {configMapKeyRef: { name: memcached-config, key: memcached_extra }}
+          image: memcached
+          command:
+            - sh
+            - -c
+            - "taskset -c $memcached_cpus memcached -t $memcached_threads -m $memory -u root $memcached_extra"
+
+

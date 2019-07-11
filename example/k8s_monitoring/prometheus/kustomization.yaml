@@ -1,5 +1,5 @@
 resources:
-- deploy.yaml
+- memcached.yaml
 
 namespace: monitoring
 

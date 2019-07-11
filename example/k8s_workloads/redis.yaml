@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: redis
+  labels:
+    app: redis
+
+spec:
+  serviceName: redis
+  selector:
+    matchLabels:
+      app: redis
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: memtire
+          image: redislabs/memtier_benchmark
+          command:
+            - sh
+            - -c
+            - "taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1 --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
+            &&
+            taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1000000 --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra
+            "
+          env:
+            - name: podname
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - name: datasize
+              valueFrom: {configMapKeyRef: { name: redis-config, key: datasize }}
+            - name: keymaximum
+              valueFrom: {configMapKeyRef: { name: redis-config, key: keymaximum }}
+            - name: ratio
+              valueFrom: {configMapKeyRef: { name: redis-config, key: ratio }}
+            - name: memtire_cpus
+              valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_cpus }}
+            - name: memtire_extra
+              valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_extra }}
+        - name: redis
+          image: redis
+          command:
+            - sh
+            - -c
+            - "taskset -c $redis_cpus redis-server --save '' --loglevel notice --databases 1 $redis_extra"
+          env:
+            - name: podname
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - name: redis_cpus
+              valueFrom: {configMapKeyRef: { name: redis-config, key: redis_cpus }}
+            - name: redis_extra
+              valueFrom: {configMapKeyRef: { name: redis-config, key: redis_extra }}

@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: stress
+  labels:
+    app: stress
+
+spec:
+  serviceName: stress
+  selector:
+    matchLabels:
+      app: stress
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: stress
+    spec:
+      containers:
+        - name: stress
+          image: polinux/stress-ng
+          command:
+            - sh
+            - -c
+            - "taskset -c $cpus stress-ng $extra"
+          env:
+            - name: cpus
+              valueFrom: {configMapKeyRef: { name: stress-config, key: cpus }}
+            - name: extra
+              valueFrom: {configMapKeyRef: { name: stress-config, key: extra }}

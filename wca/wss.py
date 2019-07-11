@@ -29,14 +29,19 @@ class WSS:
                     for line in f:
                         if 'Referenced' in line:
                             referenced += int(line.split('Referenced:')[1].split()[0])
-            except ProcessLookupError:
+            except (ProcessLookupError, FileNotFoundError):
+                log.warning('pid does not exist for clearing refs - ignoring!')
                 referenced = 0
         referenced = referenced / 1024  # scale as bytes
         measurements['wss'] = referenced
 
         if self._cycle == self.reset_interval:
             for pid in pids:
-                with open('/proc/{}/clear_refs'.format(pid), 'w') as f:
-                    f.write('1\n')
+                try:
+                    with open('/proc/{}/clear_refs'.format(pid), 'w') as f:
+                        f.write('1\n')
+                except FileNotFoundError:
+                    log.warning('pid does not exist for clearing refs - ignoring!')
+                    pass
 
         return measurements

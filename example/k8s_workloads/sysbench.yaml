@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: sysbench
+  labels:
+    workload: sysbench
+spec:
+  serviceName: sysbench
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: sysbench
+  template:
+    metadata:
+      labels:
+        app: sysbench
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: sysbench
+          env:
+            - name: threads
+              valueFrom: {configMapKeyRef: { name: sysbench-config, key: threads }}
+            - name: memory
+              valueFrom: {configMapKeyRef: { name: sysbench-config, key: memory }}
+            - name: cpus
+              valueFrom: {configMapKeyRef: { name: sysbench-config, key: cpus }}
+            - name: extra
+              valueFrom: {configMapKeyRef: { name: sysbench-config, key: extra }}
+          image: severalnines/sysbench
+          command:
+          - sh
+          - -c
+          - "taskset -c $cpus sysbench --threads=$threads memory run --time=0 --memory-block-size=$memory --memory-total-size=0 --report-interval=1 $extra"
