@@ -27,7 +27,7 @@ from wca.logger import trace, get_logging_metrics
 from wca.mesos import create_metrics
 from wca.metrics import Metric, MetricType, MetricName, DefaultTaskDerivedMetricsGeneratorFactory, \
     BaseGeneratorFactory
-from wca.nodes import Task
+from wca.nodes import Task, TaskSynchornizationException
 from wca.profiling import profiler
 from wca.runners import Runner
 from wca.storage import MetricPackage, DEFAULT_STORAGE
@@ -181,7 +181,13 @@ class MeasurementRunner(Runner):
         iteration_start = time.time()
 
         # Get information about tasks.
-        tasks = self._node.get_tasks()
+        try:
+            tasks = self._node.get_tasks()
+        except TaskSynchornizationException as e:
+            log.error('Cannot synchronize tasks with node (error=%s) - skip this iteration!', e)
+            self._wait()
+            return
+
         log.debug('Tasks detected: %d', len(tasks))
 
         for task in tasks:

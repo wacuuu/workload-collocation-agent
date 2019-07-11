@@ -27,8 +27,8 @@ configMapGenerator:
   literals:
   - mutilate_threads=5
   - mutilate_cpus=0-1000
-  - value=100000   # 100k
-  - records=1000000 # 1M  = 100GB
+  - value=10000   # 100k
+  - records=1000000 # 1M  = 10GB
   - memory=200000 # MB
   - qps=1000000
   - conns=1
@@ -43,7 +43,7 @@ configMapGenerator:
     - memtire_cpus=0-1000
     - redis_cpus=0-1000
     - datasize=1000
-    - keymaximum=10000
+    - keymaximum=100000
     - ratio=1:1
     - redis_extra=
     - memtire_extra=
@@ -52,10 +52,10 @@ configMapGenerator:
   literals:
     - threads=4
     - cpus=0-1000
-    - memory=64G
-    - extra='--rate=1'
+    - memory=32
+    - extra=
 
 - name: stress-config
   literals:
-    - extra='--stream 1 --stream-l3-size=1G'
+    - extra='--stream 1 --stream-l3-size=256G'
     - cpus=0-1000
