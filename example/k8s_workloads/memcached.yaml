@@ -38,7 +38,7 @@ spec:
           command:
             - sh
             - -c
-            - "./mutilate -T 1 -s 127.0.0.1:11211 --loadonly -r $records -V $value && \
+            - "sleep 15 && ./mutilate -T 1 -s 127.0.0.1:11211 --loadonly -r $records -V $value && \
                taskset -c $mutilate_cpus ./mutilate -C $conns -T $mutilate_threads -t $time -s 127.0.0.1:11211 --noload --scan $qps:$qps:0 -r $records -V $value $mutilate_extra"
 
         - name: memcached

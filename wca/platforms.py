@@ -144,6 +144,13 @@ def create_metrics(platform: Platform) -> List[Metric]:
             )
         )
 
+
+    platform_metrics.extend([
+        Metric(name=PLATFORM_PREFIX+'topology_cores', value=platform.cores),
+        Metric(name=PLATFORM_PREFIX+'topology_cpus', value=platform.cpus),
+        Metric(name=PLATFORM_PREFIX+'topology_sockets', value=platform.sockets),
+    ])
+
     return platform_metrics
 
 
