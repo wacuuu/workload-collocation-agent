@@ -1,0 +1,7 @@
+- op: add
+  path: /spec/template/spec/nodeSelector
+  value:
+    memory: aep
+- op: add
+  path: /spec/template/spec/terminationGracePeriodSeconds
+  value: 0

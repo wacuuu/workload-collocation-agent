@@ -1,6 +1,5 @@
 loggers: {}
   #wca.wss: debug
-  #wca.storage_http: debug
 runner: !DetectionRunner
   extra_labels: &node_labels
     node: 'node13'
@@ -13,8 +12,8 @@ runner: !DetectionRunner
     - mem_load_retired_local_dram__rd301
     - mem_inst_retired_all_loads__rd081
     - mem_inst_retired_all_stores__rd082
-#    - ocr_all_reads_l3_miss_local_dram_any_snoop__rb701003f840007f7
-#    - ocr_all_reads_l3_miss_local_pmm_any_snoop__rb701003f804007f7
+    - ocr_all_reads_l3_miss_local_dram_any_snoop__rb701003f840007f7
+    - ocr_all_reads_l3_miss_local_pmm_any_snoop__rb701003f804007f7
   node: !KubernetesNode
     cgroup_driver: cgroupfs
     ssl: !SSL
@@ -38,5 +37,6 @@ runner: !DetectionRunner
   platform_derived_metrics_generators_factory: !DefaultPlatformDerivedMetricsGeneratorsFactory
     extra_metrics:
       dram_hit: 'dram_total_mb_per_second / (pmm_total_mb_per_second+dram_total_mb_per_second)'
+      dram_read_speed_gb: 'delta(cas_count_read) * 64/1024/1024/1024'
 
 
