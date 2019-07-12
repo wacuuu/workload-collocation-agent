@@ -3,25 +3,32 @@ kind: StatefulSet
 metadata:
   name: memcached
 spec:
-  replicas: 3
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mutilate
+spec:
+  replicas: 1
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: sysbench
 spec:
-  replicas: 3
+  replicas: 0
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: redis
 spec:
-  replicas: 3
+  replicas: 0
 ---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: stress
 spec:
-  replicas: 3
+  replicas: 0

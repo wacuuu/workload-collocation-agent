@@ -1,7 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: memcached
+spec:
+  clusterIP: None
+  selector:
+    app: memcached
+
+
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: memcached
+  name: mutilate
   labels:
     workload: memcached
 spec:
@@ -9,11 +20,11 @@ spec:
   podManagementPolicy: Parallel
   selector:
     matchLabels:
-      app: memcached
+      app: mutilate
   template:
     metadata:
       labels:
-        app: memcached
+        app: mutilate
     spec:
       containers:
         - name: mutilate
@@ -35,12 +46,33 @@ spec:
               valueFrom: {configMapKeyRef: { name: memcached-config, key: mutilate_extra }}
             - name: mutilate_cpus
               valueFrom: {configMapKeyRef: { name: memcached-config, key: mutilate_cpus }}
+            - name: podname
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
           command:
-            - sh
+            - bash
             - -c
-            - "sleep 5 && ./mutilate -T 1 -s 127.0.0.1:11211 --loadonly -r $records -V $value && \
-               taskset -c $mutilate_cpus ./mutilate -C $conns -T $mutilate_threads -t $time -s 127.0.0.1:11211 --noload --scan $qps:$qps:0 -r $records -V $value $mutilate_extra"
+            - "./mutilate -T 1 -s memcached-${podname:9:100}.memcached:11211 --loadonly -r $records -V $value -v && \
+               taskset -c $mutilate_cpus ./mutilate -C $conns -T $mutilate_threads -t $time -s memcached-${podname:9:100}.memcached:11211 --noload --scan $qps:$qps:0 -r $records -V $value $mutilate_extra"
 
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: memcached
+  labels:
+    workload: memcached
+spec:
+  serviceName: memcached
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: memcached
+  template:
+    metadata:
+      labels:
+        app: memcached
+    spec:
+      containers:
         - name: memcached
           env:
             - name: memcached_threads

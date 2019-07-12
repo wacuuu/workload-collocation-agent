@@ -27,6 +27,7 @@ from wrapper.parser import (default_parse, parse_loop, DEFAULT_REGEXP,
                             ParseFunc, ServiceLevelArgs, append_service_level_metrics)
 from wca.platforms import get_wca_version
 
+
 log = logging.getLogger(__name__)
 
 
@@ -34,9 +35,19 @@ def main(parse: ParseFunc = default_parse):
     """
     Launches workload and parser with processed arguments. Handles workload shutdown.
     """
+
+    from wrapper.parser_mutilate import parse as mutilate_parser
+    from wrapper.parser_stress_ng import parse as stress_parser
+
     arg_parser = prepare_argument_parser()
     # It is assumed that unknown arguments should be passed to workload.
     args = arg_parser.parse_args()
+
+    pods_raw = subprocess.check_output(shlex.split('kubectl get pods -ojson'))
+    pods = json.loads(pods_raw)
+    print(pods)
+    names = [p['metadata']['name'] for p in pods['items']]
+    return
 
     # Additional argparse checks.
     if not ((args.load_metric_name is not None and args.peak_load is not None) or
@@ -56,34 +67,44 @@ def main(parse: ParseFunc = default_parse):
     log.debug("Logger configured with {0}".format(args.log_level))
     log.info("Starting wrapper version {}".format(get_wca_version()))
 
-    command_splited = shlex.split(args.command)
+    # create kafka storage with list of kafka brokers from arguments
+    kafka_brokers_addresses = args.kafka_brokers.replace(" ", "").split(',')
+    if kafka_brokers_addresses != [""]:
+        log.info("KafkaStorage {}".format(kafka_brokers_addresses))
+        storage = KafkaStorage(brokers_ips=kafka_brokers_addresses,
+                               max_timeout_in_seconds=5.0,
+                               topic=args.kafka_topic)
+    else:
+        storage = LogStorage(args.storage_output_filename)
+
+    labels = json.loads(args.labels)
+    _start_thread(parse, args.command, storage, labels, args.stderr, args.regexp,
+                  service_level_args, args.subprocess_shell, args.separator,
+                  args.metric_name_prefix,
+                  )
+
+def _start_thread(parse, command, storage, labels, stderr, regexp,
+                  service_level_args, subprocess_shell, separator,
+                  metric_name_prefix,
+                  ):
+
+    command_splited = shlex.split(command)
     log.info("Running command: {}".format(command_splited))
     workload_process = subprocess.Popen(command_splited,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE,
                                         universal_newlines=True,
                                         bufsize=1,
-                                        shell=args.subprocess_shell,
+                                        shell=subprocess_shell,
                                         )
-    input = workload_process.stderr if args.stderr else workload_process.stdout
 
-    labels = json.loads(args.labels)
-    parse = partial(parse, regexp=args.regexp, separator=args.separator, labels=labels,
-                    input=input, metric_name_prefix=args.metric_name_prefix)
+    input = workload_process.stderr if stderr else workload_process.stdout
+    parse = partial(parse, regexp=regexp, separator=separator, labels=labels,
+                    input=input, metric_name_prefix=metric_name_prefix)
     append_service_level_metrics_func = partial(
         append_service_level_metrics, labels=labels, service_level_args=service_level_args)
 
-    # create kafka storage with list of kafka brokers from arguments
-    kafka_brokers_addresses = args.kafka_brokers.replace(" ", "").split(',')
-    if kafka_brokers_addresses != [""]:
-        log.info("KafkaStorage {}".format(kafka_brokers_addresses))
-        kafka_storage = KafkaStorage(brokers_ips=kafka_brokers_addresses,
-                                     max_timeout_in_seconds=5.0,
-                                     topic=args.kafka_topic)
-    else:
-        kafka_storage = LogStorage(args.storage_output_filename)
-
-    t = threading.Thread(target=parse_loop, args=(parse, kafka_storage,
+    t = threading.Thread(target=parse_loop, args=(parse, storage,
                                                   append_service_level_metrics_func))
     t.start()
     t.join()
