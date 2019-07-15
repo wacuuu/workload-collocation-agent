@@ -1,5 +1,45 @@
+# reload rules with
+# ./promtool check rules /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.rules.yaml && pkill -HUP prometheus
+
 groups:
-- name: aep_scheduling
+
+- name: aep_scheduling_node
   rules:
-  - record: app_per_node:memstalls:avg_rate30s
-    expr: sum by(app, node) (rate(task__memstalls__ra310[30s]))
+  - record: node__dram_hit_15s
+    expr: sum(avg_over_time(platform__dram_hit[15s])) by(node)
+  - record: node__total_memory_stalls
+    expr: sum by(node) (rate(task__memstalls__ra310[15s]))
+  - record: node__total_wss
+    expr: sum by(node) (task__wss_referenced_mb)
+  - record: node__total_rss
+    expr: sum by(node) (platform__memory_usage)
+  - record: node__cache_contention  #
+    expr: (1 - (node__dram_hit_15s * node__dram_hit_15s)) * 100
+  - record: node__cache_contention_normalized
+    expr: node__cache_contention / cluster__avg_cache_contention
+
+- name: aep_scheduling_cluster
+  rules:
+    - record: cluster__avg_cache_contention
+      expr: avg(node__cache_contention)
+    - record: cluster__avg_app_utilization
+      expr: avg(app__cache_utilization)
+
+- name: aep_scheduling_apps
+  rules:
+  - record: app__memory_access_rate_over_15s
+    expr: avg(rate(task__mem_inst_retired_all_loads__rd081[15s]) + rate(task__mem_inst_retired_all_stores__rd082[15s])) by (app) / 1e+09
+  - record: app__memory_bandwidth_rate_15s_gb
+    expr: avg(rate(task__memory_bandwidth[15s])) by (app) / 1000000000
+  - record: app__wss_avg_15s_gb
+    expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app) / 1000
+  - record: app__memory_access_locality
+    expr: app__memory_bandwidth_rate_15s_gb / app__wss_avg_15s_gb
+  - record: app__memory_rw_ratio
+    expr: avg(task__memory_rw_ratio) by (app)
+  - record: app__cache_utilization
+    expr: app__memory_access_locality * app__memory_rw_ratio
+  - record: app__cache_utilization_normalized
+    expr: app__cache_utilization / cluster__avg_app_utilization
+
+

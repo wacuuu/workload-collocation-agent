@@ -17,7 +17,7 @@ spec:
     - --policy-config-file=/etc/kubernetes/scheduler-policy.json
     - --use-legacy-policy-config=true
     - --vmodule=*generic*=10,*extender*=10,*schedul*=10,*factory*=10
-    - -v=3
+    - -v=1
     image: gcr.io/google-containers/kube-scheduler:v1.15.0
     imagePullPolicy: IfNotPresent
     livenessProbe:

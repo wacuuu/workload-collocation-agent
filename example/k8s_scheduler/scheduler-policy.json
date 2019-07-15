@@ -6,7 +6,7 @@
       "PrioritizeVerb": "prioritize",
       "Weight": 1,
       "EnableHTTPS": false,
-      "Ignorable": true,
+      "Ignorable": false,
       "NodeCacheCapable": true
     }
   ]

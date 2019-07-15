@@ -88,13 +88,13 @@ spec:
         - name: sysbench
           env:
             - name: threads
-              valueFrom: {configMapKeyRef: { name: sysbench-high, key: threads }}
+              valueFrom: {configMapKeyRef: { name: sysbench-big, key: threads }}
             - name: memory
-              valueFrom: {configMapKeyRef: { name: sysbench-high, key: memory }}
+              valueFrom: {configMapKeyRef: { name: sysbench-big, key: memory }}
             - name: cpus
-              valueFrom: {configMapKeyRef: { name: sysbench-high, key: cpus }}
+              valueFrom: {configMapKeyRef: { name: sysbench-big, key: cpus }}
             - name: extra
-              valueFrom: {configMapKeyRef: { name: sysbench-high, key: extra }}
+              valueFrom: {configMapKeyRef: { name: sysbench-big, key: extra }}
           image: severalnines/sysbench
           command:
             - sh

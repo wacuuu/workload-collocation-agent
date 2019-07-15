@@ -82,12 +82,18 @@ class K8SHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
         result_as_json = json.dumps(result_simple).encode()
-        log.info('%s %s', self.path, result_as_json)
+        #log.debug('%s %s', self.path, result_as_json)
         self.wfile.write(result_as_json)
 
+    def log_request(self, code='-', size='-'):
+        pass
+
     def _filter(self, extender_args):
+        nodes = extender_args.NodeNames
+        # nodes = list(sorted(extender_args.NodeNames[0:3]))
+        log.info('filtered = %s', ', '.join(nodes))
         return dict(
-            NodeNames=[extender_args.NodeNames[0]],
+            NodeNames=nodes,
             # NodeNames=extender_args.NodeNames,
             # NodeNames=[],
             FailedNodes={},
@@ -95,11 +101,17 @@ class K8SHandler(http.server.BaseHTTPRequestHandler):
         )
 
     def _prioritize(self, extender_args: ExtenderArgs):
+        print(json.dumps(extender_args.Pod, indent=4))
+        labels = extender_args.Pod['metadata']['labels']
+
+
         nodes = []
         for score, nodename in enumerate(extender_args.NodeNames):
             nodes.append(
                 dict(Host=nodename, Score=0)
             )
+
+        log.info('priorities = %s', ', '.join('%s=%s' % (d['Host'], d['Score']) for d in sorted(nodes, key=lambda d:d['Host'])))
         return nodes
 
 

@@ -7,6 +7,7 @@ spec:
   selector:
     matchLabels:
       app: stress-small
+  replicas: 0
   podManagementPolicy: Parallel
   template:
     metadata:
