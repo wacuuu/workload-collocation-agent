@@ -14,7 +14,6 @@ _PROMETHEUS_URL_TPL = '{prometheus}{path}?query={name}'
 _PROMETHEUS_TIME_TPL = '&start={start}&end={end}&step=1s'
 _PROMETHEUS_TAG_TPL = '{key}="{value}"'
 
-
 def _build_prometheus_url(prometheus, name, tags=None, window_size=None, event_time=None):
     tags = tags or dict()
     path = _PROMETHEUS_QUERY_PATH
@@ -88,8 +87,8 @@ class K8SHandler(http.server.BaseHTTPRequestHandler):
 
     def _filter(self, extender_args):
         return dict(
-            # NodeNames=[extender_args.NodeNames[0]],
-            NodeNames=extender_args.NodeNames,
+            NodeNames=[extender_args.NodeNames[0]],
+            # NodeNames=extender_args.NodeNames,
             # NodeNames=[],
             FailedNodes={},
             Error='',
@@ -113,6 +112,9 @@ def start_server(port):
         log.info('serving at port: %s', port)
         httpd.serve_forever()
 
+# STATE of cluster and latest characteristics of the apps
+app_stats = {}
+node_stats = {}
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)

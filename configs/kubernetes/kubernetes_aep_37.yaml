@@ -1,6 +1,6 @@
 loggers: {}
   #wca.wss: debug
-runner: !DetectionRunner
+runner: !MeasurementRunner
   rdt_enabled: false
   extra_labels: &node_labels
     node: 'node11'
@@ -24,12 +24,8 @@ runner: !DetectionRunner
     kubelet_endpoint: "https://100.64.176.37:10250"
     monitored_namespaces: ["default"]
   wss_reset_interval: 1
-  detector: !AEPDetector
-    node_labels: *node_labels
   metrics_storage: !HTTPStorage
     port: 9100
-  anomalies_storage: !HTTPStorage
-    port: 9101
   enable_derived_metrics: true
   task_derived_metrics_generators_factory: !DefaultTaskDerivedMetricsGeneratorFactory
     extra_metrics:
@@ -38,6 +34,6 @@ runner: !DetectionRunner
   platform_derived_metrics_generators_factory: !DefaultPlatformDerivedMetricsGeneratorsFactory
     extra_metrics:
       dram_hit: 'dram_total_mb_per_second / (pmm_total_mb_per_second+dram_total_mb_per_second)'
-      dram_read_speed_gb: 'delta(cas_count_read) * 64/1024/1024/1024'
+#      dram_read_speed_gb: 'delta(cas_count_read) * 64/1024/1024/1024'
 
 

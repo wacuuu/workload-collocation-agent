@@ -1,0 +1,5 @@
+groups:
+- name: aep_scheduling
+  rules:
+  - record: app_per_node:memstalls:avg_rate30s
+    expr: sum by(app, node) (rate(task__memstalls__ra310[30s]))

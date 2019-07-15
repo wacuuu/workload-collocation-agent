@@ -1,7 +1,7 @@
 {
   "ExtenderConfigs": [
     {
-      "URLPrefix": "http://100.64.176.40:12345/api/scheduler",
+      "URLPrefix": "http://100.64.176.36:12345/api/scheduler",
       "FilterVerb": "filter",
       "PrioritizeVerb": "prioritize",
       "Weight": 1,

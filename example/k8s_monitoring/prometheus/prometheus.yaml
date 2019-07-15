@@ -1,9 +1,16 @@
+# run on 100.64.176.36 as root
+# form /root/prometheus-2.11.0-rc.0.linux-amd64
+# ./prometheus --config.file /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.yaml --web.enable-lifecycle --web.enable-admin-api
 global:
-  scrape_interval: 5s
+  scrape_interval: 1s
+  evaluation_interval: 1s
+rule_files:
+  - 'prometheus.rules.yaml'
 scrape_configs:
-  - job_name: 'node_exporters'
+  - job_name: 'wca'
     static_configs:
     - targets:
+      - '100.64.176.37:9100'
       - '100.64.176.38:9100'
       - '100.64.176.39:9100'
       - '100.64.176.40:9100'

@@ -1,6 +1,6 @@
 loggers: {}
   #wca.wss: debug
-runner: !DetectionRunner
+runner: !MeasurementRunner
   extra_labels: &node_labels
     node: node14
   action_delay: 5.0
@@ -23,12 +23,8 @@ runner: !DetectionRunner
     kubelet_endpoint: "https://100.64.176.40:10250"
     monitored_namespaces: ["default"]
   wss_reset_interval: 1
-  detector: !AEPDetector
-    node_labels: *node_labels
   metrics_storage: !HTTPStorage
     port: 9100
-  anomalies_storage: !HTTPStorage
-    port: 9101
   enable_derived_metrics: true
   task_derived_metrics_generators_factory: !DefaultTaskDerivedMetricsGeneratorFactory
     extra_metrics:
