@@ -1,0 +1,7 @@
+namePrefix: wl-
+namespace: nszulc
+bases:
+- variations/redis-memtier-default
+- variations/redis-memtier-high-mem
+- variations/redis-memtier-high-mem-low-net
+
