@@ -1,21 +1,18 @@
 apiVersion: apps/v1
 kind: StatefulSet
-
 metadata:
-  name: stress
-  labels:
-    app: stress
-
+  name: stress-small
 spec:
-  serviceName: stress
+  serviceName: stress-small
   selector:
     matchLabels:
-      app: stress
+      app: stress-small
+  replicas: 0
   podManagementPolicy: Parallel
   template:
     metadata:
       labels:
-        app: stress
+        app: stress-small
     spec:
       containers:
         - name: stress
@@ -26,6 +23,66 @@ spec:
             - "taskset -c $cpus stress-ng $extra"
           env:
             - name: cpus
-              valueFrom: {configMapKeyRef: { name: stress-config, key: cpus }}
+              valueFrom: {configMapKeyRef: { name: stress-small, key: cpus }}
             - name: extra
-              valueFrom: {configMapKeyRef: { name: stress-config, key: extra }}
+              valueFrom: {configMapKeyRef: { name: stress-small, key: extra }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: stress-medium
+spec:
+  replicas: 0
+  serviceName: stress-medium
+  selector:
+    matchLabels:
+      app: stress-medium
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: stress-medium
+    spec:
+      containers:
+        - name: stress
+          image: polinux/stress-ng
+          command:
+            - sh
+            - -c
+            - "taskset -c $cpus stress-ng $extra"
+          env:
+            - name: cpus
+              valueFrom: {configMapKeyRef: { name: stress-medium, key: cpus }}
+            - name: extra
+              valueFrom: {configMapKeyRef: { name: stress-medium, key: extra }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: stress-big
+spec:
+  serviceName: stress-big
+  selector:
+    matchLabels:
+      app: stress-big
+  replicas: 0
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: stress-big
+    spec:
+      containers:
+        - name: stress
+          image: polinux/stress-ng
+          command:
+            - sh
+            - -c
+            - "taskset -c $cpus stress-ng $extra"
+          env:
+            - name: cpus
+              valueFrom: {configMapKeyRef: { name: stress-big, key: cpus }}
+            - name: extra
+              valueFrom: {configMapKeyRef: { name: stress-big, key: extra }}

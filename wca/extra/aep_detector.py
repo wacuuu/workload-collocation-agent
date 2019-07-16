@@ -43,11 +43,12 @@ class AEPDetector(AnomalyDetector):
 
         for task_id, labels in tasks_labels.items():
             measurements = tasks_measurements[task_id]
-            if 'app' in labels:
-                app = labels['app']
+            app = labels.get('controller-revision-hash', labels.get('app'))
+
+            if app:
                 labels = dict(app=app)
                 metrics_data = dict(
-                    app_rw_ratio=measurements.get('task_rw_ratio', -1),
+                    app_rw_ratio=measurements.get('rw_ratio', -1),
                     app_dram_hit_ratio=measurements.get('task_dram_hit_ratio', -1),
                     app_wss=measurements.get('wss', -1),
                     app_cache_utilization=measurements.get('task_rw_ratio', -1) * measurements.get(

@@ -27,6 +27,7 @@ COPY . .
 
 RUN pipenv install --dev
 RUN pipenv run make wca_package
+ENTRYPOINT pipenv run make wca_package
 
 # Building final container that consists of wca only.
 FROM centos:7
