@@ -41,7 +41,7 @@ groups:
   - record: appnode__memory_rw_ratio
     expr: avg(task__memory_rw_ratio) by (app, node)
   - record: appnode__cache_utilization
-    expr: appnode__memory_access_locality * appnode__memory_rw_ratio * appnode_memory_intensivity
+    expr: appnode__memory_access_locality * appnode__memory_rw_ratio
 
 - name: aep_apps
   rules:
@@ -58,7 +58,7 @@ groups:
   - record: app__memory_intensivity
     expr: app__memory_bandwidth_rate_15s_gb / 1e11
   - record: app__cache_utilization
-    expr: app__memory_access_locality * app__memory_rw_ratio * app__memory_intensivity
+    expr: app__memory_access_locality * app__memory_rw_ratio
   - record: app__cache_utilization_normalized
     expr: app__cache_utilization / cluster__avg_app_utilization
 
