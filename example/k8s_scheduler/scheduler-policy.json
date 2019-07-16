@@ -1,4 +1,5 @@
 {
+  "Priorities": [],
   "ExtenderConfigs": [
     {
       "URLPrefix": "http://100.64.176.36:12345/api/scheduler",
@@ -6,7 +7,7 @@
       "PrioritizeVerb": "prioritize",
       "Weight": 1,
       "EnableHTTPS": false,
-      "Ignorable": false,
+      "Ignorable": true,
       "NodeCacheCapable": true
     }
   ]

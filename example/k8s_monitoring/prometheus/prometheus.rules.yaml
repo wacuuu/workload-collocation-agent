@@ -1,9 +1,9 @@
 # reload rules with
 # ./promtool check rules /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.rules.yaml && pkill -HUP prometheus
 
-groups:
 
-- name: aep_scheduling_node
+groups:
+- name: aep_node
   rules:
   - record: node__dram_hit_15s
     expr: sum(avg_over_time(platform__dram_hit[15s])) by(node)
@@ -13,33 +13,70 @@ groups:
     expr: sum by(node) (task__wss_referenced_mb)
   - record: node__total_rss
     expr: sum by(node) (platform__memory_usage)
-  - record: node__cache_contention  #
+  - record: node__cache_contention
     expr: (1 - (node__dram_hit_15s * node__dram_hit_15s)) * 100
   - record: node__cache_contention_normalized
     expr: node__cache_contention / cluster__avg_cache_contention
 
-- name: aep_scheduling_cluster
-  rules:
-    - record: cluster__avg_cache_contention
-      expr: avg(node__cache_contention)
-    - record: cluster__avg_app_utilization
-      expr: avg(app__cache_utilization)
+  - record: node__cache_utilization_class
+    expr: avg by(node) (avg_over_time(appnode__cache_utilization[15s]))
 
-- name: aep_scheduling_apps
+- name: aep_cluster
+  rules:
+  - record: cluster__avg_cache_contention
+    expr: avg(node__cache_contention)
+  - record: cluster__avg_app_utilization
+    expr: avg(app__cache_utilization)
+
+- name: aep_appnode
+  rules:
+  - record: appnode__memory_bandwidth_rate_15s_gb
+    expr: avg(rate(task__memory_bandwidth[15s])) by (app, node) / 1e9
+  - record: appnode__wss_avg_15s_gb
+    expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app, node) / 1000
+  - record: appnode__memory_intensivity
+    expr: appnode__memory_bandwidth_rate_15s_gb / 1e11
+  - record: appnode__memory_access_locality
+    expr: appnode__memory_bandwidth_rate_15s_gb / appnode__wss_avg_15s_gb
+  - record: appnode__memory_rw_ratio
+    expr: avg(task__memory_rw_ratio) by (app, node)
+  - record: appnode__cache_utilization
+    expr: appnode__memory_access_locality * appnode__memory_rw_ratio * appnode_memory_intensivity
+
+- name: aep_apps
   rules:
   - record: app__memory_access_rate_over_15s
-    expr: avg(rate(task__mem_inst_retired_all_loads__rd081[15s]) + rate(task__mem_inst_retired_all_stores__rd082[15s])) by (app) / 1e+09
+    expr: avg(rate(task__mem_inst_retired_all_loads__rd081[15s]) + rate(task__mem_inst_retired_all_stores__rd082[15s])) by (app) / 1e9
   - record: app__memory_bandwidth_rate_15s_gb
-    expr: avg(rate(task__memory_bandwidth[15s])) by (app) / 1000000000
+    expr: avg(rate(task__memory_bandwidth[15s])) by (app) / 1e9
   - record: app__wss_avg_15s_gb
     expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app) / 1000
   - record: app__memory_access_locality
     expr: app__memory_bandwidth_rate_15s_gb / app__wss_avg_15s_gb
   - record: app__memory_rw_ratio
     expr: avg(task__memory_rw_ratio) by (app)
+  - record: app__memory_intensivity
+    expr: app__memory_bandwidth_rate_15s_gb / 1e11
   - record: app__cache_utilization
-    expr: app__memory_access_locality * app__memory_rw_ratio
+    expr: app__memory_access_locality * app__memory_rw_ratio * app__memory_intensivity
   - record: app__cache_utilization_normalized
     expr: app__cache_utilization / cluster__avg_app_utilization
+
+- name: aep_apps_fits
+  rules:
+  - record: fit__sysbench_big
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-big"})
+  - record: fit__sysbench_medium
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-medium"})
+  - record: fit__sysbench_small
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-small"})
+  - record: fit__stress_big
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-big"})
+  - record: fit__stress_medium
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-medium"})
+  - record: fit__stress_small
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-small"})
+  - record: fit__memcached
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="memcached"})
 
 
