@@ -35,13 +35,13 @@ groups:
   - record: appnode__wss_avg_15s_gb
     expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app, node) / 1000
   - record: appnode__memory_intensivity
-    expr: appnode__memory_bandwidth_rate_15s_gb / 1e11
+    expr: appnode__memory_bandwidth_rate_15s_gb / 100  # Assume all nodes has max 100GB membw
   - record: appnode__memory_access_locality
     expr: appnode__memory_bandwidth_rate_15s_gb / appnode__wss_avg_15s_gb
   - record: appnode__memory_rw_ratio
     expr: avg(task__memory_rw_ratio) by (app, node)
   - record: appnode__cache_utilization
-    expr: appnode__memory_access_locality * appnode__memory_rw_ratio
+    expr: appnode__memory_access_locality * appnode__memory_rw_ratio * appnode__memory_intensivity
 
 - name: aep_apps
   rules:
@@ -56,9 +56,9 @@ groups:
   - record: app__memory_rw_ratio
     expr: avg(task__memory_rw_ratio) by (app)
   - record: app__memory_intensivity
-    expr: app__memory_bandwidth_rate_15s_gb / 1e11
+    expr: app__memory_bandwidth_rate_15s_gb / 100  # Assume all nodes has max 100GB membw
   - record: app__cache_utilization
-    expr: app__memory_access_locality * app__memory_rw_ratio
+    expr: app__memory_access_locality * app__memory_rw_ratio * app__memory_intensivity
   - record: app__cache_utilization_normalized
     expr: app__cache_utilization / cluster__avg_app_utilization
 
