@@ -32,6 +32,9 @@ Building executable binary (distribution)
 
 File ``dist/wca.pex`` must be copied to ``/usr/bin/wca.pex``.
 
+To build distribution file with support for storing metrics in Kafka please follow
+`Building executable binary with KafkaStorage component enabled <kafka_storage.rst>`_ guide.
+
 Running
 ========
 
