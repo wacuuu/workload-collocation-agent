@@ -17,7 +17,8 @@ from typing import Dict, Callable, Any, List, Optional
 
 from wca import nodes, storage, platforms
 from wca import resctrl
-from wca.allocations import AllocationsDict, InvalidAllocations, AllocationValue
+from wca.allocations import AllocationsDict, InvalidAllocations, AllocationValue, \
+    MissingAllocationException
 from wca.allocators import TasksAllocations, AllocationConfiguration, AllocationType, Allocator, \
     TaskAllocations, RDTAllocation
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
@@ -373,7 +374,14 @@ class AllocationRunner(MeasurementRunner):
 def _get_tasks_allocations(containers) -> TasksAllocations:
     tasks_allocations: TasksAllocations = {}
     for task, container in containers.items():
-        task_allocations = container.get_allocations()
+        try:
+            task_allocations = container.get_allocations()
+        except MissingAllocationException as e:
+            log.warning('One or more allocations are missing for '
+                        'container {} - ignoring! '
+                        '(because {})'.format(container, e))
+            continue
+
         tasks_allocations[task.task_id] = task_allocations
     return tasks_allocations
 

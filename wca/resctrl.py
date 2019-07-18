@@ -21,9 +21,9 @@ from typing import Tuple, List, Dict, Optional
 
 from wca import logger
 from wca.allocators import AllocationType, TaskAllocations, RDTAllocation
-from wca.allocations import InvalidAllocations
+from wca.allocations import InvalidAllocations, MissingAllocationException
 from wca.logger import TRACE
-from wca.metrics import Measurements, MetricName
+from wca.metrics import Measurements, MetricName, MissingMeasurementException
 from wca.security import SetEffectiveRootUid
 
 RESCTRL_ROOT_NAME = ''
@@ -208,10 +208,10 @@ class ResGroup:
                 if cache_monitoring_enabled:
                     with open(_get_event_file(socket_dir, LLC_OCCUPANCY)) as llc_occupancy_file:
                         llc_occupancy += int(llc_occupancy_file.read())
-        except FileNotFoundError:
-            log.warning("Could not read measurements from rdt - ignored! "
-                        "rdt group was not found (race detected)")
-            return {}
+        except FileNotFoundError as e:
+            raise MissingMeasurementException(
+                'File {} is missing. Measurement unavailable.'.format(
+                    e.filename))
 
         measurements = {}
         if mb_monitoring_enabled:
@@ -223,12 +223,16 @@ class ResGroup:
     def get_allocations(self) -> TaskAllocations:
         """Return TaskAllocations representing allocation for RDT resource."""
         rdt_allocations_mb, rdt_allocations_l3 = None, None
-        with open(os.path.join(self.fullpath, SCHEMATA)) as schemata:
-            for line in schemata:
-                if 'MB:' in line:
-                    rdt_allocations_mb = line.strip()
-                elif 'L3:' in line:
-                    rdt_allocations_l3 = line.strip()
+        try:
+            with open(os.path.join(self.fullpath, SCHEMATA)) as schemata:
+                for line in schemata:
+                    if 'MB:' in line:
+                        rdt_allocations_mb = line.strip()
+                    elif 'L3:' in line:
+                        rdt_allocations_l3 = line.strip()
+        except FileNotFoundError as e:
+            raise MissingAllocationException(
+                'File {} is missing. Allocation unavailable.'.format(e.filename))
 
         rdt_allocations = RDTAllocation(
             name=self.name,

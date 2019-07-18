@@ -25,7 +25,7 @@ from wca.containers import ContainerManager, Container
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels
 from wca.logger import trace, get_logging_metrics
 from wca.mesos import create_metrics
-from wca.metrics import Metric, MetricType, MetricName
+from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException
 from wca.nodes import Task
 from wca.profiling import profiler
 from wca.runners import Runner
@@ -235,10 +235,12 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
 
     for task, container in containers.items():
         # Task measurements and measurements based metrics.
-        task_measurements = container.get_measurements()
-        if not task_measurements:
-            log.warning('there is not measurements collected for container %r - ignoring!',
-                        container)
+        try:
+            task_measurements = container.get_measurements()
+        except MissingMeasurementException as e:
+            log.warning('One or more measurements are missing '
+                        'for container {} - ignoring! '
+                        '(because {})'.format(container, e))
             continue
 
         # Prepare tasks labels based on tasks metadata labels and task id.

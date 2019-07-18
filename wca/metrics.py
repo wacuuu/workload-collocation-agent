@@ -265,3 +265,8 @@ class DerivedMetricsGenerator:
         self._prev_ts = now
 
         return measurements
+
+
+class MissingMeasurementException(Exception):
+    """when metric has not been collected with success"""
+    pass
