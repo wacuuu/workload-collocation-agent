@@ -267,7 +267,6 @@ class Container(ContainerInterface):
     def get_measurements(self) -> Measurements:
         # Cgroup measurements
         cgroup_measurements = self._cgroup.get_measurements()
-
         # Perf events measurements
         if self._event_names:
             if self._derived_metrics_generator:

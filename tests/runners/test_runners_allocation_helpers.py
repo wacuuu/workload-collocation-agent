@@ -26,7 +26,8 @@ from wca.resctrl_allocations import RDTGroups, RDTAllocationValue
 from wca.runners.allocation import (TasksAllocationsValues,
                                     TaskAllocationsValues,
                                     AllocationRunner,
-                                    validate_shares_allocation_for_kubernetes)
+                                    validate_shares_allocation_for_kubernetes,
+                                    _get_tasks_allocations)
 from tests.testing import allocation_metric, task, container
 from tests.testing import platform_mock
 
@@ -326,3 +327,15 @@ def test_validate_shares_allocation_for_kubernetes(mock_1, mock_2, allocations,
     if should_raise_exception:
         with pytest.raises(InvalidAllocations):
             validate_shares_allocation_for_kubernetes(tasks=[], allocations=allocations)
+
+
+@patch('builtins.open', side_effect=FileNotFoundError())
+def test_get_tasks_allocations_fail(*mock):
+    rdt_information = RDTInformation(True, True, True, True, '0', '0', 0, 0, 0)
+    containers = {
+        task('/t1', labels={'label_key': 'label_value'}, resources={'cpu': 3}):
+            Container('/t1', 1, 1, rdt_information,
+                      allocation_configuration=AllocationConfiguration(
+                          cpu_quota_period=1000))
+    }
+    assert {} == _get_tasks_allocations(containers)
