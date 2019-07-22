@@ -1,3 +1,63 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  clusterIP: None
+  selector:
+    app: redis
+---
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: memtier
+  labels:
+    app: memtier
+
+spec:
+  serviceName: redis
+  selector:
+    matchLabels:
+      app: memtier
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: memtier
+    spec:
+      containers:
+        - name: memtier
+          image: redislabs/memtier_benchmark
+          command:
+            - bash
+            - -c
+            - "identifier=${podname#memtier-}"
+            - "service=${identifier%-[+[:digit:]]}"
+            - "taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
+            &&
+            taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1000000 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra"
+          env:
+            - name: podname
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+            - name: threads
+              valueFrom: {configMapKeyRef: { name: redis-config, key: threads }}
+            - name: clients
+              valueFrom: {configMapKeyRef: { name: redis-config, key: clients }}
+            - name: pipeline
+              valueFrom: {configMapKeyRef: { name: redis-config, key: pipeline }}
+            - name: datasize
+              valueFrom: {configMapKeyRef: { name: redis-config, key: datasize }}
+            - name: keymaximum
+              valueFrom: {configMapKeyRef: { name: redis-config, key: keymaximum }}
+            - name: ratio
+              valueFrom: {configMapKeyRef: { name: redis-config, key: ratio }}
+            - name: memtire_cpus
+              valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_cpus }}
+            - name: memtire_extra
+              valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_extra }}
+
+---
 apiVersion: apps/v1
 kind: StatefulSet
 
@@ -18,36 +78,6 @@ spec:
         app: redis
     spec:
       containers:
-        - name: memtire
-          image: redislabs/memtier_benchmark
-          command:
-            - bash
-            - -c
-            - "identifier=${podname#memtier-}"
-            - "service=${identifier%-[+[:digit:]]}"
-            - "taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
-            &&
-            taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1000000 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra
-            "
-          env:
-            - name: podname
-              valueFrom: {fieldRef: {fieldPath: metadata.name}}
-            - name: threads
-              valueFrom: {configMapKeyRef: { name: redis-config, key: threads }}
-            - name: clients
-              valueFrom: {configMapKeyRef: { name: redis-config, key: clients }}
-            - name: pipeline
-              valueFrom: {configMapKeyRef: { name: redis-config, key: pipeline }}
-            - name: datasize
-              valueFrom: {configMapKeyRef: { name: redis-config, key: datasize }}
-            - name: keymaximum
-              valueFrom: {configMapKeyRef: { name: redis-config, key: keymaximum }}
-            - name: ratio
-              valueFrom: {configMapKeyRef: { name: redis-config, key: ratio }}
-            - name: memtire_cpus
-              valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_cpus }}
-            - name: memtire_extra
-              valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_extra }}
         - name: redis
           image: redis
           command:

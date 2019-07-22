@@ -1,4 +1,3 @@
-namePrefix: wl-
 namespace: nszulc
 bases:
 - variations/redis-memtier-default
