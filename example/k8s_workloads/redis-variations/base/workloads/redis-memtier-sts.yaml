@@ -32,9 +32,8 @@ spec:
           command:
             - bash
             - -c
-            - "identifier=${podname#memtier-}"
-            - "service=${identifier%-[+[:digit:]]}"
-            - "taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
+            - "identifier=${podname#memtier-} service=${identifier%-[+[:digit:]]};
+            taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
             &&
             taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1000000 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra"
           env:
