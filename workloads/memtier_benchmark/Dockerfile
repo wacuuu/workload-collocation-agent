@@ -13,3 +13,5 @@
 # limitations under the License.
 
 FROM redislabs/memtier_benchmark
+
+COPY /dist/memtier_benchmark_wrapper.pex /usr/bin/
