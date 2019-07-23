@@ -1,21 +1,30 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+spec:
+  clusterIP: None
+  selector:
+    app: redis
+---
 apiVersion: apps/v1
 kind: StatefulSet
 
 metadata:
-  name: redis
+  name: memtier
   labels:
-    app: redis
+    app: memtier
 
 spec:
   serviceName: redis
   selector:
     matchLabels:
-      app: redis
+      app: memtier
   podManagementPolicy: Parallel
   template:
     metadata:
       labels:
-        app: redis
+        app: memtier
     spec:
       containers:
         - name: memtire
@@ -52,6 +61,28 @@ spec:
               valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_cpus }}
             - name: memtire_extra
               valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_extra }}
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+
+metadata:
+  name: redis
+  labels:
+    app: redis
+
+spec:
+  serviceName: redis
+  selector:
+    matchLabels:
+      app: redis
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
         - name: redis
           image: redis
           command:
