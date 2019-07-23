@@ -13,11 +13,10 @@
 # limitations under the License.
 
 from io import TextIOWrapper
-from typing import List, Dict
+from typing import List
 import json
 from wca.metrics import Metric, MetricType
 from wrapper import wrapper_main
-from wrapper.parser import readline_with_check
 
 EOF_line = "Stop-Mutilate-Now"
 
