@@ -30,7 +30,7 @@ RUN \
   apt-get update && \
   DEBIAN_FRONTEND=noninteractive \
     apt-get install -y --no-install-recommends \
-      libevent-dev python3.6\
+      libevent-dev python3.6 python3-distutils\
   && \
   apt-get clean && \
   rm -rf /var/lib/apt/lists/
