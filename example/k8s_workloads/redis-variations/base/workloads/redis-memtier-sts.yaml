@@ -28,15 +28,15 @@ spec:
     spec:
       containers:
         - name: memtire
-          image: wca/memtier_benchmark:d893891de757f304ef2d3db95325068e811476ac
+          image: 100.64.176.12:80/wca/memtier_benchmark:9d278b4e4d50182f77a8a7ef6feb7b0a6822a614
           command:
             - bash
             - -c
             - "identifier=${podname#memtier-} service=${identifier%-[+[:digit:]]};
             taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
             &&
-            taskset -c $memtire_cpus rpc_perf_wrapper.pex \
-            --command '/usr/local/bin/memtier_benchmark --run-count=1000000 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra' \
+            taskset -c $memtire_cpus memtier_benchmark_wrapper.pex \
+            --command '/usr/local/bin/memtier_benchmark --run-count=1 --json-output-file=/dev/stdout --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra' \
             --log_level DEBUG \
             --stderr 0 \
             --labels '' \
