@@ -97,7 +97,7 @@ wrapper_package:
 	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/mutilate_wrapper.pex -m wrapper.parser_mutilate
 	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/cassandra_stress_wrapper.pex -m wrapper.parser_cassandra_stress
 	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/stress_ng_wrapper.pex -m wrapper.parser_stress_ng
-	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/memtier_benchmark_wrapper.pex -m wrapper.parser_memtier
+	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) --python=python3 -o dist/memtier_benchmark_wrapper.pex -m wrapper.parser_memtier
 	./dist/wrapper.pex --help >/dev/null
 
 check: flake8 unit

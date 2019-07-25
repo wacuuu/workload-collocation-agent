@@ -14,4 +14,6 @@
 
 FROM redislabs/memtier_benchmark
 
+CMD apt update && apt install python3 -y
+
 COPY /dist/memtier_benchmark_wrapper.pex /usr/bin/
