@@ -12,8 +12,30 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM redislabs/memtier_benchmark
+FROM ubuntu:16.10 as builder
+RUN apt-get update
+RUN \
+  DEBIAN_FRONTEND=noninteractive \
+  apt-get install -y \
+    build-essential autoconf automake libpcre3-dev libevent-dev \
+    pkg-config zlib1g-dev git libboost-all-dev cmake flex
+RUN git clone https://github.com/RedisLabs/memtier_benchmark.git
+WORKDIR /memtier_benchmark
+RUN autoreconf -ivf && ./configure && make && make install
 
-RUN apt update && apt install python3 -y
+FROM ubuntu:16.10
+LABEL Description="memtier_benchmark"
+COPY --from=builder /usr/local/bin/memtier_benchmark /usr/local/bin/memtier_benchmark
+RUN \
+  apt-get update && \
+  DEBIAN_FRONTEND=noninteractive \
+    apt-get install -y --no-install-recommends \
+      libevent-dev python3.6 \
+  && \
+  apt-get clean && \
+  rm -rf /var/lib/apt/lists/
 
 COPY /dist/memtier_benchmark_wrapper.pex /usr/bin/
+
+ENTRYPOINT ["memtier_benchmark"]
+
