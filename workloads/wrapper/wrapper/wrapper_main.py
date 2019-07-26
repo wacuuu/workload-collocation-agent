@@ -56,9 +56,10 @@ def main(parse: ParseFunc = default_parse):
     log.debug("Logger configured with {0}".format(args.log_level))
     log.info("Starting wrapper version {}".format(get_wca_version()))
 
-    command_splited = shlex.split(args.command)
-    log.info("Running command: {}".format(command_splited))
-    workload_process = subprocess.Popen(command_splited,
+    command_split = shlex.split(args.command)
+    log.info("Running command: {}".format(command_split))
+
+    workload_process = subprocess.Popen(command_split,
                                         stdout=subprocess.PIPE,
                                         stderr=subprocess.PIPE,
                                         universal_newlines=True,
@@ -66,13 +67,12 @@ def main(parse: ParseFunc = default_parse):
                                         shell=args.subprocess_shell,
                                         )
     input = workload_process.stderr if args.stderr else workload_process.stdout
-
     labels = json.loads(args.labels)
     parse = partial(parse, regexp=args.regexp, separator=args.separator, labels=labels,
                     input=input, metric_name_prefix=args.metric_name_prefix)
     append_service_level_metrics_func = partial(
         append_service_level_metrics, labels=labels, service_level_args=service_level_args)
-
+    stderr_logging = partial(_stderr_logging, stderr=workload_process.stderr)
     # create kafka storage with list of kafka brokers from arguments
     kafka_brokers_addresses = args.kafka_brokers.replace(" ", "").split(',')
     if kafka_brokers_addresses != [""]:
@@ -82,14 +82,24 @@ def main(parse: ParseFunc = default_parse):
                                topic=args.kafka_topic)
     else:
         storage = LogStorage(args.storage_output_filename)
-
     t = threading.Thread(target=parse_loop, args=(parse, storage,
                                                   append_service_level_metrics_func))
+    lt = threading.Thread(target=stderr_logging)
+
     t.start()
+    lt.start()
     t.join()
+    lt.join()
 
     # terminate all spawned processes
     workload_process.terminate()
+
+
+def _stderr_logging(stderr):
+    line = stderr.readline()  # b'\n'-separated lines
+    while line:
+        log.debug('got line from subprocess: %r', line)
+        line = stderr.readline()
 
 
 def prepare_argument_parser():
