@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: memtire
-          image: 100.64.176.12:80/wca/memtier_benchmark:d3ca4bb06f80a8eb83de6116ce6b7c3abe7ca153
+          image: 100.64.176.12:80/wca/memtier_benchmark:5fcfe9599d4ddf7bb6ecde3361bba547a23a3626
           command:
             - bash
             - -c

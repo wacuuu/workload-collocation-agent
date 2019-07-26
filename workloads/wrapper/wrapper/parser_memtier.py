@@ -40,7 +40,7 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
     with open("/tmp/memtier_benchmark") as f:
         try:
             json_data = json.load(f)
-        except json.decoder.JSONDecodeError :
+        except json.decoder.JSONDecodeError:
             log.warning("Can't parse file")
             return []
 
