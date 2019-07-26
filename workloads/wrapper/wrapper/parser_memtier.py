@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import json
-import time
 import logging
+import time
 from io import TextIOWrapper
 from typing import List
 
@@ -23,6 +23,7 @@ from wrapper import wrapper_main
 log = logging.getLogger(__name__)
 
 EOF_line = "Stop-Memtier-Now"
+
 
 def parse(input: TextIOWrapper, regexp: str, separator: str = None,
           labels=None, metric_name_prefix: str = '') -> List[Metric]:
@@ -39,7 +40,7 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
     with open("/tmp/memtier_benchmark") as f:
         try:
             json_data = json.load(f)
-        except json.decoder.JSONDecodeError as e:
+        except json.decoder.JSONDecodeError :
             log.warning("Can't parse file")
             return []
 
