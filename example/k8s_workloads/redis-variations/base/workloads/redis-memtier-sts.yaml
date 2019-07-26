@@ -32,15 +32,16 @@ spec:
           command:
             - bash
             - -c
-            - "identifier=${podname#memtier-} service=${identifier%-[+[:digit:]]};
-            taskset -c $memtire_cpus /usr/local/bin/memtier_benchmark --run-count=1 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
+            - "export identifier=${podname#memtier-}; export service=${identifier%-[+[:digit:]]};
+            taskset -c $memtire_cpus memtier_benchmark --run-count=1 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
             &&
             taskset -c $memtire_cpus memtier_benchmark_wrapper.pex \
-            --command '/usr/local/bin/memtier_benchmark --run-count=1 --json-output-file=/dev/stdout --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra' \
+            --command '\"memtier_benchmark --run-count=1 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra\"' \
             --log_level DEBUG \
             --stderr 0 \
-            --labels '' \
-            --metric_name_prefix 'redis_'
+            --labels '{\"workload\": \"redis\"}' \
+            --metric_name_prefix 'redis_' \
+            --subprocess_shell
             "
           env:
             - name: podname
