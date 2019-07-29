@@ -28,7 +28,7 @@ spec:
     spec:
       containers:
         - name: memtire
-          image: 100.64.176.12:80/wca/memtier_benchmark:5fcfe9599d4ddf7bb6ecde3361bba547a23a3626
+          image: 100.64.176.12:80/wca/memtier_benchmark:e12ffdeaeaa12f8d9470bde0ed78b2a78cf855bc
           command:
             - bash
             - -c
@@ -36,12 +36,13 @@ spec:
             taskset -c $memtire_cpus memtier_benchmark --run-count=1 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
             &&
             taskset -c $memtire_cpus memtier_benchmark_wrapper.pex \
-            --command '\"memtier_benchmark --run-count=1 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra\"' \
+            --command '\"while true; do memtier_benchmark --run-count=1 --test-time=10 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra && sleep 1.2; done\"' \
             --log_level DEBUG \
             --stderr 0 \
             --labels '{\"workload\": \"redis\"}' \
             --metric_name_prefix 'redis_' \
             --subprocess_shell
+            --storage_output_filename=/var/log/wrapper/metrics.prom
             "
           env:
             - name: podname
@@ -62,6 +63,58 @@ spec:
               valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_cpus }}
             - name: memtire_extra
               valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_extra }}
+          volumeMounts:
+            - name: var-log-wrapper
+              mountPath: /var/log/wrapper
+
+        - name: node-exporter
+          image: prom/node-exporter:v0.18.1
+          securityContext:
+            privileged: true
+          args:
+            - --collector.textfile.directory=/var/log/wrapper
+            - --web.disable-exporter-metrics
+            - --no-collector.arp
+            - --no-collector.bcache
+            - --no-collector.bonding
+            - --no-collector.conntrack
+            - --no-collector.cpu
+            - --no-collector.cpufreq
+            - --no-collector.diskstats
+            - --no-collector.edac
+            - --no-collector.entropy
+            - --no-collector.filefd
+            - --no-collector.filesystem
+            - --no-collector.hwmon
+            - --no-collector.infiniband
+            - --no-collector.ipvs
+            - --no-collector.loadavg
+            - --no-collector.mdadm
+            - --no-collector.meminfo
+            - --no-collector.netclass
+            - --no-collector.netdev
+            - --no-collector.netstat
+            - --no-collector.nfs
+            - --no-collector.nfsd
+            - --no-collector.pressure
+            - --no-collector.sockstat
+            - --no-collector.stat
+            - --no-collector.time
+            - --no-collector.timex
+            - --no-collector.uname
+            - --no-collector.vmstat
+            - --no-collector.xfs
+            - --no-collector.zfs
+            - --log.level=debug
+          ports:
+            - containerPort: 9100
+              protocol: TCP
+          volumeMounts:
+            - name: var-log-wrapper
+              mountPath: /var/log/wrapper
+      volumes:
+        - name: var-log-wrapper
+          emptyDir: {}
 
 ---
 apiVersion: apps/v1

@@ -50,7 +50,10 @@ def parse(input: TextIOWrapper, regexp: str, separator: str = None,
         metric_name_prefix + 'qps', all_stats["Totals"]["Ops/sec"],
         type=MetricType.GAUGE, labels=labels, help="QPS"
     ))
-
+    new_metrics.append(Metric(
+        metric_name_prefix + 'latency', all_stats["Totals"]["Latency"],
+        type=MetricType.GAUGE, labels=labels, help="latency"
+    ))
     return new_metrics
 
 
