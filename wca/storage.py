@@ -111,9 +111,8 @@ class LogStorage(Storage):
             msg = convert_to_prometheus_exposition_format(metrics, timestamp)
             log.log(logger.TRACE, 'Dump of metrics (text format): %r', msg)
             if self.overwrite:
-                with tempfile.NamedTemporaryFile(dir=self._dir, delete=False) as fp:
-                    fp.write(msg.encode('utf-8'))
-                os.rename(fp.name, self.output_filename)
+                with open(self.output_filename, "w", encoding="utf-8") as fp:
+                    fp.write(msg)
             else:
                 print(msg, file=self._output, flush=True)
 
