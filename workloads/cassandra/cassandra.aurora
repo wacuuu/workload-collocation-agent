@@ -43,7 +43,7 @@ jobs = [
         ),
         Process(
           name='cassandra',
-          cmdline='env CASSANDRA_CONFIG=/etc/cassandra /docker-entrypoint.sh'
+          cmdline='env CASSANDRA_CONFIG=/etc/cassandra taskset -c {} /docker-entrypoint.sh'.format(cpu_list)
         ),
       ],
     ),

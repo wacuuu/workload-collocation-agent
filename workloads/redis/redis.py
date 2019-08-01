@@ -15,7 +15,7 @@
 
 import os
 from common import application_host_ip, command, image_name, \
-    initContainers, json, securityContext, pod, volumeMounts
+    initContainers, json, securityContext, pod, volumeMounts, cpu_list
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -59,7 +59,7 @@ initContainers.append(initContainer)
 
 volumeMounts.append(volume_prep_config)
 
-command.append("redis-server /prep_config/redis.conf")
+command.append("taskset -c {} redis-server /prep_config/redis.conf".format(cpu_list))
 
 json_format = json.dumps(pod)
 print(json_format)

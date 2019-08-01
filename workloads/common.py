@@ -53,6 +53,7 @@ image_name = os.getenv('image_name')
 # print('image_name:', image_name)
 
 # Resources:
+cpu_list = os.getenv('cpu_list', '0-999')
 cpu = os.getenv('cpu', '1')
 ram = os.getenv('ram', '1') + 'Gi'
 disk = os.getenv('disk', '1') + 'Gi'

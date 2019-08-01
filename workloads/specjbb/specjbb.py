@@ -14,7 +14,7 @@
 
 import os
 import math
-from common import cpu, command, image_name, image_tag, \
+from common import cpu, command, image_name, image_tag, cpu_list, \
     initContainers, json, securityContext, pod, wrapper_kafka_brokers, \
     wrapper_log_level, wrapper_kafka_topic, wrapper_labels, slo, volumeMounts
 
@@ -94,9 +94,9 @@ injector_cmd = """java -jar {jar} -m txinjector -p {config} -G GRP1 -J JVM_B"""\
     .format(jar=specjbb_jar, config=config_path)
 
 backend_cmd = """
-    java -Xms4g -Xmx4g -Xmn2g -XX:-UseBiasedLocking -XX:+UseParallelOldGC \
+    taskset -c {cpu_list} java -Xms4g -Xmx4g -Xmn2g -XX:-UseBiasedLocking -XX:+UseParallelOldGC \
     -jar {jar} -m backend -p {config} -G GRP1 -J JVM_A"""\
-    .format(jar=specjbb_jar, config=config_path)
+    .format(cpu_list=cpu_list, jar=specjbb_jar, config=config_path)
 
 volume_prep_config = {
     "name": "shared-data",
