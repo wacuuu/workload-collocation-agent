@@ -31,12 +31,10 @@ def test_log_storage(*mocks):
 
 
 @patch('wca.storage.get_current_time', return_value=1)
-@patch('os.rename')
-@patch('tempfile.NamedTemporaryFile')
-def test_log_storage_overwrite_mode(tempfile_mock, rename_mock, get_current_time_mock):
+@patch('wca.storage.open')
+def test_log_storage_overwrite_mode(logfile_mock, get_current_time_mock):
     metric = Metric(name='foo', value=8)
     log_storage = LogStorage(output_filename='mocked_file_name.log', overwrite=True)
     log_storage.store([metric])
 
-    tempfile_mock.assert_has_calls([call().__enter__().write(b'foo 8\n\n')])
-    rename_mock.assert_called_once()
+    logfile_mock.assert_has_calls([call().__enter__().write('foo 8\n\n')])
