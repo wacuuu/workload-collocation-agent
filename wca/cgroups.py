@@ -40,6 +40,7 @@ class CgroupSubsystem(str, Enum):
     CPU = '/sys/fs/cgroup/cpu'
     CPUSET = '/sys/fs/cgroup/cpuset'
     PERF_EVENT = '/sys/fs/cgroup/perf_event'
+    MEMORY = '/sys/fs/cgroup/memory'
 
     def __repr__(self):
         return repr(self.value)
@@ -49,6 +50,7 @@ class CgroupType(str, Enum):
     CPU = 'cpu'
     CPUSET = 'cpuset'
     PERF_EVENT = 'perf_event'
+    MEMORY = 'memory'
 
     def __repr__(self):
         return repr(self.value)
@@ -61,6 +63,7 @@ class CgroupResource(str, Enum):
     CPU_SHARES = 'cpu.shares'
     CPUSET_CPUS = 'cpuset.cpus'
     CPUSET_MEMS = 'cpuset.mems'
+    MEMORY_USAGE = 'memory.usage_in_bytes'
 
     def __repr__(self):
         return repr(self.value)
@@ -82,6 +85,8 @@ class Cgroup:
         self.cgroup_cpuset_fullpath = os.path.join(CgroupSubsystem.CPUSET, relative_cgroup_path)
         self.cgroup_perf_event_fullpath = os.path.join(
                 CgroupSubsystem.PERF_EVENT, relative_cgroup_path)
+        self.cgroup_memory_fullpath = os.path.join(CgroupSubsystem.MEMORY,
+                                                   relative_cgroup_path)
 
     def get_measurements(self) -> Measurements:
         try:
@@ -90,9 +95,20 @@ class Cgroup:
                 cpu_usage = int(cpu_usage_file.read())
         except FileNotFoundError as e:
             raise MissingMeasurementException(
-                'File {} is missing. Measurement unavailable.'.format(e.filename))
+                'File {} is missing. Cpu usage unavailable.'.format(e.filename))
 
-        return {MetricName.CPU_USAGE_PER_TASK: cpu_usage}
+        measurements = {MetricName.CPU_USAGE_PER_TASK: cpu_usage}
+
+        try:
+            with open(os.path.join(self.cgroup_memory_fullpath,
+                                   CgroupResource.MEMORY_USAGE)) as memory_usage_file:
+                memory_usage = int(memory_usage_file.read())
+            measurements[MetricName.MEM_USAGE_PER_TASK] = memory_usage
+        except FileNotFoundError as e:
+            raise MissingMeasurementException(
+                'File {} is missing. Memory usage unavailable.'.format(e.filename))
+
+        return measurements
 
     def _get_proper_path(
             self, cgroup_control_file: str,
@@ -103,6 +119,9 @@ class Cgroup:
             return os.path.join(self.cgroup_perf_event_fullpath, cgroup_control_file)
         if cgroup_control_type == CgroupType.CPUSET:
             return os.path.join(self.cgroup_cpuset_fullpath, cgroup_control_file)
+        if cgroup_control_type == CgroupType.MEMORY:
+            return os.path.join(self.cgroup_cpuset_fullpath,
+                                cgroup_control_file)
 
         raise NotImplementedError(cgroup_control_type)
 
