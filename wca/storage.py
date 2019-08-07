@@ -27,6 +27,7 @@ import time
 from typing import List, Tuple, Dict, Optional
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from wca.config import Numeric, Path, Str, IpPort, ValidationError
 from wca import logger
@@ -110,8 +111,12 @@ class LogStorage(Storage):
             msg = convert_to_prometheus_exposition_format(metrics, timestamp)
             log.log(logger.TRACE, 'Dump of metrics (text format): %r', msg)
             if self.overwrite:
-                with open(self.output_filename, "w", encoding="utf-8") as fp:
+                p = Path(self.output_filename)
+                p_tmp = p.joinpath(".tmp")
+                with open(p_tmp, "w", encoding="utf-8") as fp:
                     fp.write(msg)
+                p_tmp.rename(p)
+                
             else:
                 print(msg, file=self._output, flush=True)
 
