@@ -1,6 +1,7 @@
 # run on 100.64.176.36 as root
 # form /root/prometheus-2.11.0-rc.0.linux-amd64
-# ./prometheus --config.file /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.yaml --web.enable-lifecycle --web.enable-admin-api
+# ./prometheus --config.file /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.yaml --web.enable-lifecycle --web.enable-admin-api --storage.tsdb.retention.time=15m --query.lookback-delta=30s
+# to reload config: sudo kill -HUP `pgrep prometheus`
 global:
   scrape_interval: 1s
   evaluation_interval: 1s

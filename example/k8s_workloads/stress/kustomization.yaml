@@ -1,0 +1,4 @@
+bases:
+  - stream-big
+  - stream-medium
+  - stream-small

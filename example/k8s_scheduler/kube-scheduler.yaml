@@ -16,7 +16,7 @@ spec:
     - --leader-elect=true
     - --policy-config-file=/etc/kubernetes/scheduler-policy.json
     - --use-legacy-policy-config=true
-    - -v=1  # v=3 shows healthz ping
+    - -v=2  # v=3 shows healthz ping
 #    - -v=10  # v=3 shows healthz ping
     - --vmodule=*generic_scheduler*=10
 #    - --vmodule=*generic*=10,*extender*=10,*schedul*=10,*factory*=10,*resource_allocation*=10,*spread*=10

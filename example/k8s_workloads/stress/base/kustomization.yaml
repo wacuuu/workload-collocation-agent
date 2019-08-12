@@ -1,0 +1,6 @@
+resources:
+  - stress.yaml
+configMapGenerator:
+  - name: stress
+    literals:
+      - cpus=0-1000

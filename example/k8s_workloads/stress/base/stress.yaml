@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: stress
+spec:
+  serviceName: stress
+  selector:
+    matchLabels:
+      app: stress
+  replicas: 0
+  podManagementPolicy: Parallel
+  template:
+    metadata:
+      labels:
+        app: stress
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: stress
+#         image: polinux/stress-ng
+          image: 100.64.176.12:80/stress-ng-apm:latest
+          command:
+            - sh
+            - -c
+            - "taskset -c $cpus stress-ng $extra >/var/log/app-stdout.log 2>/var/log/app-stderr.log"
+          env:
+            - name: cpus
+              valueFrom: {configMapKeyRef: { name: stress, key: cpus }}
+            - name: extra
+              valueFrom: {configMapKeyRef: { name: stress, key: extra }}
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+        - name: monitor
+          image: prom/node_exporter
+          volumeMounts:
+            - name: varlog
+              mountPath: /var/log
+
+      # base on https://kubernetes.io/docs/concepts/cluster-administration/logging/#using-a-sidecar-container-with-the-logging-agent
+      volumes:
+        - name: varlog
+          emptyDir: {}
+
+
+
+
