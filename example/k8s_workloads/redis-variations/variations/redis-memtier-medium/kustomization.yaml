@@ -1,4 +1,4 @@
-nameSuffix: -high-mem
+nameSuffix: -medium
 #commonLabels:
 #        app: redis
 bases:
@@ -11,11 +11,11 @@ configMapGenerator:
   literals:
     - memtire_cpus=0-1000
     - redis_cpus=0-1000
-    - clients=200
+    - clients=100
     - threads=4
-    - datasize=1024
+    - datasize=512
     - pipeline=1
     - keymaximum=40000
-    - ratio=1:20
+    - ratio=1:10
     - redis_extra=
     - memtire_extra=""
