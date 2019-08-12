@@ -30,9 +30,10 @@ def test_log_storage(*mocks):
     assert open_mock.return_value.method_calls[0] == call.write('foo 8 1\n\n')
 
 
+@patch('pathlib.Path.rename')
 @patch('wca.storage.get_current_time', return_value=1)
 @patch('wca.storage.open')
-def test_log_storage_overwrite_mode(logfile_mock, get_current_time_mock):
+def test_log_storage_overwrite_mode(logfile_mock, get_current_time_mock, pathlib_rename_mock):
     metric = Metric(name='foo', value=8)
     log_storage = LogStorage(output_filename='mocked_file_name.log', overwrite=True)
     log_storage.store([metric])
