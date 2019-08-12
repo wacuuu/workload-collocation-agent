@@ -25,6 +25,8 @@ workload_version_name = os.environ.get('workload_version_name', 'default')
 replica_index = os.environ.get('replica_index', 0)
 job_uniq_id = os.environ['job_uniq_id']
 job_name = os.environ['job_name']
+cpu_list = os.environ.get('cpu_list', '0-999')
+
 
 application = os.environ['application']
 load_generator = os.environ.get('load_generator', None)

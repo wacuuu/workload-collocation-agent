@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import os
-from common import command, json, pod
+from common import command, json, pod, cpu_list
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -31,10 +31,11 @@ max_memory = int(os.environ.get('max_memory') or 1024)
 # ----------------------------------------------------------------------------------------------------
 
 
-cmd = """twemcache --prealloc --hash-power=20 --max-memory={max_memory} \
+cmd = """taskset -c {cpu_list} twemcache --prealloc --hash-power=20 --max-memory={max_memory} \
 --port={communication_port} --eviction-strategy=2 --verbosity=4 \
 --threads={worker_threads} --backlog=128 -u twemcache \
 --maximize-core-limit --slab-size=1048576 """.format(
+    cpu_list=cpu_list,
     communication_port=communication_port,
     worker_threads=worker_threads,
     max_memory=max_memory)
