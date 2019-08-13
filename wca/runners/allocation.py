@@ -22,7 +22,7 @@ from wca.allocations import AllocationsDict, InvalidAllocations, AllocationValue
 from wca.allocators import TasksAllocations, AllocationConfiguration, AllocationType, Allocator, \
     TaskAllocations, RDTAllocation
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
-        CPUSetAllocationValue
+    CPUSetAllocationValue
 from wca.config import Numeric, Str, assure_type
 from wca.containers import ContainerInterface, Container
 from wca.detectors import convert_anomalies_to_metrics, \

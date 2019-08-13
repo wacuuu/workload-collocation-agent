@@ -84,7 +84,7 @@ class Cgroup:
         self.cgroup_cpu_fullpath = os.path.join(CgroupSubsystem.CPU, relative_cgroup_path)
         self.cgroup_cpuset_fullpath = os.path.join(CgroupSubsystem.CPUSET, relative_cgroup_path)
         self.cgroup_perf_event_fullpath = os.path.join(
-                CgroupSubsystem.PERF_EVENT, relative_cgroup_path)
+            CgroupSubsystem.PERF_EVENT, relative_cgroup_path)
         self.cgroup_memory_fullpath = os.path.join(CgroupSubsystem.MEMORY,
                                                    relative_cgroup_path)
 
@@ -205,8 +205,8 @@ class Cgroup:
 
         if current_period != self.allocation_configuration.cpu_quota_period:
             self._write(
-                    CgroupResource.CPU_PERIOD, self.allocation_configuration.cpu_quota_period,
-                    CgroupType.CPU)
+                CgroupResource.CPU_PERIOD, self.allocation_configuration.cpu_quota_period,
+                CgroupType.CPU)
 
         if normalized_quota >= QUOTA_NORMALIZED_MAX:
             if normalized_quota > QUOTA_NORMALIZED_MAX:
@@ -234,11 +234,11 @@ class Cgroup:
             self._write(CgroupResource.CPUSET_CPUS, normalized_cpus, CgroupType.CPUSET)
         except PermissionError:
             log.warning(
-                    'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
-                        CgroupResource.CPUSET_CPUS, normalized_cpus, self.cgroup_cpuset_fullpath))
+                'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
+                    CgroupResource.CPUSET_CPUS, normalized_cpus, self.cgroup_cpuset_fullpath))
         try:
             self._write(CgroupResource.CPUSET_MEMS, normalized_mems, CgroupType.CPUSET)
         except PermissionError:
             log.warning(
-                    'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
-                        CgroupResource.CPUSET_MEMS, normalized_mems, self.cgroup_cpuset_fullpath))
+                'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
+                    CgroupResource.CPUSET_MEMS, normalized_mems, self.cgroup_cpuset_fullpath))

@@ -1,22 +1,22 @@
+import ctypes
 import json
 import logging
 import os
+import time
 from collections import defaultdict
 from enum import Enum
 from typing import List, Dict, BinaryIO, Optional
 
-import ctypes
 from dataclasses import dataclass
-from wca import perf_const as pc
 
+from wca import perf_const as pc
 from wca.metrics import Measurements, BaseDerivedMetricsGenerator, BaseGeneratorFactory, \
     EvalBasedMetricsGenerator
 from wca.perf import _create_event_attributes, _perf_event_open, _create_file_from_fd, \
-    _get_online_cpus, _parse_event_groups, _aggregate_measurements, LIBC
-import time
-
+    _parse_event_groups, _aggregate_measurements, LIBC
 
 log = logging.getLogger(__name__)
+
 
 @dataclass
 class Event:
@@ -52,13 +52,14 @@ def _create_event_attributes(pmu_type, disabled, event: Event):
     # attr.read_format = ( pc.PERF_FORMAT_TOTAL_TIME_ENABLED |
     #                     pc.PERF_FORMAT_TOTAL_TIME_RUNNING )
 
-    #attr.flags = pc.AttrFlags.exclude_guest
+    # attr.flags = pc.AttrFlags.exclude_guest
     attr.flags = pc.AttrFlags.inherit
 
     if disabled:
         attr.flags |= pc.AttrFlags.disabled
 
     return attr
+
 
 @dataclass
 class UncorePerfCounters:
@@ -94,7 +95,6 @@ class UncorePerfCounters:
 
         return measurements
 
-
     def cleanup(self):
         """Closes all opened file descriptors"""
         for pmu, _group_event_leader_files in self._group_event_leader_files_per_pmu.values():
@@ -102,7 +102,6 @@ class UncorePerfCounters:
                 file.close()
         for file in self._event_files:
             file.close()
-
 
     def _open_for_cpu(self, pmu: int, cpu: int, event: Event):
         """Opens file descriptor for event selected via event_name, for selected cpu"""
@@ -174,7 +173,9 @@ UNCORE_IMC_EVENTS = [
     Event(name=UncoreMetricName.CAS_COUNT_WRITE, event=0x04, umask=0xc),  # * 64 to get bytes
 ]
 
+
 class PMUNotAvailable(Exception): pass
+
 
 def _discover_pmu_uncore_imc_config(events):
     from os.path import join
@@ -194,24 +195,27 @@ def _discover_pmu_uncore_imc_config(events):
 class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
 
     def _derive(self, measurements, delta, available, time_delta):
-        scale = 64 / (1024*1024)
+        scale = 64 / (1024 * 1024)
         if available(UncoreMetricName.PMM_BANDWIDTH_WRITE, UncoreMetricName.PMM_BANDWIDTH_READ):
-            pmm_reads_delta, pmm_writes_delta = delta(UncoreMetricName.PMM_BANDWIDTH_READ, UncoreMetricName.PMM_BANDWIDTH_WRITE)
+            pmm_reads_delta, pmm_writes_delta = delta(UncoreMetricName.PMM_BANDWIDTH_READ,
+                                                      UncoreMetricName.PMM_BANDWIDTH_WRITE)
             measurements['pmm_read_mb_per_second'] = pmm_reads_delta * scale / time_delta
             measurements['pmm_write_mb_per_second'] = pmm_writes_delta * scale / time_delta
-            measurements['pmm_total_mb_per_second'] = measurements['pmm_read_mb_per_second'] + measurements['pmm_write_mb_per_second']
+            measurements['pmm_total_mb_per_second'] = measurements['pmm_read_mb_per_second'] + \
+                                                      measurements['pmm_write_mb_per_second']
         else:
             log.warning('pmm metrics not available!')
 
-        cas_reads_delta, cas_writes_delta = delta(UncoreMetricName.CAS_COUNT_READ, UncoreMetricName.CAS_COUNT_WRITE)
+        cas_reads_delta, cas_writes_delta = delta(UncoreMetricName.CAS_COUNT_READ,
+                                                  UncoreMetricName.CAS_COUNT_WRITE)
         measurements['dram_read_mb_per_second'] = cas_reads_delta * scale / time_delta
         measurements['dram_write_mb_per_second'] = cas_writes_delta * scale / time_delta
-        measurements['dram_total_mb_per_second'] = measurements['dram_read_mb_per_second'] + measurements['dram_write_mb_per_second']
+        measurements['dram_total_mb_per_second'] = measurements['dram_read_mb_per_second'] + \
+                                                   measurements['dram_write_mb_per_second']
 
 
 @dataclass
 class DefaultPlatformDerivedMetricsGeneratorsFactory(BaseGeneratorFactory):
-
     extra_metrics: Optional[Dict[str, str]] = None
 
     def create(self, get_measurements):

@@ -21,6 +21,7 @@ import abc
 import itertools
 import logging
 import os
+import pathlib
 import re
 import sys
 import tempfile
@@ -29,8 +30,8 @@ from typing import List, Tuple, Dict, Optional
 
 from dataclasses import dataclass, field
 
-from wca.config import Numeric, Path, Str, IpPort, ValidationError
 from wca import logger
+from wca.config import Numeric, Path, Str, IpPort, ValidationError
 from wca.metrics import Metric, MetricType
 
 log = logging.getLogger(__name__)
@@ -226,7 +227,10 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
         if first_metric.help:
             group_separator = '\n' if n > 0 else ''
             output.append('{0}# HELP {1} {2}\n'.format(group_separator,
-                first_metric.name, first_metric.help.replace('\\', r'\\').replace('\n', r'\n')))
+                                                       first_metric.name,
+                                                       first_metric.help.replace('\\',
+                                                                                 r'\\').replace(
+                                                           '\n', r'\n')))
 
         if first_metric.type:
             output.append('# TYPE {0} {1}\n'.format(first_metric.name, first_metric.type))
@@ -400,9 +404,9 @@ class MetricPackage:
                 metric.labels.update(common_labels)
         self.storage.store(self.metrics)
 
+
 @dataclass
 class FilterStorage(Storage):
-
     storages: List[Storage]
     filter: Optional[List[str]] = None
 
@@ -411,5 +415,3 @@ class FilterStorage(Storage):
             metrics = list(filter(lambda metric: metric.name in self.filter, metrics))
         for storage in self.storages:
             storage.store(metrics)
-
-

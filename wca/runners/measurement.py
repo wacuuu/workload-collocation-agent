@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from abc import abstractmethod
-from dataclasses import dataclass
 import logging
+import re
 import resource
 import time
+from abc import abstractmethod
 from typing import Dict, List, Tuple, Optional
-import re
+
+from dataclasses import dataclass
 
 from wca import nodes, storage, platforms, profiling
 from wca import resctrl
@@ -29,13 +30,13 @@ from wca.detectors import TasksMeasurements, TasksResources, TasksLabels
 from wca.logger import trace, get_logging_metrics
 from wca.mesos import create_metrics
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
-    DefaultTaskDerivedMetricsGeneratorFactory, BaseGeneratorFactory
+    BaseGeneratorFactory
 from wca.nodes import Task, TaskSynchornizationException
+from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
+    PMUNotAvailable
 from wca.profiling import profiler
 from wca.runners import Runner
 from wca.storage import MetricPackage, DEFAULT_STORAGE
-from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
-    UncoreDerivedMetricsGenerator, DefaultPlatformDerivedMetricsGeneratorsFactory, PMUNotAvailable
 
 log = logging.getLogger(__name__)
 
@@ -215,9 +216,8 @@ class MeasurementRunner(Runner):
             cpus, pmu_events = _discover_pmu_uncore_imc_config(UNCORE_IMC_EVENTS)
         except PMUNotAvailable:
             self._uncore_pmu = None
-            self._uncore_get_measurements = lambda : {}
+            self._uncore_get_measurements = lambda: {}
             return
-
 
         self._uncore_pmu = UncorePerfCounters(
             cpus=cpus,
@@ -225,7 +225,8 @@ class MeasurementRunner(Runner):
 
         )
         if enable_derived_metrics:
-            self._uncore_derived_metrics = self._platform_derived_metrics_generators_factory.create(self._uncore_pmu.get_measurements)
+            self._uncore_derived_metrics = self._platform_derived_metrics_generators_factory.create(
+                self._uncore_pmu.get_measurements)
             self._uncore_get_measurements = self._uncore_derived_metrics.get_measurements
         else:
             self._uncore_get_measurements = self._uncore_pmu.get_measurements
@@ -247,7 +248,7 @@ class MeasurementRunner(Runner):
             sanitized_labels = dict()
             for label_key, label_value in task.labels.items():
                 sanitized_labels.update({sanitize_label(label_key):
-                                         label_value})
+                                             label_value})
             task.labels = sanitized_labels
 
         # Generate new labels.

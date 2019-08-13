@@ -23,12 +23,12 @@ from wca import logger
 from wca import perf
 from wca import resctrl
 from wca.allocators import AllocationConfiguration, TaskAllocations
+from wca.logger import TRACE
 from wca.metrics import Measurements, merge_measurements, DefaultDerivedMetricsGenerator
 from wca.nodes import Task
 from wca.platforms import RDTInformation
 from wca.profiling import profiler
 from wca.resctrl import ResGroup
-from wca.logger import TRACE
 
 log = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ class ContainerSet(ContainerInterface):
                  event_names: List[str] = None,
                  enable_derived_metrics: bool = False,
                  wss_reset_interval: int = 0,
-                 task_derived_metrics_generators_factory = None,
+                 task_derived_metrics_generators_factory=None,
                  ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
@@ -137,7 +137,7 @@ class ContainerSet(ContainerInterface):
                 event_names=event_names,
                 enable_derived_metrics=enable_derived_metrics,
                 wss_reset_interval=wss_reset_interval,
-                task_derived_metrics_generators_factory = task_derived_metrics_generators_factory,
+                task_derived_metrics_generators_factory=task_derived_metrics_generators_factory,
             )
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
@@ -221,7 +221,7 @@ class Container(ContainerInterface):
                  event_names: List[str] = None,
                  enable_derived_metrics: bool = False,
                  wss_reset_interval: int = 0,
-                 task_derived_metrics_generators_factory = None,
+                 task_derived_metrics_generators_factory=None,
                  ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
@@ -259,7 +259,6 @@ class Container(ContainerInterface):
             return self._derived_metrics_generator.get_measurements()
         else:
             return self._get_measurements()
-
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
         """Returns empty list as Container class cannot have subcontainers -
@@ -347,7 +346,7 @@ class ContainerManager:
                  allocation_configuration: Optional[AllocationConfiguration],
                  event_names: List[str], enable_derived_metrics: bool = False,
                  wss_reset_interval: int = 0,
-                 task_derived_metrics_generators_factory = None,
+                 task_derived_metrics_generators_factory=None,
                  ):
         self.containers: Dict[Task, ContainerInterface] = {}
         self._rdt_information = rdt_information

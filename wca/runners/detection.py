@@ -15,8 +15,8 @@ import logging
 import time
 from typing import Dict, List, Optional
 
-from wca.config import Numeric, Str, assure_type
 from wca import nodes, storage, detectors
+from wca.config import Numeric, Str, assure_type
 from wca.detectors import convert_anomalies_to_metrics, \
     update_anomalies_metrics_with_task_information, Anomaly
 from wca.metrics import Metric, MetricType, BaseGeneratorFactory
@@ -91,19 +91,20 @@ class DetectionRunner(MeasurementRunner):
             enable_derived_metrics: bool = False,
             tasks_label_generator: Dict[str, TaskLabelGenerator] = None,
             wss_reset_interval: int = 0,
-            task_derived_metrics_generators_factory: BaseGeneratorFactory=None,
-            platform_derived_metrics_generators_factory: BaseGeneratorFactory=None,
-        ):
-        super().__init__(node, metrics_storage,
-                         action_delay, rdt_enabled,
-                         extra_labels, event_names,
-                         enable_derived_metrics,
-                         tasks_label_generator,
-                         enable_derived_metrics,
-                         wss_reset_interval=wss_reset_interval,
-                         task_derived_metrics_generators_factory=task_derived_metrics_generators_factory,
-                         platform_derived_metrics_generators_factory=platform_derived_metrics_generators_factory
-                         )
+            task_derived_metrics_generators_factory: BaseGeneratorFactory = None,
+            platform_derived_metrics_generators_factory: BaseGeneratorFactory = None,
+    ):
+        super().__init__(
+            node, metrics_storage,
+            action_delay, rdt_enabled,
+            extra_labels, event_names,
+            enable_derived_metrics,
+            tasks_label_generator,
+            enable_derived_metrics,
+            wss_reset_interval=wss_reset_interval,
+            task_derived_metrics_generators_factory=task_derived_metrics_generators_factory,
+            platform_derived_metrics_generators_factory=platform_derived_metrics_generators_factory
+        )
         self._detector = detector
 
         # Anomaly.

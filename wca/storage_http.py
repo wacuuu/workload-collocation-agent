@@ -13,18 +13,17 @@
 # limitations under the License.
 
 import http
+import http.server
 import logging
 import socketserver
 import threading
-from typing import Optional
-
-log = logging.getLogger(__name__)
 
 from dataclasses import dataclass
-import http.server
 
 from wca.storage import Storage, is_convertable_to_prometheus_exposition_format, \
     InconvertibleToPrometheusExpositionFormat, convert_to_prometheus_exposition_format
+
+log = logging.getLogger(__name__)
 
 
 class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
