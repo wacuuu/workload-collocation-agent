@@ -66,7 +66,7 @@ def test_measurements_runner(subcgroups):
                   expected_metric_value=cpu_usage)
 
     # Test for labels generator.
-    cpu_metric = [metric for metric in got_metrics if metric.name == 'cpu_usage'][0]
+    cpu_metric = [metric for metric in got_metrics if metric.name == 'task__cpu_usage'][0]
     assert 'task_name' in t1.labels
     assert cpu_metric.labels['application'] == 'example/root/staging/redis-6792'
     assert cpu_metric.labels['application_version_name'] == ''
