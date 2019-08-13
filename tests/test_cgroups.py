@@ -26,7 +26,9 @@ from tests.testing import create_open_mock
 def test_get_measurements():
     cgroup = Cgroup('/some/foo1', platform_cpus=1)
     measurements = cgroup.get_measurements()
-    assert measurements == {MetricName.CPU_USAGE_PER_TASK: 100}
+    assert measurements == {MetricName.CPU_USAGE_PER_TASK: 100,
+                            MetricName.MEM_USAGE_PER_TASK: 100,
+                            }
 
 
 @patch('builtins.open', mock_open(read_data='100'))

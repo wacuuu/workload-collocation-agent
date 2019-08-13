@@ -57,9 +57,9 @@ def test_measurements_runner(subcgroups):
 
     # Measurements metrics about tasks, based on get_measurements mocks.
     cpu_usage = TASK_CPU_USAGE * (len(subcgroups) if subcgroups else 1)
-    assert_metric(got_metrics, 'cpu_usage', dict(task_id=t1.task_id),
+    assert_metric(got_metrics, 'task__cpu_usage', dict(task_id=t1.task_id),
                   expected_metric_value=cpu_usage)
-    assert_metric(got_metrics, 'cpu_usage', dict(task_id=t2.task_id),
+    assert_metric(got_metrics, 'task__cpu_usage', dict(task_id=t2.task_id),
                   expected_metric_value=cpu_usage)
 
 
@@ -93,7 +93,7 @@ def test_measurements_wait(sleep_mock):
     ({}, {}, []),
     ({'t1_task_id': {'app': 'redis'}}, {}, []),
     ({'t1_task_id': {'app': 'redis'}}, {'t1_task_id': {'cpu_usage': DEFAULT_METRIC_VALUE}},
-     [metric('cpu_usage', {'app': 'redis'})]),
+     [metric('task__cpu_usage', {'app': 'redis'})]),
 ])
 def test_build_tasks_metrics(tasks_labels, tasks_measurements, expected_metrics):
     assert expected_metrics == _build_tasks_metrics(tasks_labels, tasks_measurements)

@@ -120,20 +120,25 @@ def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks)
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1))
 @patch('time.time', return_value=1536071557.123456)
 def test_collect_platform_information(*mocks):
-    assert collect_platform_information() == (
+    got_information = collect_platform_information()
+    expected_information = (
         Platform(1, 1, 2, 'intel xeon', {0: 100, 1: 200}, 1337, 1536071557.123456,
                  RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20), {}),
         [
             Metric.create_metric_with_metadata(
-                name=MetricName.MEM_USAGE, value=1337
+                name='platform__' + MetricName.MEM_USAGE, value=1337
             ),
             Metric.create_metric_with_metadata(
-                name=MetricName.CPU_USAGE_PER_CPU, value=100, labels={"cpu": "0"}
+                name='platform__' + MetricName.CPU_USAGE_PER_CPU, value=100, labels={"cpu": "0"}
             ),
             Metric.create_metric_with_metadata(
-                name=MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}
+                name='platform__' + MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}
             ),
+            Metric(name='platform__topology_cores', value=1, labels={}),
+            Metric(name='platform__topology_cpus', value=2, labels={}),
+            Metric(name='platform__topology_sockets', value=1, labels={}),
         ],
         {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
          "wca_version": "0.1", "cpu_model": "intel xeon"}
     )
+    assert got_information == expected_information
