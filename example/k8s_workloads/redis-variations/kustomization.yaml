@@ -1,6 +1,7 @@
 namespace: nszulc
 bases:
-- variations/redis-memtier-default
-- variations/redis-memtier-high-mem
-- variations/redis-memtier-high-mem-low-net
+- variations/redis-memtier-small
+- variations/redis-memtier-big
+- variations/redis-memtier-medium
+
 

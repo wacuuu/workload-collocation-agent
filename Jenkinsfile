@@ -97,6 +97,18 @@ pipeline {
                     '''
                     }
                 }
+                stage("Build and push memtier_benchmark Docker image") {
+                    when {expression{return params.BUILD_IMAGES}}
+                    steps {
+                    sh '''
+                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/memtier_benchmark:${GIT_COMMIT}
+                    IMAGE_DIR=${WORKSPACE}/workloads/memtier_benchmark
+                    cp -r dist ${IMAGE_DIR}
+                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
+                    docker push ${IMAGE_NAME}
+                    '''
+                    }
+                }
                 stage("Build and push stress-ng Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {

@@ -80,12 +80,12 @@ def main(parse: ParseFunc = default_parse):
     labels = json.loads(args.labels)
     _start_thread(parse, args.command, storage, labels, args.stderr, args.regexp,
                   service_level_args, args.subprocess_shell, args.separator,
-                  args.metric_name_prefix,
+                  args.metric_name_prefix, args
                   )
 
 def _start_thread(parse, command, storage, labels, stderr, regexp,
                   service_level_args, subprocess_shell, separator,
-                  metric_name_prefix,
+                  metric_name_prefix, args
                   ):
 
     command_splited = shlex.split(command)
@@ -103,7 +103,7 @@ def _start_thread(parse, command, storage, labels, stderr, regexp,
                     input=input, metric_name_prefix=metric_name_prefix)
     append_service_level_metrics_func = partial(
         append_service_level_metrics, labels=labels, service_level_args=service_level_args)
-
+    stderr_logging = partial(_stderr_logging, stderr=workload_process.stderr)
     # create kafka storage with list of kafka brokers from arguments
     kafka_brokers_addresses = args.kafka_brokers.replace(" ", "").split(',')
     if kafka_brokers_addresses != [""]:
@@ -112,15 +112,26 @@ def _start_thread(parse, command, storage, labels, stderr, regexp,
                                max_timeout_in_seconds=5.0,
                                topic=args.kafka_topic)
     else:
-        storage = LogStorage(args.storage_output_filename)
-
+        overwrite = args.storage_output_filename.endswith(".prom")
+        storage = LogStorage(args.storage_output_filename, overwrite=overwrite)
     t = threading.Thread(target=parse_loop, args=(parse, storage,
                                                   append_service_level_metrics_func))
+    lt = threading.Thread(target=stderr_logging)
+
     t.start()
+    lt.start()
     t.join()
+    lt.join()
 
     # terminate all spawned processes
     workload_process.terminate()
+
+
+def _stderr_logging(stderr):
+    line = stderr.readline()  # b'\n'-separated lines
+    while line:
+        log.debug('got line from subprocess: %r', line)
+        line = stderr.readline()
 
 
 def prepare_argument_parser():

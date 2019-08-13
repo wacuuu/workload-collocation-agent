@@ -23,8 +23,8 @@ import logging
 import os
 import re
 import sys
-import tempfile
 import time
+import pathlib
 from typing import List, Tuple, Dict, Optional
 
 from dataclasses import dataclass, field
@@ -113,9 +113,12 @@ class LogStorage(Storage):
             msg = convert_to_prometheus_exposition_format(metrics, timestamp, self.filter_labels)
             log.log(logger.TRACE, 'Dump of metrics (text format): %r', msg)
             if self.overwrite:
-                with tempfile.NamedTemporaryFile(dir=self._dir, delete=False) as fp:
-                    fp.write(msg.encode('utf-8'))
-                os.rename(fp.name, self.output_filename)
+                p = pathlib.Path(self.output_filename)
+                p_tmp = p.joinpath(".tmp")
+                with open(p_tmp, "w", encoding="utf-8") as fp:
+                    fp.write(msg)
+                p_tmp.rename(p)
+
             else:
                 print(msg, file=self._output, flush=True)
 

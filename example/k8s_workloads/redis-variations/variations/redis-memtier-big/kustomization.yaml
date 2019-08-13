@@ -1,0 +1,21 @@
+nameSuffix: -big
+#commonLabels:
+#        app: redis
+bases:
+- ../../base/workloads
+#patchesStrategicMerge:
+#- overlay.yaml
+
+configMapGenerator:
+- name: redis-config
+  literals:
+    - memtire_cpus=0-1000
+    - redis_cpus=0-1000
+    - clients=200
+    - threads=4
+    - datasize=1024
+    - pipeline=1
+    - keymaximum=40000
+    - ratio=1:10
+    - redis_extra=
+    - memtire_extra=""

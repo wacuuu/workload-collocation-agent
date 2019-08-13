@@ -1,10 +1,10 @@
-import os
-
-from wca.metrics import Measurements
 import logging
 import os
 
+from wca.metrics import Measurements
+
 log = logging.getLogger(__name__)
+
 
 class WSS:
 
