@@ -18,12 +18,12 @@ import pprint
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict
 
-from wca import cgroups
+from wca import cgroups, wss
 from wca import logger
 from wca import perf
 from wca import resctrl
 from wca.allocators import AllocationConfiguration, TaskAllocations
-from wca.metrics import Measurements, merge_measurements, DerivedMetricsGenerator
+from wca.metrics import Measurements, merge_measurements, DefaultDerivedMetricsGenerator
 from wca.nodes import Task
 from wca.platforms import RDTInformation
 from wca.profiling import profiler
@@ -107,7 +107,9 @@ class ContainerSet(ContainerInterface):
                  allocation_configuration: Optional[AllocationConfiguration] = None,
                  resgroup: ResGroup = None,
                  event_names: List[str] = None,
-                 enable_derived_metrics: bool = False
+                 enable_derived_metrics: bool = False,
+                 wss_reset_interval: int = 0,
+                 task_derived_metrics_generators_factory = None,
                  ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
@@ -134,6 +136,8 @@ class ContainerSet(ContainerInterface):
                 allocation_configuration=allocation_configuration,
                 event_names=event_names,
                 enable_derived_metrics=enable_derived_metrics,
+                wss_reset_interval=wss_reset_interval,
+                task_derived_metrics_generators_factory = task_derived_metrics_generators_factory,
             )
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
@@ -215,9 +219,13 @@ class Container(ContainerInterface):
                  allocation_configuration:
                  Optional[AllocationConfiguration] = None,
                  event_names: List[str] = None,
-                 enable_derived_metrics: bool = False):
+                 enable_derived_metrics: bool = False,
+                 wss_reset_interval: int = 0,
+                 task_derived_metrics_generators_factory = None,
+                 ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
+        assert len(self._name) > 0, 'Container name cannot be empty string!'
         self._allocation_configuration = allocation_configuration
         self._rdt_information = rdt_information
         self._resgroup = resgroup
@@ -229,12 +237,29 @@ class Container(ContainerInterface):
             platform_sockets=platform_sockets,
             allocation_configuration=allocation_configuration)
 
-        self._derived_metrics_generator = None
+        if wss_reset_interval > 0:
+            self.wss = wss.WSS(self.get_pids, wss_reset_interval)
+        else:
+            self.wss = None
+
         if self._event_names:
             self._perf_counters = perf.PerfCounters(self._cgroup_path, event_names=event_names)
-            if enable_derived_metrics:
-                self._derived_metrics_generator = DerivedMetricsGenerator(
-                    event_names, self._perf_counters.get_measurements)
+        else:
+            self._perf_counters = None
+
+        self._derived_metrics_generator = None
+        if enable_derived_metrics:
+            task_derived_metrics_generators_factory = task_derived_metrics_generators_factory \
+                                                      or DefaultDerivedMetricsGenerator
+            self._derived_metrics_generator = task_derived_metrics_generators_factory.create(
+                self._get_measurements)
+
+    def get_measurements(self) -> Measurements:
+        if self._derived_metrics_generator is not None:
+            return self._derived_metrics_generator.get_measurements()
+        else:
+            return self._get_measurements()
+
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
         """Returns empty list as Container class cannot have subcontainers -
@@ -264,17 +289,13 @@ class Container(ContainerInterface):
         if self._rdt_information:
             self._resgroup.add_pids(self._cgroup.get_pids(), mongroup_name=self._name)
 
-    def get_measurements(self) -> Measurements:
+    def _get_measurements(self) -> Measurements:
         # Cgroup measurements
         cgroup_measurements = self._cgroup.get_measurements()
         # Perf events measurements
         if self._event_names:
-            if self._derived_metrics_generator:
-                # derived metrics
-                perf_measurements = self._derived_metrics_generator.get_measurements()
-            else:
-                # raw counters only
-                perf_measurements = self._perf_counters.get_measurements()
+            # raw counters only
+            perf_measurements = self._perf_counters.get_measurements()
         else:
             perf_measurements = {}
 
@@ -287,10 +308,16 @@ class Container(ContainerInterface):
         else:
             rdt_measurements = {}
 
+        if self.wss:
+            wss_measurements = self.wss.get_measurements()
+        else:
+            wss_measurements = {}
+
         return flatten_measurements([
             cgroup_measurements,
             rdt_measurements,
             perf_measurements,
+            wss_measurements,
         ])
 
     def cleanup(self):
@@ -318,7 +345,10 @@ class ContainerManager:
     def __init__(self, rdt_information: Optional[RDTInformation], platform_cpus: int,
                  platform_sockets: int,
                  allocation_configuration: Optional[AllocationConfiguration],
-                 event_names: List[str], enable_derived_metrics: bool = False):
+                 event_names: List[str], enable_derived_metrics: bool = False,
+                 wss_reset_interval: int = 0,
+                 task_derived_metrics_generators_factory = None,
+                 ):
         self.containers: Dict[Task, ContainerInterface] = {}
         self._rdt_information = rdt_information
         self._platform_cpus = platform_cpus
@@ -326,6 +356,8 @@ class ContainerManager:
         self._allocation_configuration = allocation_configuration
         self._event_names = event_names
         self._enable_derived_metrics = enable_derived_metrics
+        self._wss_reset_interval = wss_reset_interval
+        self._task_derived_metrics_generators_factory = task_derived_metrics_generators_factory
 
     def _create_container(self, task: Task) -> ContainerInterface:
         """Check whether the task groups multiple containers,
@@ -341,6 +373,9 @@ class ContainerManager:
                 allocation_configuration=self._allocation_configuration,
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
+                wss_reset_interval=self._wss_reset_interval,
+                task_derived_metrics_generators_factory=self._task_derived_metrics_generators_factory,
+
             )
         else:
             container = Container(
@@ -351,6 +386,8 @@ class ContainerManager:
                 allocation_configuration=self._allocation_configuration,
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
+                wss_reset_interval=self._wss_reset_interval,
+                task_derived_metrics_generators_factory=self._task_derived_metrics_generators_factory,
             )
         return container
 

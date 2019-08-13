@@ -120,8 +120,7 @@ class Cgroup:
         if cgroup_control_type == CgroupType.CPUSET:
             return os.path.join(self.cgroup_cpuset_fullpath, cgroup_control_file)
         if cgroup_control_type == CgroupType.MEMORY:
-            return os.path.join(self.cgroup_cpuset_fullpath,
-                                cgroup_control_file)
+            return os.path.join(self.cgroup_cpuset_fullpath, cgroup_control_file)
 
         raise NotImplementedError(cgroup_control_type)
 

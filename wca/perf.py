@@ -183,17 +183,23 @@ def _scale_counter_value(raw_value, time_enabled, time_running) -> (float, float
     if time_running != time_enabled:
         scaling_factor = float(time_enabled) / float(time_running)
         if scaling_factor > SCALING_RATE_WARNING_THRESHOLD:
-            log.warning("Measurement scaling rate: %f", scaling_factor)
+            log.debug("Measurement scaling rate: %f", scaling_factor)
         return round(float(raw_value) * scaling_factor), scaling_factor
     else:
         return float(raw_value), 1.0
 
 
-def _parse_raw_event_name(event_name: str) -> int:
-    """Parses raw event name with the format: name__rEEUUCC,
-        where UU == umask (Unit Mask),
-          and EE == event number (Event select field),
-          and optionally CMASK (Counter Mask)
+def _parse_raw_event_name(event_name: str) -> (int, int):
+    """Parses raw event name with the format:
+
+        name__rEEUU
+        name__rEEUUCC
+        name__rEEUUCC1111111111
+
+        where UU == umask (Unit Mask) (byte)
+          and EE == event number (Event select field), (byte)
+          and optionally CMASK (Counter Mask) (byte)
+          and optionally config1 (5bytes, 40bits)
         EE,UU and CC are parsed as hex.
 
     Intel Software Developer Manual Volume 2, Chapter 18.2.1
@@ -204,15 +210,19 @@ def _parse_raw_event_name(event_name: str) -> int:
         raise Exception('raw events name is expected to contain "__r" characters.')
     try:
         _, bits = event_name.split('__r')
-        if len(bits) == 6:
+        config1 = 0
+        if len(bits) == 16:
+            cmask = int(bits[4:6], 16)
+            config1 = int(bits[6:16], 16)
+        elif len(bits) == 6:
             cmask = int(bits[4:6], 16)
         elif len(bits) == 4:
             cmask = 0
         else:
-            raise Exception('improper raw event_name specification (length should be 4 or 6)')
+            raise Exception('improper raw event_name specification (length should be 4 or 6 or 16)')
         event = int(bits[0:2], 16)
         umask = int(bits[2:4], 16)
-        return event | (umask << 8) | (cmask << 24)
+        return event | (umask << 8) | (cmask << 24), config1
     except ValueError as e:
         raise Exception('Cannot parse raw event definition: %r: error %s' % (bits, e)) from e
 
@@ -229,7 +239,7 @@ def _create_event_attributes(event_name, disabled):
         attr.config = pc.HardwareEventNameMap[event_name]
     elif '__r' in event_name:
         attr.type = pc.PerfType.PERF_TYPE_RAW
-        attr.config = _parse_raw_event_name(event_name)
+        attr.config, attr.config1 = _parse_raw_event_name(event_name)
     else:
         raise Exception('unknown event name %r' % event_name)
 
@@ -243,7 +253,7 @@ def _create_event_attributes(event_name, disabled):
                         pc.PERF_FORMAT_TOTAL_TIME_RUNNING |
                         pc.PERF_FORMAT_ID)
 
-    attr.flags = pc.AttrFlags.exclude_guest
+    attr.flags = pc.AttrFlags.exclude_guest | pc.AttrFlags.inherit
 
     if disabled:
         attr.flags |= pc.AttrFlags.disabled

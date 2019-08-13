@@ -21,6 +21,8 @@ from wca.config import assure_type
 
 TaskId = str
 
+class TaskSynchornizationException(Exception):
+    pass
 
 @dataclass
 class Task:

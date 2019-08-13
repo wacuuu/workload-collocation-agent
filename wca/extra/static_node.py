@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import logging
-import os
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 
+import os
 from dataclasses import dataclass, field
 
 from wca.config import Str
@@ -42,6 +42,7 @@ class StaticNode(Node):
     require_pids: bool = False
     default_labels: Dict[Str, Str] = field(default_factory=dict)
     default_resources: Dict[Str, Union[Str, float]] = field(default_factory=dict)
+    tasks_labels: Optional[Dict[str, Dict[str, str]]] = None
 
     _BASE_CGROUP_PATH = '/sys/fs/cgroup'
     _REQUIRED_CONTROLLERS = ('cpu', 'cpuacct', 'perf_event')
@@ -61,12 +62,15 @@ class StaticNode(Node):
                                 full_cgroup_path, task_name)
                     break
             else:
+                labels = dict(self.default_labels)
+                if self.tasks_labels:
+                    labels.update(self.tasks_labels.get(task_name))
                 tasks.append(
                     Task(
                         name=task_name,
                         task_id=task_name,
                         cgroup_path='/%s' % task_name,
-                        labels=dict(self.default_labels),
+                        labels=labels,
                         resources=dict(self.default_resources),
                         subcgroups_paths=[]
                     )

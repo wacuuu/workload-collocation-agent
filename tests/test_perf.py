@@ -23,7 +23,7 @@ import pytest
 from wca import metrics
 from wca import perf
 from wca import perf_const as pc
-from wca.metrics import MetricName, DerivedMetricName, DerivedMetricsGenerator
+from wca.metrics import MetricName, DerivedMetricName, DefaultDerivedMetricsGenerator
 from wca.perf import _parse_raw_event_name
 from tests.testing import create_open_mock
 
@@ -60,8 +60,8 @@ def test_create_file_from_invalid_fd():
 
 
 @pytest.mark.parametrize("disabled_flag,expected", [
-    (True, pc.AttrFlags.exclude_guest | pc.AttrFlags.disabled),
-    (False, pc.AttrFlags.exclude_guest)
+    (True, pc.AttrFlags.exclude_guest | pc.AttrFlags.disabled | pc.AttrFlags.inherit),
+    (False, pc.AttrFlags.exclude_guest | pc.AttrFlags.inherit)
 ])
 def test_create_event_attributes_disabled_flag(disabled_flag, expected):
     assert perf._create_event_attributes(
@@ -330,7 +330,7 @@ def test_read_unknown_cpu_model(*args):
 
 ])
 def test_parse_raw_event_name(event_name, expected_attr_config):
-    got_attr_config = _parse_raw_event_name(event_name)
+    got_attr_config, _ = _parse_raw_event_name(event_name)
     assert got_attr_config == expected_attr_config
 
 
@@ -355,10 +355,7 @@ def test_derived_metrics():
             MetricName.CACHE_REFERENCES: 50000,
         }
 
-    derived_metrics_generator = DerivedMetricsGenerator(
-        event_names=[MetricName.INSTRUCTIONS, MetricName.CYCLES,
-                     MetricName.CACHE_MISSES, MetricName.CACHE_REFERENCES],
-        get_measurements_func=gm_func)
+    derived_metrics_generator = DefaultDerivedMetricsGenerator(get_measurements_func=gm_func)
 
     # First run, does not have enough information to generate those metrics.
 

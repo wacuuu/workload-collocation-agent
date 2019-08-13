@@ -23,7 +23,7 @@ import requests
 from wca import logger
 from wca.config import assure_type, Numeric, Url, Str
 from wca.metrics import MetricName
-from wca.nodes import Node, Task, TaskId
+from wca.nodes import Node, Task, TaskId, TaskSynchornizationException
 from wca.security import SSL
 
 DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.CACHE_MISSES)
@@ -89,6 +89,7 @@ class KubernetesNode(Node):
     # Timeout to access kubernetes agent.
     timeout: Numeric(1, 60) = 5  # [s]
 
+
     # List of namespaces to monitor pods in.
     monitored_namespaces: List[Str] = field(default_factory=lambda: ["default"])
 
@@ -115,7 +116,10 @@ class KubernetesNode(Node):
 
     def get_tasks(self) -> List[Task]:
         """Returns only running tasks."""
-        kubelet_json_response = self._request_kubelet()
+        try:
+            kubelet_json_response = self._request_kubelet()
+        except requests.exceptions.ConnectionError as e:
+            raise TaskSynchornizationException('%s' % e) from e
 
         tasks = []
         for pod in kubelet_json_response.get('items'):
@@ -140,6 +144,8 @@ class KubernetesNode(Node):
             else:
                 labels = {}
             labels[_sanitize_label(QOS_LABELNAME)] = qos  # Add label with QOS class of the pod.
+            # Extend labels with 'task_name'.
+            labels['task_name'] = pod.get('metadata').get('namespace') + "/" + pod_name
 
             # Apart from obvious part of the loop it checks whether all
             # containers are in ready state -

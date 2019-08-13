@@ -44,6 +44,7 @@ spec:
             --subprocess_shell
             --storage_output_filename=/var/log/wrapper/metrics.prom
             "
+
           env:
             - name: podname
               valueFrom: {fieldRef: {fieldPath: metadata.name}}
@@ -115,6 +116,7 @@ spec:
       volumes:
         - name: var-log-wrapper
           emptyDir: {}
+
 
 ---
 apiVersion: apps/v1

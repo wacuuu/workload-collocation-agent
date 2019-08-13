@@ -1,0 +1,88 @@
+resources:
+#- redis.yaml
+- memcached.yaml
+- sysbench.yaml
+- stress.yaml
+
+namespace: default
+
+patchesJson6902:
+#- target: { group: apps, version: v1, kind: StatefulSet, name: redis}
+#  path: set_common.yaml
+
+- target: { group: apps, version: v1, kind: StatefulSet, name: memcached}
+  path: set_common.yaml
+- target: { group: apps, version: v1, kind: StatefulSet, name: mutilate}
+  path: set_common.yaml
+
+- target: { group: apps, version: v1, kind: StatefulSet, name: sysbench-small}
+  path: set_common.yaml
+- target: { group: apps, version: v1, kind: StatefulSet, name: sysbench-medium}
+  path: set_common.yaml
+- target: { group: apps, version: v1, kind: StatefulSet, name: sysbench-big}
+  path: set_common.yaml
+
+- target: { group: apps, version: v1, kind: StatefulSet, name: stress-small}
+  path: set_common.yaml
+- target: { group: apps, version: v1, kind: StatefulSet, name: stress-medium}
+  path: set_common.yaml
+- target: { group: apps, version: v1, kind: StatefulSet, name: stress-big}
+  path: set_common.yaml
+
+configMapGenerator:
+- name: memcached
+  literals:
+  - mutilate_threads=8
+  - mutilate_cpus=0-1000
+  - value=10000   # 100k
+  - records=1000000 # 1M  = 10GB
+  - memory=200000 # MB
+  - qps=1000000
+  - conns=1
+  - time=300     # seconds
+  - memcached_threads=4
+  - memcached_cpus=0-1000
+  - memcached_extra=
+  - mutilate_extra=
+
+- name: redis
+  literals:
+    - memtire_cpus=0-1000
+    - redis_cpus=0-1000
+    - datasize=1000
+    - keymaximum=100000
+    - ratio=1:1
+    - redis_extra=
+    - memtire_extra=
+
+- name: sysbench-small
+  literals:
+    - threads=4
+    - cpus=0-1000
+    - memory=16g
+    - extra=
+- name: sysbench-medium
+  literals:
+    - threads=8
+    - cpus=0-1000
+    - memory=64g
+    - extra=
+- name: sysbench-big
+  literals:
+    - threads=16
+    - cpus=0-1000
+    - memory=128g
+    - extra=
+
+- name: stress-small
+  literals:
+    - extra='--stream 1 --stream-l3-size=512m' # 6GB RSS
+    - cpus=0-1000
+- name: stress-medium
+  literals:
+    - extra='--stream 1 --stream-l3-size=2g' # 24GB RSS
+    - cpus=0-1000
+- name: stress-big
+  literals:
+    - extra='--stream 8 --stream-l3-size=2g' # 24GB RSS + 8 threads
+    - cpus=0-1000

@@ -147,7 +147,7 @@ spec:
           hostPath:
             path: /dev/cpu
 
-        # Paths for node_exporter to collect metrics
+        # Paths for nodeexporter to collect metrics
         - name: proc
           hostPath:
             path: /proc

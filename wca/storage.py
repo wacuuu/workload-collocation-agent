@@ -75,6 +75,8 @@ class LogStorage(Storage):
     # * with `overwrite` set to False, timestamps are added.
     include_timestamp: Optional[bool] = None
 
+    filter_labels: Optional[List[str]] = None
+
     def __post_init__(self):
         # Auto configure timestamp, based on "overwrite" flag.
         if self.include_timestamp is None:
@@ -108,7 +110,7 @@ class LogStorage(Storage):
                 timestamp = get_current_time()
             else:
                 timestamp = None
-            msg = convert_to_prometheus_exposition_format(metrics, timestamp)
+            msg = convert_to_prometheus_exposition_format(metrics, timestamp, self.filter_labels)
             log.log(logger.TRACE, 'Dump of metrics (text format): %r', msg)
             if self.overwrite:
                 p = pathlib.Path(self.output_filename)
@@ -214,20 +216,29 @@ def group_metrics_by_name(metrics: List[Metric]) -> \
 
 
 def convert_to_prometheus_exposition_format(metrics: List[Metric],
-                                            timestamp: Optional[str] = None) -> str:
+                                            timestamp: Optional[str] = None,
+                                            filter_labels: Optional[List[str]] = None
+                                            ) -> str:
     """Convert metrics to the prometheus format."""
     output = []
 
     grouped_metrics = group_metrics_by_name(metrics)
-
-    for metric_name, metrics in grouped_metrics:
+    group_separator = ''
+    for n, (metric_name, metrics) in enumerate(grouped_metrics):
         first_metric = metrics[0]
         if first_metric.help:
-            output.append('# HELP {0} {1}\n'.format(
+            group_separator = '\n' if n > 0 else ''
+            output.append('{0}# HELP {1} {2}\n'.format(group_separator,
                 first_metric.name, first_metric.help.replace('\\', r'\\').replace('\n', r'\n')))
 
         if first_metric.type:
             output.append('# TYPE {0} {1}\n'.format(first_metric.name, first_metric.type))
+
+        if not first_metric.help and not first_metric.type:
+            output.append(group_separator)
+        else:
+            # reset group separator
+            group_separator = ''
 
         # Assert that all metrics with the same name have the same metadata.
         assert {metric.type for metric in metrics} == {first_metric.type}
@@ -238,7 +249,9 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
             label_str = '{{{0}}}'.format(','.join(
                 ['{0}="{1}"'.format(
                     k, v.replace('\\', r'\\').replace('\n', r'\n').replace('"', r'\"'))
-                    for k, v in sorted(metric.labels.items())]))
+                    for k, v in sorted(metric.labels.items())
+                    if (filter_labels is None or k in filter_labels)
+                ]))
 
             # Do not send empty labels.
             if label_str == '{}':
@@ -255,8 +268,6 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
                                                         value_str, timestamp))
             else:
                 output.append('{0}{1} {2}\n'.format(metric.name, label_str, value_str))
-
-        output.append('\n')
 
     return ''.join(output)
 
@@ -391,3 +402,17 @@ class MetricPackage:
             for metric in self.metrics:
                 metric.labels.update(common_labels)
         self.storage.store(self.metrics)
+
+@dataclass
+class FilterStorage(Storage):
+
+    storages: List[Storage]
+    filter: Optional[List[str]] = None
+
+    def store(self, metrics):
+        if self.filter is not None:
+            metrics = list(filter(lambda metric: metric.name in self.filter, metrics))
+        for storage in self.storages:
+            storage.store(metrics)
+
+

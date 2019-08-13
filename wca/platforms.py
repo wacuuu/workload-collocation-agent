@@ -18,7 +18,7 @@ import socket
 import time
 from typing import List, Dict, Set, Tuple, Optional
 
-from wca.metrics import Metric, MetricName
+from wca.metrics import Metric, MetricName, Measurements
 from wca.profiling import profiler
 
 from dataclasses import dataclass
@@ -41,10 +41,10 @@ def get_wca_version():
     try:
         version = get_distribution('wca').version
     except DistributionNotFound:
-        log.warning("Version is not available. "
-                    "Probably egg-info directory does not exist"
-                    "(which is required for pkg_resources module "
-                    "to find the version).")
+        # log.warning("Version is not available. "
+        #             "Probably egg-info directory does not exist"
+        #             "(which is required for pkg_resources module "
+        #             "to find the version).")
         return "unknown_version"
 
     return version
@@ -115,23 +115,42 @@ class Platform:
 
     rdt_information: Optional[RDTInformation]
 
+    measurements: Measurements
+
 
 def create_metrics(platform: Platform) -> List[Metric]:
     """Creates a list of Metric objects from data in Platform object"""
+    PLATFORM_PREFIX='platform__'
     platform_metrics = list()
     platform_metrics.append(
         Metric.create_metric_with_metadata(
-            name=MetricName.MEM_USAGE,
+            name=PLATFORM_PREFIX + MetricName.MEM_USAGE,
             value=platform.total_memory_used)
     )
     for cpu_id, cpu_usage in platform.cpus_usage.items():
         platform_metrics.append(
             Metric.create_metric_with_metadata(
-                name=MetricName.CPU_USAGE_PER_CPU,
+                name=PLATFORM_PREFIX + MetricName.CPU_USAGE_PER_CPU,
                 value=cpu_usage,
                 labels={"cpu": str(cpu_id)}
             )
         )
+
+    for metric_name, metric_value in platform.measurements.items():
+        platform_metrics.append(
+            Metric.create_metric_with_metadata(
+                name=PLATFORM_PREFIX + metric_name,
+                value=metric_value,
+            )
+        )
+
+
+    platform_metrics.extend([
+        Metric(name=PLATFORM_PREFIX+'topology_cores', value=platform.cores),
+        Metric(name=PLATFORM_PREFIX+'topology_cpus', value=platform.cpus),
+        Metric(name=PLATFORM_PREFIX+'topology_sockets', value=platform.sockets),
+    ])
+
     return platform_metrics
 
 
@@ -331,7 +350,8 @@ def _collect_rdt_information() -> RDTInformation:
 
 
 @profiler.profile_duration(name='collect_platform_information')
-def collect_platform_information(rdt_enabled: bool = True) -> (
+def collect_platform_information(rdt_enabled: bool = True,
+                                 extra_platform_measurements: Optional[Measurements] = None) -> (
         Platform, List[Metric], Dict[str, str]):
     """Returns Platform information, metrics and common labels.
 
@@ -363,7 +383,8 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
         cpus_usage=cpus_usage,
         total_memory_used=total_memory_used,
         timestamp=time.time(),
-        rdt_information=rdt_information
+        rdt_information=rdt_information,
+        measurements=extra_platform_measurements or {},
     )
     assert len(platform.cpus_usage) == platform.cpus, \
         "Inconsistency in cpu data returned by kernel"

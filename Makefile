@@ -49,11 +49,6 @@ junit:
 	pipenv run env PYTHONPATH=.:workloads/wrapper pytest --cov-report term-missing --cov=wca tests --junitxml=unit_results.xml -vvv -s --ignore=tests/e2e/test_wca_metrics.py
 
 WCA_IMAGE := wca-$(shell git rev-parse HEAD)
-test:
-	CID=$$(cat .cidfile); \
-	echo $$CID > dupa
-
-WCA_IMAGE := wca-$(shell git rev-parse HEAD)
 wca_package_in_docker:
 	@echo Building wca pex file inside docker and copying to ./dist/wca.pex
 	@echo WCA image name is: $(WCA_IMAGE)
@@ -100,7 +95,7 @@ wrapper_package:
 	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/memtier_benchmark_wrapper.pex -m wrapper.parser_memtier
 	./dist/wrapper.pex --help >/dev/null
 
-check: flake8 unit
+check: flake8 bandit unit
 
 dist: wca_package wrapper_package
 

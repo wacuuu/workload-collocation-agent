@@ -11,10 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from abc import abstractmethod
+from dataclasses import dataclass
 import logging
 import resource
 import time
 from typing import Dict, List, Tuple, Optional
+import re
 
 from wca import nodes, storage, platforms, profiling
 from wca import resctrl
@@ -25,11 +28,14 @@ from wca.containers import ContainerManager, Container
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels
 from wca.logger import trace, get_logging_metrics
 from wca.mesos import create_metrics
-from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException
-from wca.nodes import Task
+from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
+    DefaultTaskDerivedMetricsGeneratorFactory, BaseGeneratorFactory
+from wca.nodes import Task, TaskSynchornizationException
 from wca.profiling import profiler
 from wca.runners import Runner
 from wca.storage import MetricPackage, DEFAULT_STORAGE
+from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
+    UncoreDerivedMetricsGenerator, DefaultPlatformDerivedMetricsGeneratorsFactory, PMUNotAvailable
 
 log = logging.getLogger(__name__)
 
@@ -37,6 +43,38 @@ _INITIALIZE_FAILURE_ERROR_CODE = 1
 
 DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES,
                   MetricName.CACHE_MISSES, MetricName.CACHE_REFERENCES, MetricName.MEMSTALL)
+
+
+class TaskLabelGenerator:
+    @abstractmethod
+    def generate(self, tasks) -> None:
+        """add additional labels to each task based on already existing labels"""
+        ...
+
+
+@dataclass
+class TaskLabelRegexGenerator(TaskLabelGenerator):
+    pattern: str
+    repl: str
+    source: str = 'task_name'  # by default use `task_name`: specially created for that purpose
+
+    def generate(self, tasks, target) -> None:
+        for task in tasks:
+            source_val = task.labels.get(self.source, None)
+            if source_val is None:
+                err_msg = "Source label {} not found in task {}".format(self.source, task.name)
+                log.warning(err_msg)
+                continue
+            if target in task.labels:
+                err_msg = "Target label {} already existing in task {}. Skipping.".format(
+                    target, task.name)
+                log.debug(err_msg)
+                continue
+            task.labels[target] = re.sub(self.pattern, self.repl, source_val)
+            if task.labels[target] == "" or task.labels[target] is None:
+                log.debug('Label {} for task {} set to empty string.')
+            if task.labels[target] is None:
+                log.debug('Label {} for task {} set to None.')
 
 
 class MeasurementRunner(Runner):
@@ -57,6 +95,8 @@ class MeasurementRunner(Runner):
             (defaults to instructions, cycles, cache-misses, memstalls)
         enable_derived_metrics: enable derived metrics ips, ipc and cache_hit_ratio
             (based on enabled_event names), default to False
+        task_label_generator: component to add new labels based on sanitized labels read
+            from orchestrator
     """
 
     def __init__(
@@ -68,7 +108,11 @@ class MeasurementRunner(Runner):
             extra_labels: Dict[Str, Str] = None,
             event_names: List[str] = None,
             enable_derived_metrics: bool = False,
+            tasks_label_generator: Dict[str, TaskLabelGenerator] = None,
             _allocation_configuration: Optional[AllocationConfiguration] = None,
+            wss_reset_interval: int = 0,
+            task_derived_metrics_generators_factory: BaseGeneratorFactory = None,
+            platform_derived_metrics_generators_factory: BaseGeneratorFactory = None,
     ):
 
         self._node = node
@@ -85,6 +129,20 @@ class MeasurementRunner(Runner):
         self._allocation_configuration = _allocation_configuration
         self._event_names = event_names or DEFAULT_EVENTS
         self._enable_derived_metrics = enable_derived_metrics
+        if tasks_label_generator is None:
+            self._tasks_label_generator = {
+                'application':
+                    TaskLabelRegexGenerator('$', '', 'task_name'),
+                'application_version_name':
+                    TaskLabelRegexGenerator('.*$', '', 'task_name'),
+            }
+        else:
+            self._tasks_label_generator = tasks_label_generator
+        self._wss_reset_interval = wss_reset_interval
+        self._task_derived_metrics_generators_factory = task_derived_metrics_generators_factory
+        self._platform_derived_metrics_generators_factory = platform_derived_metrics_generators_factory
+
+        self._uncore_pmu = None
 
     @profiler.profile_duration(name='sleep')
     def _wait(self):
@@ -144,14 +202,45 @@ class MeasurementRunner(Runner):
             allocation_configuration=self._allocation_configuration,
             event_names=self._event_names,
             enable_derived_metrics=self._enable_derived_metrics,
+            wss_reset_interval=self._wss_reset_interval,
+            task_derived_metrics_generators_factory=self._task_derived_metrics_generators_factory
         )
+
+        self._init_uncore_pmu(self._enable_derived_metrics)
+
         return None
+
+    def _init_uncore_pmu(self, enable_derived_metrics):
+        try:
+            cpus, pmu_events = _discover_pmu_uncore_imc_config(UNCORE_IMC_EVENTS)
+        except PMUNotAvailable:
+            self._uncore_pmu = None
+            self._uncore_get_measurements = lambda : {}
+            return
+
+
+        self._uncore_pmu = UncorePerfCounters(
+            cpus=cpus,
+            pmu_events=pmu_events
+
+        )
+        if enable_derived_metrics:
+            self._uncore_derived_metrics = self._platform_derived_metrics_generators_factory.create(self._uncore_pmu.get_measurements)
+            self._uncore_get_measurements = self._uncore_derived_metrics.get_measurements
+        else:
+            self._uncore_get_measurements = self._uncore_pmu.get_measurements
 
     def _iterate(self):
         iteration_start = time.time()
 
         # Get information about tasks.
-        tasks = self._node.get_tasks()
+        try:
+            tasks = self._node.get_tasks()
+        except TaskSynchornizationException as e:
+            log.error('Cannot synchronize tasks with node (error=%s) - skip this iteration!', e)
+            self._wait()
+            return
+
         log.debug('Tasks detected: %d', len(tasks))
 
         for task in tasks:
@@ -161,12 +250,18 @@ class MeasurementRunner(Runner):
                                          label_value})
             task.labels = sanitized_labels
 
+        # Generate new labels.
+        for new_label, task_label_generator in self._tasks_label_generator.items():
+            task_label_generator.generate(tasks, new_label)
+
         # Keep sync of found tasks and internally managed containers.
         containers = self._containers_manager.sync_containers_state(tasks)
 
+        extra_platform_measurements = self._uncore_get_measurements()
+
         # Platform information
         platform, platform_metrics, platform_labels = platforms.collect_platform_information(
-            self._rdt_enabled)
+            self._rdt_enabled, extra_platform_measurements=extra_platform_measurements)
 
         # Common labels
         common_labels = dict(platform_labels, **self._extra_labels)
@@ -267,12 +362,16 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
 
 def _build_tasks_metrics(tasks_labels: TasksLabels,
                          tasks_measurements: TasksMeasurements) -> List[Metric]:
+    """TODO:  TBD ALSO ADDS PREFIX for name!"""
     tasks_metrics: List[Metric] = []
+
+    TASK_METRICS_PREFIX = 'task__'
 
     for task_id, task_measurements in tasks_measurements.items():
         task_metrics = create_metrics(task_measurements)
         # Decorate metrics with task specific labels.
         for task_metric in task_metrics:
+            task_metric.name = TASK_METRICS_PREFIX + task_metric.name
             task_metric.labels.update(tasks_labels[task_id])
         tasks_metrics += task_metrics
     return tasks_metrics

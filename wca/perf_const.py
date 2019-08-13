@@ -56,16 +56,17 @@ class PerfEventAttr(ctypes.Structure):
                 ('sample_type', ctypes.c_ulong),
                 ('read_format', ctypes.c_ulong),
                 ('flags', ctypes.c_ulong),
-                ('wakeup_events', ctypes.c_uint),
-                ('IGNORE3', ctypes.c_uint),
-                ('IGNORE4', ctypes.c_ulong),
-                ('IGNORE5', ctypes.c_ulong),
-                ('IGNORE6', ctypes.c_ulong),
-                ('IGNORE7', ctypes.c_uint),
-                ('IGNORE8', ctypes.c_int),
-                ('IGNORE9', ctypes.c_ulong),
+                ('wakeup_events', ctypes.c_uint),  # union {wakeup_events, wakeup_watermark}
+                ('bp_type', ctypes.c_uint),  # bp_type
+                ('config1', ctypes.c_ulong),  # union {bp_addr, kprobe_func, kprobe_path, config1}
+                ('config2', ctypes.c_ulong),  # union {bp_len, kprobe_addr, probe_offset, config2}
+                ('branch_sample_type', ctypes.c_ulong),
+                ('sample_regs_user', ctypes.c_uint),  # sample_regs_user
+                ('sample_stack_user', ctypes.c_int),  # sample_stack_user
+                ('IGNORE9', ctypes.c_ulong),  # TODO: check me for 3.10 vs 5.15
                 ('IGNORE10', ctypes.c_uint),
-                ('IGNORE11', ctypes.c_uint)]
+                ('IGNORE11', ctypes.c_uint),
+                ]
 
 
 class EventType:
