@@ -35,7 +35,7 @@ from wca.profiling import profiler
 from wca.runners import Runner
 from wca.storage import MetricPackage, DEFAULT_STORAGE
 from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
-    UncoreDerivedMetricsGenerator, DefaultPlatformDerivedMetricsGeneratorsFactory
+    UncoreDerivedMetricsGenerator, DefaultPlatformDerivedMetricsGeneratorsFactory, PMUNotAvailable
 
 log = logging.getLogger(__name__)
 
@@ -211,7 +211,13 @@ class MeasurementRunner(Runner):
         return None
 
     def _init_uncore_pmu(self, enable_derived_metrics):
-        cpus, pmu_events = _discover_pmu_uncore_imc_config(UNCORE_IMC_EVENTS)
+        try:
+            cpus, pmu_events = _discover_pmu_uncore_imc_config(UNCORE_IMC_EVENTS)
+        except PMUNotAvailable:
+            self._uncore_pmu = None
+            self._uncore_get_measurements = lambda : {}
+            return
+
 
         self._uncore_pmu = UncorePerfCounters(
             cpus=cpus,

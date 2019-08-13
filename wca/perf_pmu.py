@@ -174,12 +174,16 @@ UNCORE_IMC_EVENTS = [
     Event(name=UncoreMetricName.CAS_COUNT_WRITE, event=0x04, umask=0xc),  # * 64 to get bytes
 ]
 
+class PMUNotAvailable(Exception): pass
+
 def _discover_pmu_uncore_imc_config(events):
     from os.path import join
     base_path = '/sys/devices'
     imcs = [d for d in os.listdir(base_path) if d.startswith('uncore_imc_')]
     pmu_types = [int(open(join(base_path, imc, 'type')).read().rstrip()) for imc in imcs]
     pmu_cpus_set = set([open(join(base_path, imc, 'cpumask')).read().rstrip() for imc in imcs])
+    if len(pmu_cpus_set) == 0:
+        raise PMUNotAvailable()
     assert len(pmu_cpus_set) == 1
     pmu_cpus_csv = list(pmu_cpus_set)[0]
     cpus = list(map(int, pmu_cpus_csv.split(',')))
