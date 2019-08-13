@@ -22,26 +22,9 @@ spec:
           command:
             - sh
             - -c
-            - "taskset -c $cpus stress-ng $extra >/var/log/app-stdout.log 2>/var/log/app-stderr.log"
+            - "taskset -c $cpus stress-ng"
           env:
             - name: cpus
               valueFrom: {configMapKeyRef: { name: stress, key: cpus }}
             - name: extra
               valueFrom: {configMapKeyRef: { name: stress, key: extra }}
-          volumeMounts:
-            - name: varlog
-              mountPath: /var/log
-        - name: monitor
-          image: prom/node_exporter
-          volumeMounts:
-            - name: varlog
-              mountPath: /var/log
-
-      # base on https://kubernetes.io/docs/concepts/cluster-administration/logging/#using-a-sidecar-container-with-the-logging-agent
-      volumes:
-        - name: varlog
-          emptyDir: {}
-
-
-
-

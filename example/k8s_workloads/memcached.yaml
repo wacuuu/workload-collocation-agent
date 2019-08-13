@@ -25,6 +25,7 @@ spec:
       labels:
         app: mutilate
     spec:
+      terminationGracePeriodSeconds: 0
       containers:
         - name: mutilate
           image: bplotka/mutilate
