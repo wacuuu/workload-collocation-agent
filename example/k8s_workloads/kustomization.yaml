@@ -1,33 +1,11 @@
 resources:
-#- redis.yaml
 - memcached.yaml
 - sysbench.yaml
-- stress.yaml
+
+bases:
+- stress
 
 namespace: default
-
-patchesJson6902:
-#- target: { group: apps, version: v1, kind: StatefulSet, name: redis}
-#  path: set_common.yaml
-
-- target: { group: apps, version: v1, kind: StatefulSet, name: memcached}
-  path: set_common.yaml
-- target: { group: apps, version: v1, kind: StatefulSet, name: mutilate}
-  path: set_common.yaml
-
-- target: { group: apps, version: v1, kind: StatefulSet, name: sysbench-small}
-  path: set_common.yaml
-- target: { group: apps, version: v1, kind: StatefulSet, name: sysbench-medium}
-  path: set_common.yaml
-- target: { group: apps, version: v1, kind: StatefulSet, name: sysbench-big}
-  path: set_common.yaml
-
-- target: { group: apps, version: v1, kind: StatefulSet, name: stress-small}
-  path: set_common.yaml
-- target: { group: apps, version: v1, kind: StatefulSet, name: stress-medium}
-  path: set_common.yaml
-- target: { group: apps, version: v1, kind: StatefulSet, name: stress-big}
-  path: set_common.yaml
 
 configMapGenerator:
 - name: memcached
@@ -44,16 +22,6 @@ configMapGenerator:
   - memcached_cpus=0-1000
   - memcached_extra=
   - mutilate_extra=
-
-- name: redis
-  literals:
-    - memtire_cpus=0-1000
-    - redis_cpus=0-1000
-    - datasize=1000
-    - keymaximum=100000
-    - ratio=1:1
-    - redis_extra=
-    - memtire_extra=
 
 - name: sysbench-small
   literals:
@@ -73,16 +41,3 @@ configMapGenerator:
     - cpus=0-1000
     - memory=128g
     - extra=
-
-- name: stress-small
-  literals:
-    - extra='--stream 1 --stream-l3-size=512m' # 6GB RSS
-    - cpus=0-1000
-- name: stress-medium
-  literals:
-    - extra='--stream 1 --stream-l3-size=2g' # 24GB RSS
-    - cpus=0-1000
-- name: stress-big
-  literals:
-    - extra='--stream 8 --stream-l3-size=2g' # 24GB RSS + 8 threads
-    - cpus=0-1000
