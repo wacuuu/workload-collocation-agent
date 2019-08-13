@@ -14,7 +14,7 @@
 
 import os
 from common import application, command, json, pod, wrapper_kafka_brokers, wrapper_log_level, \
-    wrapper_kafka_topic, wrapper_labels, slo
+    wrapper_kafka_topic, wrapper_labels, slo, cpu_list
 
 
 # ----------------------------------------------------------------------------------------------------
@@ -27,9 +27,9 @@ stressor = os.environ.get('stressor') or 'stream'
 number_workers = int(os.environ.get('number_workers') or 1)
 # ----------------------------------------------------------------------------------------------------
 
-stress_ng_cmd = ('"while true; do stress-ng --{}={} --timeout={}'
+stress_ng_cmd = ('"while true; do taskset -c {} stress-ng --{}={} --timeout={}'
                  ' --metrics --metrics-brief -Y /dev/stdout;done"').format(
-                    stressor, number_workers, timeout)
+                    cpu_list, stressor, number_workers, timeout)
 
 stress_ng_run_cmd = """/usr/bin/stress_ng_wrapper.pex --command '{stress_ng_cmd}' \
 --metric_name_prefix {metric_name_prefix} \

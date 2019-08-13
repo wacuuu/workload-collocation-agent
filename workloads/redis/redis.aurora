@@ -44,7 +44,7 @@ jobs = [
                 ),
                 Process(
                     name='redis',
-                    cmdline='redis-server redis.conf'
+                    cmdline='taskset -c {} redis-server redis.conf'.format(cpu_list)
                     ),
             ],
         ),

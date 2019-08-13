@@ -91,9 +91,9 @@ injector_cmd = ("""
     .format(jar=specjbb_jar, config=config_path))
 
 backend_cmd = ("""
-    java -Xms4g -Xmx4g -Xmn2g -XX:-UseBiasedLocking -XX:+UseParallelOldGC \
+    taskset -c {cpu_list} java -Xms4g -Xmx4g -Xmn2g -XX:-UseBiasedLocking -XX:+UseParallelOldGC \
         -jar {jar} -m backend -p {config} -G GRP1 -J JVM_A"""
-    .format(jar=specjbb_jar, config=config_path))
+    .format(cpu_list=cpu_list, jar=specjbb_jar, config=config_path))
 
 config_create_process = Process(name='specjbb_build_config', cmdline=config_create_cmd)
 controller_process = Process(name='specjbb_controller',	cmdline=controller_cmd)

@@ -18,17 +18,26 @@ import pytest
 
 from wca.allocators import AllocationConfiguration
 from wca.cgroups import Cgroup, CgroupType, CgroupResource
-from wca.metrics import MetricName
+from wca.metrics import MetricName, MissingMeasurementException
 from tests.testing import create_open_mock
 
 
-@patch('builtins.open', mock_open(read_data='100'))
+@patch('wca.cgroups.log.warning')
+@patch('builtins.open', side_effect=FileNotFoundError())
+def test_get_measurements_not_found_cgroup(mock_file, mock_log_warning):
+    cgroup = Cgroup('/some/foo1', platform_cpus=1)
+    with pytest.raises(MissingMeasurementException):
+        cgroup.get_measurements()
+
+
+@patch('builtins.open', create_open_mock(
+    {'/sys/fs/cgroup/cpu/some/foo1/cpuacct.usage': '100',
+     '/sys/fs/cgroup/memory/some/foo1/memory.usage_in_bytes': '100'}))
 def test_get_measurements():
     cgroup = Cgroup('/some/foo1', platform_cpus=1)
     measurements = cgroup.get_measurements()
     assert measurements == {MetricName.CPU_USAGE_PER_TASK: 100,
-                            MetricName.MEM_USAGE_PER_TASK: 100,
-                            }
+                            MetricName.MEM_USAGE_PER_TASK: 100}
 
 
 @patch('builtins.open', mock_open(read_data='100'))

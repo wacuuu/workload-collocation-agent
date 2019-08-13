@@ -19,7 +19,7 @@ import pytest
 
 from wca.config import ValidationError
 from wca.mesos import MesosNode, MesosTask
-from tests.testing import create_json_fixture_mock
+from tests.testing import create_json_fixture_mock, create_open_mock
 
 
 @patch('requests.post', return_value=create_json_fixture_mock('mesos_get_state', __file__))
@@ -43,11 +43,22 @@ def test_get_tasks(find_cgroup_mock, post_mock):
                 'org.apache.aurora.metadata.name': 'cassandra--9043',
                 'org.apache.aurora.metadata.workload_uniq_id': '9043',
                 'org.apache.aurora.metadata.application': 'cassandra',
-                'org.apache.aurora.metadata.load_generator': 'ycsb'},
+                'org.apache.aurora.metadata.load_generator': 'ycsb',
+                'task_name': 'root/staging14/cassandra--9043'},
         name='root/staging14/cassandra--9043',
         task_id='root-staging14-cassandra--9043-0-9ee9fbf1-b51b-4bb3-9748-6a4327fd7e0e',
         resources={'mem': 2048.0, 'cpus': 8.0, 'disk': 10240.0}
     )
+
+
+@patch('requests.post', return_value=create_json_fixture_mock('mesos_get_state', __file__))
+@patch('builtins.open', new=create_open_mock({
+    "/proc/32620/cgroup": "2:cpuacct,cpu:/",
+}))
+def test_get_tasks_with_wrong_cgroup(post_mock):
+    node = MesosNode()
+    tasks = set(node.get_tasks())  # Wrap with set to make sure that hash is implemented.
+    assert len(tasks) == 0
 
 
 @pytest.mark.parametrize(

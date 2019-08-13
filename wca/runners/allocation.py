@@ -17,7 +17,8 @@ from typing import Dict, Callable, Any, List, Optional
 
 from wca import nodes, storage, platforms
 from wca import resctrl
-from wca.allocations import AllocationsDict, InvalidAllocations, AllocationValue
+from wca.allocations import AllocationsDict, InvalidAllocations, AllocationValue, \
+    MissingAllocationException
 from wca.allocators import TasksAllocations, AllocationConfiguration, AllocationType, Allocator, \
     TaskAllocations, RDTAllocation
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
@@ -33,7 +34,7 @@ from wca.resctrl_allocations import (RDTAllocationValue, RDTGroups,
                                      validate_mb_string,
                                      validate_l3_string)
 from wca.runners.detection import AnomalyStatistics
-from wca.runners.measurement import MeasurementRunner
+from wca.runners.measurement import MeasurementRunner, TaskLabelGenerator
 from wca.storage import MetricPackage, DEFAULT_STORAGE
 
 log = logging.getLogger(__name__)
@@ -205,6 +206,7 @@ class AllocationRunner(MeasurementRunner):
             remove_all_resctrl_groups: bool = False,
             event_names: Optional[List[str]] = None,
             enable_derived_metrics: bool = False,
+            tasks_label_generator: Dict[str, TaskLabelGenerator] = None,
             wss_reset_interval: int = 0,
     ):
 
@@ -214,7 +216,7 @@ class AllocationRunner(MeasurementRunner):
                          extra_labels, _allocation_configuration=self._allocation_configuration,
                          event_names=event_names, enable_derived_metrics=enable_derived_metrics,
                          wss_reset_interval=wss_reset_interval,
-                         )
+                         tasks_label_generator=tasks_label_generator)
 
         # Allocation specific.
         self._allocator = allocator
@@ -376,7 +378,14 @@ class AllocationRunner(MeasurementRunner):
 def _get_tasks_allocations(containers) -> TasksAllocations:
     tasks_allocations: TasksAllocations = {}
     for task, container in containers.items():
-        task_allocations = container.get_allocations()
+        try:
+            task_allocations = container.get_allocations()
+        except MissingAllocationException as e:
+            log.warning('One or more allocations are missing for '
+                        'container {} - ignoring! '
+                        '(because {})'.format(container, e))
+            continue
+
         tasks_allocations[task.task_id] = task_allocations
     return tasks_allocations
 

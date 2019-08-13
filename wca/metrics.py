@@ -39,9 +39,9 @@ class MetricName(str, Enum):
 
 
 class DerivedMetricName(str, Enum):
-    # instructions/cycles
+    # instructions/second
     IPS = 'ips'
-    # instructions/seconds
+    # instructions/cycle
     IPC = 'ipc'
     # (cache-references - cache_misses) / cache_references
     CACHE_HIT_RATIO = 'cache_hit_ratio'
@@ -118,15 +118,25 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricType.COUNTER,
             'Cache references'
         ),
+    MetricName.SCALING_FACTOR_MAX:
+        MetricMetadata(
+            MetricType.GAUGE,
+            'Perf metric scaling factor, MAX value'
+        ),
+    MetricName.SCALING_FACTOR_AVG:
+        MetricMetadata(
+            MetricType.GAUGE,
+            'Perf metric scaling factor, average from all CPUs'
+        ),
     DerivedMetricName.IPC:
         MetricMetadata(
             MetricType.GAUGE,
-            'Instructions per cycles'
+            'Instructions per cycle'
         ),
     DerivedMetricName.IPS:
         MetricMetadata(
             MetricType.GAUGE,
-            'Instructions per seconds'
+            'Instructions per second'
         ),
     DerivedMetricName.CACHE_HIT_RATIO:
         MetricMetadata(
@@ -198,8 +208,8 @@ def merge_measurements(measurements_list: List[Measurements]) -> \
 class BaseDerivedMetricsGenerator:
     """ Calculate derived metrics based on predefined rules:
 
-    ipc = instructions / cycles
-    ips = instructions / seconds
+    ipc = instructions / cycle
+    ips = instructions / second
     cache_hit_ratio = cache-reference - cache-misses / cache-references
     cache_misses_per_kilo_instructions = cache_misses / (instructions/1000)
     """
@@ -317,3 +327,8 @@ class DefaultTaskDerivedMetricsGeneratorFactory(BaseGeneratorFactory):
             return EvalBasedMetricsGenerator(derived_generator.get_measurements, self.extra_metrics)
         else:
             return derived_generator
+
+
+class MissingMeasurementException(Exception):
+    """when metric has not been collected with success"""
+    pass

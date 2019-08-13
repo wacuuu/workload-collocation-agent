@@ -21,7 +21,7 @@ from wca.detectors import convert_anomalies_to_metrics, \
     update_anomalies_metrics_with_task_information, Anomaly
 from wca.metrics import Metric, MetricType, BaseGeneratorFactory
 from wca.profiling import profiler
-from wca.runners.measurement import MeasurementRunner
+from wca.runners.measurement import MeasurementRunner, TaskLabelGenerator
 from wca.storage import MetricPackage, DEFAULT_STORAGE
 
 log = logging.getLogger(__name__)
@@ -89,6 +89,7 @@ class DetectionRunner(MeasurementRunner):
             extra_labels: Dict[Str, Str] = None,
             event_names: Optional[List[str]] = None,
             enable_derived_metrics: bool = False,
+            tasks_label_generator: Dict[str, TaskLabelGenerator] = None,
             wss_reset_interval: int = 0,
             task_derived_metrics_generators_factory: BaseGeneratorFactory=None,
             platform_derived_metrics_generators_factory: BaseGeneratorFactory=None,
@@ -96,6 +97,8 @@ class DetectionRunner(MeasurementRunner):
         super().__init__(node, metrics_storage,
                          action_delay, rdt_enabled,
                          extra_labels, event_names,
+                         enable_derived_metrics,
+                         tasks_label_generator,
                          enable_derived_metrics,
                          wss_reset_interval=wss_reset_interval,
                          task_derived_metrics_generators_factory=task_derived_metrics_generators_factory,

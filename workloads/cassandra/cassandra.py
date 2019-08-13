@@ -14,7 +14,7 @@
 
 import os
 from common import command, image_name, image_tag, initContainers, json, \
-    securityContext, volumeMounts, pod
+    securityContext, volumeMounts, pod, cpu_list
 
 # ----------------------------------------------------------------------------------------------------
 ###
@@ -67,7 +67,8 @@ cmd = ("cp /prep_config/cassandra.yaml /etc/cassandra &&"
        "cp /prep_config/cassandra-env.sh /etc/cassandra && "
        "MAX_HEAP_SIZE=\"{}M\" HEAP_NEWSIZE=\"{}M\" "
        "CASSANDRA_CONFIG=\"/etc/cassandra\" "
-       "/docker-entrypoint.sh".format(max_heap_size, heap_newsize))
+       "taskset -c {} /docker-entrypoint.sh".format(
+        max_heap_size, heap_newsize, cpu_list))
 command.append(cmd)
 
 json_format = json.dumps(pod)

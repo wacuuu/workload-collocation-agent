@@ -27,14 +27,22 @@ import tempfile
 import time
 from typing import List, Tuple, Dict, Optional
 
-import confluent_kafka
 from dataclasses import dataclass, field
 
-from wca.config import Numeric, Path, Str, IpPort
+from wca.config import Numeric, Path, Str, IpPort, ValidationError
 from wca import logger
 from wca.metrics import Metric, MetricType
 
 log = logging.getLogger(__name__)
+try:
+    import confluent_kafka
+except ModuleNotFoundError:
+    confluent_kafka = None
+    confluent_kafka_import_error = 'confluent_kafka python package not included in pex file'
+except ImportError:
+    confluent_kafka = None
+    confluent_kafka_import_error = 'confluent_kafka python package requires librdkafka ' \
+                                   'dynamic library which is absent on the system'
 
 
 class Storage(abc.ABC):
@@ -261,6 +269,22 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
     return ''.join(output)
 
 
+def check_kafka_dependency():
+    if confluent_kafka is None:
+        log.error(confluent_kafka_import_error)
+        raise ValidationError(confluent_kafka_import_error)
+
+
+def create_kafka_consumer(brokers_ips: str, extra_params: Dict):
+    config = extra_params or dict()
+    config.update({'bootstrap.servers': ",".join(brokers_ips)})
+    return confluent_kafka.Producer(config)
+
+
+class KafkaConsumerInitializationException(Exception):
+    pass
+
+
 @dataclass
 class KafkaStorage(Storage):
     """Storage for saving metrics in Kafka.
@@ -280,20 +304,15 @@ class KafkaStorage(Storage):
     extra_config: Dict[Str, Str] = None
 
     def __post_init__(self) -> None:
+        check_kafka_dependency()
         try:
-            self._create_producer()
-        except Exception:
-            log.exception('Exception durning kafka consumer initialization:')
-            raise
-
+            self.producer = create_kafka_consumer(self.brokers_ips, self.extra_config)
+        except Exception as e:
+            log.exception('Exception during kafka consumer initialization:')
+            raise KafkaConsumerInitializationException(str(e))
         self.error_from_callback = None
         """used to pass error from within callback_on_delivery
           (called from different thread) to KafkaStorage instance"""
-
-    def _create_producer(self) -> None:
-        config = self.extra_config or dict()
-        config.update({'bootstrap.servers': ",".join(self.brokers_ips)})
-        self.producer = confluent_kafka.Producer(config)
 
     def callback_on_delivery(self, err, msg) -> None:
         """Called once for each message produced to indicate delivery result.

@@ -23,7 +23,7 @@ from typing import List, Dict, Callable
 
 import wca
 from wca.metrics import Metric, MetricType
-from wca.storage import KafkaStorage, Storage
+from wca.storage import Storage
 
 log = logging.getLogger(__name__)
 ParseFunc = Callable[[TextIOWrapper, str, str, Dict[str, str]], List[Metric]]
@@ -84,7 +84,7 @@ def default_parse(input: TextIOWrapper, regexp: str, separator: str = None,
     return new_metrics
 
 
-def kafka_store_with_retry(storage: Storage, metrics: List[Metric]):
+def store_with_retry(storage: Storage, metrics: List[Metric]):
     # Try MAX_ATTEMPTS times to send metrics to kafka server
     # with increasing sleep time between attempts
     backoff_delay = 1
@@ -92,7 +92,7 @@ def kafka_store_with_retry(storage: Storage, metrics: List[Metric]):
         try:
             storage.store(metrics)
         except wca.storage.FailedDeliveryException:
-            log.warning("Failed to deliver message to kafka, "
+            log.warning("Failed to deliver message to storage, "
                         "tried {0} times".format(attempt + 1))
             if attempt == MAX_ATTEMPTS - 1:
                 raise
@@ -186,7 +186,7 @@ def parse_loop(parse: Callable[[], List[Metric]], storage: Storage,
                     log.debug("Found metric: {}".format(metric))
                 parse_loop.last_valid_metrics = parse_loop.metrics.copy()
                 if storage is not None:
-                    kafka_store_with_retry(storage, parse_loop.last_valid_metrics)
+                    store_with_retry(storage, parse_loop.last_valid_metrics)
 
         except BaseException:
             _thread.interrupt_main()

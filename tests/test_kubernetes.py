@@ -29,7 +29,9 @@ def ktask(name, qos):
               qos=qos,
               labels={'exampleKey': 'value', QOS_LABELNAME: qos},
               resources={'requests_cpu': 0.25,
-                         'requests_memory': float(64*1024**2)},
+                         'requests_memory': float(64*1024**2),
+                         'cpus': 0.25,
+                         'mem': float(64 * 1024 ** 2)},
               cgroup_path='/kubepods/{}/pod{}'.format(qos, name),
               subcgroups_paths=['/kubepods/{}/pod{}/t1'.format(qos, name),
                                 '/kubepods/{}/pod{}/t2'.format(qos, name)])
@@ -42,9 +44,13 @@ def test_get_tasks(get_mock):
                           name='test',
                           task_id='4d6a81df-3448-11e9-8e1d-246e96663c22',
                           qos='burstable',
-                          labels={'exampleKey': 'value', QOS_LABELNAME: 'burstable'},
+                          labels={'exampleKey': 'value',
+                                  QOS_LABELNAME: 'burstable',
+                                  'task_name': 'default/test'},
                           resources={'requests_cpu': 0.25,
-                                     'requests_memory': float(64*1024**2)},
+                                     'requests_memory': float(64*1024**2),
+                                     'cpus': 0.25,
+                                     'mem': float(64 * 1024 ** 2)},
                           cgroup_path='/kubepods/burstable/pod4d6a81df'
                                       '-3448-11e9-8e1d-246e96663c22',
                           subcgroups_paths=['/kubepods/burstable/pod4d'
@@ -56,7 +62,7 @@ def test_get_tasks(get_mock):
                           name='test2',
                           task_id='567975a0-3448-11e9-8e1d-246e96663c22',
                           qos='besteffort',
-                          labels={QOS_LABELNAME: 'besteffort'},
+                          labels={QOS_LABELNAME: 'besteffort', 'task_name': 'default/test2'},
                           resources={},
                           cgroup_path='/kubepods/besteffort/pod567975a0-3448-'
                                       '11e9-8e1d-246e96663c22',
@@ -105,7 +111,9 @@ def test_calculate_resources_with_requests_and_limits():
     assert {'limits_cpu': 0.25,
             'limits_memory': float(64*1024**2),
             'requests_cpu': 0.25,
-            'requests_memory': float(64*1024**2)
+            'requests_memory': float(64*1024**2),
+            'cpus': 0.25,
+            'mem': float(64*1024**2)
             } == _calculate_pod_resources(container_spec)
 
 
@@ -115,7 +123,10 @@ def test_calculate_resources_multiple_containers():
         {'resources': {'requests': {'cpu': '100m', 'memory': '32Mi'}}}
     ]
     assert {'requests_cpu': 0.35, 'requests_memory':
-            float(67108864 + 32 * 1024 ** 2)} == _calculate_pod_resources(container_spec)
+            float(67108864 + 32 * 1024 ** 2),
+            'cpus': 0.35,
+            'mem': float(67108864 + 32 * 1024 ** 2)
+            } == _calculate_pod_resources(container_spec)
 
 
 _POD_ID = '12345-67890'

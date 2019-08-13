@@ -19,8 +19,9 @@ from typing import Optional, List, Union
 from dataclasses import dataclass
 
 from wca import logger
+from wca.allocations import MissingAllocationException
 from wca.allocators import TaskAllocations, AllocationType, AllocationConfiguration
-from wca.metrics import Measurements, MetricName
+from wca.metrics import Measurements, MetricName, MissingMeasurementException
 
 log = logging.getLogger(__name__)
 
@@ -84,27 +85,28 @@ class Cgroup:
         self.cgroup_cpuset_fullpath = os.path.join(CgroupSubsystem.CPUSET, relative_cgroup_path)
         self.cgroup_perf_event_fullpath = os.path.join(
                 CgroupSubsystem.PERF_EVENT, relative_cgroup_path)
-        self.cgroup_memory_fullpath = os.path.join(CgroupSubsystem.MEMORY, relative_cgroup_path)
+        self.cgroup_memory_fullpath = os.path.join(CgroupSubsystem.MEMORY,
+                                                   relative_cgroup_path)
 
     def get_measurements(self) -> Measurements:
         try:
             with open(os.path.join(self.cgroup_cpu_fullpath, CgroupResource.CPU_USAGE)) as \
                     cpu_usage_file:
                 cpu_usage = int(cpu_usage_file.read())
-        except FileNotFoundError:
-            log.warning('Could not read measurements for cgroup %s. ', self.cgroup_path)
-            return {}
+        except FileNotFoundError as e:
+            raise MissingMeasurementException(
+                'File {} is missing. Cpu usage unavailable.'.format(e.filename))
 
         measurements = {MetricName.CPU_USAGE_PER_TASK: cpu_usage}
 
         try:
-            with open(os.path.join(self.cgroup_memory_fullpath, CgroupResource.MEMORY_USAGE)) as \
-                    memory_usage_file:
+            with open(os.path.join(self.cgroup_memory_fullpath,
+                                   CgroupResource.MEMORY_USAGE)) as memory_usage_file:
                 memory_usage = int(memory_usage_file.read())
             measurements[MetricName.MEM_USAGE_PER_TASK] = memory_usage
-        except FileNotFoundError:
-            log.warning('Could not read memory usage measurement for cgroup %s.', self.cgroup_path)
-            return {}
+        except FileNotFoundError as e:
+            raise MissingMeasurementException(
+                'File {} is missing. Memory usage unavailable.'.format(e.filename))
 
         return measurements
 
@@ -125,10 +127,15 @@ class Cgroup:
     def _read(self, cgroup_control_file: str, cgroup_control_type: CgroupType) -> int:
         """Read helper to store any and convert value from cgroup control file."""
         path = self._get_proper_path(cgroup_control_file, cgroup_control_type)
-        with open(path) as file:
-            raw_value = int(file.read())
-            log.log(logger.TRACE, 'cgroup: read %s=%r', file.name, raw_value)
-            return raw_value
+        try:
+            with open(path) as file:
+                raw_value = int(file.read())
+                log.log(logger.TRACE, 'cgroup: read %s=%r', file.name, raw_value)
+        except FileNotFoundError as e:
+            raise MissingAllocationException(
+                'File {} is missing. Allocation unavailable.'.format(e.filename))
+
+        return raw_value
 
     def _write(
             self, cgroup_control_file: str, value: Union[int, str],

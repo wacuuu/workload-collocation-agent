@@ -190,3 +190,8 @@ class BoxedNumeric(AllocationValue):
             # If value is not changed, then value is the same as
             # new so we can return any of them (lets return the new one) as target
             return current, None
+
+
+class MissingAllocationException(Exception):
+    """when allocation has not been collected with success"""
+    pass

@@ -16,6 +16,7 @@
 import errno
 from unittest.mock import patch, mock_open, call, Mock, MagicMock
 
+from wca.metrics import MissingMeasurementException
 from wca.resctrl import ResGroup
 from wca.resctrl import RESCTRL_ROOT_NAME
 from tests.testing import create_open_mock
@@ -62,6 +63,14 @@ def test_resgroup_sync_no_space_left_on_device(makedirs_mock, exists_mock, log_w
 def test_get_measurements(*mock):
     resgroup = ResGroup(name=RESCTRL_ROOT_NAME)
     assert {'memory_bandwidth': 2, 'llc_occupancy': 2} == \
+        resgroup.get_measurements('best_efforts', True, True)
+
+
+@patch('os.listdir', return_value=['1', '2'])
+@patch('builtins.open', side_effect=FileNotFoundError())
+def test_get_measurements_race(*mock):
+    resgroup = ResGroup(name=RESCTRL_ROOT_NAME)
+    with pytest.raises(MissingMeasurementException):
         resgroup.get_measurements('best_efforts', True, True)
 
 

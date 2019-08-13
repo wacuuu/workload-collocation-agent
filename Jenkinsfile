@@ -26,22 +26,29 @@ pipeline {
                 }
             }
         }
+        stage("Build WCA pex") {
+            steps {
+                sh '''
+                  make wca_package_in_docker
+                '''
+            }
+        }
         stage("Build pex files") {
             steps {
                 sh '''
-                  make venv dist
+                  make venv wrapper_package
                 '''
                 archiveArtifacts(artifacts: "dist/**")
             }
         }
-	stage("Check code with bandit") {
-	    steps {
-		sh '''
-		  make bandit bandit_pex
-	        '''
-                archiveArtifacts(artifacts: "wca-bandit.html, wca-pex-bandit.html")
-	   }
-	}
+        stage("Check code with bandit") {
+             steps {
+             sh '''
+               make bandit bandit_pex
+             '''
+             archiveArtifacts(artifacts: "wca-bandit.html, wca-pex-bandit.html")
+           }
+        }
         stage("Build and push Workload Collocation Agent Docker image") {
             steps {
                 sh '''
@@ -58,12 +65,12 @@ pipeline {
                 stage("Using tester") {
                     steps {
                         sh '''
-						sudo bash -c "
-						export PYTHONPATH="$(pwd):$(pwd)/tests/tester"
-						dist/wca.pex -c $(pwd)/tests/tester/configs/tester_example.yaml \
-						-r tester:Tester -r tester:MetricCheck -r tester:FileCheck \
-						--log=debug --root
-						"
+                        sudo bash -c "
+                        export PYTHONPATH="$(pwd):$(pwd)/tests/tester"
+                        dist/wca.pex -c $(pwd)/tests/tester/configs/tester_example.yaml \
+                        -r tester:Tester -r tester:MetricCheck -r tester:FileCheck \
+                        --log=debug --root
+                        "
                     '''
                     }
                 }
@@ -85,7 +92,6 @@ pipeline {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/redis:${GIT_COMMIT}
                     IMAGE_DIR=${WORKSPACE}/workloads/redis
-                    cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
                     '''

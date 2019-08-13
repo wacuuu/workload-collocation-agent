@@ -14,10 +14,11 @@
 
 
 import pytest
+from itertools import chain
 
 from wca.runners.measurement import sanitize_label
 from wca.mesos import create_metrics
-from wca.metrics import Metric, merge_measurements
+from wca.metrics import Metric, merge_measurements, MetricName, DerivedMetricName, METRICS_METADATA
 
 
 @pytest.mark.parametrize('label_key,expected_label_key', (
@@ -57,3 +58,8 @@ def test_create_metrics(task_measurements, expected_metrics):
 ))
 def test_merge_measurements(measurements_list, expected_merge):
     assert merge_measurements(measurements_list) == expected_merge
+
+
+def test_metric_meta_exists():
+    for metric_name in chain(MetricName, DerivedMetricName):
+        assert metric_name in METRICS_METADATA
