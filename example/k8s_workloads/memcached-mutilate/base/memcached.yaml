@@ -6,7 +6,7 @@ metadata:
   labels:
     workload: memcached-mutilate
 spec:
-  replicas: 1
+  replicas: 0
   serviceName: memcached
   podManagementPolicy: Parallel
   selector:

@@ -24,7 +24,7 @@ spec:
           command:
             - sh
             - -c
-            - "taskset -c $cpus stress-ng"
+            - "taskset -c $cpus stress-ng $extra"
           env:
             - name: cpus
               valueFrom: {configMapKeyRef: { name: stress, key: cpus }}

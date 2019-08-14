@@ -1,29 +1,5 @@
-resources:
-- sysbench.yaml
-
 bases:
 - stress
-- redis-memtire
-- memcached-mutilate/base
-
-namespace: default
-
-configMapGenerator:
-- name: sysbench-small
-  literals:
-  - threads=4
-  - cpus=0-1000
-  - memory=16g
-  - extra=
-- name: sysbench-medium
-  literals:
-    - threads=8
-    - cpus=0-1000
-    - memory=64g
-    - extra=
-- name: sysbench-big
-  literals:
-    - threads=16
-    - cpus=0-1000
-    - memory=128g
-    - extra=
+#- redis-memtire
+- memcached-mutilate
+- sysbench

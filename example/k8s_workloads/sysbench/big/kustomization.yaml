@@ -1,0 +1,11 @@
+nameSuffix: -big
+
+bases:
+- ../base
+
+configMapGenerator:
+- name: sysbench
+  behavior: merge
+  literals:
+    - threads=16
+    - memory=128g
