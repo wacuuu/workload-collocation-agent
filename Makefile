@@ -11,8 +11,7 @@ ENV_SAFE = env PYTHONPATH=. INCLUDE_UNSAFE_CONFLUENT_KAFKA_WHEEL=no
 ENV_UNSAFE = env PYTHONPATH=. INCLUDE_UNSAFE_CONFLUENT_KAFKA_WHEEL=yes
 
 OPTIONAL_MODULES =
-ifeq ($(OPTIONAL_FEATURES),kafka_storage)
-	OPTIONAL_MODULES = 'confluent-kafka-python'
+ifeq ($(OPTIONAL_FEATURES),kafka_storage) OPTIONAL_MODULES = 'confluent-kafka-python'
 endif
 
 
@@ -42,7 +41,9 @@ bandit_pex:
 
 unit:
 	@echo Running unit tests.
+	env PIPENV_QUIET=true pipenv install flask
 	pipenv run env PYTHONPATH=.:workloads/wrapper pytest --cov-report term-missing --cov=wca tests --ignore=tests/e2e/test_wca_metrics.py
+	env PIPENV_QUIET=true pipenv uninstall flask
 
 junit:
 	@echo Running unit tests.
