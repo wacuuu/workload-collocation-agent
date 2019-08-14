@@ -1,8 +1,8 @@
-nameSuffix: -high-mem
+nameSuffix: -big
 #commonLabels:
 #        app: redis
 bases:
-- ../../base/workloads
+- ../base
 #patchesStrategicMerge:
 #- overlay.yaml
 
@@ -16,6 +16,6 @@ configMapGenerator:
     - datasize=1024
     - pipeline=1
     - keymaximum=40000
-    - ratio=1:20
+    - ratio=1:10
     - redis_extra=
     - memtire_extra=""

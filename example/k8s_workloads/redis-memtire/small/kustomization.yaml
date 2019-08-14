@@ -2,7 +2,7 @@ nameSuffix: -small
 #commonLabels:
 #        app: redis
 bases:
-- ../../base/workloads
+- ../base
 #patchesStrategicMerge:
 #- overlay.yaml
 

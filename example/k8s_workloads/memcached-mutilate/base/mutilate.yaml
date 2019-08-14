@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: memcached
+spec:
+  clusterIP: None
+  selector:
+    app: memcached
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mutilate
+  labels:
+    workload: memcached-mutilate
+spec:
+  replicas: 1
+  serviceName: memcached
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: mutilate
+  template:
+    metadata:
+      labels:
+        app: mutilate
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: mutilate
+          image: bplotka/mutilate
+          env:
+            - name: threads
+              valueFrom: {configMapKeyRef: { name: mutilate, key: threads }}
+            - name: qps
+              valueFrom: {configMapKeyRef: { name: mutilate, key: qps }}
+            - name: time
+              valueFrom: {configMapKeyRef: { name: mutilate, key: time }}
+            - name: conns
+              valueFrom: {configMapKeyRef: { name: mutilate, key: conns }}
+            - name: records
+              valueFrom: {configMapKeyRef: { name: mutilate, key: records }}
+            - name: value
+              valueFrom: {configMapKeyRef: { name: mutilate, key: value }}
+            - name: extra
+              valueFrom: {configMapKeyRef: { name: mutilate, key: extra }}
+            - name: cpus
+              valueFrom: {configMapKeyRef: { name: mutilate, key: cpus }}
+            - name: podname
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+          command:
+            - bash
+            - -c
+            - "identifier=${podname#mutilate-}; export service=${identifier%-[+[:digit:]]}; target=memcached-${identifier}.memcached-${service}; echo $target;
+               echo loading && ./mutilate -T 1 -s ${target}:11211 --loadonly -r $records -V $value -v && echo started && \
+               taskset -c $cpus ./mutilate -C $conns -T $threads -t $time -s ${target}:11211 --noload --scan $qps:$qps:0 -r $records -V $value $extra"
