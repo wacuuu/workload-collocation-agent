@@ -24,7 +24,7 @@ from typing import Optional, List
 from dataclasses import dataclass
 
 from wca.config import assure_type, Numeric, ValidationError
-from wca.security import SSL
+from wca.security import SSL, HTTPSAdapter, SecureSequentialThreadingHandler
 
 log = logging.getLogger(__name__)
 
@@ -120,6 +120,7 @@ class ZookeeperDatabase(Database):
                 self._client = KazooClient(
                         hosts=self.hosts,
                         timeout=self.timeout,
+                        handler=SecureSequentialThreadingHandler(),
                         use_ssl=True,
                         verify_certs=True,
                         ca=self.ssl.server_verify,
@@ -130,6 +131,7 @@ class ZookeeperDatabase(Database):
                 self._client = KazooClient(
                         hosts=self.hosts,
                         timeout=self.timeout,
+                        handler=SecureSequentialThreadingHandler(),
                         use_ssl=True,
                         verify_certs=self.ssl.server_verify,
                         certfile=self.ssl.client_cert_path,
@@ -193,7 +195,9 @@ class EtcdDatabase(Database):
             try:
                 full_url = '{}{}{}'.format(host, self.api_path, url)
                 if self.ssl:
-                    r = requests.post(
+                    s = requests.Session()
+                    s.mount(host, HTTPSAdapter())
+                    r = s.post(
                             full_url,
                             data=json.dumps(data),
                             timeout=self.timeout,

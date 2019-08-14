@@ -14,12 +14,21 @@
 
 
 import ctypes
+import errno
 import logging
 import os
+import socket
+import ssl
+import time
+from kazoo.handlers.threading import SequentialThreadingHandler
+from kazoo.handlers.utils import _set_default_tcpsock_options
+from requests.adapters import HTTPAdapter
+from urllib3.util.ssl_ import create_urllib3_context
 from dataclasses import dataclass
 from typing import Optional, Union
 from wca import logger
 from wca.config import ValidationError, Path
+
 
 LIBC = ctypes.CDLL('libc.so.6', use_errno=True)
 
@@ -119,7 +128,6 @@ class SSL:
     client_key_path: Optional[Path(absolute=True, mode=os.R_OK)] = None
 
     def __post_init__(self):
-
         if self.client_key_path and not self.client_cert_path:
             # There is only client key path, that is wrong, throw error.
             raise ValidationError(
@@ -134,3 +142,135 @@ class SSL:
 
         # Otherwise return None or path to .pem file which consists client cert and key.
         return self.client_cert_path
+
+
+SECURE_CIPHERS = ':'.join([
+    #   Commented algorithms are not supported in Centos7
+    'ECDHE-ECDSA-AES128-GCM-SHA256',
+    'ECDHE-RSA-AES128-GCM-SHA256',
+    'ECDH-ECDSA-AES128-GCM-SHA256',
+    'DHE-RSA-AES128-GCM-SHA256',
+    'AES128-GCM-SHA256',
+    #   'ECDHE-ECDSA-AES128-CCM',
+    'ECDHE-ECDSA-AES128-SHA256',
+    'ECDHE-RSA-AES128-SHA256',
+    #   'ECDHE-ECDSA-AES256-CCM',
+    #   'AES128-CCM',
+    'AES128-SHA256',
+    #   'AES256-CCM',
+    'AES256-SHA256',
+    #   'DHE-RSA-AES128-CCM',
+    'DHE-RSA-AES128-SHA256',
+    #   'DHE-RSA-AES256-CCM',
+    'DHE-RSA-AES256-SHA256',
+    'DHE-DSS-AES128-GCM-SHA256',
+    'DHE-DSS-AES128-SHA256',
+    'DHE-DSS-AES256-SHA256',
+    #   '@SECLEVEL=2',
+    ])
+
+SECURE_OPTIONS = 0
+SECURE_OPTIONS |= ssl.OP_NO_SSLv2
+SECURE_OPTIONS |= ssl.OP_NO_SSLv3
+SECURE_OPTIONS |= ssl.OP_NO_TLSv1
+SECURE_OPTIONS |= ssl.OP_NO_COMPRESSION
+
+
+#   Definition copied from kazoo.handlers.utils and modified.
+#   Same code is commited in master but not released yet.
+#   After release version 2.6.2 it would be removed.
+def create_tcp_connection(module, address, timeout=None,
+                          use_ssl=False, ca=None, certfile=None,
+                          keyfile=None, keyfile_password=None,
+                          verify_certs=True, options=None, ciphers=None):
+    end = None
+    if timeout is None:
+        # thanks to create_connection() developers for
+        # this ugliness...
+        timeout = module.getdefaulttimeout()
+    if timeout is not None:
+        end = time.time() + timeout
+    sock = None
+
+    while True:
+        timeout_at = end if end is None else end - time.time()
+        # The condition is not '< 0' here because socket.settimeout treats 0 as
+        # a special case to put the socket in non-blocking mode.
+        if timeout_at is not None and timeout_at <= 0:
+            break
+
+        if use_ssl:
+            # Disallow use of SSLv2 and V3 (meaning we require TLSv1.0+)
+            context = ssl.SSLContext(ssl.PROTOCOL_SSLv23)
+
+            if options is not None:
+                context.options = options
+            else:
+                context.options |= ssl.OP_NO_SSLv2
+                context.options |= ssl.OP_NO_SSLv3
+
+            if ciphers:
+                context.set_ciphers(ciphers)
+
+            # Load default CA certs
+            context.load_default_certs(ssl.Purpose.SERVER_AUTH)
+            context.verify_mode = (
+                ssl.CERT_OPTIONAL if verify_certs else ssl.CERT_NONE
+            )
+            if ca:
+                context.load_verify_locations(ca)
+            if certfile and keyfile:
+                context.verify_mode = (
+                    ssl.CERT_REQUIRED if verify_certs else ssl.CERT_NONE
+                )
+                context.load_cert_chain(certfile=certfile,
+                                        keyfile=keyfile,
+                                        password=keyfile_password)
+            try:
+                # Query the address to get back it's address family
+                addrs = socket.getaddrinfo(address[0], address[1], 0,
+                                           socket.SOCK_STREAM)
+                conn = context.wrap_socket(module.socket(addrs[0][0]))
+                conn.settimeout(timeout_at)
+                conn.connect(address)
+                sock = conn
+                break
+            except ssl.SSLError:
+                raise
+        else:
+            try:
+                # if we got a timeout, lets ensure that we decrement the time
+                # otherwise there is no timeout set and we'll call it as such
+                sock = module.create_connection(address, timeout_at)
+                break
+            except Exception as ex:
+                errnum = ex.errno if isinstance(ex, OSError) else ex[0]
+                if errnum == errno.EINTR:
+                    continue
+                raise
+
+    if sock is None:
+        raise module.error
+
+    _set_default_tcpsock_options(module, sock)
+    return sock
+
+
+class HTTPSAdapter(HTTPAdapter):
+    """The HTTPs Adapter for urllib3. Provides better security.
+    """
+    def init_poolmanager(self, *args, **kwargs):
+        ssl_context = create_urllib3_context(options=SECURE_OPTIONS, ciphers=SECURE_CIPHERS)
+        kwargs['ssl_context'] = ssl_context
+        return super(HTTPSAdapter, self).init_poolmanager(*args, **kwargs)
+
+    def proxy_manager_for(self, *args, **kwargs):
+        ssl_context = create_urllib3_context(options=SECURE_OPTIONS, ciphers=SECURE_CIPHERS)
+        kwargs['ssl_context'] = ssl_context
+        return super(HTTPSAdapter, self).proxy_manager_for(*args, **kwargs)
+
+
+class SecureSequentialThreadingHandler(SequentialThreadingHandler):
+    def create_connection(self, *args, **kwargs):
+        return create_tcp_connection(socket, options=SECURE_OPTIONS, ciphers=SECURE_CIPHERS,
+                                     *args, **kwargs)
