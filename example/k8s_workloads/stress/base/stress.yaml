@@ -30,3 +30,6 @@ spec:
               valueFrom: {configMapKeyRef: { name: stress, key: cpus }}
             - name: extra
               valueFrom: {configMapKeyRef: { name: stress, key: extra }}
+  # required for workaround bug with kustomize https://github.com/kubernetes-sigs/kustomize/issues/504
+  # when using commonLabels
+  volumeClaimTemplates: []

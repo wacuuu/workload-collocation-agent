@@ -1,0 +1,14 @@
+nameSuffix: -medium
+bases:
+- ../base
+
+commonLabels:
+  app: memcached-medium
+
+configMapGenerator:
+- name: mutilate
+  behavior: merge
+  literals:
+  - value=10000      # 10k
+  - records=1000000  # 1M        total = 10GB
+  - qps=1000000      # 1M

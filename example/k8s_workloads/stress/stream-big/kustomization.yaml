@@ -2,6 +2,9 @@ nameSuffix: -stream-big
 bases:
 - ../base
 
+commonLabels:
+  app: stress-stream-big
+
 configMapGenerator:
 - name: stress
   behavior: merge

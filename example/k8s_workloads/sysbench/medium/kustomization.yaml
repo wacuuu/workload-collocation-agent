@@ -3,6 +3,10 @@ nameSuffix: -medium
 bases:
 - ../base
 
+commonLabels:
+  app: sysbench-big
+
+
 configMapGenerator:
 - name: sysbench
   behavior: merge

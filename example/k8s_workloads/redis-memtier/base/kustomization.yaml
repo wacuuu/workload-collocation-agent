@@ -1,0 +1,19 @@
+resources:
+- redis.yaml
+- memtier.yaml
+
+configMapGenerator:
+  - name: redis
+    literals:
+      - cpus=0-1000
+      - extra=""
+  - name: memtier
+    literals:
+      - cpus=0-1000
+      - extra=""
+      - clients=200
+      - threads=4
+      - datasize=1024
+      - pipeline=1
+      - keymaximum=40000
+      - ratio=1:10

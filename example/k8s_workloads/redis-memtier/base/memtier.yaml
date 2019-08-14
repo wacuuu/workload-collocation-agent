@@ -4,7 +4,7 @@ kind: StatefulSet
 metadata:
   name: memtier
   labels:
-    workload: redis-memtire
+    workload: redis-memtier
 
 spec:
   replicas: 0
@@ -20,16 +20,16 @@ spec:
     spec:
       terminationGracePeriodSeconds: 0
       containers:
-        - name: memtire
+        - name: memtier
           image: 100.64.176.12:80/wca/memtier_benchmark:e12ffdeaeaa12f8d9470bde0ed78b2a78cf855bc
           command:
             - bash
             - -c
             - "export identifier=${podname#memtier-}; export service=${identifier%-[+[:digit:]]};
-            taskset -c $memtire_cpus memtier_benchmark --run-count=1 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
+            taskset -c $cpus memtier_benchmark --run-count=1 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
             &&
-            taskset -c $memtire_cpus memtier_benchmark_wrapper.pex \
-            --command '\"while true; do memtier_benchmark --run-count=1 --test-time=10 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $memtire_extra && sleep 1.2; done\"' \
+            taskset -c $cpus memtier_benchmark_wrapper.pex \
+            --command '\"while true; do memtier_benchmark --run-count=1 --test-time=10 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $extra && sleep 1.2; done\"' \
             --log_level DEBUG \
             --stderr 0 \
             --labels '{\"workload\": \"redis\"}' \
@@ -42,21 +42,21 @@ spec:
             - name: podname
               valueFrom: {fieldRef: {fieldPath: metadata.name}}
             - name: threads
-              valueFrom: {configMapKeyRef: { name: redis-config, key: threads }}
+              valueFrom: {configMapKeyRef: { name: memtier, key: threads }}
             - name: clients
-              valueFrom: {configMapKeyRef: { name: redis-config, key: clients }}
+              valueFrom: {configMapKeyRef: { name: memtier, key: clients }}
             - name: pipeline
-              valueFrom: {configMapKeyRef: { name: redis-config, key: pipeline }}
+              valueFrom: {configMapKeyRef: { name: memtier, key: pipeline }}
             - name: datasize
-              valueFrom: {configMapKeyRef: { name: redis-config, key: datasize }}
+              valueFrom: {configMapKeyRef: { name: memtier, key: datasize }}
             - name: keymaximum
-              valueFrom: {configMapKeyRef: { name: redis-config, key: keymaximum }}
+              valueFrom: {configMapKeyRef: { name: memtier, key: keymaximum }}
             - name: ratio
-              valueFrom: {configMapKeyRef: { name: redis-config, key: ratio }}
-            - name: memtire_cpus
-              valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_cpus }}
-            - name: memtire_extra
-              valueFrom: {configMapKeyRef: { name: redis-config, key: memtire_extra }}
+              valueFrom: {configMapKeyRef: { name: memtier, key: ratio }}
+            - name: cpus
+              valueFrom: {configMapKeyRef: { name: memtier, key: _cpus }}
+            - name: extra
+              valueFrom: {configMapKeyRef: { name: memtier, key: _extra }}
           volumeMounts:
             - name: var-log-wrapper
               mountPath: /var/log/wrapper
@@ -109,4 +109,8 @@ spec:
       volumes:
         - name: var-log-wrapper
           emptyDir: {}
+
+  # required for workaround bug with kustomize https://github.com/kubernetes-sigs/kustomize/issues/504
+  # when using commonLabels
+  volumeClaimTemplates: []
 

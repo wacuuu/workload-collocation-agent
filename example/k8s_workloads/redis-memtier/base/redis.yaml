@@ -14,7 +14,7 @@ kind: StatefulSet
 metadata:
   name: redis
   labels:
-    workload: redis-memtire
+    workload: redis
 
 spec:
   replicas: 0
@@ -39,9 +39,11 @@ spec:
           env:
             - name: podname
               valueFrom: {fieldRef: {fieldPath: metadata.name}}
-            - name: redis_cpus
-              valueFrom: {configMapKeyRef: { name: redis-config, key: redis_cpus }}
-            - name: redis_extra
-              valueFrom: {configMapKeyRef: { name: redis-config, key: redis_extra }}
+            - name: cpus
+              valueFrom: {configMapKeyRef: { name: redis, key: cpus }}
+            - name: extra
+              valueFrom: {configMapKeyRef: { name: redis, key: extra }}
 
-
+  # required for workaround bug with kustomize https://github.com/kubernetes-sigs/kustomize/issues/504
+  # when using commonLabels
+  volumeClaimTemplates: []
