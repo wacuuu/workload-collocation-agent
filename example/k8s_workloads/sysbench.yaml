@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: sysbench-small
+  labels:
+    workload: sysbench
 spec:
   serviceName: sysbench-small
   podManagementPolicy: Parallel
@@ -37,6 +39,8 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: sysbench-medium
+  labels:
+    workload: sysbench
 spec:
   replicas: 0
   serviceName: sysbench-medium
@@ -71,6 +75,8 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: sysbench-big
+  labels:
+    workload: sysbench
 spec:
   replicas: 0
   serviceName: sysbench-big

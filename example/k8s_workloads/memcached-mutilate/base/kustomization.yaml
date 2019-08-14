@@ -1,0 +1,23 @@
+resources:
+- memcached.yaml
+- mutilate.yaml
+
+configMapGenerator:
+- name: memcached
+  literals:
+  - memory=200000 # MB
+  - threads=4
+  - cpus=0-1000
+  - extra=
+
+- name: mutilate
+  literals:
+    - threads=8
+    - cpus=0-1000
+    - value=10000       # 10k
+    - records=1000000   # 1M  = 10GB
+    - qps=1000000       # 1M
+    - conns=1
+    - time=15          # seconds
+    - extra=
+

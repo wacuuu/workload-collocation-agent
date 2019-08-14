@@ -1,34 +1,20 @@
 resources:
-- memcached.yaml
 - sysbench.yaml
 
 bases:
 - stress
+- redis-memtire
+- memcached-mutilate/base
 
 namespace: default
 
 configMapGenerator:
-- name: memcached
-  literals:
-  - mutilate_threads=8
-  - mutilate_cpus=0-1000
-  - value=10000   # 100k
-  - records=1000000 # 1M  = 10GB
-  - memory=200000 # MB
-  - qps=1000000
-  - conns=1
-  - time=300     # seconds
-  - memcached_threads=4
-  - memcached_cpus=0-1000
-  - memcached_extra=
-  - mutilate_extra=
-
 - name: sysbench-small
   literals:
-    - threads=4
-    - cpus=0-1000
-    - memory=16g
-    - extra=
+  - threads=4
+  - cpus=0-1000
+  - memory=16g
+  - extra=
 - name: sysbench-medium
   literals:
     - threads=8

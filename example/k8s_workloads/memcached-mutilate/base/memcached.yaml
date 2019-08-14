@@ -1,0 +1,37 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: memcached
+  labels:
+    workload: memcached-mutilate
+spec:
+  replicas: 1
+  serviceName: memcached
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: memcached
+  template:
+    metadata:
+      labels:
+        app: memcached
+    spec:
+      containers:
+        - name: memcached
+          env:
+            - name: threads
+              valueFrom: {configMapKeyRef: { name: memcached, key: threads }}
+            - name: cpus
+              valueFrom: {configMapKeyRef: { name: memcached, key: cpus }}
+            - name: memory
+              valueFrom: {configMapKeyRef: { name: memcached, key: memory }}
+            - name: extra
+              valueFrom: {configMapKeyRef: { name: memcached, key: extra }}
+          image: memcached
+          command:
+            - sh
+            - -c
+            - "taskset -c $cpus memcached -t $threads -m $memory -u root $extra"
+
+
