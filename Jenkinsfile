@@ -270,7 +270,7 @@ pipeline {
 def wca_and_workloads_check() {
     images_check()
     sh "make venv"
-    sh "make wca_package"
+    sh "make wca_package_in_docker"
     print('Reconfiguring wca...')
     copy_files("${WORKSPACE}/tests/e2e/demo_scenarios/common/${CONFIG}", "${WORKSPACE}/tests/e2e/demo_scenarios/common/wca_config.yml.tmp")
     replace_in_config(CERT)
