@@ -50,6 +50,15 @@ data:
       @type null
     </match>
     <source>
+      @type dummy
+      tag dummy
+      dummy {"hello":"world"}
+    </source>
+    <source>
+      @type prometheus
+    </source>
+
+    <source>
       @type tail
       path /var/log/containers/*.log
       pos_file /var/log/fluentd-containers.log.pos
@@ -67,26 +76,57 @@ data:
     <match kubernetes.var.log.containers.**monitoring**.log>
       @type null
     </match>
-    <match kubernetes.**>
-      @type stdout
-    </match>
+    <filter kubernetes.var.log.containers.**>
+      @type prometheus
+      <metric>
+        name stdout_lines
+        type counter
+        desc Number of stdout lines
+        <labels>
+          hostname ${hostname}
+          app $.kubernetes.labels.app
+          workload $.kubernetes.labels.workload
+        </labels>
+      </metric>
+    </filter>
+    <filter dummy>
+      @type prometheus
+      <metric>
+        name dummy_messages
+        type counter
+        desc The total number of incoming dummy messages
+        <labels>
+          tag ${tag}
+          hostname ${hostname}
+        </labels>
+      </metric>
+    </filter>
+ #   <match **>
+ #     @type stdout
+ #   </match>
 
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: fluentd
   namespace: monitoring
   labels:
-    k8s-app: fluentd-logging
+    app: fluentd-logging
     version: v1
 spec:
+  selector:
+    matchLabels:
+      app: fluentd-logging
+  updateStrategy:
+    type: RollingUpdate
   template:
     metadata:
       labels:
-        k8s-app: fluentd-logging
+        app: fluentd-logging
         version: v1
     spec:
+      hostNetwork: true
       serviceAccount: fluentd
       serviceAccountName: fluentd
       nodeSelector:
