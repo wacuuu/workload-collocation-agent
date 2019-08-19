@@ -54,9 +54,9 @@ spec:
             - name: ratio
               valueFrom: {configMapKeyRef: { name: memtier, key: ratio }}
             - name: cpus
-              valueFrom: {configMapKeyRef: { name: memtier, key: _cpus }}
+              valueFrom: {configMapKeyRef: { name: memtier, key: cpus }}
             - name: extra
-              valueFrom: {configMapKeyRef: { name: memtier, key: _extra }}
+              valueFrom: {configMapKeyRef: { name: memtier, key: extra }}
           volumeMounts:
             - name: var-log-wrapper
               mountPath: /var/log/wrapper
