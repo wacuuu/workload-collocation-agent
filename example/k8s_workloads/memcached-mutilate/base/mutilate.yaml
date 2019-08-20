@@ -25,6 +25,8 @@ spec:
       labels:
         app: mutilate
     spec:
+      nodeSelector:
+        goal: load_generator
       terminationGracePeriodSeconds: 0
       containers:
         - name: mutilate

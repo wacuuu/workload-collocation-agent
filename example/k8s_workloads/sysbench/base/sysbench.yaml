@@ -14,6 +14,8 @@ spec:
       labels:
         app: sysbench
     spec:
+      nodeSelector:
+        goal: service
       terminationGracePeriodSeconds: 0
       containers:
         - name: sysbench

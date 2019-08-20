@@ -29,6 +29,8 @@ spec:
         app: redis
     spec:
       terminationGracePeriodSeconds: 0
+      nodeSelector:
+        goal: service
       containers:
         - name: redis
           image: redis

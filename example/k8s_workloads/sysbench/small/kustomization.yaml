@@ -3,7 +3,7 @@ bases:
 - ../base
 
 commonLabels:
-  app: sysbench-big
+  app: sysbench-small
 
 configMapGenerator:
 - name: sysbench

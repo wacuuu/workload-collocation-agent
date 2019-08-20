@@ -17,6 +17,8 @@ spec:
       labels:
         app: memcached
     spec:
+      nodeSelector:
+        goal: service
       containers:
         - name: memcached
           env:
