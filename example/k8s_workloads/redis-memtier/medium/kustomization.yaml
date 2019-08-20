@@ -1,0 +1,18 @@
+nameSuffix: -medium
+
+bases:
+- ../base
+
+commonLabels:
+  app: redis-medium
+
+configMapGenerator:
+- name: memtier
+  behavior: merge
+  literals:
+    - clients=100
+    - threads=4
+    - datasize=512
+    - pipeline=1
+    - keymaximum=40000
+    - ratio=1:10

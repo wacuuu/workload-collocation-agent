@@ -1,6 +1,10 @@
 nameSuffix: -small
 bases:
 - ../base
+
+commonLabels:
+  app: memcached-small
+
 configMapGenerator:
 - name: mutilate
   behavior: merge

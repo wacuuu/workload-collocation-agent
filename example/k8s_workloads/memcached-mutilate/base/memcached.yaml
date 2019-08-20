@@ -6,7 +6,7 @@ metadata:
   labels:
     workload: memcached-mutilate
 spec:
-  replicas: 1
+  replicas: 0
   serviceName: memcached
   podManagementPolicy: Parallel
   selector:
@@ -33,5 +33,6 @@ spec:
             - sh
             - -c
             - "taskset -c $cpus memcached -t $threads -m $memory -u root $extra"
-
-
+  # required for workaround bug with kustomize https://github.com/kubernetes-sigs/kustomize/issues/504
+  # when using commonLabels
+  volumeClaimTemplates: []
