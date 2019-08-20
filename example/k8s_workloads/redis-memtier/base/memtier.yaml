@@ -3,8 +3,6 @@ kind: StatefulSet
 
 metadata:
   name: memtier
-  labels:
-    workload: redis-memtier
 
 spec:
   replicas: 0

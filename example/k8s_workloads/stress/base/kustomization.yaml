@@ -1,5 +1,9 @@
 resources:
   - stress.yaml
+
+commonLabels:
+  workload: stress
+
 configMapGenerator:
   - name: stress
     literals:

@@ -2,11 +2,15 @@ resources:
 - redis.yaml
 - memtier.yaml
 
+commonLabels:
+  workload: redis-memtier
+
 configMapGenerator:
 - name: redis
   literals:
   - cpus=0-1000
   - extra=
+
 - name: memtier
   literals:
     - cpus=0-1000
