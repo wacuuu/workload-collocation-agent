@@ -1,0 +1,13 @@
+resources:
+  - sysbench.yaml
+
+commonLabels:
+  workload: sysbench
+
+configMapGenerator:
+  - name: sysbench
+    literals:
+      - threads=4
+      - cpus=0-1000
+      - memory=16g
+      - extra=

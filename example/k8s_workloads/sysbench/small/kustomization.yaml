@@ -1,0 +1,13 @@
+nameSuffix: -small
+bases:
+- ../base
+
+commonLabels:
+  app: sysbench-small
+
+configMapGenerator:
+- name: sysbench
+  behavior: merge
+  literals:
+    - threads=4
+    - memory=16g

@@ -1,7 +1,0 @@
-namespace: nszulc
-bases:
-- variations/redis-memtier-small
-- variations/redis-memtier-big
-- variations/redis-memtier-medium
-
-
