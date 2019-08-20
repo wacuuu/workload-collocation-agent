@@ -119,7 +119,9 @@ class KubernetesNode(Node):
         try:
             kubelet_json_response = self._request_kubelet()
         except requests.exceptions.ConnectionError as e:
-            raise TaskSynchornizationException('%s' % e) from e
+            raise TaskSynchornizationException('connection error: %s' % e) from e
+        except requests.exceptions.ReadTimeout as e:
+            raise TaskSynchornizationException('timeout: %s' % e) from e
 
         tasks = []
         for pod in kubelet_json_response.get('items'):
