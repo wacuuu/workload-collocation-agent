@@ -1,6 +1,7 @@
 loggers: {}
   #wca.wss: debug
 runner: !MeasurementRunner
+  rdt_enabled: true
   extra_labels: &node_labels
     node: 'node12'
   action_delay: 5.0
