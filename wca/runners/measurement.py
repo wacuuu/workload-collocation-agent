@@ -184,6 +184,8 @@ class MeasurementRunner(Runner):
             if not rdt_initialization_ok:
                 return 1
 
+        log.debug('rdt_enabled: %s', self._rdt_enabled)
+
         # Postpone the container manager initialization after rdt checks were performed.
         platform_cpus, _, platform_sockets = platforms.collect_topology_information()
 
