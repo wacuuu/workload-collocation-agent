@@ -1,0 +1,18 @@
+nameSuffix: -big-rnd
+
+bases:
+- ../base
+
+patchesStrategicMerge:
+  - resources.yaml
+
+commonLabels:
+  app: sysbench-memory-big-rnd
+
+configMapGenerator:
+- name: sysbench-memory
+  behavior: merge
+  literals:
+    - threads=16
+    - memory=128g
+    - extra=--memory-access-mode=rnd

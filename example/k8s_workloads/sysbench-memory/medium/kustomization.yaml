@@ -4,11 +4,13 @@ bases:
 - ../base
 
 commonLabels:
-  app: sysbench-medium
+  app: sysbench-memory-medium
 
+patchesStrategicMerge:
+  - resources.yaml
 
 configMapGenerator:
-- name: sysbench
+- name: sysbench-memory
   behavior: merge
   literals:
     - threads=8

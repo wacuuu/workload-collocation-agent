@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: sysbench
+  name: sysbench-memory
 spec:
-  serviceName: sysbench
+  serviceName: sysbench-memory
   podManagementPolicy: Parallel
   replicas: 0
   selector:
     matchLabels:
-      app: sysbench
+      app: sysbench-memory
   template:
     metadata:
       labels:
-        app: sysbench
+        app: sysbench-memory
     spec:
       nodeSelector:
         goal: service
@@ -21,13 +21,13 @@ spec:
         - name: sysbench
           env:
             - name: threads
-              valueFrom: {configMapKeyRef: { name: sysbench, key: threads }}
+              valueFrom: {configMapKeyRef: { name: sysbench-memory, key: threads }}
             - name: memory
-              valueFrom: {configMapKeyRef: { name: sysbench, key: memory }}
+              valueFrom: {configMapKeyRef: { name: sysbench-memory, key: memory }}
             - name: cpus
-              valueFrom: {configMapKeyRef: { name: sysbench, key: cpus }}
+              valueFrom: {configMapKeyRef: { name: sysbench-memory, key: cpus }}
             - name: extra
-              valueFrom: {configMapKeyRef: { name: sysbench, key: extra }}
+              valueFrom: {configMapKeyRef: { name: sysbench-memory, key: extra }}
           image: severalnines/sysbench
           command:
             - sh

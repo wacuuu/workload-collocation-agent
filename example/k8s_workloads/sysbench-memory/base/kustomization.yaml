@@ -1,13 +1,16 @@
 resources:
-  - sysbench.yaml
+  - sysbench-memory.yaml
 
 commonLabels:
-  workload: sysbench
+  workload: sysbench-memory
 
 configMapGenerator:
-  - name: sysbench
+  - name: sysbench-memory
     literals:
       - threads=4
       - cpus=0-1000
       - memory=16g
       - extra=
+
+patchesStrategicMerge:
+- resources.yaml
