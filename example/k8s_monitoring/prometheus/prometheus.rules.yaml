@@ -1,5 +1,5 @@
 # reload rules with
-# ./promtool check rules /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.rules.yaml && pkill -HUP prometheus
+# promtool check rules /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.rules.yaml && pkill -HUP prometheus
 
 
 groups:
@@ -61,6 +61,8 @@ groups:
     expr: app__memory_access_locality * app__memory_rw_ratio * app__memory_intensivity
   - record: app__cache_utilization_normalized
     expr: app__cache_utilization / cluster__avg_app_utilization
+  - record: app__rss_15s_avg_gb
+    expr: avg by(app) (avg_over_time(task__memory_usage_per_task_bytes[15s])) / 1e9
 
 - name: aep_apps_fits
   rules:
