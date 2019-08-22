@@ -65,6 +65,7 @@ pipeline {
                 stage("Using tester") {
                     steps {
                         sh '''
+			sudo chmod 700 $(pwd)/tests/tester/configs/tester_example.yaml
                         sudo bash -c "
                         export PYTHONPATH="$(pwd):$(pwd)/tests/tester"
                         dist/wca.pex -c $(pwd)/tests/tester/configs/tester_example.yaml \
