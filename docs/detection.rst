@@ -368,20 +368,23 @@ Example message stored in Kafka using Prometheus exposition format:
 
 Generating additional labels for tasks
 --------------------------------------
-An additional helper functionality of WCA agent is to generate new labels for tasks based on other labels.
+A helper functionality of WCA agent is to generate additional labels for a task based on any data
+contained in that task object (e.g. based on the task other label value).
 That new labels will be attached to tasks metrics and stored.
 
-For that purpose a field **tasks_label_generator** can be defined in classes derived from ``MeasurementsRunner``.
+For that purpose a field **task_label_generators** can be defined in classes derived from ``MeasurementsRunner``.
 It is a dictionary, where each key defines a name of new label, and value for that key 
-consitutes an object of a class derived from ``TaskLabelGenerator``.
+constitutes an object of a class derived from ``TaskLabelGenerator``.
 
 In the example below the class used to generate label is ``TaskLabelRegexGenerator``.
-TaskLabelRegexGenerator uses re.sub function to extract needed information from another label value.
+``TaskLabelRegexGenerator`` uses **re.sub** function to extract needed information from another label value
+(to see list of available task labels please read `Task's metrics labels for Mesos <mesos.rst>`_ and
+`Task's metrics labels for Kubernetes <kubernetes.rst>`_).
 
 In the example below if label ``task_name`` (``source`` parameter) has value ``root/staging/my_important_task`` new labels
 will be attached to the task metrics:
 
-- ``application`` with value `my_important_task`,
+- ``application`` with value "my_important_task",
 - ``application_version_name`` with empty string.
 
 
@@ -389,7 +392,7 @@ will be attached to the task metrics:
 
   runner: !DetectionRunner
     ...
-    tasks_label_generator:
+    task_label_generators:
       application: !TaskLabelRegexGenerator
         pattern: '.*\/.*\/(.*)'
         repl: '\1'  # first match group
