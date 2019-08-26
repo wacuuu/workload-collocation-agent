@@ -82,3 +82,33 @@ groups:
     expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="memcached"})
 
 
+- name: wca_task_derived
+  rules:
+  - record: task__dram_hit
+    expr: task__mem_load_retired_local_dram__rd301 / (task__mem_load_retired_local_pmm__rd180 + task__mem_load_retired_local_dram__rd301)
+  - record: task__memory_rw_ratio
+    expr: rate(task__mem_inst_retired_all_loads__rd081[15s]) / rate(task__mem_inst_retired_all_stores__rd082[15s])
+
+- name: wca_platform_derived
+  rules:
+  # PMM
+  - record: platform__pmm_reads_mb_per_second
+    expr: rate(platform__pmm_bandwidth_read[15s]) * 64 / 1e6
+  - record: platform__pmm_writes_mb_per_second
+    expr: rate(platform__pmm_bandwidth_write[15s]) * 64 / 1e6
+  - record: platform__pmm_total_mb_per_second
+    expr: platform__pmm_reads_mb_per_second + platform__pmm_writes_mb_per_second
+
+  # DRAM
+  - record: platform__dram_reads_mb_per_second
+    expr: rate(platform__cas_count_read[15s]) * 64 / 1e6
+  - record: platform__dram_writes_mb_per_second
+    expr: rate(platform__cas_count_write[15s]) * 64 / 1e6
+  - record: platform__dram_total_mb_per_second
+    expr: platform__dram_reads_mb_per_second + platform__dram_writes_mb_per_second
+
+  # HIT
+  - record: platform__dram_hit
+    expr: 'platform__dram_total_mb_per_second / (platform__pmm_total_mb_per_second + platform__dram_total_mb_per_second)'
+
+

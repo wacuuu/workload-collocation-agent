@@ -26,13 +26,13 @@ runner: !MeasurementRunner
   wss_reset_interval: 1
   metrics_storage: !HTTPStorage
     port: 9100
-  enable_derived_metrics: true
-  task_derived_metrics_generators_factory: !DefaultTaskDerivedMetricsGeneratorFactory
-    extra_metrics:
-      dram_hit: 'mem_load_retired_local_dram__rd301 / (mem_load_retired_local_pmm__rd180 + mem_load_retired_local_dram__rd301)'
-      memory_rw_ratio: 'delta("mem_inst_retired_all_loads__rd081") / delta("mem_inst_retired_all_stores__rd082")'
-  platform_derived_metrics_generators_factory: !DefaultPlatformDerivedMetricsGeneratorsFactory
-    extra_metrics:
-      dram_hit: 'dram_total_mb_per_second / (pmm_total_mb_per_second+dram_total_mb_per_second)'
+  enable_derived_metrics: false
+#  task_derived_metrics_generators_factory: !DefaultTaskDerivedMetricsGeneratorFactory
+#    extra_metrics:
+#      dram_hit: 'mem_load_retired_local_dram__rd301 / (mem_load_retired_local_pmm__rd180 + mem_load_retired_local_dram__rd301)'
+#      memory_rw_ratio: 'delta("mem_inst_retired_all_loads__rd081") / delta("mem_inst_retired_all_stores__rd082")'
+#  platform_derived_metrics_generators_factory: !DefaultPlatformDerivedMetricsGeneratorsFactory
+#    extra_metrics:
+#      dram_hit: 'dram_total_mb_per_second / (pmm_total_mb_per_second+dram_total_mb_per_second)'
 
 

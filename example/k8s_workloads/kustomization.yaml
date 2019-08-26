@@ -2,4 +2,4 @@ bases:
 - stress
 - redis-memtier
 - memcached-mutilate
-- sysbench
+- sysbench-memory
