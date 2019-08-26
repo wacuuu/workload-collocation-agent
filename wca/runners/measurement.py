@@ -30,10 +30,10 @@ from wca.detectors import TasksMeasurements, TasksResources, TasksLabels
 from wca.logger import trace, get_logging_metrics
 from wca.mesos import create_metrics
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
-    BaseGeneratorFactory
+    BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory
 from wca.nodes import Task, TaskSynchornizationException
 from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
-    PMUNotAvailable
+    PMUNotAvailable, DefaultPlatformDerivedMetricsGeneratorsFactory
 from wca.profiling import profiler
 from wca.runners import Runner
 from wca.storage import MetricPackage, DEFAULT_STORAGE
@@ -112,8 +112,8 @@ class MeasurementRunner(Runner):
             tasks_label_generator: Dict[str, TaskLabelGenerator] = None,
             _allocation_configuration: Optional[AllocationConfiguration] = None,
             wss_reset_interval: int = 0,
-            task_derived_metrics_generators_factory: BaseGeneratorFactory = None,
-            platform_derived_metrics_generators_factory: BaseGeneratorFactory = None,
+            task_derived_metrics_generators_factory: BaseGeneratorFactory = DefaultTaskDerivedMetricsGeneratorFactory(),
+            platform_derived_metrics_generators_factory: BaseGeneratorFactory = DefaultPlatformDerivedMetricsGeneratorsFactory(),
     ):
 
         self._node = node
