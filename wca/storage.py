@@ -115,7 +115,7 @@ class LogStorage(Storage):
             log.log(logger.TRACE, 'Dump of metrics (text format): %r', msg)
             if self.overwrite:
                 p = pathlib.Path(self.output_filename)
-                p_tmp = p.joinpath(".tmp")
+                p_tmp = p.with_suffix('.tmp')
                 with open(p_tmp, "w", encoding="utf-8") as fp:
                     fp.write(msg)
                 p_tmp.rename(p)
