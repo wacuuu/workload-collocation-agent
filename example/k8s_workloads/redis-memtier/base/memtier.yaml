@@ -25,18 +25,10 @@ spec:
           command:
             - bash
             - -c
-            - "export identifier=${podname#memtier-}; export service=${identifier%-[+[:digit:]]};
+            - 'export identifier=${podname#memtier-}; export service=${identifier%-[+[:digit:]]};
             taskset -c $cpus memtier_benchmark --run-count=1 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
             &&
-            taskset -c $cpus memtier_benchmark_wrapper.pex \
-            --command '\"while true; do memtier_benchmark --run-count=1 --test-time=10 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $extra && sleep 1.2; done\"' \
-            --log_level DEBUG \
-            --stderr 0 \
-            --labels '{\"workload\": \"redis\"}' \
-            --metric_name_prefix 'redis_' \
-            --subprocess_shell
-            --storage_output_filename=/var/log/wrapper/metrics.prom
-            "
+            taskset -c $cpus sh -c "while true; do memtier_benchmark --run-count=1 --test-time=10 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio $ratio $extra && sleep 1.2; done"'
 
           env:
             - name: podname
