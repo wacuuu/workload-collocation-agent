@@ -12,3 +12,6 @@ configMapGenerator:
   - value=50000      # 50k
   - records=1000000  # 1M        total = 50GB
   - qps=1000000      # 2M
+
+patchesStrategicMerge:
+  - resources.yaml

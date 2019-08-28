@@ -10,3 +10,6 @@ configMapGenerator:
   behavior: merge
   literals:
     - extra='--stream 8 --stream-l3-size=2g' # 24GB RSS + 8 threads
+
+patchesStrategicMerge:
+  - resources.yaml

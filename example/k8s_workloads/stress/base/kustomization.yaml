@@ -8,3 +8,6 @@ configMapGenerator:
   - name: stress
     literals:
       - cpus=0-1000
+
+patchesStrategicMerge:
+  - resources.yaml

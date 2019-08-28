@@ -8,7 +8,7 @@ commonLabels:
 configMapGenerator:
 - name: memcached
   literals:
-  - memory=200000 # MB
+  - memory=200000 # MB a.k.a. 200G
   - threads=4
   - cpus=0-1000
   - extra=
@@ -24,3 +24,5 @@ configMapGenerator:
     - time=15          # seconds
     - extra=
 
+patchesStrategicMerge:
+  - resources.yaml
