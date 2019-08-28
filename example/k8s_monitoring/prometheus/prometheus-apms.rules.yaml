@@ -1,0 +1,7 @@
+groups:
+- name: SLOS
+  rules:
+  - record: slo
+    expr: 23004
+    labels:
+      app: memcached

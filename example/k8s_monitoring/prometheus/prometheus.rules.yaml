@@ -1,8 +1,40 @@
 # reload rules with
 # promtool check rules /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.rules.yaml && pkill -HUP prometheus
 
-
 groups:
+# ----------------------------- APP -------------------------------------
+- name: aep_apps
+  rules:
+  - record: app__memory_access_rate_over_15s
+    expr: avg(rate(task__mem_inst_retired_all_loads__rd081[15s]) + rate(task__mem_inst_retired_all_stores__rd082[15s])) by (app) / 1e9
+  - record: app__memory_bandwidth_rate_15s_gb
+    expr: avg(rate(task__memory_bandwidth[15s])) by (app) / 1e9
+  - record: app__wss_avg_15s_gb
+    expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app) / 1000
+  - record: app__memory_access_locality
+    expr: app__memory_bandwidth_rate_15s_gb / app__wss_avg_15s_gb
+  - record: app__memory_rw_ratio
+    expr: avg(task__memory_rw_ratio) by (app)
+  - record: app__memory_intensivity
+    expr: app__memory_bandwidth_rate_15s_gb / 100  # Assume all nodes has max 100GB membw
+  - record: app__rss_15s_avg_gb
+    expr: avg by(app) (avg_over_time(task__memory_usage_per_task_bytes[15s])) / 1e9
+  # Cache utlization normaliazed to cluster avg_app_utlization
+  - record: app__cache_utilization_normalized
+    expr: app__cache_utilization / cluster__avg_app_utilization
+  # Cache utilization = RW * (BW/WSS) * (BW/100)
+  - record: app__cache_utilization
+    expr: app__memory_access_locality * app__memory_rw_ratio * app__memory_intensivity
+  # 2LM Friend = RW / (BW * WSS)
+  - record: app__2lm_friend
+    expr: app__memory_rw_ratio / (app__memory_bandwidth_rate_15s_gb*app__wss_avg_15s_gb)
+  # RSS / WSS (2LM Friend v2)
+  - record: app__rss_wss_ratio
+    expr: app__rss_15s_avg_gb / app__wss_avg_15s_gb
+  - record: app__cache_misses
+    expr: avg(rate(task__cache_misses[15s])) by (app)
+
+# ----------------------------- NODE -------------------------------------
 - name: aep_node
   rules:
   - record: node__dram_hit_15s
@@ -17,10 +49,10 @@ groups:
     expr: (1 - (node__dram_hit_15s * node__dram_hit_15s)) * 100
   - record: node__cache_contention_normalized
     expr: node__cache_contention / cluster__avg_cache_contention
-
   - record: node__cache_utilization_class
     expr: avg by(node) (avg_over_time(appnode__cache_utilization[15s]))
 
+# ----------------------------- CLUSTER -------------------------------------
 - name: aep_cluster
   rules:
   - record: cluster__avg_cache_contention
@@ -28,6 +60,7 @@ groups:
   - record: cluster__avg_app_utilization
     expr: avg(app__cache_utilization)
 
+# ----------------------------- APPNODE -------------------------------------
 - name: aep_appnode
   rules:
   - record: appnode__memory_bandwidth_rate_15s_gb
@@ -43,45 +76,37 @@ groups:
   - record: appnode__cache_utilization
     expr: appnode__memory_access_locality * appnode__memory_rw_ratio * appnode__memory_intensivity
 
-- name: aep_apps
-  rules:
-  - record: app__memory_access_rate_over_15s
-    expr: avg(rate(task__mem_inst_retired_all_loads__rd081[15s]) + rate(task__mem_inst_retired_all_stores__rd082[15s])) by (app) / 1e9
-  - record: app__memory_bandwidth_rate_15s_gb
-    expr: avg(rate(task__memory_bandwidth[15s])) by (app) / 1e9
-  - record: app__wss_avg_15s_gb
-    expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app) / 1000
-  - record: app__memory_access_locality
-    expr: app__memory_bandwidth_rate_15s_gb / app__wss_avg_15s_gb
-  - record: app__memory_rw_ratio
-    expr: avg(task__memory_rw_ratio) by (app)
-  - record: app__memory_intensivity
-    expr: app__memory_bandwidth_rate_15s_gb / 100  # Assume all nodes has max 100GB membw
-  - record: app__cache_utilization
-    expr: app__memory_access_locality * app__memory_rw_ratio * app__memory_intensivity
-  - record: app__cache_utilization_normalized
-    expr: app__cache_utilization / cluster__avg_app_utilization
-  - record: app__rss_15s_avg_gb
-    expr: avg by(app) (avg_over_time(task__memory_usage_per_task_bytes[15s])) / 1e9
 
+# ----------------------------- FIT -------------------------------------
 - name: aep_apps_fits
   rules:
-  - record: fit__sysbench_big
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-big"})
-  - record: fit__sysbench_medium
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-medium"})
   - record: fit__sysbench_small
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-small"})
-  - record: fit__stress_big
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-big"})
-  - record: fit__stress_medium
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-medium"})
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-memory-small"})
+  - record: fit__sysbench_medium
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-memory-medium"})
+  - record: fit__sysbench_big
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-memory-big"})
+
   - record: fit__stress_small
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-small"})
-  - record: fit__memcached
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="memcached"})
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-stream-small"})
+  - record: fit__stress_medium
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-stream-medium"})
+  - record: fit__stress_big
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-stream-big"})
+
+  - record: fit__memcached_small
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="memcached-small"})
+  - record: fit__memcached_medium
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="memcached-medium"})
+  - record: fit__memcached_big
+    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="memcached-big"})
 
 
+####################################################################################
+# DERIVED
+####################################################################################
+
+# ----------------------------- TASK_DERIVED -------------------------------------
 - name: wca_task_derived
   rules:
   - record: task__dram_hit
@@ -89,6 +114,8 @@ groups:
   - record: task__memory_rw_ratio
     expr: rate(task__mem_inst_retired_all_loads__rd081[15s]) / rate(task__mem_inst_retired_all_stores__rd082[15s])
 
+
+# ----------------------------- PLATFORM (derived) ---------------------------------
 - name: wca_platform_derived
   rules:
   # PMM
