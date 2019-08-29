@@ -14,6 +14,7 @@ PORT = 12345
 PROMETHEUS = 'http://100.64.176.36:9090'
 NAMESPACE = 'default'
 LEVEL = logging.INFO
+FIT_MODE = "rsswss"
 
 # CONSTANTS
 _PROMETHEUS_QUERY_PATH = "/api/v1/query"
@@ -102,7 +103,7 @@ def _prioritize_logic(app, nodes, namespace):
     else:
         # Get most fitted nodes.
         priorities = {}
-        query = '1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="%s"})' % app
+        query = 'fit(mode="%s", app="%s"}' % (FIT_MODE, app)
         nodes_fit = do_raw_query(query, 'node')
         if not nodes_fit:
             # Unknown app - first seen.
