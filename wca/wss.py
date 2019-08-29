@@ -35,7 +35,7 @@ class WSS:
         referenced = referenced / 1024  # scale as mega bytes
         measurements['wss_referenced_mb'] = referenced
 
-        if self._cycle == self.reset_interval:
+        if self._cycle % self.reset_interval == 0:
             for pid in pids:
                 try:
                     with open('/proc/{}/clear_refs'.format(pid), 'w') as f:
