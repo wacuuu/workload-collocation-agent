@@ -91,27 +91,20 @@ def _filter_logic(app, nodes, namespace):
     return nodes
 
 
+PRIORITY_QUERY = 'fit{app="%s"}'
+
 def _prioritize_logic(app, nodes, namespace):
     if namespace != NAMESPACE:
         log.info('ignoring pods not from %r namespace (got %r)', NAMESPACE, namespace)
         return {}
 
-    cache_contention_by_node = do_query('node__cache_contention', 'node')
-    if app is None:
-        log.info('app is unknown - missing label app - prioritize by node_cache_contetion only')
-        priorities = cache_contention_by_node
-    else:
-        # Get most fitted nodes.
-        priorities = {}
-        query = 'fit(mode="%s", app="%s"}' % (FIT_MODE, app)
-        nodes_fit = do_raw_query(query, 'node')
-        if not nodes_fit:
-            # Unknown app - first seen.
-            priorities = cache_contention_by_node
-        else:
-            log.info('nodes_fit for %r: %r', app, nodes_fit)
-            for node in nodes:
-                priorities[node] = int(nodes_fit.get(node, 0) * 100)
+    # Get most fitted nodes.
+    priorities = {}
+    query = PRIORITY_QUERY %(app)
+    nodes_fit = do_raw_query(query, 'node')
+    log.info('nodes_fit for %r: %r', app, nodes_fit)
+    for node in nodes:
+        priorities[node] = int(nodes_fit.get(node, 0) * 100)
     return priorities
 
 
