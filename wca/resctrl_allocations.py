@@ -289,7 +289,7 @@ class RDTAllocationValue(AllocationValue):
 
 def _parse_schemata_file_row(line: str) -> Dict[str, str]:
     """Parse RDTAllocation.l3 and RDTAllocation.mb strings based on
-    https://elixir.bootlin.com/linux/latest/source/arch/x86/kernel/cpu/intel_rdt_ctrlmondata.c#lL206
+    https://github.com/torvalds/linux/blob/9cf6b756cdf2cd38b8b0dac2567f7c6daf5e79d5/arch/x86/kernel/cpu/resctrl/ctrlmondata.c#L254
     and return dict mapping and domain id to its configuration (value).
     Resource type (e.g. mb, l3) is dropped.
 
