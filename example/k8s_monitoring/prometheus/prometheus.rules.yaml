@@ -172,6 +172,6 @@ groups:
 
   # HIT
   - record: platform__dram_hit
-    expr: 'platform__dram_total_mb_per_second / (platform__pmm_total_mb_per_second + platform__dram_total_mb_per_second)'
+    expr: platform__dram_total_mb_per_second / (platform__pmm_total_mb_per_second + platform__dram_total_mb_per_second)
 
 

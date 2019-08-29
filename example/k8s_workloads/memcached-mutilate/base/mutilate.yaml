@@ -48,13 +48,15 @@ spec:
               valueFrom: {configMapKeyRef: { name: mutilate, key: extra }}
             - name: cpus
               valueFrom: {configMapKeyRef: { name: mutilate, key: cpus }}
+            - name: load_records
+              valueFrom: {configMapKeyRef: { name: mutilate, key: load_records }}
             - name: podname
               valueFrom: {fieldRef: {fieldPath: metadata.name}}
           command:
             - bash
             - -c
             - "identifier=${podname#mutilate-}; export service=${identifier%-[+[:digit:]]}; target=memcached-${identifier}.memcached-${service}; echo $target;
-               echo loading && ./mutilate -T 1 -s ${target}:11211 --loadonly -r $records -V $value -v && echo started && \
+               echo loading && ./mutilate -T 1 -s ${target}:11211 --loadonly -r $load_records -V $value -v && echo started && \
                taskset -c $cpus ./mutilate -C $conns -T $threads -t $time -s ${target}:11211 --noload --scan $qps:$qps:0 -r $records -V $value $extra"
   # required for workaround bug with kustomize https://github.com/kubernetes-sigs/kustomize/issues/504
   # when using commonLabels
