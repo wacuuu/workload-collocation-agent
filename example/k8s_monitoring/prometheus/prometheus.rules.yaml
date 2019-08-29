@@ -35,11 +35,8 @@ groups:
   # RSS / WSS (2LM Friend v2)
   - record: app__rss_wss_ratio
     expr: app__rss_15s_avg_gb / app__wss_avg_15s_gb
-    # RSS / WSS (2LM Friend v2)
   - record: app__wss_rss_ratio
     expr: app__wss_avg_15s_gb / app__rss_15s_avg_gb
-  - record: app__cache_misses
-    expr: avg(rate(task__cache_misses[15s])) by (app)
 
 # ----------------------------- NODE -------------------------------------
 - name: aep_node
@@ -86,105 +83,59 @@ groups:
 
 # ----------------------------- FIT (according (node_cache_utilization-app_cache_utilization) -------------------------------------
 - name: aep_apps_fits
+
   rules:
   - record: fit
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-memory-small"})
+    expr: abs( (app__wss_rss_ratio) - on() group_left(node) node__dram_hit_15s{node="node11"} )
     labels:
-      app: sysbench-memory-small
-      mode: cacheutil
-  - record: fit
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-memory-medium"})
-    labels:
-      app: sysbench-memory-medium
-      mode: cacheutil
-  - record: fit
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="sysbench-memory-big"})
-    labels:
-      app: sysbench-memory-big
-      mode: cacheutil
-
-  - record: fit
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-stream-small"})
-    labels:
-      app: stress-stream-small
-      mode: cacheutil
-  - record: fit
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-stream-medium"})
-    labels:
-      app: stress-stream-medium
-      mode: cacheutil
-  - record: fit
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="stress-stream-big"})
-    labels:
-      app: stress-stream-big
-      mode: cacheutil
-
-  - record: fit
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="memcached-small"})
-    labels:
-      app: memcached-small
-      mode: cacheutil
-  - record: fit
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="memcached-medium"})
-    labels:
-      app: memcached-medium
-      mode: cacheutil
-  - record: fit
-    expr: 1 / abs(node__cache_utilization_class - on() group_left app__cache_utilization{app="memcached-big"})
-    labels:
-      app: memcached-big
-      mode: cacheutil
-
-  # ----------------------------- FIT (according (node_cache_utilization-app_cache_utilization) -------------------------------------
-  # FIR RSS/WSS vs node dram hit
-
-  - record: fit
-    expr: abs( (1 / app__rss_wss_ratio{app="sysbench-memory-small"}) - on() group_right() node__dram_hit_15s )
-    labels:
-      app: sysbench-memory-small
       mode: rsswss
   - record: fit
-    expr: abs( (1 / app__rss_wss_ratio{app="sysbench-memory-medium"}) - on() group_right() node__dram_hit_15s )
+    expr: abs( (app__wss_rss_ratio) - on() group_left(node) node__dram_hit_15s{node="node12"} )
     labels:
-      app: sysbench-memory-medium
       mode: rsswss
   - record: fit
-    expr: abs( (1 / app__rss_wss_ratio{app="sysbench-memory-big"}) - on() group_right() node__dram_hit_15s )
+    expr: abs( (app__wss_rss_ratio) - on() group_left(node) node__dram_hit_15s{node="node13"} )
     labels:
-      app: sysbench-memory-big
+      mode: rsswss
+  - record: fit
+    expr: abs( (app__wss_rss_ratio) - on() group_left(node) node__dram_hit_15s{node="node14"} )
+    labels:
       mode: rsswss
 
   - record: fit
-    expr: abs( (1 / app__rss_wss_ratio{app="stress-stream-small"}) - on() group_right() node__dram_hit_15s )
+    expr: 1 / abs(app__cache_utilization - on() group_left(node) node__cache_utilization_class{node="node11"})
     labels:
-      app: stress-stream-small
-      mode: rsswss
+      mode: cacheutil
   - record: fit
-    expr: abs( (1 / app__rss_wss_ratio{app="stress-stream-medium"}) - on() group_right() node__dram_hit_15s )
+    expr: 1 / abs(app__cache_utilization - on() group_left(node) node__cache_utilization_class{node="node12"})
     labels:
-      app: stress-stream-medium
-      mode: rsswss
+      mode: cacheutil
   - record: fit
-    expr: abs( (1 / app__rss_wss_ratio{app="stress-stream-big"}) - on() group_right() node__dram_hit_15s )
+    expr: 1 / abs(app__cache_utilization - on() group_left(node) node__cache_utilization_class{node="node13"})
     labels:
-      app: stress-stream-big
-      mode: rsswss
+      mode: cacheutil
+  - record: fit
+    expr: 1 / abs(app__cache_utilization - on() group_left(node) node__cache_utilization_class{node="node14"})
+    labels:
+      mode: cacheutil
+
 
   - record: fit
-    expr: abs( (1 / app__rss_wss_ratio{app="memcached-small"}) - on() group_right() node__dram_hit_15s )
+    expr: 1 / abs(app__cache_utilization - on() group_left(node) node__cache_utilization_class{node="node11"})
     labels:
-      app: memcached-small
-      mode: rsswss
+      mode: 2lmfriend
   - record: fit
-    expr: abs( (1 / app__rss_wss_ratio{app="memcached-medium"}) - on() group_right() node__dram_hit_15s )
+    expr: 1 / abs(app__cache_utilization - on() group_left(node) node__cache_utilization_class{node="node12"})
     labels:
-      app: memcached-medium
-      mode: rsswss
+      mode: 2lmfriend
   - record: fit
-    expr: abs( (1 / app__rss_wss_ratio{app="memcached-big"}) - on() group_right() node__dram_hit_15s )
+    expr: 1 / abs(app__cache_utilization - on() group_left(node) node__cache_utilization_class{node="node13"})
     labels:
-      app: memcached-big
-      mode: rsswss
+      mode: 2lmfriend
+  - record: fit
+    expr: 1 / abs(app__cache_utilization - on() group_left(node) node__cache_utilization_class{node="node14"})
+    labels:
+      mode: 2lmfriend
 
 
 ####################################################################################
