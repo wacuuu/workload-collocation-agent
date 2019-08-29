@@ -340,6 +340,7 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
                         'for container {} - ignoring! '
                         '(because {})'.format(container, e))
             continue
+        task_measurements[MetricName.LAST_SEEN] = time.time()
 
         # Prepare tasks labels based on tasks metadata labels and task id.
         task_labels = {
