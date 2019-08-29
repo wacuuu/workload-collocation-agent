@@ -18,8 +18,8 @@ spec:
     - --use-legacy-policy-config=true
     - -v=2  # v=3 shows healthz ping
 #    - -v=10  # v=3 shows healthz ping
-#    - --vmodule=*generic_scheduler*=10,*balanced*=10,*least*=10
-    - --vmodule=*generic*=10,*extender*=10,*schedul*=10,*factory*=10,*resource_allocation*=10,*spread*=10,*prior*=10,*balan*=10
+    - --vmodule=*generic*=10,*generic_scheduler*=10,*resource_allocation*=10
+#    - --vmodule=*generic*=10,*extender*=10,*schedul*=10,*factory*=10,*resource_allocation*=10,*spread*=10,*prior*=10,*balan*=10
     image: gcr.io/google-containers/kube-scheduler:v1.15.0
     imagePullPolicy: IfNotPresent
     livenessProbe:

@@ -1,5 +1,6 @@
 {
   "Priorities": [],
+  "AlwaysCheckAllPredicates": true,
   "ExtenderConfigs": [
     {
       "URLPrefix": "http://100.64.176.36:12345/api/scheduler",
