@@ -30,7 +30,7 @@ Required agent options
 ------------------------------
 
 - ``containerizers=mesos`` - to enable PID based cgroup discovery,
-- ``isolation=cgroups/cpu,cgroups/perf_event`` - to enable CPU shares management and perf event monitoring,
+- ``isolation=cgroups/cpu,cgroups/perf_event,cgroups/mem`` - to enable CPU shares management and perf event monitoring,
 - ``perf_events=cycles`` and ``perf_interval=360days`` - to enable perf event subsystem cgroup management without actual counter collection.
 
 Following exact setup was verified to work with provided `workloads </workloads>`_:
