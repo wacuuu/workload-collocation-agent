@@ -13,6 +13,5 @@ configMapGenerator:
     - clients=50
     - threads=4
     - datasize=32
-    - pipeline=1
-    - keymaximum=40000
+    - pipeline=10
     - ratio=1:10

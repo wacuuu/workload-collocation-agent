@@ -11,8 +11,7 @@ configMapGenerator:
   behavior: merge
   literals:
     - clients=100
-    - threads=4
+    - threads=6
     - datasize=512
-    - pipeline=1
-    - keymaximum=40000
+    - pipeline=10
     - ratio=1:10
