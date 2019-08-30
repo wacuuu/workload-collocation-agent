@@ -25,7 +25,7 @@ spec:
           command:
             - bash
             - -c
-            - "export identifier=${podname#memtier-}; export service=${identifier%-[+[:digit:]]};
+            - "shopt -s extglob; export identifier=${podname#memtier-}; export service=${identifier%-+([[:digit:]])};
             taskset -c $cpus memtier_benchmark --run-count=1 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-maximum=$keymaximum --ratio 1:0
             &&
             taskset -c $cpus memtier_benchmark_wrapper.pex \
