@@ -1,51 +1,37 @@
 groups:
 - name: SLOS
   rules:
-  - record: apm__mutilate_slo
+  - record: apm__slo
     expr: 1200
     labels:
       app: mutilate
-  - record: apm__mutilate_sli
-    expr: apm__mutilate_scan_read_p99 and rate(apm__mutilate_stdout_lines[10s])>0
+  - record: apm__sli
+    expr: apm__mutilate_scan_read_p99 and rate(apm__mutilate_stdout_lines[5s])>0
     labels:
       app: mutilate
-  - record: apm__mutilate_sli_normalized
-    expr: apm__mutilate_sli / apm__mutilate_slo
-    labels:
-      app: mutilate
-  - record: apm__sysbench_slo
+  - record: apm__slo
     expr: 3200
     labels:
       app: sysbench
-  - record: apm__sysbench_sli
+  - record: apm__sli
     expr: apm__sysbench_qps and rate(apm__sysbench_stdout_lines[5s])>0
     labels:
       app: sysbench
-  - record: apm__sysbech_sli_normalized
-    expr: apm__sysbench_sli / apm__sysbench_slo
-    labels:
-      app: sysbench
-  - record: apm__stress_ng_slo
+  - record: apm__slo
     expr: 1000
     labels:
       app: stress_ng
-  - record: apm__stress_ng_sli
-    expr: apm__stress_ng_bogo_ops_per_second_usr_sys_time and rate(apm__stress_ng_stdout_lines[10s])>0
+  - record: apm__sli
+    expr: apm__stress_ng_bogo_ops_per_second_usr_sys_time and rate(apm__stress_ng_stdout_lines[5s])>0
     labels:
       app: stress_ng
-  - record: apm__stress_ng_sli_normalized
-    expr: apm__stress_ng_sli / apm__stress_ng_slo
-    labels:
-      app: stress_ng
-  - record: apm__memtier_slo
+  - record: apm__slo
     expr: 1000
     labels:
       app: memtier
-  - record: apm__memtier_sli
-    expr:  apm__memtier_qps and rate(apm__memtier_stdout_lines[10s])>0
+  - record: apm__sli
+    expr:  apm__memtier_qps and rate(apm__memtier_stdout_lines[5s])>0
     labels:
       app: memtier
-  - record: apm__memtier_sli_normalized
-    expr: apm__memtier_sli / apm__memtier_slo
-    labels:
-      app: memtier
+  - record: apm__sli_normalized
+    expr: apm__sli / on (app) group_left apm__slo
