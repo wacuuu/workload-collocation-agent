@@ -31,7 +31,7 @@ from wca.kubernetes import have_tasks_qos_label, are_all_tasks_of_single_qos
 from wca.metrics import Metric, MetricType
 from wca.nodes import Task
 from wca.resctrl_allocations import (RDTAllocationValue, RDTGroups,
-                                     validate_mb_string,
+                                     normalize_mb_string,
                                      validate_l3_string)
 from wca.runners.detection import AnomalyStatistics
 from wca.runners.measurement import MeasurementRunner, TaskLabelGenerator
@@ -274,10 +274,16 @@ class AllocationRunner(MeasurementRunner):
                                    platform.rdt_information.min_cbm_bits)
 
             if root_rdt_mb is not None:
-                validate_mb_string(root_rdt_mb, platform.sockets,
-                                   platform.rdt_information.mb_min_bandwidth)
-
-            resctrl.cleanup_resctrl(root_rdt_l3, root_rdt_mb, self._remove_all_resctrl_groups)
+                normalized_root_rdt_mb = normalize_mb_string(
+                        root_rdt_mb,
+                        platform.sockets,
+                        platform.rdt_information.mb_min_bandwidth,
+                        platform.rdt_information.mb_bandwidth_gran)
+                resctrl.cleanup_resctrl(
+                        root_rdt_l3, normalized_root_rdt_mb, self._remove_all_resctrl_groups)
+            else:
+                resctrl.cleanup_resctrl(
+                        root_rdt_l3, root_rdt_mb, self._remove_all_resctrl_groups)
         except InvalidAllocations as e:
             log.error('Cannot initialize RDT subsystem: %s', e)
             return False
