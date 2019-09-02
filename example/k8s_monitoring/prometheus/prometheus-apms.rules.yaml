@@ -30,7 +30,7 @@ groups:
     labels:
       app: memtier
   - record: apm__sli
-    expr:  apm__memtier_qps and rate(apm__memtier_stdout_lines[5s])>0
+    expr:  apm__memtier_ops and rate(apm__memtier_stdout_lines[5s])>0
     labels:
       app: memtier
   - record: apm__sli_normalized
