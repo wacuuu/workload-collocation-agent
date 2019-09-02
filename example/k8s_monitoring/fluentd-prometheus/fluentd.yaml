@@ -62,8 +62,6 @@ spec:
       hostNetwork: true
       serviceAccount: fluentd
       serviceAccountName: fluentd
-      nodeSelector:
-        kubernetes.io/hostname: node14
       #tolerations:
       #- key: node-role.kubernetes.io/master
       #  effect: NoSchedule
@@ -76,6 +74,9 @@ spec:
           requests:
             cpu: 100m
             memory: 200Mi
+        ports:
+          - containerPort: 24231
+            name: web
         volumeMounts:
         - mountPath: /fluentd/etc/
           name: fconf
