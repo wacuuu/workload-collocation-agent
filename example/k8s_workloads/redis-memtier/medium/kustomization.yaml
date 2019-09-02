@@ -12,6 +12,5 @@ configMapGenerator:
   literals:
     - clients=50
     - threads=6
-    - keymaximum=100000000
-    - datasize=32
-    - ratio=1:10
+    - keymaximum=100000000 # 100M
+    - datasize=32          # 3.2G
