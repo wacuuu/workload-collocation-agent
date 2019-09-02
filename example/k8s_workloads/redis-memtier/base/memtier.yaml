@@ -28,7 +28,7 @@ spec:
             - 'shopt -s extglob; export identifier=${podname#memtier-}; export service=${identifier%-+([[:digit:]])};
             taskset -c $cpus memtier_benchmark --run-count=1 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-pattern=P:P --key-maximum=$keymaximum --ratio 1:0
             &&
-            taskset -c $cpus sh -c "while true; do memtier_benchmark --run-count=9999 --test-time=6000 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --key-maximum=$keymaximum --key-pattern=G:G --ratio $ratio $extra; done"'
+            taskset -c $cpus sh -c "while true; do memtier_benchmark --run-count=9999 --test-time=6000 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --key-maximum=$keymaximum --key-pattern=G:G --ratio $ratio $extra 2>&1 | awk ''BEGIN { RS = "\r" }{ print $0 }'' 1>&2; done"'
 
           env:
             - name: podname
@@ -53,51 +53,7 @@ spec:
             - name: var-log-wrapper
               mountPath: /var/log/wrapper
 
-        - name: node-exporter
-          image: prom/node-exporter:v0.18.1
-          securityContext:
-            privileged: true
-          args:
-            - --collector.textfile.directory=/var/log/wrapper
-            - --web.disable-exporter-metrics
-            - --no-collector.arp
-            - --no-collector.bcache
-            - --no-collector.bonding
-            - --no-collector.conntrack
-            - --no-collector.cpu
-            - --no-collector.cpufreq
-            - --no-collector.diskstats
-            - --no-collector.edac
-            - --no-collector.entropy
-            - --no-collector.filefd
-            - --no-collector.filesystem
-            - --no-collector.hwmon
-            - --no-collector.infiniband
-            - --no-collector.ipvs
-            - --no-collector.loadavg
-            - --no-collector.mdadm
-            - --no-collector.meminfo
-            - --no-collector.netclass
-            - --no-collector.netdev
-            - --no-collector.netstat
-            - --no-collector.nfs
-            - --no-collector.nfsd
-            - --no-collector.pressure
-            - --no-collector.sockstat
-            - --no-collector.stat
-            - --no-collector.time
-            - --no-collector.timex
-            - --no-collector.uname
-            - --no-collector.vmstat
-            - --no-collector.xfs
-            - --no-collector.zfs
-            - --log.level=debug
-          ports:
-            - containerPort: 9100
-              protocol: TCP
-          volumeMounts:
-            - name: var-log-wrapper
-              mountPath: /var/log/wrapper
+
       volumes:
         - name: var-log-wrapper
           emptyDir: {}
