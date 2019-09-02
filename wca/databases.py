@@ -77,7 +77,7 @@ class LocalDatabase(Database):
     directory: str
 
     def __post_init__(self):
-        os.makedirs(self.directory)
+        os.makedirs(self.directory, exist_ok=True)
 
     def set(self, key: bytes, value: bytes):
         _validate_key(key)
