@@ -9,8 +9,7 @@ configMapGenerator:
 - name: memtier
   behavior: merge
   literals:
-    - clients=200
+    - clients=50
     - threads=8
-    - datasize=1024
-    - pipeline=10
-    - ratio=1:10
+    - keymaximum=50000000 # 50M
+    - datasize=1024       # eff 50G
