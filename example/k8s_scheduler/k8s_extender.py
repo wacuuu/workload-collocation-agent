@@ -91,7 +91,7 @@ def _filter_logic(app, nodes, namespace):
     return nodes
 
 
-PRIORITY_QUERY = 'fit{app="%s"}'
+PRIORITY_QUERY = 'fit_avg{app="%s"}'
 
 def _prioritize_logic(app, nodes, namespace):
     if namespace != NAMESPACE:

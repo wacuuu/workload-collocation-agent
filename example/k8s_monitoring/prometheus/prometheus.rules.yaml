@@ -14,6 +14,15 @@ groups:
     expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app) / 1000
   - record: app__rss # GB
     expr: avg by(app) (avg_over_time(task__memory_usage_per_task_bytes[15s])) / 1e9
+  - record: app__tlb_misses
+    expr: avg(task__dtlb_load_misses_ratio) by (app)
+  # Depends on context
+  - record: app__tlb_miss_ratio
+    expr: avg(task__dtlb_load_misses_ratio) by (app)
+  - record: app__dram_hit
+    expr: avg(task__dram_hit) by (app)
+  - record: app__dram_miss
+    expr: avg(task__dram_miss) by (app)
   ### Consumer/Producer analysis
   - record: app__rw
     expr: avg(task__memory_rw_ratio) by (app)
@@ -112,6 +121,8 @@ groups:
   rules:
   - record: scaled__node_contention_risk
     expr: (nodenorm__contention_risk - scalar(min(nodenorm__contention_risk))) / (scalar(max(nodenorm__contention_risk)) - scalar(min(nodenorm__contention_risk)))
+  - record: scaled__app_contention_sensitivity
+    expr: (appnorm__contention_sensitivity - scalar(min(appnorm__contention_sensitivity))) / (scalar(max(appnorm__contention_sensitivity)) - scalar(min(appnorm__contention_sensitivity)))
   - record: scaled__app_contention_insensitivity
     expr: (appnorm__contention_insensitivity - scalar(min(appnorm__contention_insensitivity))) / (scalar(max(appnorm__contention_insensitivity)) - scalar(min(appnorm__contention_insensitivity)))
 
@@ -145,7 +156,14 @@ groups:
     expr: abs( scaled__app_contention_insensitivity - on() group_left(node) scaled__node_contention_risk{node="node13"} )
   - record: fit
     expr: abs( scaled__app_contention_insensitivity - on() group_left(node) scaled__node_contention_risk{node="node14"} )
-
+  - record: fit_avg
+    expr: avg_over_time(fit{node="node11"}[15s])
+  - record: fit_avg
+    expr: avg_over_time(fit{node="node12"}[15s])
+  - record: fit_avg
+    expr: avg_over_time(fit{node="node13"}[15s])
+  - record: fit_avg
+    expr: avg_over_time(fit{node="node14"}[15s])
 
 # ----------------------------- FIT (according (node_cache_utilization-app_cache_utilization) -------------------------------------
 #- name: aep_apps_fits
@@ -212,9 +230,13 @@ groups:
 - name: wca_task_derived
   rules:
   - record: task__dram_hit
-    expr: task__mem_load_retired_local_dram__rd301 / (task__mem_load_retired_local_pmm__rd180 + task__mem_load_retired_local_dram__rd301)
+    expr: rate(task__mem_load_retired_local_dram__rd301[15s]) / (rate(task__mem_load_retired_local_pmm__rd180[15s]) + rate(task__mem_load_retired_local_dram__rd301[15s]))
+  - record: task__dram_miss
+    expr: rate(task__mem_load_retired_local_pmm__rd180[15s]) / rate(task__mem_inst_retired_all_loads__rd081[15s])
   - record: task__memory_rw_ratio
     expr: rate(task__mem_inst_retired_all_loads__rd081[15s]) / rate(task__mem_inst_retired_all_stores__rd082[15s])
+  - record: task__dtlb_load_misses_ratio
+    expr: task__dtlb_load_misses__r080e / task__mem_inst_retired_all_loads__rd081
 
 
 # ----------------------------- PLATFORM (derived) ---------------------------------
