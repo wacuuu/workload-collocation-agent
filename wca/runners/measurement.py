@@ -129,6 +129,7 @@ class MeasurementRunner(Runner):
         self._last_iteration = time.time()  # Used internally by wait function.
         self._allocation_configuration = _allocation_configuration
         self._event_names = event_names or DEFAULT_EVENTS
+        log.info('Enabling %i perf events: %s', len(self._event_names), ', '.join(self._event_names))
         self._enable_derived_metrics = enable_derived_metrics
         if tasks_label_generator is None:
             self._tasks_label_generator = {

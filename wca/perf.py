@@ -15,6 +15,8 @@
 
 import ctypes
 import logging
+from collections import defaultdict
+
 import os
 import statistics
 import struct
@@ -130,23 +132,36 @@ def _aggregate_measurements(measurements_per_cpu, event_names) -> Measurements:
     # because we later add 2 non-standard metrics,
     # we shouldn't return them when they are dependent on other events
     if len(event_names) == 0:
+        log.warning('not enough events to aggregate!')
         return {}
 
     aggregated_measurements: Measurements = {metric_name: 0 for metric_name in event_names}
     aggregated_measurements.update(**{MetricName.SCALING_FACTOR_MAX: 0,
                                       MetricName.SCALING_FACTOR_AVG: 0})
+
+    empty_metrics = set()
+
     for cpu, measurements_from_single_cpu in measurements_per_cpu.items():
         for metric_name in event_names:
             aggregated_measurements[metric_name] += measurements_from_single_cpu[metric_name]
+
         aggregated_measurements[MetricName.SCALING_FACTOR_MAX] = max(
             aggregated_measurements[MetricName.SCALING_FACTOR_MAX],
             measurements_from_single_cpu[MetricName.SCALING_FACTOR_MAX]
         )
         aggregated_measurements[MetricName.SCALING_FACTOR_AVG] += measurements_from_single_cpu[
             MetricName.SCALING_FACTOR_AVG]
+
     if len(measurements_per_cpu) > 0:
         aggregated_measurements[MetricName.SCALING_FACTOR_AVG] /= len(
             measurements_per_cpu)  # assuming even number of measurements per CPU
+
+    # Just check if there is some activity on counter on any cpu
+    for metric_name in event_names:
+        if aggregated_measurements[metric_name] == 0:
+            empty_metrics.add(metric_name)
+    if len(empty_metrics) > 0:
+        log.warning('number of measurements with 0 value: %d (%s)', len(empty_metrics), ', '.join(empty_metrics))
 
     return aggregated_measurements
 
