@@ -74,6 +74,9 @@ spec:
           requests:
             cpu: 100m
             memory: 200Mi
+        ports:
+          - containerPort: 24231
+            name: web
         volumeMounts:
         - mountPath: /fluentd/etc/
           name: fconf
