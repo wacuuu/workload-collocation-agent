@@ -6,7 +6,7 @@ groups:
     labels:
       app: mutilate
   - record: apm__sli
-    expr: apm__mutilate_scan_read_p99 and rate(apm__mutilate_stdout_lines[5s])>0
+    expr: apm__mutilate_scan_read_p99 and rate(apm__mutilate_stdout_lines[30s])>0
     labels:
       app: mutilate
   - record: apm__slo
@@ -14,7 +14,7 @@ groups:
     labels:
       app: sysbench
   - record: apm__sli
-    expr: apm__sysbench_qps and rate(apm__sysbench_stdout_lines[5s])>0
+    expr: apm__sysbench_qps and rate(apm__sysbench_stdout_lines[30s])>0
     labels:
       app: sysbench
   - record: apm__slo
@@ -22,7 +22,7 @@ groups:
     labels:
       app: stress_ng
   - record: apm__sli
-    expr: apm__stress_ng_bogo_ops_per_second_usr_sys_time and rate(apm__stress_ng_stdout_lines[5s])>0
+    expr: apm__stress_ng_bogo_ops_per_second_usr_sys_time and rate(apm__stress_ng_stdout_lines[30s])>0
     labels:
       app: stress_ng
   - record: apm__slo
@@ -30,7 +30,7 @@ groups:
     labels:
       app: memtier
   - record: apm__sli
-    expr:  apm__memtier_ops and rate(apm__memtier_stdout_lines[5s])>0
+    expr:  apm__memtier_ops and rate(apm__memtier_stdout_lines[30s])>0
     labels:
       app: memtier
   - record: apm__sli_normalized
