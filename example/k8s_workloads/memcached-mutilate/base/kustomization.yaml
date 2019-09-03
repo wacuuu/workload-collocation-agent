@@ -2,9 +2,6 @@ resources:
 - memcached.yaml
 - mutilate.yaml
 
-commonLabels:
-  workload: memcached-mutilate
-
 configMapGenerator:
 - name: memcached
   literals:

@@ -2,9 +2,6 @@ resources:
 - redis.yaml
 - memtier.yaml
 
-commonLabels:
-  workload: redis-memtier
-
 configMapGenerator:
 - name: redis
   literals:

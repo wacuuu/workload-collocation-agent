@@ -5,35 +5,37 @@ groups:
   - record: apm__slo  # big
     expr: 700
     labels:
-      app: mutilate-big
+      app: memcached-big
   - record: apm__slo  # medium
     expr: 600
     labels:
-      app: mutilate-medium
+      app: memcached-medium
   - record: apm__slo  # small
     expr: 500
     labels:
-      app: mutilate-small
+      app: memcached-small
   - record: apm__sli
     expr: avg(apm__mutilate_scan_read_p99 and rate(apm__mutilate_stdout_lines[30s])>0) by (app)
+
 # -------------Sysbench-----------------
   - record: apm__slo  # big
     expr: 70000
     labels:
-      app: sysbench-big
+      app: sysbench-memory-big
   - record: apm__slo  # medium
     expr: 40000
     labels:
-      app: sysbench-medium
+      app: sysbench-memory-medium
   - record: apm__slo  # small
     expr: 18000
     labels:
-      app: sysbench-small
+      app: sysbench-memory-small
   - record: apm__sli # MiB/sec
     expr: avg(avg_over_time(apm__sysbench_qps[30s]) and (rate(apm__sysbench_stdout_lines[15s])>0)) by (app)
+
 # -------------Stress-----------------
   - record: apm__slo  # big
-    expr: 100
+    expr: 10000
     labels:
       app: stress-stream-big
   - record: apm__slo
@@ -46,21 +48,23 @@ groups:
       app: stress-stream-small
   - record: apm__sli
     expr: avg(rate(apm__stress_ng_bogo_ops_counter[30s]) and rate(apm__stress_ng_stdout_lines[15s]) > 0) by (app)
+
 # -------------Memtier-----------------
   - record: apm__slo
-    expr: 1000
+    expr: 100000000
     labels:
-      app: memtier-small
+      app: redis-small
   - record: apm__slo
-    expr: 1000
+    expr: 100000000
     labels:
-      app: memtier-medium
+      app: redis-medium
   - record: apm__slo
-    expr: 1000
+    expr: 100000000
     labels:
-      app: memtier-big
+      app: redis-big
   - record: apm__sli
-    expr:  apm__memtier_ops and rate(apm__memtier_stdout_lines[30s])>0
+    expr: avg(rate(apm__memtier_ops[30s]) and rate(apm__memtier_stdout_lines[30s])>0) by (app)
+
 #---------------------------------------
   - record: apm__sli_normalized
     expr: apm__sli / on (app) group_left apm__slo

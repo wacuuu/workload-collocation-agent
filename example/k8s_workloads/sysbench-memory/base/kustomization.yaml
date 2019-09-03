@@ -1,9 +1,6 @@
 resources:
   - sysbench-memory.yaml
 
-commonLabels:
-  workload: sysbench-memory
-
 configMapGenerator:
   - name: sysbench-memory
     literals:

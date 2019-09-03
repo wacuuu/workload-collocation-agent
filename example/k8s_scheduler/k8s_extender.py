@@ -96,16 +96,21 @@ WEIGHT_MULTIPLER = 30
 
 def _prioritize_logic(app, nodes, namespace):
     if namespace != NAMESPACE:
-        log.info('ignoring pods not from %r namespace (got %r)', NAMESPACE, namespace)
+        log.debug('ignoring pods not from %r namespace (got %r)', NAMESPACE, namespace)
         return {}
 
     # Get most fitted nodes.
     priorities = {}
     query = PRIORITY_QUERY %(app)
     nodes_fit = do_raw_query(query, 'node')
-    log.info('nodes_fit for %r: %r', app, nodes_fit)
+    log.debug('nodes_fit for %r: %r', app, nodes_fit)
     for node in nodes:
-        priorities[node] = int(nodes_fit.get(node, 0) * WEIGHT_MULTIPLER)
+        try:
+            priorities[node] = int(nodes_fit.get(node, 0) * WEIGHT_MULTIPLER)
+        except ValueError:
+            logging.debug('NaN for %s - ignored')
+            continue
+
     return priorities
 
 
@@ -158,7 +163,7 @@ class K8SHandler(http.server.BaseHTTPRequestHandler):
         app, nodes, namespace = self._extract_common_input(extender_args)
         self._extract_common_input(extender_args)
         nodes = _filter_logic(app, nodes, namespace)
-        log.info('filtered = %s', ', '.join(nodes))
+        log.debug('filtered = %s', ', '.join(nodes))
         # Encode
         return dict(
             NodeNames=nodes,
@@ -170,11 +175,10 @@ class K8SHandler(http.server.BaseHTTPRequestHandler):
         # Logic
         app, nodes, namespace = self._extract_common_input(extender_args)
         priorities = _prioritize_logic(app, nodes, namespace)
-        log.info('priorities: %r', priorities)
+        log.info('%s priorities  %r', app, ', '.join('%s:%d' %(k,v) for k,v in sorted(priorities.items(), key=lambda x: x[0])))
         # Encode as PriorityList
         priority_list = [dict(Host=node, Score=priorities.get(node, 0)) for node in nodes]
-        log.debug('priority list = %s', ', '.join('%s=%s' % (d['Host'], d['Score']) for d in
-                                                  sorted(priority_list, key=lambda d: d['Host'])))
+        log.debug('priority list = %s', ', '.join('%s=%s' % (d['Host'], d['Score']) for d in sorted(priority_list, key=lambda d: d['Host'])))
         return priority_list
 
 

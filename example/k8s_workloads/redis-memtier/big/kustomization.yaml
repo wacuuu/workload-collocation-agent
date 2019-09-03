@@ -13,3 +13,6 @@ configMapGenerator:
     - threads=8
     - keymaximum=50000000 # 50M
     - datasize=1024       # eff 50G
+
+patchesStrategicMerge:
+  - resources.yaml

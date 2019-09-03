@@ -10,14 +10,10 @@ spec:
 ---
 apiVersion: apps/v1
 kind: StatefulSet
-
 metadata:
   name: redis
-  labels:
-    workload: redis
-
 spec:
-  #replicas: 0
+  replicas: 0
   serviceName: redis
   selector:
     matchLabels:
