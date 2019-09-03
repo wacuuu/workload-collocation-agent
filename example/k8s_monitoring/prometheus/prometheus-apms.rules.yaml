@@ -29,8 +29,8 @@ groups:
     expr: 3200
     labels:
       app: sysbench-big
-  - record: apm__sli
-    expr: avg(apm__sysbench_qps and rate(apm__sysbench_stdout_lines[30s])>0) by (app)
+  - record: apm__sli # MiB/sec
+    expr: avg(avg_over_time(apm__sysbench_qps[30s]) and (rate(apm__sysbench_stdout_lines[15s])>0)) by (app)
 # -------------Stress-----------------
   - record: apm__slo
     expr: 1000        # small
