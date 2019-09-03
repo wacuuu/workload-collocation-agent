@@ -91,7 +91,8 @@ def _filter_logic(app, nodes, namespace):
     return nodes
 
 
-PRIORITY_QUERY = 'fit{app="%s"}'
+PRIORITY_QUERY = 'fit_avg{app="%s"}'
+WEIGHT_MULTIPLER = 30
 
 def _prioritize_logic(app, nodes, namespace):
     if namespace != NAMESPACE:
@@ -104,7 +105,7 @@ def _prioritize_logic(app, nodes, namespace):
     nodes_fit = do_raw_query(query, 'node')
     log.info('nodes_fit for %r: %r', app, nodes_fit)
     for node in nodes:
-        priorities[node] = int(nodes_fit.get(node, 0) * 100)
+        priorities[node] = int(nodes_fit.get(node, 0) * WEIGHT_MULTIPLER)
     return priorities
 
 

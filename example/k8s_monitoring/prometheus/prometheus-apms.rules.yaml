@@ -1,37 +1,66 @@
 groups:
 - name: SLOS
   rules:
-  - record: apm__slo
-    expr: 1200
+# -------------Mutilate-----------------
+  - record: apm__slo  # big
+    expr: 700
     labels:
-      app: mutilate
+      app: mutilate-big
+  - record: apm__slo  # medium
+    expr: 600
+    labels:
+      app: mutilate-medium
+  - record: apm__slo  # small
+    expr: 500
+    labels:
+      app: mutilate-small
   - record: apm__sli
-    expr: apm__mutilate_scan_read_p99 and rate(apm__mutilate_stdout_lines[30s])>0
+    expr: avg(apm__mutilate_scan_read_p99 and rate(apm__mutilate_stdout_lines[30s])>0) by (app)
+# -------------Sysbench-----------------
+  - record: apm__slo  # big
+    expr: 70000
     labels:
-      app: mutilate
+      app: sysbench-big
+  - record: apm__slo  # medium
+    expr: 40000
+    labels:
+      app: sysbench-medium
+  - record: apm__slo  # small
+    expr: 18000
+    labels:
+      app: sysbench-small
+  - record: apm__sli # MiB/sec
+    expr: avg(avg_over_time(apm__sysbench_qps[30s]) and (rate(apm__sysbench_stdout_lines[15s])>0)) by (app)
+# -------------Stress-----------------
+  - record: apm__slo  # big
+    expr: 100
+    labels:
+      app: stress-stream-big
   - record: apm__slo
-    expr: 3200
+    expr: 100         # medium
     labels:
-      app: sysbench
+      app: stress-stream-medium
+  - record: apm__slo
+    expr: 1000        # small
+    labels:
+      app: stress-stream-small
   - record: apm__sli
-    expr: apm__sysbench_qps and rate(apm__sysbench_stdout_lines[30s])>0
-    labels:
-      app: sysbench
+    expr: avg(rate(apm__stress_ng_bogo_ops_counter[30s]) and rate(apm__stress_ng_stdout_lines[15s]) > 0) by (app)
+# -------------Memtier-----------------
   - record: apm__slo
     expr: 1000
     labels:
-      app: stress_ng
-  - record: apm__sli
-    expr: apm__stress_ng_bogo_ops_per_second_usr_sys_time and rate(apm__stress_ng_stdout_lines[30s])>0
-    labels:
-      app: stress_ng
+      app: memtier-small
   - record: apm__slo
     expr: 1000
     labels:
-      app: memtier
+      app: memtier-medium
+  - record: apm__slo
+    expr: 1000
+    labels:
+      app: memtier-big
   - record: apm__sli
     expr:  apm__memtier_ops and rate(apm__memtier_stdout_lines[30s])>0
-    labels:
-      app: memtier
+#---------------------------------------
   - record: apm__sli_normalized
     expr: apm__sli / on (app) group_left apm__slo
