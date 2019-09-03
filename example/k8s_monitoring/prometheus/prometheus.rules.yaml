@@ -44,7 +44,7 @@ groups:
     expr: app__bw / 100  # Assume all nodes has max 100GB membw
   ### IV. Contention sensitivity
   - record: app__contention_sensitivity
-    expr: app__rw / (app__memory_intensivity * app__memory_utilization)
+    expr: app__rw / app__memory_utilization
 
   ### II. 2LM Friend (MaciejM)
   # 2LM Friend = RW / (BW * WSS)
