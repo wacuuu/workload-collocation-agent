@@ -149,13 +149,13 @@ groups:
 - name: fit
   rules:
   - record: fit
-    expr: abs( scaled__app_contention_insensitivity - on() group_left(node) scaled__node_contention_risk{node="node11"} )
+    expr: abs( scaled__app_contention_sensitivity - on() group_left(node) scaled__node_contention_risk{node="node11"} )
   - record: fit
-    expr: abs( scaled__app_contention_insensitivity - on() group_left(node) scaled__node_contention_risk{node="node12"} )
+    expr: abs( scaled__app_contention_sensitivity - on() group_left(node) scaled__node_contention_risk{node="node12"} )
   - record: fit
-    expr: abs( scaled__app_contention_insensitivity - on() group_left(node) scaled__node_contention_risk{node="node13"} )
+    expr: abs( scaled__app_contention_sensitivity - on() group_left(node) scaled__node_contention_risk{node="node13"} )
   - record: fit
-    expr: abs( scaled__app_contention_insensitivity - on() group_left(node) scaled__node_contention_risk{node="node14"} )
+    expr: abs( scaled__app_contention_sensitivity - on() group_left(node) scaled__node_contention_risk{node="node14"} )
   - record: fit_avg
     expr: avg_over_time(fit{node="node11"}[15s])
   - record: fit_avg
