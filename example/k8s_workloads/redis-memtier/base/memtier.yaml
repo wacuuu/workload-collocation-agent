@@ -26,9 +26,9 @@ spec:
             - bash
             - -c
             - 'shopt -s extglob; export identifier=${podname#memtier-}; export service=${identifier%-+([[:digit:]])};
-            taskset -c $cpus memtier_benchmark --run-count=1 --json-out-file=/tmp/memtier_benchmark --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-pattern=P:P --key-maximum=$keymaximum --ratio 1:0
+            taskset -c $cpus memtier_benchmark --run-count=1 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --requests=allkeys --key-pattern=P:P --key-maximum=$keymaximum --ratio 1:0 2>&1 | awk ''BEGIN { RS = "\r" } { print $0 }''
             &&
-            taskset -c $cpus sh -c "while true; do memtier_benchmark --run-count=9999 --test-time=6000 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --key-maximum=$keymaximum --key-pattern=G:G --ratio $ratio $extra 2>&1 | awk ''BEGIN { RS = "\r" }{ print $0 }'' 1>&2; done"'
+            taskset -c $cpus memtier_benchmark --run-count=9999 --requests=100000 --server=redis-${identifier}.redis-${service} --threads=$threads --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --hide-histogram --key-maximum=$keymaximum --key-pattern=G:G --ratio $ratio 2>&1 | awk ''BEGIN { RS = "\r" } { print $0 }'' '
 
           env:
             - name: podname
