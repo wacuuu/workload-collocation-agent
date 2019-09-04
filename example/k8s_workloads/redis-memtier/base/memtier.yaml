@@ -27,14 +27,20 @@ spec:
           command:
             - bash
             - -c
-            - 'echo sleeping...; sleep 5; shopt -s extglob; export identifier=${podname#memtier-}; export service=${identifier%-+([[:digit:]])};
+            - 'echo sleeping...;
+            sleep 5;
+            shopt -s extglob;
+            identifier=${podname#memtier-};
+            service=${identifier%-+([[:digit:]])};
+            target=redis-${identifier}.redis-${service};
+            echo targeting: $target;
             echo preparing data...
             &&
-            taskset -c $cpus memtier_benchmark --run-count=1 --requests=allkeys --server=redis-${identifier}.redis-${service} --threads=1 --clients=1 --pipeline=20000 --data-size=$datasize --hide-histogram  --key-pattern=P:P --key-maximum=$keymaximum --ratio 1:0
+            taskset -c $cpus memtier_benchmark --run-count=1 --requests=allkeys --server=$target --threads=1 --clients=1 --pipeline=20000 --data-size=$datasize --hide-histogram  --key-pattern=P:P --key-maximum=$keymaximum --ratio 1:0
             &&
             echo loading...
             &&
-            stdbuf -e0 -o0 taskset -c $cpus stdbuf -e0 -o0 memtier_benchmark --run-count=9999 --requests=10000000000 --server=redis-${identifier}.redis-${service} --threads=$threads --hide-histogram --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --key-pattern=G:G --key-maximum=$keymaximum  --ratio $ratio 2>&1 | stdbuf -e0 -o0 awk ''BEGIN { RS = "\r" } { print $0; fflush(); system("") }'' '
+            stdbuf -e0 -o0 taskset -c $cpus stdbuf -e0 -o0 memtier_benchmark --run-count=9999 --requests=10000000000 --server=$target --threads=$threads --hide-histogram --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --key-pattern=G:G --key-maximum=$keymaximum  --ratio $ratio 2>&1 | stdbuf -e0 -o0 awk ''BEGIN { RS = "\r" } { print $0; fflush(); system("") }'' '
 
           env:
             - name: podname

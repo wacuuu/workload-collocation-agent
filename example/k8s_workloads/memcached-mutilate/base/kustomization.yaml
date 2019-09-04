@@ -19,7 +19,7 @@ configMapGenerator:
     - records=100000           # 100k
     - qps=1000000              # 1M
     - conns=1
-    - time=15          # seconds
+    - time=30                  # seconds
     - extra=
 
 patchesStrategicMerge:

@@ -46,7 +46,12 @@ spec:
           command:
             - bash
             - -c
-            - "sleep 5; identifier=${podname#mutilate-}; export service=${identifier%-[+[:digit:]]}; target=memcached-${identifier}.memcached-${service}; echo $target;
+            - "sleep 5;
+               shopt -s extglob;
+               identifier=${podname#mutilate-};
+               service=${identifier%-+([[:digit:]])};
+               target=memcached-${identifier}.memcached-${service};
+               echo targeting: $target;
                echo loading && ./mutilate -T 1 -s ${target}:11211 --loadonly -r $load_records -V $value -v && echo started && \
                taskset -c $cpus ./mutilate -C $conns -T $threads -t $time -s ${target}:11211 --noload --scan $qps:$qps:0 -r $records -V $value $extra"
   # required for workaround bug with kustomize https://github.com/kubernetes-sigs/kustomize/issues/504
