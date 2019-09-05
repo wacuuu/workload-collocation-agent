@@ -10,4 +10,4 @@ spec:
           resources:
             requests:
               cpu: 4
-              memory: 55G # valueSize*records = 50k * 1M = 50G
+              memory: 60G # valueSize*records = 50k * 1M = 50G

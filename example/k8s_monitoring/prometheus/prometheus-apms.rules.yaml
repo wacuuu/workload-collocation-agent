@@ -20,12 +20,12 @@ groups:
     expr: avg_over_time(apm__mutilate_scan_qps[60s]) and apm__mutilate_alive
   - record: apm__mutilate_latency
     expr: avg_over_time(apm__mutilate_scan_read_p99[60s]) and apm__mutilate_alive
+  - record: apm__memcached_latency
+    expr: (label_replace(apm__mutilate_latency, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right(node) (task__last_seen/task__last_seen)
+  - record: apm__memcached_qps
+    expr: (label_replace(apm__mutilate_qps, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right(node) (task__last_seen/task__last_seen)
   - record: apm__sli  #  SLI
     expr: avg(apm__mutilate_scan_read_p99 and apm__mutilate_alive) by (app)
-  - record: apm__memcached_latency
-    expr: (label_replace(apm__mutilate_latency, "task_name", "default/memcached-$1", "task_name", "default/mutilate-(.*)")) * on(task_name) group_right(node) (task__last_seen/task__last_seen)
-  - record: apm__memcached_qps
-    expr: (label_replace(apm__mutilate_qps, "task_name", "default/memcached-$1", "task_name", "default/mutilate-(.*)")) * on(task_name) group_right(node) (task__last_seen/task__last_seen)
 # -------------Sysbench-----------------
   - record: apm__slo  # big
     expr: 70000
