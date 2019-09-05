@@ -5,7 +5,10 @@ namespace: monitoring
 configMapGenerator:
   - name: fconf
     files:
-    - fluent.conf
+    - configurations/fluent.conf
+    - configurations/stress.conf
+    - configurations/mutilate.conf
+    - configurations/sysbench.conf
+    - configurations/memtier.conf
 resources:
   - fluentd.yaml
-
