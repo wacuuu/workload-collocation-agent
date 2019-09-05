@@ -40,7 +40,7 @@ spec:
             &&
             echo loading...
             &&
-            stdbuf -e0 -o0 taskset -c $cpus stdbuf -e0 -o0 memtier_benchmark --run-count=9999 --requests=10000000000 --server=$target --threads=$threads --hide-histogram --clients=$clients --pipeline=$pipeline --data-size=$datasize --random-data --key-pattern=G:G --key-maximum=$keymaximum  --ratio $ratio 2>&1 | stdbuf -e0 -o0 awk ''BEGIN { RS = "\r" } { print $0; fflush(); system("") }'' '
+            stdbuf -e0 -o0 taskset -c $cpus stdbuf -e0 -o0 memtier_benchmark --run-count=9999 --requests=10000000000 --server=$target --threads=$threads --hide-histogram --clients=$clients --pipeline=$pipeline --data-size=$datasize --key-pattern=G:G --key-maximum=$keymaximum  --ratio $ratio 2>&1 | stdbuf -e0 -o0 awk ''BEGIN { RS = "\r" } { print $0; fflush(); system("") }'' '
 
           env:
             - name: podname
