@@ -73,6 +73,20 @@ groups:
       app: redis-big
   - record: apm__sli
     expr: avg(rate(apm__memtier_ops[30s]) and rate(apm__memtier_stdout_lines[30s])>0) by (app)
+  # intermediary
+  - record: apm__memtier_alive
+      expr: ceil(rate(apm__memtier_stdout_lines[30s])>0)
+  - record: apm__memtier_ops
+    expr: avg_over_time(apm__memtier_scan_ops[60s]) and apm__memtier_alive
+  - record: apm__memtier_latency
+    expr: avg_over_time(apm__memtier_scan_latency[60s] and apm__memtier_alive
+  # common apm metrics
+  - record: apm__sli  #  SLI
+    expr: avg(apm__memtier_scan_latency and apm__memtier_alive) by (app)
+  - record: apm__latency
+    expr: (label_replace(apm__memtier_latency, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() (task__last_seen / task__last_seen)
+  - record: apm__qps
+    expr: (label_replace(apm__memtier_ops, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() (task__last_seen / task__last_seen)
 
 #---------------------------------------
   - record: apm__sli_normalized
