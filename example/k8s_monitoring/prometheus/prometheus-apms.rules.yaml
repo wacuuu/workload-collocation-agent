@@ -18,8 +18,10 @@ groups:
     expr: apm__memcached_qps
 
 # -------------Sysbench-----------------
+  - record: apm__sysbench_alive
+    expr: ceil(rate(apm__sysbench_stdout_lines[15s])>0)
   - record: apm__sysbench_mbps    # MiB/sec
-    expr: avg(avg_over_time(apm__sysbench_qps[30s]) and (rate(apm__sysbench_stdout_lines[15s])>0)) by (app)
+    expr: avg_over_time(apm__sysbench_qps[60s]) and apm__sysbench_alive
   - record: apm__throughput       # MiB/sec
     expr: apm__sysbench_mbps
 
