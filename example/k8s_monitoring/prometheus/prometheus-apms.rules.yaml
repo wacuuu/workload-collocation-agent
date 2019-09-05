@@ -20,12 +20,10 @@ groups:
     expr: avg_over_time(apm__mutilate_scan_qps[60s]) and apm__mutilate_alive
   - record: apm__mutilate_latency
     expr: avg_over_time(apm__mutilate_scan_read_p99[60s]) and apm__mutilate_alive
-  - record: apm__memcached_latency
-    expr: (label_replace(apm__mutilate_latency, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right(node) (task__last_seen/task__last_seen)
-  - record: apm__memcached_qps
-    expr: (label_replace(apm__mutilate_qps, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right(node) (task__last_seen/task__last_seen)
-  - record: apm__sli  #  SLI
-    expr: avg(apm__mutilate_scan_read_p99 and apm__mutilate_alive) by (app)
+  - record: apm__latency
+    expr: (label_replace(apm__mutilate_latency, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)
+  - record: apm__qps
+    expr: (label_replace(apm__mutilate_qps, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)
 # -------------Sysbench-----------------
   - record: apm__slo  # big
     expr: 70000
@@ -75,19 +73,19 @@ groups:
     expr: avg(rate(apm__memtier_ops[30s]) and rate(apm__memtier_stdout_lines[30s])>0) by (app)
   # intermediary
   - record: apm__memtier_alive
-      expr: ceil(rate(apm__memtier_stdout_lines[30s])>0)
+    expr: ceil(rate(apm__memtier_stdout_lines[30s])>0)
   - record: apm__memtier_ops
-    expr: avg_over_time(apm__memtier_scan_ops[60s]) and apm__memtier_alive
+    expr: rate(apm__memtier_scan_operations[30s]) and apm__memtier_alive
   - record: apm__memtier_latency
-    expr: avg_over_time(apm__memtier_scan_latency[60s] and apm__memtier_alive
+    expr: avg_over_time(apm__memtier_scan_latency[60s]) and apm__memtier_alive
   # common apm metrics
-  - record: apm__sli  #  SLI
-    expr: avg(apm__memtier_scan_latency and apm__memtier_alive) by (app)
   - record: apm__latency
     expr: (label_replace(apm__memtier_latency, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() (task__last_seen / task__last_seen)
   - record: apm__qps
     expr: (label_replace(apm__memtier_ops, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() (task__last_seen / task__last_seen)
 
 #---------------------------------------
+  - record: apm__sli  #  SLI
+    expr: apm__qps
   - record: apm__sli_normalized
     expr: apm__sli / on (app) group_left apm__slo

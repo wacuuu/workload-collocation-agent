@@ -9,5 +9,5 @@ spec:
         - name: redis
           resources:
             requests:
-              cpu: 6
+              cpu: 1
               memory: 30G
