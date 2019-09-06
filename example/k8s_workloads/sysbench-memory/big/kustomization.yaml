@@ -15,3 +15,4 @@ configMapGenerator:
   literals:
     - threads=16
     - memory=128g
+    - report_interval=70

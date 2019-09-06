@@ -7,6 +7,7 @@ configMapGenerator:
       - threads=4
       - cpus=0-1000
       - memory=16g
+      - report_interval=1
       - extra=
 
 patchesStrategicMerge:
