@@ -10,4 +10,4 @@ spec:
           resources:
             requests:
               cpu: 8
-              memory: 64G
+              memory: 16G
