@@ -1,93 +1,76 @@
 groups:
 - name: SLOS
   rules:
-# -------------Mutilate-----------------
-  - record: apm__slo  # big
-    expr: 700
-    labels:
-      app: memcached-big
-  - record: apm__slo  # medium
-    expr: 600
-    labels:
-      app: memcached-medium
-  - record: apm__slo  # small
-    expr: 500
-    labels:
-      app: memcached-small
+# -------------Memcached + Mutilate-----------------
   - record: apm__mutilate_alive
     expr: ceil(rate(apm__mutilate_stdout_lines[30s])>0)
   - record: apm__mutilate_qps
     expr: avg_over_time(apm__mutilate_scan_qps[60s]) and apm__mutilate_alive
   - record: apm__mutilate_latency
     expr: avg_over_time(apm__mutilate_scan_read_p99[60s]) and apm__mutilate_alive
-  - record: apm__sli  #  SLI
-    expr: avg(apm__mutilate_scan_read_p99 and apm__mutilate_alive) by (app)
   - record: apm__memcached_latency
-    expr: (label_replace(apm__mutilate_latency, "task_name", "default/memcached-$1", "task_name", "default/mutilate-(.*)")) * on(task_name) group_right(node) (task__last_seen/task__last_seen)
+    expr: (label_replace(apm__mutilate_latency, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)
   - record: apm__memcached_qps
-    expr: (label_replace(apm__mutilate_qps, "task_name", "default/memcached-$1", "task_name", "default/mutilate-(.*)")) * on(task_name) group_right(node) (task__last_seen/task__last_seen)
+    expr: (label_replace(apm__mutilate_qps, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)
+  - record: apm__latency
+    expr: apm__memcached_latency
+  - record: apm__throughput
+    expr: apm__memcached_qps
+
 # -------------Sysbench-----------------
-  - record: apm__slo  # big
-    expr: 70000
-    labels:
-      app: sysbench-memory-big
-  - record: apm__slo  # medium
-    expr: 40000
-    labels:
-      app: sysbench-memory-medium
-  - record: apm__slo  # small
-    expr: 18000
-    labels:
-      app: sysbench-memory-small
-  - record: apm__sli # MiB/sec
-    expr: avg(avg_over_time(apm__sysbench_qps[30s]) and (rate(apm__sysbench_stdout_lines[15s])>0)) by (app)
+  - record: apm__sysbench_alive
+    expr: ceil(rate(apm__sysbench_stdout_lines[15s])>0)
+  - record: apm__sysbench_mbps    # MiB/sec
+    expr: avg_over_time(apm__sysbench_qps[60s]) and apm__sysbench_alive
+  - record: apm__throughput       # MiB/sec
+    expr: apm__sysbench_mbps
 
 # -------------Stress-----------------
-  - record: apm__slo  # big
-    expr: 10000
-    labels:
-      app: stress-stream-big
-  - record: apm__slo
-    expr: 100         # medium
-    labels:
-      app: stress-stream-medium
-  - record: apm__slo
-    expr: 1000        # small
-    labels:
-      app: stress-stream-small
-  - record: apm__sli
-    expr: avg(rate(apm__stress_ng_bogo_ops_counter[30s]) and rate(apm__stress_ng_stdout_lines[15s]) > 0) by (app)
+  - record: apm__stress_bogo_ops
+    expr: rate(apm__stress_ng_bogo_ops_counter[30s]) and rate(apm__stress_ng_stdout_lines[15s]) > 0
+  - record: apm__throughput      # bogo/ops
+    expr: apm__stress_bogo_ops
 
-# -------------Memtier-----------------
-  - record: apm__slo
-    expr: 100000000
-    labels:
-      app: redis-small
-  - record: apm__slo
-    expr: 100000000
-    labels:
-      app: redis-medium
-  - record: apm__slo
-    expr: 100000000
-    labels:
-      app: redis-big
-  - record: apm__sli
-    expr: avg(rate(apm__memtier_ops[30s]) and rate(apm__memtier_stdout_lines[30s])>0) by (app)
+# -------------Redis + Memtier-----------------
   # intermediary
   - record: apm__memtier_alive
-      expr: ceil(rate(apm__memtier_stdout_lines[30s])>0)
+    expr: ceil(rate(apm__memtier_stdout_lines[30s])>0)
   - record: apm__memtier_ops
-    expr: avg_over_time(apm__memtier_scan_ops[60s]) and apm__memtier_alive
+    expr: rate(apm__memtier_scan_operations[30s]) and apm__memtier_alive
   - record: apm__memtier_latency
-    expr: avg_over_time(apm__memtier_scan_latency[60s] and apm__memtier_alive
+    expr: avg_over_time(apm__memtier_scan_latency[60s]) and apm__memtier_alive
   # common apm metrics
-  - record: apm__sli  #  SLI
-    expr: avg(apm__memtier_scan_latency and apm__memtier_alive) by (app)
-  - record: apm__latency
+  - record: apm__redis_latency
     expr: (label_replace(apm__memtier_latency, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() (task__last_seen / task__last_seen)
-  - record: apm__qps
+  - record: apm__redis_qps
     expr: (label_replace(apm__memtier_ops, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() (task__last_seen / task__last_seen)
+  - record: apm__latency
+    expr: apm__redis_latency
+  - record: apm__throughput
+    expr: apm__redis_qps
 
-#---------------------------------------
+#--------------------------------------- GENERIC FOR ALL WORKLODAS
+  - record: apm__sli          #  SLI based on throughput
+    expr: apm__throughput
+
+#--------------------------------------- normalized
+  # Memcached QPS goal
+  - {record: apm__slo, labels: {app: memcached-big}, expr: 500}
+  - {record: apm__slo, labels: {app: memcached-medium}, expr: 500}
+  - {record: apm__slo, labels: {app: memcached-small}, expr: 500}
+  # Redis QPS goal
+  - {record: apm__slo, labels: {app: redis-big}, expr: 100000}
+  - {record: apm__slo, labels: {app: redis-medium}, expr: 100000}
+  - {record: apm__slo, labels: {app: redis-small}, expr: 100000}
+  # Stress Bogo / sec goal
+  - {record: apm__slo, labels: {app: stress-stream-big}, expr: 50}
+  - {record: apm__slo, labels: {app: stress-stream-medium}, expr: 50}
+  - {record: apm__slo, labels: {app: stress-stream-small}, expr: 50}
+  # Sysbench MB/s target
+  - {record: apm__slo, labels: {app: sysbench-memory-big}, expr: 50000}
+  - {record: apm__slo, labels: {app: sysbench-memory-medium}, expr: 50000}
+  - {record: apm__slo, labels: {app: sysbench-memory-small}, expr: 50000}
+
+  # NORMALIZED ACCORDING THE GOALS
   - record: apm__sli_normalized
     expr: apm__sli / on (app) group_left apm__slo
