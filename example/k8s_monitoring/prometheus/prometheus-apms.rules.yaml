@@ -41,9 +41,9 @@ groups:
     expr: avg_over_time(apm__memtier_scan_latency[60s]) and apm__memtier_alive
   # common apm metrics
   - record: apm__redis_latency
-    expr: (label_replace(apm__memtier_latency, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() (task__last_seen / task__last_seen)
+    expr: (label_replace(apm__memtier_latency, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() task__up
   - record: apm__redis_qps
-    expr: (label_replace(apm__memtier_ops, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() (task__last_seen / task__last_seen)
+    expr: (label_replace(apm__memtier_ops, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() task__up
   - record: apm__latency
     expr: apm__redis_latency
   - record: apm__throughput

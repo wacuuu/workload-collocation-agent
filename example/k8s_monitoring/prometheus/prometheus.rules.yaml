@@ -16,6 +16,10 @@ groups:
     expr: avg by(app) (avg_over_time(task__memory_usage_per_task_bytes[15s])) / 1e9
   - record: app__tlb_misses
     expr: avg(task__dtlb_load_misses_ratio) by (app)
+  - record: app__cpus
+    expr: avg(task__cpus) by (app)
+  - record: app__mem
+    expr: avg(task__mem) by (app)
   # Depends on context
   - record: app__tlb_miss_ratio
     expr: avg(task__dtlb_load_misses_ratio) by (app)
@@ -27,7 +31,7 @@ groups:
   - record: app__rw
     expr: avg(task__memory_rw_ratio) by (app)
   - record: app__count
-    expr: count(task__last_seen) by (app)
+    expr: count(task__up) by (app)
 
   ### I. Cache utilization (PawelP)
   # Metrics for cache-utilization metric
@@ -39,7 +43,7 @@ groups:
   # Memory utilization = WSS/RSS
   - record: app__memory_utilization
     expr: app__wss / app__rss
-  # Memory intesivity
+  # Memory intensitivity
   - record: app__memory_intensivity
     expr: app__bw / 100  # Assume all nodes has max 100GB membw
   ### IV. Contention sensitivity
@@ -142,7 +146,7 @@ groups:
   - record: appnode__cache_utilization
     expr: appnode__memory_access_locality * appnode__memory_rw_ratio * appnode__memory_intensivity
   - record: appnode__count
-    expr: count(task__last_seen) by (app, node)
+    expr: count(task__up) by (app, node)
 
 # ------------------------------ FIT v2 ------------------------------------------------------
 #
