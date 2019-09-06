@@ -39,16 +39,16 @@ groups:
     expr: app__bw / app__wss
   # Cache utilization = RW * (BW/WSS) * (BW/100)
   - record: app__cache_utilization
-    expr: app__cache_locality * app__rw * app__memory_intensivity
+    expr: app__cache_locality * app__rw * app__memory_intensity
   # Memory utilization = WSS/RSS
   - record: app__memory_utilization
     expr: app__wss / app__rss
-  # Memory intensitivity
-  - record: app__memory_intensivity
+  # Memory intensity
+  - record: app__memory_intensity
     expr: app__bw / 100  # Assume all nodes has max 100GB membw
   ### IV. Contention sensitivity
   - record: app__contention_sensitivity
-    expr: app__rw / app__memory_utilization
+    expr: app__rw * app__memory_intensity / app__memory_utilization
 
   ### II. 2LM Friend (MaciejM)
   # 2LM Friend = RW / (BW * WSS)
@@ -137,14 +137,14 @@ groups:
     expr: avg(rate(task__memory_bandwidth[15s])) by (app, node) / 1e9
   - record: appnode__wss_avg_15s_gb
     expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app, node) / 1000
-  - record: appnode__memory_intensivity
+  - record: appnode__memory_intensity
     expr: appnode__memory_bandwidth_rate_15s_gb / 100  # Assume all nodes has max 100GB membw
   - record: appnode__memory_access_locality
     expr: appnode__memory_bandwidth_rate_15s_gb / appnode__wss_avg_15s_gb
   - record: appnode__memory_rw_ratio
     expr: avg(task__memory_rw_ratio) by (app, node)
   - record: appnode__cache_utilization
-    expr: appnode__memory_access_locality * appnode__memory_rw_ratio * appnode__memory_intensivity
+    expr: appnode__memory_access_locality * appnode__memory_rw_ratio * appnode__memory_intensity
   - record: appnode__count
     expr: count(task__up) by (app, node)
 
