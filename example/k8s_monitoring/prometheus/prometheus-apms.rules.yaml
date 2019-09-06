@@ -12,24 +12,32 @@ groups:
     expr: (label_replace(apm__mutilate_latency, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)
   - record: apm__memcached_qps
     expr: (label_replace(apm__mutilate_qps, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)
-  - record: apm__latency
-    expr: apm__memcached_latency
+  # T & L
   - record: apm__throughput
     expr: apm__memcached_qps
+  - record: apm__latency    # percentile99
+    expr: apm__memcached_latency
 
 # -------------Sysbench-----------------
   - record: apm__sysbench_alive
     expr: ceil(rate(apm__sysbench_stdout_lines[15s])>0)
   - record: apm__sysbench_mbps    # MiB/sec
     expr: avg_over_time(apm__sysbench_qps[60s]) and apm__sysbench_alive
+  # T & L
   - record: apm__throughput       # MiB/sec
     expr: apm__sysbench_mbps
+  - record: apm__latency          # average seconds to transfer on 1GB
+    expr: 1 / (apm__sysbench_mbps / 1e3)
+
 
 # -------------Stress-----------------
   - record: apm__stress_bogo_ops
     expr: rate(apm__stress_ng_bogo_ops_counter[30s]) and rate(apm__stress_ng_stdout_lines[15s]) > 0
+  # T & L
   - record: apm__throughput      # bogo/ops
     expr: apm__stress_bogo_ops
+  - record: apm__latency          # average seconds to perform one bogus operation
+    expr: 1 / apm__stress_bogo_ops
 
 # -------------Redis + Memtier-----------------
   # intermediary
@@ -44,14 +52,15 @@ groups:
     expr: (label_replace(apm__memtier_latency, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() task__up
   - record: apm__redis_qps
     expr: (label_replace(apm__memtier_ops, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() task__up
-  - record: apm__latency
-    expr: apm__redis_latency
+  # T & L
   - record: apm__throughput
     expr: apm__redis_qps
+  - record: apm__latency
+    expr: apm__redis_latency
 
 #--------------------------------------- GENERIC FOR ALL WORKLODAS
   - record: apm__sli          #  SLI based on throughput
-    expr: apm__throughput
+    expr: apm__latency
 
 #--------------------------------------- normalized
   # Memcached QPS goal
