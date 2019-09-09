@@ -9,5 +9,5 @@ spec:
         - name: memcached
           resources:
             requests:
-              cpu: 4
+              cpu: 3
               memory: 2G # valueSize*records = 10k * 1M = 2G

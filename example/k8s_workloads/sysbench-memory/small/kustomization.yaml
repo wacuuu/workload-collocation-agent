@@ -12,6 +12,6 @@ configMapGenerator:
 - name: sysbench-memory
   behavior: merge
   literals:
-    - threads=4
+    - threads=3
     - memory=1g
     - report_interval=1
