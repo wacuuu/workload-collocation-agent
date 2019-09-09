@@ -3,7 +3,8 @@ loggers: {}
 runner: !MeasurementRunner
   rdt_enabled: true
   extra_labels: &node_labels
-    node: node14
+    node: 'node14'
+    mode: '1lm'
   action_delay: 5.0
   event_names:
     - instructions

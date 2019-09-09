@@ -4,6 +4,7 @@ runner: !MeasurementRunner
   rdt_enabled: true
   extra_labels: &node_labels
     node: 'node11'
+    mode: '2lm'
   action_delay: 5.0
   event_names:
     - instructions
