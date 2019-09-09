@@ -1,6 +1,6 @@
 bases:
 - small
-- big
 - medium
+#- big
 
 

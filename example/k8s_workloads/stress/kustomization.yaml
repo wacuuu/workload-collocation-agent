@@ -1,4 +1,4 @@
 bases:
-  - stream-big
-  - stream-medium
-  - stream-small
+- stream-small
+- stream-medium
+#- stream-big
