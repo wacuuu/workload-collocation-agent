@@ -14,5 +14,5 @@ configMapGenerator:
   behavior: merge
   literals:
     - threads=8
-    - memory=4g
+    - memory=2g
     - report_interval=1
