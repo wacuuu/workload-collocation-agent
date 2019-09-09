@@ -77,6 +77,16 @@ groups:
     expr: sum(avg_over_time(platform__dram_hit[15s])) by(node)
   - record: node__total_rss
     expr: sum by(node) (platform__memory_usage)
+  - record: node__bw
+    expr: platform__pmm_total_mb_per_second
+    labels:
+      mode: 2lm
+  - record: node__bw
+    expr: platform__dram_total_mb_per_second
+    labels:
+      mode: 1lm
+
+
   # node based on tasks
   - record: node__total_memory_stalls
     expr: sum by(node) (rate(task__memstalls__ra310[15s]))
