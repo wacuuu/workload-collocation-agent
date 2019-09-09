@@ -8,26 +8,26 @@ groups:
     expr: avg_over_time(apm__mutilate_scan_qps[60s]) and apm__mutilate_alive
   - record: apm__mutilate_latency
     expr: avg_over_time(apm__mutilate_scan_read_p99[60s]) and apm__mutilate_alive
-  - record: apm__memcached_latency
-    expr: (label_replace(apm__mutilate_latency, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)
+  - record: apm__memcached_latency  # ms p99
+    expr: ((label_replace(apm__mutilate_latency, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)) / 1e3
   - record: apm__memcached_qps
     expr: (label_replace(apm__mutilate_qps, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)
   # T & L
   - record: apm__throughput
     expr: apm__memcached_qps
-  - record: apm__latency    # percentile99
+  - record: apm__latency    # percentile99 [ms]
     expr: apm__memcached_latency
 
 # -------------Sysbench-----------------
   - record: apm__sysbench_alive
     expr: ceil(rate(apm__sysbench_stdout_lines[15s])>0)
   - record: apm__sysbench_mbps    # MiB/sec
-    expr: avg_over_time(apm__sysbench_qps[60s]) and apm__sysbench_alive
+    expr: avg_over_time(apm__sysbench_qps[90s]) and apm__sysbench_alive
   # T & L
   - record: apm__throughput       # MiB/sec
     expr: apm__sysbench_mbps
-  - record: apm__latency          # average seconds to transfer on 1GB
-    expr: 1 / (apm__sysbench_mbps / 1e3)
+  - record: apm__latency          # average mili seconds (ms) to transfer on 1GB
+    expr: 1e3 / (apm__sysbench_mbps / 1e3)
 
 
 # -------------Stress-----------------
@@ -36,8 +36,8 @@ groups:
   # T & L
   - record: apm__throughput      # bogo/ops
     expr: apm__stress_bogo_ops
-  - record: apm__latency          # average seconds to perform one bogus operation
-    expr: 1 / apm__stress_bogo_ops
+  - record: apm__latency          # average milliseconds to perform one bogus operation (ms)
+    expr: 1e3 / apm__stress_bogo_ops
 
 # -------------Redis + Memtier-----------------
   # intermediary
@@ -48,7 +48,7 @@ groups:
   - record: apm__memtier_latency
     expr: avg_over_time(apm__memtier_scan_latency[60s]) and apm__memtier_alive
   # common apm metrics
-  - record: apm__redis_latency
+  - record: apm__redis_latency  # msec latency
     expr: (label_replace(apm__memtier_latency, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() task__up
   - record: apm__redis_qps
     expr: (label_replace(apm__memtier_ops, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() task__up
@@ -61,24 +61,41 @@ groups:
 #--------------------------------------- GENERIC FOR ALL WORKLODAS
   - record: apm__sli          #  SLI based on throughput
     expr: apm__latency
-
-#--------------------------------------- normalized
-  # Memcached QPS goal
-  - {record: apm__slo, labels: {app: memcached-big}, expr: 500}
-  - {record: apm__slo, labels: {app: memcached-medium}, expr: 500}
-  - {record: apm__slo, labels: {app: memcached-small}, expr: 500}
-  # Redis QPS goal
-  - {record: apm__slo, labels: {app: redis-big}, expr: 100000}
-  - {record: apm__slo, labels: {app: redis-medium}, expr: 100000}
-  - {record: apm__slo, labels: {app: redis-small}, expr: 100000}
-  # Stress Bogo / sec goal
-  - {record: apm__slo, labels: {app: stress-stream-big}, expr: 50}
-  - {record: apm__slo, labels: {app: stress-stream-medium}, expr: 50}
+#--------------------------------------- Targets for Latency
+  # Memcached latency goal microseconds (us)
+  - {record: apm__slo, labels: {app: memcached-big}, expr: 2}
+  - {record: apm__slo, labels: {app: memcached-medium}, expr: 1}
+  - {record: apm__slo, labels: {app: memcached-small}, expr: 1}
+  # Redis latency goal msec latency (ms)
+  - {record: apm__slo, labels: {app: redis-big}, expr: 10}
+  - {record: apm__slo, labels: {app: redis-medium}, expr: 5}
+  - {record: apm__slo, labels: {app: redis-small}, expr: 3}
+    # Stress microseconds for one bogus operation (maxiumum)
+  - {record: apm__slo, labels: {app: stress-stream-big}, expr: 10}
+  - {record: apm__slo, labels: {app: stress-stream-medium}, expr: 150}
   - {record: apm__slo, labels: {app: stress-stream-small}, expr: 50}
-  # Sysbench MB/s target
+    # Sysbench average duraiton of copying 1MB
   - {record: apm__slo, labels: {app: sysbench-memory-big}, expr: 50000}
   - {record: apm__slo, labels: {app: sysbench-memory-medium}, expr: 50000}
   - {record: apm__slo, labels: {app: sysbench-memory-small}, expr: 50000}
+
+##--------------------------------------- normalized
+#  # Memcached QPS goal
+#  - {record: apm__slo, labels: {app: memcached-big}, expr: 500}
+#  - {record: apm__slo, labels: {app: memcached-medium}, expr: 500}
+#  - {record: apm__slo, labels: {app: memcached-small}, expr: 500}
+#  # Redis QPS goal
+#  - {record: apm__slo, labels: {app: redis-big}, expr: 100000}
+#  - {record: apm__slo, labels: {app: redis-medium}, expr: 100000}
+#  - {record: apm__slo, labels: {app: redis-small}, expr: 100000}
+#  # Stress Bogo / sec goal
+#  - {record: apm__slo, labels: {app: stress-stream-big}, expr: 50}
+#  - {record: apm__slo, labels: {app: stress-stream-medium}, expr: 50}
+#  - {record: apm__slo, labels: {app: stress-stream-small}, expr: 50}
+#  # Sysbench MB/s target
+#  - {record: apm__slo, labels: {app: sysbench-memory-big}, expr: 50000}
+#  - {record: apm__slo, labels: {app: sysbench-memory-medium}, expr: 50000}
+#  - {record: apm__slo, labels: {app: sysbench-memory-small}, expr: 50000}
 
   # NORMALIZED ACCORDING THE GOALS
   - record: apm__sli_normalized
