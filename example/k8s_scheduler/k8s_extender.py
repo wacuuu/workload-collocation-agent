@@ -86,30 +86,45 @@ def do_raw_query(query, result_tag):
     result = response['data']['result']
     return {pair['metric'][result_tag]: float(pair['value'][1]) for pair in result}
 
-
-def _filter_logic(app, nodes, namespace):
-    return nodes
-
-
 PRIORITY_QUERY = 'fit_avg{app="%s"}'
 WEIGHT_MULTIPLER = 30
 
-def _prioritize_logic(app, nodes, namespace):
-    if namespace != NAMESPACE:
-        log.debug('ignoring pods not from %r namespace (got %r)', NAMESPACE, namespace)
-        return {}
-
-    # Get most fitted nodes.
+def _get_priorities(app, nodes):
+    # Get priorities weighter by multipler.
     priorities = {}
     query = PRIORITY_QUERY %(app)
     nodes_fit = do_raw_query(query, 'node')
     log.debug('nodes_fit for %r: %r', app, nodes_fit)
     for node in nodes:
-        try:
-            priorities[node] = int(nodes_fit.get(node, 0) * WEIGHT_MULTIPLER)
-        except ValueError:
-            logging.debug('NaN for %s - ignored')
+        if node in nodes_fit:
+            try:
+                priorities[node] = int(nodes_fit.get(node, 0) * WEIGHT_MULTIPLER)
+            except ValueError:
+                logging.debug('NaN fit value for %s - ignored')
+                continue
+        else:
+            logging.debug('missing fit for %s - ignored')
             continue
+
+    return priorities
+
+FILTER_FIT_THRESHOLD = 0.8
+
+def _filter_logic(app, nodes, namespace):
+    if namespace != NAMESPACE:
+        log.debug('ignoring pods not from %r namespace (got %r)', NAMESPACE, namespace)
+        return nodes
+
+    priorities = _get_priorities(app, nodes)
+    nodes = {node for node in nodes if node in priorities and priorities[node] > FILTER_FIT_THRESHOLD}
+
+    return nodes
+
+def _prioritize_logic(app, nodes, namespace):
+    if namespace != NAMESPACE:
+        log.debug('ignoring pods not from %r namespace (got %r)', NAMESPACE, namespace)
+        return {}
+    priorities = _get_priorities(app, nodes)
 
     return priorities
 
