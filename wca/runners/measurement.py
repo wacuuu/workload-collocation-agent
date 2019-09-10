@@ -26,7 +26,7 @@ from wca import security
 from wca.allocators import AllocationConfiguration
 from wca.config import Numeric, Str
 from wca.containers import ContainerManager, Container
-from wca.detectors import TasksMeasurements, TasksResources, TasksLabels
+from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, TaskResource
 from wca.logger import trace, get_logging_metrics
 from wca.mesos import create_metrics
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
@@ -341,7 +341,14 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
                         'for container {} - ignoring! '
                         '(because {})'.format(container, e))
             continue
-        task_measurements[MetricName.LAST_SEEN] = time.time()
+        # Extra metrics
+        task_measurements[MetricName.UP.value] = 1
+        task_measurements[MetricName.LAST_SEEN.value] = time.time()
+        #
+        if TaskResource.CPUS in task.resources:
+            task_measurements[MetricName.CPUS.value] = task.resources[TaskResource.CPUS.value]
+        if TaskResource.MEM in task.resources:
+            task_measurements[MetricName.MEM.value] = task.resources[TaskResource.MEM.value]
 
         # Prepare tasks labels based on tasks metadata labels and task id.
         task_labels = {
@@ -356,6 +363,8 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
         # https://github.com/intel/platform-resource-manager/tree/master/prm
         task_labels['initial_task_cpu_assignment'] = \
             str(task.resources.get('cpus', task.resources.get('cpu_limits', "unknown")))
+
+
 
         # Aggregate over all tasks.
         tasks_labels[task.task_id] = task_labels

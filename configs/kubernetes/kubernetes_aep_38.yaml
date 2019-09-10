@@ -4,6 +4,7 @@ runner: !MeasurementRunner
   rdt_enabled: true
   extra_labels: &node_labels
     node: 'node12'
+    mode: '2lm'
   action_delay: 5.0
   event_names:
     - instructions
@@ -28,7 +29,7 @@ runner: !MeasurementRunner
     monitored_namespaces: ["default"]
   wss_reset_interval: 1
   metrics_storage: !HTTPStorage
-    port: 9100
+    port: 9101
   enable_derived_metrics: false
 #  task_derived_metrics_generators_factory: !DefaultTaskDerivedMetricsGeneratorFactory
 #    extra_metrics:

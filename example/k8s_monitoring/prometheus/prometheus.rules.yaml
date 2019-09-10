@@ -16,6 +16,12 @@ groups:
     expr: avg by(app) (avg_over_time(task__memory_usage_per_task_bytes[15s])) / 1e9
   - record: app__tlb_misses
     expr: avg(task__dtlb_load_misses_ratio) by (app)
+  - record: app__cpus
+    expr: avg(task__cpus) by (app)
+  - record: app__cpus_usage  # [cpus/s]
+    expr: avg(task__cpus_usage) by (app)
+  - record: app__mem
+    expr: avg(task__mem) by (app)
   # Depends on context
   - record: app__tlb_miss_ratio
     expr: avg(task__dtlb_load_misses_ratio) by (app)
@@ -27,34 +33,38 @@ groups:
   - record: app__rw
     expr: avg(task__memory_rw_ratio) by (app)
   - record: app__count
-    expr: count(task__last_seen) by (app)
+    expr: count(task__up) by (app)
 
-  ### I. Cache utilization (PawelP)
-  # Metrics for cache-utilization metric
+  # Metrics for cache-utilization metric (transfered vs wss)
   - record: app__cache_locality
     expr: app__bw / app__wss
-  # Cache utilization = RW * (BW/WSS) * (BW/100)
-  - record: app__cache_utilization
-    expr: app__cache_locality * app__rw * app__memory_intensivity
-  # Memory utilization = WSS/RSS
+  # Memory utilization = WSS/RSS  (used vs allocated)
   - record: app__memory_utilization
     expr: app__wss / app__rss
-  # Memory intesivity
-  - record: app__memory_intensivity
-    expr: app__bw / 100  # Assume all nodes has max 100GB membw
-  ### IV. Contention sensitivity
-  - record: app__contention_sensitivity
-    expr: app__rw / app__memory_utilization
+  # Memory intensity (GB transfered per core)
+  - record: app__memory_intensity
+    expr: app__bw / app__cpus_usage
 
-  ### II. 2LM Friend (MaciejM)
-  # 2LM Friend = RW / (BW * WSS)
+  ### I. Cache utilization (PawelP)
+    # Cache utilization = RW * (BW/WSS) * (BW/100)
+  - record: app__cache_utilization
+    expr: app__cache_locality * app__rw * app__memory_intensity
+
+  ### II Contention sensitivity (Pawel v2)
+  - record: app__contention_sensitivity
+    expr: app__rw * app__memory_intensity * app__memory_utilization
+
+  ### III. 2LM Friend (MaciejM)
+    # 2LM Friend = RW / (BW * WSS)
   - record: app__2lm_friend
     expr: app__rw / (app__bw*app__wss)
 
-  ### III. RSS to WSS ratio (TomaszP)
-  # RSS/WSS or WSS/RSS
+  ### IV. RSS to WSS ratio (TomaszP)
+    # RSS/WSS or WSS/RSS
   - record: app__rss_wss_ratio
     expr: app__rss / app__wss
+
+
 
 
 
@@ -67,6 +77,16 @@ groups:
     expr: sum(avg_over_time(platform__dram_hit[15s])) by(node)
   - record: node__total_rss
     expr: sum by(node) (platform__memory_usage)
+  - record: node__bw
+    expr: platform__pmm_total_mb_per_second
+    labels:
+      mode: 2lm
+  - record: node__bw
+    expr: platform__dram_total_mb_per_second
+    labels:
+      mode: 1lm
+
+
   # node based on tasks
   - record: node__total_memory_stalls
     expr: sum by(node) (rate(task__memstalls__ra310[15s]))
@@ -133,16 +153,16 @@ groups:
     expr: avg(rate(task__memory_bandwidth[15s])) by (app, node) / 1e9
   - record: appnode__wss_avg_15s_gb
     expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app, node) / 1000
-  - record: appnode__memory_intensivity
+  - record: appnode__memory_intensity
     expr: appnode__memory_bandwidth_rate_15s_gb / 100  # Assume all nodes has max 100GB membw
   - record: appnode__memory_access_locality
     expr: appnode__memory_bandwidth_rate_15s_gb / appnode__wss_avg_15s_gb
   - record: appnode__memory_rw_ratio
     expr: avg(task__memory_rw_ratio) by (app, node)
   - record: appnode__cache_utilization
-    expr: appnode__memory_access_locality * appnode__memory_rw_ratio * appnode__memory_intensivity
+    expr: appnode__memory_access_locality * appnode__memory_rw_ratio * appnode__memory_intensity
   - record: appnode__count
-    expr: count(task__last_seen) by (app, node)
+    expr: count(task__up) by (app, node)
 
 # ------------------------------ FIT v2 ------------------------------------------------------
 #
@@ -237,7 +257,8 @@ groups:
     expr: rate(task__mem_inst_retired_all_loads__rd081[15s]) / rate(task__mem_inst_retired_all_stores__rd082[15s])
   - record: task__dtlb_load_misses_ratio
     expr: task__dtlb_load_misses__r080e / task__mem_inst_retired_all_loads__rd081
-
+  - record: task__cpus_usage       # [cpus/s]
+    expr: rate(task__cpu_usage_per_task[30s]) / 1e9
 
 # ----------------------------- PLATFORM (derived) ---------------------------------
 - name: wca_platform_derived

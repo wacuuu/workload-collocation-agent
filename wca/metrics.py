@@ -23,6 +23,7 @@ log = logging.getLogger(__name__)
 
 
 class MetricName(str, Enum):
+    # Per task
     INSTRUCTIONS = 'instructions'
     CYCLES = 'cycles'
     CACHE_MISSES = 'cache_misses'
@@ -37,6 +38,9 @@ class MetricName(str, Enum):
     SCALING_FACTOR_AVG = 'scaling_factor_avg'
     SCALING_FACTOR_MAX = 'scaling_factor_max'
     LAST_SEEN = 'last_seen'
+    UP = 'up'
+    CPUS = 'cpus'
+    MEM = 'mem'
 
 
 class DerivedMetricName(str, Enum):
