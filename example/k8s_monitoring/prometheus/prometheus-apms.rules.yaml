@@ -41,7 +41,7 @@ groups:
   - record: apm__stress_bogo_ops
     expr: rate(apm__stress_ng_bogo_ops_counter[60s]) and rate(apm__stress_ng_stdout_lines[15s]) > 0
   - record: apm__stress_bogo_ops_per_task
-    expr: apm__stress_bogo_ops * on(task_name) group_left() task__up
+    expr: apm__stress_bogo_ops * on(task_name) group_right() task__up
     # T & L
   - record: apm__throughput      # bogo/ops (group_right to get labels from tasks)
     expr: apm__stress_bogo_ops_per_task
