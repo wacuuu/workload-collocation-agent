@@ -18,9 +18,9 @@ NAMESPACE = 'default'
 LEVEL = logging.INFO
 
 # Model from the past
-#http://100.64.176.12:3000/d/D-6RTCSWz/aep-demo1?orgId=1&from=1568115479500&to=1568115600279
-TIME = '1568115600'
-LOOKBACK = '2m'
+# http://100.64.176.12:3000/d/D-6RTCSWz/aep-demo1?orgId=1&from=1568122559713&to=1568122651335
+TIME = '1568122651'
+LOOKBACK = '1m'
 
 # CONSTANTS
 _PROMETHEUS_QUERY_PATH = "/api/v1/query"
