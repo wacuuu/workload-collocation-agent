@@ -4,7 +4,7 @@ RUN yum install -y gcc make git patch libaio-devel libattr-devel libbsd-devel li
 RUN yum install -y patch
 RUN git clone https://github.com/ColinIanKing/stress-ng
 WORKDIR stress-ng
-RUN git checkout V0.10.4
+RUN git checkout V0.10.04
 ADD apm.patch .
 RUN patch -p1 <apm.patch
 RUN make -j
