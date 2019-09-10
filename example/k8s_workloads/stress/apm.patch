@@ -17,7 +17,7 @@ index 5620e8d..bb09bb4 100644
 +        time_t now;
 +        time(&now);
 +		diff = *real_counter - last;
-+		pr_inf("Time %ld, diff %" PRIu64 "\n", now, *diff);
++		pr_inf("Time %ld, diff %" PRIu64 "\n", now, diff);
 +        last = *real_counter;
 +		fflush(stdout);
 +	}
