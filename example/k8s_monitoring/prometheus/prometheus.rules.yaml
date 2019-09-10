@@ -31,7 +31,7 @@ groups:
     expr: avg(task__dram_miss) by (app)
   ### Consumer/Producer analysis
   - record: app__rw
-    expr: avg(task__memory_rw_ratio) by (app)
+    expr: clamp_min( avg(task__memory_rw_ratio) by (app), 1.0)
   - record: app__count
     expr: count(task__up) by (app)
 
@@ -50,22 +50,19 @@ groups:
   - record: app__cache_utilization
     expr: app__cache_locality * app__rw * app__memory_intensity
 
-  ### II Contention sensitivity (Pawel v2)
-  - record: app__contention_sensitivity
-    expr: app__rw * app__memory_intensity * app__memory_utilization
-
-  ### III. 2LM Friend (MaciejM)
+  ### II. 2LM Friend (MaciejM)
     # 2LM Friend = RW / (BW * WSS)
   - record: app__2lm_friend
     expr: app__rw / (app__bw*app__wss)
 
-  ### IV. RSS to WSS ratio (TomaszP)
+  ### III. RSS to WSS ratio (TomaszP)
     # RSS/WSS or WSS/RSS
   - record: app__rss_wss_ratio
     expr: app__rss / app__wss
 
-
-
+  ### IV Contention sensitivity (Pawel v2) based on MaciejM but invereted and normalized
+  - record: app__contention_sensitivity
+    expr: clamp_max(app__memory_intensity * app__memory_utilization / app__rw, 5)
 
 
 # ----------------------------- NODE -------------------------------------
@@ -139,13 +136,31 @@ groups:
 # https://stats.stackexchange.com/questions/10289/whats-the-difference-between-normalization-and-standardization
 - name: scaled
   rules:
+## 1. rescaling
   - record: scaled__node_contention_risk
     expr: (nodenorm__contention_risk - scalar(min(nodenorm__contention_risk))) / (scalar(max(nodenorm__contention_risk)) - scalar(min(nodenorm__contention_risk)))
   - record: scaled__app_contention_sensitivity
     expr: (appnorm__contention_sensitivity - scalar(min(appnorm__contention_sensitivity))) / (scalar(max(appnorm__contention_sensitivity)) - scalar(min(appnorm__contention_sensitivity)))
   - record: scaled__app_contention_insensitivity
     expr: (appnorm__contention_insensitivity - scalar(min(appnorm__contention_insensitivity))) / (scalar(max(appnorm__contention_insensitivity)) - scalar(min(appnorm__contention_insensitivity)))
+#
+## 2. mean normalization
+#- name: scaled
+#  rules:
+#    - record: scaled__node_contention_risk
+#      expr: (nodenorm__contention_risk - scalar(avg(nodenorm__contention_risk))) / (scalar(max(nodenorm__contention_risk)) - scalar(min(nodenorm__contention_risk)))
+#    - record: scaled__app_contention_sensitivity
+#      expr: (appnorm__contention_sensitivity - scalar(avg(appnorm__contention_sensitivity))) / (scalar(max(appnorm__contention_sensitivity)) - scalar(min(appnorm__contention_sensitivity)))
+#    - record: scaled__app_contention_insensitivity
+#      expr: (appnorm__contention_insensitivity - scalar(avg(appnorm__contention_insensitivity))) / (scalar(max(appnorm__contention_insensitivity)) - scalar(min(appnorm__contention_insensitivity)))
 
+# 3. stddev z-scaling
+#  - record: scaled__node_contention_risk
+#    expr: (nodenorm__contention_risk - scalar(avg(nodenorm__contention_risk))) / scalar(stddev(nodenorm__contention_risk))
+#  - record: scaled__app_contention_sensitivity
+#    expr: (appnorm__contention_sensitivity - scalar(avg(appnorm__contention_sensitivity))) / scalar(stddev(appnorm__contention_sensitivity))
+#  - record: scaled__app_contention_insensitivity
+#    expr: (appnorm__contention_insensitivity - scalar(avg(appnorm__contention_insensitivity))) / scalar(stddev(appnorm__contention_insensitivity))
 # ----------------------------- APPNODE -------------------------------------
 - name: aep_appnode
   rules:

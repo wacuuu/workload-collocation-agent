@@ -14,8 +14,13 @@ log = logging.getLogger(__name__)
 PORT = 12345
 PROMETHEUS = 'http://100.64.176.36:9090'
 NAMESPACE = 'default'
+
 LEVEL = logging.INFO
-FIT_MODE = "rsswss"
+
+# Model from the past
+#http://100.64.176.12:3000/d/D-6RTCSWz/aep-demo1?orgId=1&from=1568115479500&to=1568115600279
+TIME = '1568115600'
+LOOKBACK = '2m'
 
 # CONSTANTS
 _PROMETHEUS_QUERY_PATH = "/api/v1/query"
@@ -35,6 +40,7 @@ def _build_raw_query(prometheus, query, time=None):
     )
     if time:
         url += _PROMETHEUS_TIME_TPL.format(time=time)
+    log.debug('full url: %s', url)
     return url
 
 
@@ -93,14 +99,12 @@ def do_raw_query(query, result_tag, time):
     result = response['data']['result']
     return {pair['metric'][result_tag]: float(pair['value'][1]) for pair in result}
 
-TIME = '2019-09-09T20:08:00Z'
-PRIORITY_QUERY = 'avg_over_time(fit_avg{app="%s"}[8m])'
-# http://100.64.176.12:3000/d/D-6RTCSWz/aep-demo1?orgId=1&from=1568059380211&to=1568059679940
+PRIORITY_QUERY = 'avg_over_time(fit_avg{app="%s"}[%s])'
 
 def _get_priorities(app, nodes):
     """ in range 0 - 1 from query """
     priorities = {}
-    query = PRIORITY_QUERY %(app)
+    query = PRIORITY_QUERY %(app, LOOKBACK)
     nodes_fit = do_raw_query(query, 'node', TIME)
     log.debug('nodes_fit for %r: %r', app, nodes_fit)
     for node in nodes:
