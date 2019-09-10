@@ -1,0 +1,29 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: fluentd
+  namespace: fluentd
+  labels:
+    app: fluentd
+spec:
+  selector:
+    app: fluentd
+  ports:
+  - name: web
+    port: 24231
+    targetPort: 24231
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: fluentd
+  namespace: fluentd
+  labels:
+    team: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: fluentd
+  endpoints:
+  - port: web
+    interval: 1s
