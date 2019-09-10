@@ -52,7 +52,7 @@ groups:
 
   ### II Contention sensitivity (Pawel v2)
   - record: app__contention_sensitivity
-    expr: app__rw * app__memory_intensity / app__memory_utilization
+    expr: app__rw * app__memory_intensity * app__memory_utilization
 
   ### III. 2LM Friend (MaciejM)
     # 2LM Friend = RW / (BW * WSS)
