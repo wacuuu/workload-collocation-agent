@@ -67,24 +67,24 @@ groups:
 
 #--------------------------------------- Targets for Latency [msecs]
   # Memcached latency goal
-  - {record: apm__slo, labels: {app: memcached-big},    expr: 2.5 }
-  - {record: apm__slo, labels: {app: memcached-medium}, expr: 1.5 }
-  - {record: apm__slo, labels: {app: memcached-small},  expr: 1.0 }
+  - {record: apm__slo, labels: {app: memcached-big},    expr: "2.5" }
+  - {record: apm__slo, labels: {app: memcached-medium}, expr: "1.5" }
+  - {record: apm__slo, labels: {app: memcached-small},  expr: "1.0" }
 
   # Redis latency goal
-  - {record: apm__slo, labels: {app: redis-big},        expr: 7}
-  - {record: apm__slo, labels: {app: redis-medium},     expr: 4}
-  - {record: apm__slo, labels: {app: redis-small},      expr: 2}
+  - {record: apm__slo, labels: {app: redis-big},        expr: "7"}
+  - {record: apm__slo, labels: {app: redis-medium},     expr: "4"}
+  - {record: apm__slo, labels: {app: redis-small},      expr: "2"}
 
     # Stress average duration for one bogus operation (maximum)
-  - {record: apm__slo, labels: {app: stress-stream-big},    expr: 20000}      #  4 threads
-  - {record: apm__slo, labels: {app: stress-stream-medium}, expr: 10000}  #  1 thread
-  - {record: apm__slo, labels: {app: stress-stream-small},  expr: 4000}   #  1 thread
+  - {record: apm__slo, labels: {app: stress-stream-big},    expr: "20000"}      #  4 threads
+  - {record: apm__slo, labels: {app: stress-stream-medium}, expr: "10000"}  #  1 thread
+  - {record: apm__slo, labels: {app: stress-stream-small},  expr: "4000"}   #  1 thread
 
     # Sysbench average durations [ms]  of copying 1GB (maximum)
-  - {record: apm__slo, labels: {app: sysbench-memory-big}, expr: 80}      # 60ms
-  - {record: apm__slo, labels: {app: sysbench-memory-medium}, expr: 150}   # 32ms
-  - {record: apm__slo, labels: {app: sysbench-memory-small}, expr: 250}    # 40ms
+  - {record: apm__slo, labels: {app: sysbench-memory-big}, expr: "80"}      # 60ms
+  - {record: apm__slo, labels: {app: sysbench-memory-medium}, expr: "150"}   # 32ms
+  - {record: apm__slo, labels: {app: sysbench-memory-small}, expr: "250"}    # 40ms
 
 ##--------------------------------------- normalized
 #  # Memcached QPS goal

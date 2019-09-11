@@ -9,5 +9,5 @@ spec:
         - name: sysbench
           resources:
             requests:
-              cpu: 4
+              cpu: 3
               memory: 10G
