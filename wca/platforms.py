@@ -118,6 +118,10 @@ class Platform:
     measurements: Measurements
 
 
+_platform_static_information = {
+
+}
+
 def create_metrics(platform: Platform) -> List[Metric]:
     """Creates a list of Metric objects from data in Platform object"""
     PLATFORM_PREFIX='platform__'
@@ -150,6 +154,17 @@ def create_metrics(platform: Platform) -> List[Metric]:
         Metric(name=PLATFORM_PREFIX + 'topology_cpus', value=platform.cpus),
         Metric(name=PLATFORM_PREFIX + 'topology_sockets', value=platform.sockets),
         Metric(name=PLATFORM_PREFIX + 'last_seen', value=time.time()),
+    ])
+
+
+    # RETURN MEMORY DIMM DETAILS based on lshw
+    # DRAM based on
+    # sudo lshw -class memory -json -quiet -sanitize -notime
+    platform_metrics.extend([
+        Metric(name=PLATFORM_PREFIX + 'dram_dimm_count', value=8),
+        Metric(name=PLATFORM_PREFIX + 'dram_dimm_size_bytes', value=8),
+        Metric(name=PLATFORM_PREFIX + 'pmm_dimm_count', value=4),
+        Metric(name=PLATFORM_PREFIX + 'pmm_dimm_size_bytes', value=4)
     ])
 
     return platform_metrics
