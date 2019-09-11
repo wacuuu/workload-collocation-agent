@@ -13,8 +13,11 @@
 # limitations under the License.
 import logging
 import os
+import json
 import re
+import shlex
 import socket
+import subprocess
 import time
 from typing import List, Dict, Set, Tuple, Optional
 
@@ -160,6 +163,19 @@ def create_metrics(platform: Platform) -> List[Metric]:
     # RETURN MEMORY DIMM DETAILS based on lshw
     # DRAM based on
     # sudo lshw -class memory -json -quiet -sanitize -notime
+
+    if not len(_platform_static_information):
+        lshw_raw = subprocess.check_output(shlex.split('sudo lshw -class memory -json -quiet -sanitize -notime'))
+        lshw_str = lshw_raw.decode("utf-8")
+        lshw_str = lshw_str.rstrip()
+        lshw_str = '[' + lshw_str[0:(len(lshw_str) - 1)] + ']'
+        lshw_metrics = json.loads(lshw_str)
+
+        dram_dimm_count = 0
+
+    else:
+        pass
+
     platform_metrics.extend([
         Metric(name=PLATFORM_PREFIX + 'dram_dimm_count', value=8),
         Metric(name=PLATFORM_PREFIX + 'dram_dimm_size_bytes', value=8),
