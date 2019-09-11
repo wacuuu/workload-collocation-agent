@@ -31,7 +31,7 @@ groups:
     expr: avg(task__dram_miss) by (app)
   ### Consumer/Producer analysis
   - record: app__rw
-#    expr: clamp_min( avg(task__memory_rw_ratio) by (app), 1.0)
+#    expr: clamp_min( avg(task__memory_rw_ratio) by (app), 1.0)   # for DEMO1
     expr: avg(task__memory_rw_ratio) by (app)
   - record: app__count
     expr: count(task__up) by (app)
@@ -63,8 +63,8 @@ groups:
 
   ### IV Contention sensitivity (Pawel v2) based on MaciejM but invereted and normalized
   - record: app__contention_sensitivity
-#    expr: clamp_max(app__memory_intensity * app__memory_utilization / app__rw, 5)
-    expr:  app__memory_intensity * app__memory_utilization / app__rw / app__cache_locality
+    expr: clamp_max(app__memory_intensity * app__memory_utilization / app__rw, 5)  # for DEMO1
+#    expr:  app__memory_intensity * app__memory_utilization / app__rw / app__cache_locality
 
 
 # ----------------------------- NODE -------------------------------------
@@ -122,8 +122,8 @@ groups:
   - record: appnorm__rw
     expr: app__rw / scalar(cluster__rw)
   - record: appnorm__contention_sensitivity
-    #expr: app__contention_sensitivity / scalar(cluster__contention_sensitivity)
-#    expr: app__contention_sensitivity / scalar(sum(app__contention_sensitivity))  # NAIVE
+    #expr: app__contention_sensitivity / scalar(cluster__contention_sensitivity)   # for DEMO1
+    #expr: app__contention_sensitivity / scalar(sum(app__contention_sensitivity))  # NAIVE
     expr: (app__contention_sensitivity - scalar(avg(app__contention_sensitivity))) / scalar(stddev(app__contention_sensitivity)) # Z-normalization
 
   - record: appnorm__contention_insensitivity
@@ -205,6 +205,23 @@ groups:
   - record: fit_avg
     expr: avg_over_time(fit{node="node14"}[15s])
 
+# ------------------------------ FIT v2 ------------------------------------------------------
+#
+- name: contention_risk_on_node
+  rules:
+    - record: app__contention_risk_on_node
+      expr: scaled__app_contention_sensitivity * on() group_left(node) scaled__node_contention_risk{node="node11"}
+    - record: app__contention_risk_on_node
+      expr: scaled__app_contention_sensitivity * on() group_left(node) scaled__node_contention_risk{node="node12"}
+    - record: app__contention_risk_on_node
+      expr: scaled__app_contention_sensitivity * on() group_left(node) scaled__node_contention_risk{node="node13"}
+    - record: app__contention_risk_on_node
+      expr: scaled__app_contention_sensitivity * on() group_left(node) scaled__node_contention_risk{node="node14"}
+
+- name: fit_without_risk
+  rules:
+    - record: fit_without_risk
+      expr: clamp_min(fit_avg - app__contention_risk_on_node, 0)
 # ----------------------------- FIT (according (node_cache_utilization-app_cache_utilization) -------------------------------------
 #- name: aep_apps_fits
 #

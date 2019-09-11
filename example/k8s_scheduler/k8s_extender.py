@@ -18,9 +18,13 @@ NAMESPACE = 'default'
 LEVEL = logging.INFO
 
 # Model from the past
-# http://100.64.176.12:3000/d/D-6RTCSWz/aep-demo1?orgId=1&from=1568122559713&to=1568122651335
-TIME = '1568122651'
-LOOKBACK = '1m'
+# http://100.64.176.12:3000/d/MbAID-cZk/2lm-contention-demo?orgId=1&from=1568224919123&to=1568225041575
+TIME = '1568225041'
+LOOKBACK = '2m'
+FIT_QUERY = 'avg_over_time(fit_avg{app="%s"}[%s])'
+
+RISK_QUERY = 'avg_over_time(app__contention_risk_on_node{app="%s"}[%s])'
+RISK_THRESHOLD = 0.5
 
 # CONSTANTS
 _PROMETHEUS_QUERY_PATH = "/api/v1/query"
@@ -99,12 +103,11 @@ def do_raw_query(query, result_tag, time):
     result = response['data']['result']
     return {pair['metric'][result_tag]: float(pair['value'][1]) for pair in result}
 
-PRIORITY_QUERY = 'avg_over_time(fit_avg{app="%s"}[%s])'
 
 def _get_priorities(app, nodes):
     """ in range 0 - 1 from query """
     priorities = {}
-    query = PRIORITY_QUERY %(app, LOOKBACK)
+    query = FIT_QUERY %(app, LOOKBACK)
     nodes_fit = do_raw_query(query, 'node', TIME)
     log.debug('nodes_fit for %r: %r', app, nodes_fit)
     for node in nodes:
@@ -120,22 +123,39 @@ def _get_priorities(app, nodes):
 
     return priorities
 
+def _get_risk(app, nodes):
+    """ in range 0 - 1 from query """
+    risks = {}
+    query = RISK_QUERY %(app, LOOKBACK)
+    nodes_risk = do_raw_query(query, 'node', TIME)
+    log.debug('nodes_risk for %r: %r', app, risks)
+    for node in nodes:
+        if node in nodes_risk:
+            value = nodes_risk[node]
+            if math.isnan(value):
+                logging.debug('NaN risk value for %s - ignored')
+                continue
+            risks[node] = value
+        else:
+            logging.debug('missing fit for %s - ignored')
+            continue
+
+    return risks
 ### ------------------------------ FILTERING (predicates) ----------------------
 
-FILTER_FIT_THRESHOLD = 0.5
 
 def _filter_logic(app, nodes, namespace):
     if namespace != NAMESPACE:
         log.debug('ignoring pods not from %r namespace (got %r)', NAMESPACE, namespace)
         return nodes
 
-    priorities = _get_priorities(app, nodes)
-    if len(priorities) == 0:
-        log.debug('"%s" priorities not found - ignoring', app)
+    risks = _get_risk(app, nodes)
+    if len(risks) == 0:
+        log.debug('"%s" risks not found - ignoring', app)
         return nodes
     else:
-        log.debug('"%s" priorities for filter %r', app, priorities)
-        nodes = list({node for node in nodes if node in priorities and priorities[node] > FILTER_FIT_THRESHOLD})
+        log.debug('"%s" risks for filter %r', app, risks)
+        nodes = list({node for node in nodes if node in risks and risks[node] < RISK_THRESHOLD})
 
     return nodes
 
@@ -189,19 +209,20 @@ class K8SHandler(http.server.BaseHTTPRequestHandler):
         """ :returns app, nodes, namespace"""
         nodes = extender_args.NodeNames
         labels = extender_args.Pod['metadata']['labels']
+        name = extender_args.Pod['metadata']['name']
         # generic input
         namespace = extender_args.Pod['metadata']['namespace']
         # specific workloads input
         app = labels.get('app', None)
-        return app, nodes, namespace
+        return app, nodes, namespace, name
 
     def _filter(self, extender_args):
         # Logic
         log.debug('Pod: \n%s:', json.dumps(extender_args.Pod, indent=4))
-        app, nodes, namespace = self._extract_common_input(extender_args)
+        app, nodes, namespace, name = self._extract_common_input(extender_args)
         self._extract_common_input(extender_args)
         nodes = _filter_logic(app, nodes, namespace)
-        log.info('"%s" allowed nodes= %s', app, ', '.join(nodes))
+        log.info('[%s] Allowed nodes: %s', name, ', '.join(nodes))
         # Encode
         return dict(
             NodeNames=nodes,
@@ -211,9 +232,9 @@ class K8SHandler(http.server.BaseHTTPRequestHandler):
 
     def _prioritize(self, extender_args: ExtenderArgs):
         # Logic
-        app, nodes, namespace = self._extract_common_input(extender_args)
+        app, nodes, namespace, name = self._extract_common_input(extender_args)
         priorities = _prioritize_logic(app, nodes, namespace)
-        log.info('"%s" priorities=  %r', app, ', '.join('%s:%d' %(k,v) for k,v in sorted(priorities.items(), key=lambda x: x[0])))
+        log.info('[%s] Priorities:  %s', name, '  '.join('%s(%d), ' %(k,v) for k,v in sorted(priorities.items(), key=lambda x: -x[1])))
         # Encode as PriorityList
         priority_list = [dict(Host=node, Score=priorities.get(node, 0)) for node in nodes]
         log.debug('priority list = %s', ', '.join('%s=%s' % (d['Host'], d['Score']) for d in sorted(priority_list, key=lambda d: d['Host'])))
@@ -225,7 +246,7 @@ class ThreadingHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 
 def main(level, port):
-    logging.basicConfig(level=level)
+    logging.basicConfig(level=level, format='%(message)s')
     with http.server.HTTPServer(('', port), K8SHandler) as httpd:
         log.info('serving at port: %s', port)
         httpd.serve_forever()
