@@ -161,11 +161,13 @@ def create_metrics(platform: Platform) -> List[Metric]:
     # DRAM based on
     # sudo lshw -class memory -json -quiet -sanitize -notime
     platform_metrics.extend([
+        # RAM
         Metric(name=PLATFORM_PREFIX + 'dimm_count', value=8, labels={'type': 'ram'}),
-        Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes', value=12831232,
+        Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes', value=1000000000,
                labels={'type': 'ram'}),
+        # NVM
         Metric(name=PLATFORM_PREFIX + 'dimm_count', value=8, labels={'type': 'nvm'}),
-        Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes', value=8,
+        Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes', value=25600000,
                labels={'type': 'nvm'}),
     ])
 
