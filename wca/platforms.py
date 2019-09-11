@@ -163,6 +163,12 @@ def create_metrics(platform: Platform) -> List[Metric]:
     global _platform_static_information
     if not len(_platform_static_information):
         # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
+        ipmctl_output = subprocess.check_output(shlex.split('ipmctl show -u B -memoryresources')).decode("utf-8")
+        memorymode_size = 0
+        for line in ipmctl_output.splitlines():
+            if 'MemoryCapacity' in line:
+                memorymode_size = line.split('=')[1].split(' ')[0]
+
         lshw_raw = subprocess.check_output(shlex.split('lshw -class memory -json -quiet -sanitize -notime'))
         lshw_str = lshw_raw.decode("utf-8")
         lshw_str = lshw_str.rstrip()
@@ -177,7 +183,7 @@ def create_metrics(platform: Platform) -> List[Metric]:
                 for bank in system['children']:
                     if '[empty]' in bank['description']:
                         continue
-                    elif 'Cache DRAM' in bank['description']:
+                    elif 'DDR4' in bank['description']:
                         assert bank['units'] == 'bytes'
                         ram_dimm_count += 1
                         ram_dimm_size += bank['size']
@@ -190,6 +196,7 @@ def create_metrics(platform: Platform) -> List[Metric]:
         _platform_static_information['nvm_dimm_count'] = nvm_dimm_count
         _platform_static_information['ram_dimm_size'] = ram_dimm_size
         _platform_static_information['nvm_dimm_size'] = nvm_dimm_size
+        _platform_static_information['memorymode_size'] = memorymode_size
 
     platform_metrics.extend([
         # RAM
@@ -206,6 +213,8 @@ def create_metrics(platform: Platform) -> List[Metric]:
         Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
                value=_platform_static_information['nvm_dimm_size'],
                labels={'type': 'nvm'}),
+        Metric(name=PLATFORM_PREFIX + 'memory_mode_size_bytes',
+               value=_platform_static_information['memorymode_size']),
     ])
 
     return platform_metrics

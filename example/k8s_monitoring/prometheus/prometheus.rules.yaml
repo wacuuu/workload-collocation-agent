@@ -10,8 +10,8 @@ groups:
     expr: avg(rate(task__mem_inst_retired_all_loads__rd081[15s]) + rate(task__mem_inst_retired_all_stores__rd082[15s])) by (app) / 1e9
   - record: app__bw  # GB/s
     expr: avg(rate(task__memory_bandwidth[15s])) by (app) / 1e9
-  - record: app__wss # GB
-    expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app) / 1000
+  - record: app__wss # GB  collected over 5s
+    expr: (avg(avg_over_time(task__wss_referenced_mb[15s])) by (app) / 1000)
   - record: app__rss # GB
     expr: avg by(app) (avg_over_time(task__memory_usage_per_task_bytes[15s])) / 1e9
   - record: app__tlb_misses
@@ -31,12 +31,13 @@ groups:
     expr: avg(task__dram_miss) by (app)
   ### Consumer/Producer analysis
   - record: app__rw
-    expr: clamp_min( avg(task__memory_rw_ratio) by (app), 1.0)
+#    expr: clamp_min( avg(task__memory_rw_ratio) by (app), 1.0)
+    expr: avg(task__memory_rw_ratio) by (app)
   - record: app__count
     expr: count(task__up) by (app)
 
   # Metrics for cache-utilization metric (transfered vs wss)
-  - record: app__cache_locality
+  - record: app__cache_locality  # 50GB/s / 10 GBs
     expr: app__bw / app__wss
   # Memory utilization = WSS/RSS  (used vs allocated)
   - record: app__memory_utilization
@@ -47,8 +48,8 @@ groups:
 
   ### I. Cache utilization (PawelP)
     # Cache utilization = RW * (BW/WSS) * (BW/100)
-  - record: app__cache_utilization
-    expr: app__cache_locality * app__rw * app__memory_intensity
+#  - record: app__cache_utilization
+#    expr: app__cache_locality * app__rw * app__memory_intensity
 
   ### II. 2LM Friend (MaciejM)
     # 2LM Friend = RW / (BW * WSS)
@@ -62,7 +63,8 @@ groups:
 
   ### IV Contention sensitivity (Pawel v2) based on MaciejM but invereted and normalized
   - record: app__contention_sensitivity
-    expr: clamp_max(app__memory_intensity * app__memory_utilization / app__rw, 5)
+#    expr: clamp_max(app__memory_intensity * app__memory_utilization / app__rw, 5)
+    expr:  app__memory_intensity * app__memory_utilization / app__rw / app__cache_locality
 
 
 # ----------------------------- NODE -------------------------------------
@@ -102,7 +104,7 @@ groups:
 - name: cluster
   rules:
   # over appsj
-  - {record: cluster__cache_utilization,        expr: sum(app__cache_utilization)     }
+#  - {record: cluster__cache_utilization,        expr: sum(app__cache_utilization)     }
   - {record: cluster__rw,                       expr: sum(app__rw)                    }
   - {record: cluster__2lm_friend,               expr: sum(app__2lm_friend)            }
   - {record: cluster__contention_sensitivity,   expr: sum(app__contention_sensitivity)}
@@ -115,12 +117,15 @@ groups:
 - name: appnorm
   rules:
   # Cache utilization normalized to cluster avg_app_utilization
-  - record: appnorm__cache_utilization
-    expr: app__cache_utilization / scalar(cluster__cache_utilization)
+#  - record: appnorm__cache_utilization
+#    expr: app__cache_utilization / scalar(cluster__cache_utilization)
   - record: appnorm__rw
     expr: app__rw / scalar(cluster__rw)
   - record: appnorm__contention_sensitivity
-    expr: app__contention_sensitivity / scalar(cluster__contention_sensitivity)
+    #expr: app__contention_sensitivity / scalar(cluster__contention_sensitivity)
+#    expr: app__contention_sensitivity / scalar(sum(app__contention_sensitivity))  # NAIVE
+    expr: (app__contention_sensitivity - scalar(avg(app__contention_sensitivity))) / scalar(stddev(app__contention_sensitivity)) # Z-normalization
+
   - record: appnorm__contention_insensitivity
     expr: 1 - appnorm__contention_sensitivity
 
@@ -270,6 +275,10 @@ groups:
     expr: rate(task__mem_load_retired_local_pmm__rd180[15s]) / rate(task__mem_inst_retired_all_loads__rd081[15s])
   - record: task__memory_rw_ratio
     expr: rate(task__mem_inst_retired_all_loads__rd081[15s]) / rate(task__mem_inst_retired_all_stores__rd082[15s])
+  - record: task__memory_operations
+    expr: task__mem_inst_retired_all_loads__rd081 + task__mem_inst_retired_all_stores__rd082
+  - record: task__memory_operations_mbps  # assuming every operation takes 1bytes (underestimate, but includes data from all cache layers)
+    expr: rate(task__memory_operations[15s]) / 1e6
   - record: task__dtlb_load_misses_ratio
     expr: task__dtlb_load_misses__r080e / task__mem_inst_retired_all_loads__rd081
   - record: task__cpus_usage       # [cpus/s]
