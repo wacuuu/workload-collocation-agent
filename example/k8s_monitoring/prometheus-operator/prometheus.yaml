@@ -5,6 +5,7 @@ metadata:
   name: prometheus
   namespace: prometheus
 spec:
+  retention: 7d
   serviceAccountName: prometheus
   serviceMonitorNamespaceSelector:
     any: true
@@ -17,7 +18,7 @@ spec:
   resources:
     requests:
       memory: 400Mi
-  enableAdminAPI: false
+  enableAdminAPI: true
 ---
 apiVersion: v1
 kind: Service
