@@ -159,31 +159,52 @@ def create_metrics(platform: Platform) -> List[Metric]:
         Metric(name=PLATFORM_PREFIX + 'last_seen', value=time.time()),
     ])
 
-
     # RETURN MEMORY DIMM DETAILS based on lshw
-    # DRAM based on
-    # sudo lshw -class memory -json -quiet -sanitize -notime
-
+    global _platform_static_information
     if not len(_platform_static_information):
-        lshw_raw = subprocess.check_output(shlex.split('sudo lshw -class memory -json -quiet -sanitize -notime'))
+        # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
+        lshw_raw = subprocess.check_output(shlex.split('lshw -class memory -json -quiet -sanitize -notime'))
         lshw_str = lshw_raw.decode("utf-8")
         lshw_str = lshw_str.rstrip()
         lshw_str = '[' + lshw_str[0:(len(lshw_str) - 1)] + ']'
-        lshw_metrics = json.loads(lshw_str)
+        lshw_data = json.loads(lshw_str)
+        nvm_dimm_count = 0
+        ram_dimm_count = 0
+        nvm_dimm_size = 0
+        ram_dimm_size = 0
+        for system in lshw_data:
+            if system['id'] == 'memory' and 'children' in system:
+                for bank in system['children']:
+                    if '[empty]' in bank['description']:
+                        continue
+                    elif 'Cache DRAM' in bank['description']:
+                        assert bank['units'] == 'bytes'
+                        ram_dimm_count += 1
+                        ram_dimm_size += bank['size']
+                    elif 'Non-volatile' in bank['description']:
+                        assert bank['units'] == 'bytes'
+                        nvm_dimm_count += 1
+                        nvm_dimm_size += bank['size']
 
-        dram_dimm_count = 0
-
-    else:
-        pass
+        _platform_static_information['ram_dimm_count'] = ram_dimm_count
+        _platform_static_information['nvm_dimm_count'] = nvm_dimm_count
+        _platform_static_information['ram_dimm_size'] = ram_dimm_size
+        _platform_static_information['nvm_dimm_size'] = nvm_dimm_size
 
     platform_metrics.extend([
         # RAM
-        Metric(name=PLATFORM_PREFIX + 'dimm_count', value=8, labels={'type': 'ram'}),
-        Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes', value=1000000000,
+        Metric(name=PLATFORM_PREFIX + 'dimm_count',
+               value=_platform_static_information['ram_dimm_count'],
+               labels={'type': 'ram'}),
+        Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
+               value=_platform_static_information['ram_dimm_size'],
                labels={'type': 'ram'}),
         # NVM
-        Metric(name=PLATFORM_PREFIX + 'dimm_count', value=8, labels={'type': 'nvm'}),
-        Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes', value=25600000,
+        Metric(name=PLATFORM_PREFIX + 'dimm_count',
+               value=_platform_static_information['nvm_dimm_count'],
+               labels={'type': 'nvm'}),
+        Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
+               value=_platform_static_information['nvm_dimm_size'],
                labels={'type': 'nvm'}),
     ])
 
