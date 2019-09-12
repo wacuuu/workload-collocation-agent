@@ -78,7 +78,7 @@ def test_config_with_simple_classes():
 
 
 def test_config_with_env_class():
-    config.register(Env, strict_mode=False)
+    config.register(Env, strict_mode=True)
 
     test_config_path = testing.relative_module_path(__file__, 'test_config_env.yaml')
     data = config.load_config(test_config_path)

@@ -34,10 +34,12 @@ import logging
 import os
 import types
 import typing
+from collections import UserString
 from os.path import exists, isabs, split  # direct target import for mocking purposes in test_main
-from ruamel import yaml
 from typing import Any, Optional
 from urllib.parse import urlparse
+
+from ruamel import yaml
 
 from wca import logger
 
@@ -166,7 +168,7 @@ class _StrType(type):
     @classmethod
     def assure(cls, value):
         """Validates str input"""
-        assure_base_types(value, [str])
+        assure_base_types(value, [str, UserString])
         assure_max_str_length(value, cls.max_size)
 
 
