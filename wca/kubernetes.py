@@ -12,13 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Union
-import os
-from urllib.parse import urljoin
 import logging
+import os
+import pathlib
+from enum import Enum
+from typing import Dict, List, Optional, Union
+from urllib.parse import urljoin
+
 import requests
+from dataclasses import dataclass, field
 
 from wca import logger
 from wca.config import assure_type, Numeric, Url, Str
@@ -34,6 +36,7 @@ SERVICE_HOST_ENV_NAME = "KUBERNETES_SERVICE_HOST"
 SERVICE_PORT_ENV_NAME = "KUBERNETES_SERVICE_PORT"
 SERVICE_TOKEN_FILENAME = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 SERVICE_CERT_FILENAME = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
 
 @dataclass
 class KubernetesTask(Task):
@@ -88,14 +91,45 @@ class KubernetesNode(Node):
     ssl: Optional[SSL] = None
 
     # By default use localhost, however kubelet may not listen on it.
+    kubelet_enabled: bool = False
     kubelet_endpoint: Url = 'https://127.0.0.1:10250'
+
+    node_ip: str = None
 
     # Timeout to access kubernetes agent.
     timeout: Numeric(1, 60) = 5  # [s]
 
-
     # List of namespaces to monitor pods in.
     monitored_namespaces: List[Str] = field(default_factory=lambda: ["default"])
+
+    def _request_kubeapi(self):
+        # should be a config prep
+        kubeapi_host = os.environ.get(SERVICE_HOST_ENV_NAME)
+        kubeapi_port = os.environ.get(SERVICE_PORT_ENV_NAME)
+        kubeapi_endpoint = "https://{}:{}".format(kubeapi_host, kubeapi_port)
+        full_url = urljoin(kubeapi_endpoint, "/api/v1/namespaces/default/pods")
+
+        log.debug("Created kubeapi endpoint %s", kubeapi_endpoint)
+
+        dadadidi = SSL(
+            server_verify=False,
+            client_cert_path=SERVICE_CERT_FILENAME
+        )
+        with pathlib.Path(SERVICE_TOKEN_FILENAME).open() as f:
+            service_token = f.read()
+
+        r = requests.get(
+            full_url,
+            headers={
+                "Authorization": "Bearer {}".format(service_token)
+            },
+            timeout=self.timeout,
+            cert=SERVICE_CERT_FILENAME
+        )
+
+        r.raise_for_status()
+
+        return r.json()
 
     def _request_kubelet(self):
         PODS_PATH = '/pods'
@@ -103,11 +137,11 @@ class KubernetesNode(Node):
 
         if self.ssl:
             r = requests.get(
-                    full_url,
-                    json=dict(type='GET_STATE'),
-                    timeout=self.timeout,
-                    verify=self.ssl.server_verify,
-                    cert=self.ssl.get_client_certs())
+                full_url,
+                json=dict(type='GET_STATE'),
+                timeout=self.timeout,
+                verify=self.ssl.server_verify,
+                cert=self.ssl.get_client_certs())
         else:
             r = requests.get(
                 full_url,
@@ -121,17 +155,28 @@ class KubernetesNode(Node):
     def get_tasks(self) -> List[Task]:
         """Returns only running tasks."""
         try:
-            kubelet_json_response = self._request_kubelet()
+            if self.kubelet_enabled:
+                podlist_json_response = self._request_kubelet()
+            else:
+                podlist_json_response = self._request_kubeapi()
+                # when using kubeapi we need this set
+                if self.node_ip is None:
+                    raise ValueError("node_ip is not set in config")
         except requests.exceptions.ConnectionError as e:
             raise TaskSynchornizationException('connection error: %s' % e) from e
         except requests.exceptions.ReadTimeout as e:
             raise TaskSynchornizationException('timeout: %s' % e) from e
 
         tasks = []
-        for pod in kubelet_json_response.get('items'):
+        for pod in podlist_json_response.get('items'):
             container_statuses = pod.get('status').get('containerStatuses')
+
+            # Kubeapi returns all pods in cluster
+            if self.node_ip.strip() != pod["status"]["hostIP"]:
+                continue
+
+            # Lacking needed information.
             if not container_statuses:
-                # Lacking needed information.
                 continue
 
             # Ignore pods in not monitored namespaces.
@@ -209,8 +254,8 @@ def _build_cgroup_path(cgroup_driver, qos, pod_id, container_id=''):
 
 
 # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#meaning-of-memory
-_MEMORY_UNITS = {'Ki': 1024, 'Mi': 1024**2, 'Gi': 1024**3, 'Ti': 1024**4,
-                 'K': 1000, 'M': 1000**2, 'G': 1000**3, 'T': 1000**4}
+_MEMORY_UNITS = {'Ki': 1024, 'Mi': 1024 ** 2, 'Gi': 1024 ** 3, 'Ti': 1024 ** 4,
+                 'K': 1000, 'M': 1000 ** 2, 'G': 1000 ** 3, 'T': 1000 ** 4}
 _CPU_UNITS = {'m': 0.001}
 _RESOURCE_TYPES = ['requests', 'limits']
 _MAPPING = {'requests_memory': 'mem', 'ephemeral-storage': 'disk', 'requests_cpu': 'cpus'}
@@ -221,7 +266,7 @@ def _calculate_pod_resources(containers_spec: List[Dict[str, str]]):
        e.g. 'cpu_limits': '0.25' """
     resources = dict()
 
-    units = {'memory': _MEMORY_UNITS,  'ephemeral-storage': _MEMORY_UNITS,
+    units = {'memory': _MEMORY_UNITS, 'ephemeral-storage': _MEMORY_UNITS,
              'cpu': _CPU_UNITS}
 
     for container in containers_spec:
