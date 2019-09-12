@@ -11,8 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
+import os
+from collections import UserString
 from typing import List
 
 try:
@@ -39,6 +39,14 @@ from wca.metrics import DefaultTaskDerivedMetricsGeneratorFactory
 from wca.perf_pmu import DefaultPlatformDerivedMetricsGeneratorsFactory
 
 
+class Env(UserString):
+    """Env class allows using environment variables as values in wca config"""
+
+    def __init__(self, name):
+        seq = os.environ.get(name, "")
+        super().__init__(seq)
+
+
 def register_components(extra_components: List[str]):
     config.register(detection.DetectionRunner)
     config.register(allocation.AllocationRunner)
@@ -60,6 +68,7 @@ def register_components(extra_components: List[str]):
     config.register(aep_detector.AEPDetector)
     config.register(DefaultTaskDerivedMetricsGeneratorFactory)
     config.register(DefaultPlatformDerivedMetricsGeneratorsFactory)
+    config.register(Env)
 
     for component in extra_components:
         # Load external class ignored its requirements.
