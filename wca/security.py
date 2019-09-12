@@ -169,10 +169,13 @@ SECURE_CIPHERS = ':'.join([
     #   '@SECLEVEL=2',
     ])
 
+
+# Disable some protocols.
 SECURE_OPTIONS = 0
 SECURE_OPTIONS |= ssl.OP_NO_SSLv2
 SECURE_OPTIONS |= ssl.OP_NO_SSLv3
 SECURE_OPTIONS |= ssl.OP_NO_TLSv1
+SECURE_OPTIONS |= ssl.OP_NO_TLSv1_1
 SECURE_OPTIONS |= ssl.OP_NO_COMPRESSION
 
 

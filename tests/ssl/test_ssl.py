@@ -4,17 +4,22 @@ import ssl
 import time
 from multiprocessing import Process
 from wca.security import HTTPSAdapter
-from flask import Flask
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+
+class TestHTTPRequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'Passed')
 
 
 def run_simple_https_server(ssl_context: ssl.SSLContext):
-    server = Flask('Simple test server')
+    server = HTTPServer(('127.0.0.1', 8080), TestHTTPRequestHandler)
 
-    @server.route('/test')
-    def test():
-        return 'Passed'
+    server.socket = ssl_context.wrap_socket(server.socket, server_side=True)
 
-    server.run(host='127.0.0.1', port=8080, ssl_context=ssl_context)
+    server.serve_forever()
 
 
 def test_good_certificate():
@@ -26,7 +31,7 @@ def test_good_certificate():
     try:
         s = requests.Session()
         s.mount('https://localhost:8080/', HTTPSAdapter())
-        r = s.get('https://localhost:8080/test', verify='tests/ssl/rootCA.crt')
+        r = s.get('https://localhost:8080/', verify='tests/ssl/rootCA.crt')
         assert r.text == 'Passed'
         server.terminate()
     except Exception:
@@ -44,7 +49,7 @@ def test_wrong_certificate():
         s = requests.Session()
         try:
             s.mount('https://localhost:8080/', HTTPSAdapter())
-            s.get('https://localhost:8080/test', verify='tests/ssl/wrongRootCA.crt')
+            s.get('https://localhost:8080/', verify='tests/ssl/wrongRootCA.crt')
             server.terminate()
         except Exception:
             server.terminate()
@@ -61,7 +66,7 @@ def test_unsupported_rsa_1024():
         s = requests.Session()
         try:
             s.mount('https://localhost:8080/', HTTPSAdapter())
-            s.get('https://localhost:8080/test', verify='tests/ssl/rootCA.crt')
+            s.get('https://localhost:8080/', verify='tests/ssl/rootCA.crt')
             server.terminate()
         except Exception:
             server.terminate()
@@ -78,7 +83,7 @@ def test_supported_rsa_2048():
         s = requests.Session()
         try:
             s.mount('https://localhost:8080/', HTTPSAdapter())
-            s.get('https://localhost:8080/test', verify='tests/ssl/rootCA.crt')
+            s.get('https://localhost:8080/', verify='tests/ssl/rootCA.crt')
             server.terminate()
         except Exception:
             server.terminate()
@@ -94,7 +99,7 @@ def test_supported_tls_1_2():
     try:
         s = requests.Session()
         s.mount('https://localhost:8080/', HTTPSAdapter())
-        r = s.get('https://localhost:8080/test', verify='tests/ssl/rootCA.crt')
+        r = s.get('https://localhost:8080/', verify='tests/ssl/rootCA.crt')
         assert r.text == 'Passed'
         server.terminate()
     except Exception:
@@ -112,7 +117,7 @@ def test_unsupported_tls_1_1():
         s = requests.Session()
         try:
             s.mount('https://localhost:8080/', HTTPSAdapter())
-            s.get('https://localhost:8080/test', verify='tests/ssl/rootCA.crt')
+            s.get('https://localhost:8080/', verify='tests/ssl/rootCA.crt')
             server.terminate()
         except Exception:
             server.terminate()
@@ -129,7 +134,7 @@ def test_unsupported_tls_1_0():
         s = requests.Session()
         try:
             s.mount('https://localhost:8080/', HTTPSAdapter())
-            s.get('https://localhost:8080/test', verify='tests/ssl/rootCA.crt')
+            s.get('https://localhost:8080/', verify='tests/ssl/rootCA.crt')
             server.terminate()
         except Exception:
             server.terminate()

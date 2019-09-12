@@ -42,15 +42,11 @@ bandit_pex:
 
 unit:
 	@echo Running unit tests.
-	env PIPENV_QUIET=true pipenv install flask
 	pipenv run env PYTHONPATH=.:workloads/wrapper pytest --cov-report term-missing --cov=wca tests --ignore=tests/e2e/test_wca_metrics.py
-	env PIPENV_QUIET=true pipenv uninstall flask
 
 junit:
 	@echo Running unit tests.	
-	env PIPENV_QUIET=true pipenv install flask
 	pipenv run env PYTHONPATH=.:workloads/wrapper pytest --cov-report term-missing --cov=wca tests --junitxml=unit_results.xml -vvv -s --ignore=tests/e2e/test_wca_metrics.py
-	env PIPENV_QUIET=true pipenv uninstall flask
 
 WCA_IMAGE := wca-$(shell git rev-parse HEAD)
 wca_package_in_docker:
