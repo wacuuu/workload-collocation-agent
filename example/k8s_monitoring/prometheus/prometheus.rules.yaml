@@ -100,6 +100,7 @@ groups:
   - record: node__contention_risk
     expr: 1 - node__dram_hit
 
+
 # ----------------------------- CLUSTER -------------------------------------
 - name: cluster
   rules:

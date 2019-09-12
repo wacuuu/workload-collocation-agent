@@ -22,9 +22,10 @@ LEVEL = logging.INFO
 TIME = '1568225041'
 LOOKBACK = '2m'
 FIT_QUERY = 'avg_over_time(fit_avg{app="%s"}[%s])'
+WEIGHT_MULTIPLER = 50.0
 
 RISK_QUERY = 'avg_over_time(app__contention_risk_on_node{app="%s"}[%s])'
-RISK_THRESHOLD = 0.5
+RISK_THRESHOLD = 0.3 # 30%
 
 # CONSTANTS
 _PROMETHEUS_QUERY_PATH = "/api/v1/query"
@@ -161,7 +162,6 @@ def _filter_logic(app, nodes, namespace):
 
 ### ------------------------------ PRIORITIES ------------------------------
 
-WEIGHT_MULTIPLER = 30.0
 
 def _prioritize_logic(app, nodes, namespace):
     if namespace != NAMESPACE:
@@ -236,8 +236,10 @@ class K8SHandler(http.server.BaseHTTPRequestHandler):
         priorities = _prioritize_logic(app, nodes, namespace)
         log.info('[%s] Priorities:  %s', name, '  '.join('%s(%d), ' %(k,v) for k,v in sorted(priorities.items(), key=lambda x: -x[1])))
         # Encode as PriorityList
-        priority_list = [dict(Host=node, Score=priorities.get(node, 0)) for node in nodes]
+        priority_list = [dict(Host=node, Score=int(priorities.get(node, 0))) for node in nodes]
         log.debug('priority list = %s', ', '.join('%s=%s' % (d['Host'], d['Score']) for d in sorted(priority_list, key=lambda d: d['Host'])))
+        for d in priority_list:
+            assert isinstance(d['Score'], int), 'will be silently discarded!'
         return priority_list
 
 
