@@ -36,7 +36,8 @@ spec:
       hostPID: true
       hostIPC: true
       hostNetwork: true
-
+      nodeSelector:
+        kubernetes.io/hostname: node14
 #      affinity:
 #        nodeAffinity:
 #          requiredDuringSchedulingIgnoredDuringExecution:
@@ -78,7 +79,7 @@ spec:
       containers:
 
       - name: wca
-        image: wca
+        image: 100.64.176.12:80/wca:nszulc1
         securityContext:
           privileged: true
         env:
@@ -88,7 +89,7 @@ spec:
           - name: CONFIG
             value: /var/lib/wca/config.yml
           - name: EXTRA_COMPONENT
-            value: example.external_package:ExampleDetector
+            value: '' #example.external_package:ExampleDetector
         volumeMounts:
           - name: kubelet-key-crt
             mountPath: /etc/wca/certs/

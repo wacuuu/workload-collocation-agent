@@ -1,4 +1,4 @@
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +13,8 @@
 # limitations under the License.
 
 
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: wca
-  labels:
-    name: wca
+from_env: !Env
+  name: USER
+
+unset_env: !Env
+  name: THIS_TEST_CASE_RELIES_ON_THIS_ENV_BEING_UNSET

@@ -23,13 +23,15 @@ data:
 
     runner: !AllocationRunner
       action_delay: 5.0
-      rdt_enabled: true
+      rdt_enabled: false
       enable_derived_metrics: True
       node: !KubernetesNode
         # We support two options: cgroupfs, systemd.
         cgroup_driver: cgroupfs
-        client_private_key: "/etc/wca/certs/client.key"
-        client_cert: "/etc/wca/certs/client.crt"
+        ssl: !SSL
+          server_verify: False
+          client_key_path: "/etc/wca/certs/apiserver-kubelet-client.key"
+          client_cert_path: "/etc/wca/certs/apiserver-kubelet-client.crt"
         kubelet_endpoint: "https://$OWN_IP_TO_BE_REPLACED:10250"
         monitored_namespaces: ["default"]
 
@@ -52,5 +54,4 @@ data:
         - name: Default rule for all tasks.
           allocations:
             cpu_quota: 1.
-            rdt:
-              name: ''
+

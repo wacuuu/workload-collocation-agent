@@ -1,0 +1,70 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: wca-sa
+  namespace: wca
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: wca
+  name: wca-role
+rules:
+- apiGroups: ['*']
+  resources: ['*']
+  verbs: ['*']
+
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: wca-clusterrole
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - pods
+  - namespaces
+  verbs:
+  - get
+  - list
+  - watch
+
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: wca-rolebinding
+  namespace: wca
+subjects:
+- kind: ServiceAccount
+  name: wca-sa
+  apiGroup: rbac.authorization.k8s.io
+  #- kind: User
+  #name: system:serviceaccount:default:default
+  #apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: wca-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: wca-clusterrolebinding
+  namespace: wca
+subjects:
+- kind: ServiceAccount
+  name: wca-sa
+  apiGroup: rbac.authorization.k8s.io
+
+  #- kind: User
+  #name: system:serviceaccount:default:default
+  #apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: wca-clusterrole
+  apiGroup: rbac.authorization.k8s.io
