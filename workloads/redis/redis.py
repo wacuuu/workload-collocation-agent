@@ -28,8 +28,7 @@ communication_port = os.environ.get('communication_port', 11211)
 
 # Preparing config file.
 cmdline_config = ["sh", "-c",
-                  ("set -x && "
-                   "cd /prep_config && "
+                  ("cd /prep_config && "
                    "cp /etc/redis.conf . && "
                    "sed -i 's/logfile.*/logfile \"\"/' \
                    redis.conf && "
@@ -59,7 +58,7 @@ initContainers.append(initContainer)
 
 volumeMounts.append(volume_prep_config)
 
-command.append("taskset -c {} redis-server /prep_config/redis.conf".format(cpu_list))
+command.append("/usr/bin/taskset -c {} redis-server /prep_config/redis.conf".format(cpu_list))
 
 json_format = json.dumps(pod)
 print(json_format)
