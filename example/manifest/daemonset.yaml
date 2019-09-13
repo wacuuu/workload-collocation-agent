@@ -36,6 +36,7 @@ spec:
       hostPID: true
       hostIPC: true
       hostNetwork: true
+      serviceAccountName: wca-sa
       nodeSelector:
         kubernetes.io/hostname: node14
 #      affinity:
@@ -79,7 +80,7 @@ spec:
       containers:
 
       - name: wca
-        image: 100.64.176.12:80/wca:nszulc1
+        image: 100.64.176.12:80/wca:nszulc15
         securityContext:
           privileged: true
         env:
