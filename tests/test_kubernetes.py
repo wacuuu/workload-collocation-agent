@@ -84,9 +84,9 @@ def test_get_tasks(get_mock):
 @patch('requests.get', return_value=create_json_fixture_mock('kubeapi_res', __file__))
 @patch('pathlib.Path.open')
 def test_get_tasks_kubeapi(get_mock, pathlib_open_mock):
-    node = KubernetesNode()
+    node = KubernetesNode(node_ip="100.64.176.37")
     tasks = node.get_tasks()
-    assert all(task for task in tasks)
+    assert len(tasks) == 12
 
 
 @patch(
