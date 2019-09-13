@@ -111,10 +111,6 @@ class KubernetesNode(Node):
 
         log.debug("Created kubeapi endpoint %s", kubeapi_endpoint)
 
-        dadadidi = SSL(
-            server_verify=False,
-            client_cert_path=SERVICE_CERT_FILENAME
-        )
         with pathlib.Path(SERVICE_TOKEN_FILENAME).open() as f:
             service_token = f.read()
 
