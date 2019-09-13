@@ -22,18 +22,23 @@ data:
   wca_config.yml: |
 
     runner: !AllocationRunner
+      #extra_labes:
+      # node: !Env
+      #    name: HOSTNAME
       action_delay: 5.0
       rdt_enabled: false
       enable_derived_metrics: True
       node: !KubernetesNode
         # We support two options: cgroupfs, systemd.
         cgroup_driver: cgroupfs
-        ssl: !SSL
-          server_verify: False
-          client_key_path: "/etc/wca/certs/apiserver-kubelet-client.key"
-          client_cert_path: "/etc/wca/certs/apiserver-kubelet-client.crt"
-        kubelet_endpoint: "https://$OWN_IP_TO_BE_REPLACED:10250"
+        #ssl: !SSL
+        #  server_verify: False
+        #  client_key_path: "/etc/wca/certs/apiserver-kubelet-client.key"
+        #  client_cert_path: "/etc/wca/certs/apiserver-kubelet-client.crt"
+        #kubelet_endpoint: "https://$OWN_IP_TO_BE_REPLACED:10250"
         monitored_namespaces: ["default"]
+        # use !Env
+        node_ip: "100.64.176.40"
 
       metrics_storage: !LogStorage
         overwrite: True
@@ -48,6 +53,9 @@ data:
       extra_labels:
         env_uniq_id: $ENV_UNIQ_ID_TO_BE_REPLACED
         own_ip: $OWN_IP_TO_BE_REPLACED
+        node: !Env
+          name: HOSTNAME
+
 
       allocator: !StaticAllocator
         rules:

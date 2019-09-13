@@ -42,7 +42,7 @@ from wca.perf_pmu import DefaultPlatformDerivedMetricsGeneratorsFactory
 class Env(UserString):
     """Env class allows using environment variables as values in wca config"""
 
-    def __init__(self, name):
+    def __init__(self, name: str):
         seq = os.environ.get(name, "")
         super().__init__(seq)
 
