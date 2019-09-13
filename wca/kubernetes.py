@@ -94,7 +94,7 @@ class KubernetesNode(Node):
     kubelet_enabled: bool = False
     kubelet_endpoint: Url = 'https://127.0.0.1:10250'
 
-    node_ip: str = None
+    node_ip: Str = None
 
     # Timeout to access kubernetes agent.
     timeout: Numeric(1, 60) = 5  # [s]
@@ -111,10 +111,6 @@ class KubernetesNode(Node):
 
         log.debug("Created kubeapi endpoint %s", kubeapi_endpoint)
 
-        dadadidi = SSL(
-            server_verify=False,
-            client_cert_path=SERVICE_CERT_FILENAME
-        )
         with pathlib.Path(SERVICE_TOKEN_FILENAME).open() as f:
             service_token = f.read()
 
@@ -127,6 +123,8 @@ class KubernetesNode(Node):
             verify=SERVICE_CERT_FILENAME
         )
 
+        if not r.ok:
+            log.error('%i %s - %s', r.status_code, r.reason, r.raw)
         r.raise_for_status()
 
         return r.json()
@@ -148,6 +146,8 @@ class KubernetesNode(Node):
                 json=dict(type='GET_STATE'),
                 timeout=self.timeout)
 
+        if not r.ok:
+            log.error('%i %s - %s', r.status_code, r.reason, r.raw)
         r.raise_for_status()
 
         return r.json()

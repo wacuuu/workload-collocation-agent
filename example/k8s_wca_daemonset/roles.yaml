@@ -34,17 +34,14 @@ rules:
 
 ---
 kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1beta1
+apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: wca-rolebinding
   namespace: wca
 subjects:
 - kind: ServiceAccount
   name: wca-sa
-  apiGroup: rbac.authorization.k8s.io
-  #- kind: User
-  #name: system:serviceaccount:default:default
-  #apiGroup: rbac.authorization.k8s.io
+  namespace: wca
 roleRef:
   kind: Role
   name: wca-role
@@ -59,11 +56,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: wca-sa
-  apiGroup: rbac.authorization.k8s.io
-
-  #- kind: User
-  #name: system:serviceaccount:default:default
-  #apiGroup: rbac.authorization.k8s.io
+  namespace: wca
 roleRef:
   kind: ClusterRole
   name: wca-clusterrole
