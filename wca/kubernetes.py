@@ -124,7 +124,7 @@ class KubernetesNode(Node):
                 "Authorization": "Bearer {}".format(service_token)
             },
             timeout=self.timeout,
-            cert=SERVICE_CERT_FILENAME
+            verify=SERVICE_CERT_FILENAME
         )
 
         r.raise_for_status()
