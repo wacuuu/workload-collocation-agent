@@ -84,7 +84,7 @@ spec:
           privileged: true
         env:
           - name: LOG
-            value: debug
+            value: info
           # Env CONFIG have to be this same path as for config created by init-pod wca-set-config
           - name: CONFIG
             value: /var/lib/wca/config.yml
