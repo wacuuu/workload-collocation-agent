@@ -56,7 +56,6 @@ COPY --from=wca /wca/dist/wca.pex /usr/bin/
 ENTRYPOINT \
     python36 /usr/bin/wca.pex \
         --config $CONFIG \
-        --register $EXTRA_COMPONENT \
         --log $LOG \
         -0 \
         $WCA_EXTRA_PARAMS
