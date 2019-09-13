@@ -148,7 +148,6 @@ SECURE_CIPHERS = ':'.join([
     #   Commented algorithms are not supported in Centos7
     'ECDHE-ECDSA-AES128-GCM-SHA256',
     'ECDHE-RSA-AES128-GCM-SHA256',
-    'ECDH-ECDSA-AES128-GCM-SHA256',
     'DHE-RSA-AES128-GCM-SHA256',
     'AES128-GCM-SHA256',
     #   'ECDHE-ECDSA-AES128-CCM',
