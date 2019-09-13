@@ -23,7 +23,7 @@ from wca.mesos import MesosNode
 from wca.platforms import RDTInformation
 from wca.resctrl import ResGroup
 from wca.runners.measurement import MeasurementRunner, _build_tasks_metrics, _prepare_tasks_data, \
-    TaskLabelRegexGenerator
+    TaskLabelRegexGenerator, TaskLabelGenerator, append_additional_labels_to_tasks
 from tests.testing import assert_metric, redis_task_with_default_labels, prepare_runner_patches, \
     TASK_CPU_USAGE, WCA_MEMORY_USAGE, metric, DEFAULT_METRIC_VALUE, task
 
@@ -65,11 +65,13 @@ def test_measurements_runner(subcgroups):
     assert_metric(got_metrics, 'cpu_usage', dict(task_id=t2.task_id),
                   expected_metric_value=cpu_usage)
 
-    # Test for labels generator.
-    cpu_metric = [metric for metric in got_metrics if metric.name == 'cpu_usage'][0]
-    assert 'task_name' in t1.labels
-    assert cpu_metric.labels['application'] == 'example/root/staging/redis-6792'
-    assert cpu_metric.labels['application_version_name'] == ''
+    # Test whether application and application_version_name were properly generated using
+    #   default runner._task_label_generators defined in constructor of MeasurementsRunner.
+    assert_metric(got_metrics, 'cpu_usage',
+                  {'application': t1.name, 'application_version_name': ''})
+
+    # Test whether `initial_task_cpu_assignment` label is attached to task metrics.
+    assert_metric(got_metrics, 'cpu_usage', {'initial_task_cpu_assignment': '8.0'})
 
 
 @prepare_runner_patches
@@ -122,9 +124,7 @@ def test_prepare_tasks_data(*mocks):
 
     assert tasks_measurements == {'t1_task_id': {'cpu_usage': 13}}
     assert tasks_resources == {'t1_task_id': {'cpu': 3}}
-    assert tasks_labels == {'t1_task_id': {'initial_task_cpu_assignment': 'unknown',
-                                           'label_key': 'label_value',
-                                           'task_id': 't1_task_id'}}
+    assert tasks_labels == {'t1_task_id': {'label_key': 'label_value'}}
 
 
 @patch('wca.cgroups.Cgroup')
@@ -157,24 +157,35 @@ def test_prepare_task_data_cgroup_not_found(*mocks):
 @pytest.mark.parametrize('source_val, pattern, repl, expected_val', (
     ('__val__', '__(.*)__', r'\1', 'val'),
     ('example/devel/staging-13/redis.small', r'.*/.*/.*/(.*)\..*', r'\1', 'redis'),
+    ('example/devel/staging-13/redis.small', r'non_matching_pattern', r'',
+     'example/devel/staging-13/redis.small'),
 ))
 def test_task_label_regex_generator(source_val, pattern, repl, expected_val):
-    tasks = [task('/t1', labels={'source_key': source_val})]
+    task1 = task('/t1', labels={'source_key': source_val})
     task_label_regex_generator = TaskLabelRegexGenerator(pattern, repl, 'source_key')
-    task_label_regex_generator.generate(tasks, 'target_key')
-    assert tasks[0].labels['target_key'] == expected_val
+    assert expected_val == task_label_regex_generator.generate(task1)
 
 
 @patch('wca.runners.measurement.log')
-def test_task_label_regex_generator_error(log_mock):
-    tasks = [task('/t1', labels={'source_key': 'source_val'})]
-    task_label_regex_generator = TaskLabelRegexGenerator('__(.*)__', '\\1', 'non_existing_key')
-    task_label_regex_generator.generate(tasks, 'target_key')
-    log_mock.warning.assert_called_once()
+def test_append_additional_labels_to_tasks__generate_returns_None(log_mock):
+    """Generate method for generator returns None."""
+    class TestTaskLabelGenerator(TaskLabelGenerator):
+        def generate(self, task):
+            return None
+
+    task1 = task('/t1', labels={'source_key': 'source_val'})
+    append_additional_labels_to_tasks(
+        {'target_key': TestTaskLabelGenerator()},
+        [task1])
+    log_mock.debug.assert_called_once()
 
 
-def test_task_label_regex_generator_overwriting_label():
-    tasks = [task('/t1', labels={'source_key': '__val__'})]
-    task_label_regex_generator = TaskLabelRegexGenerator('__(.*)__', '\\1', 'source_key')
-    task_label_regex_generator.generate(tasks, 'source_key')
-    assert tasks[0].labels['source_key'] == '__val__'
+@patch('wca.runners.measurement.log')
+def test_append_additional_labels_to_tasks__overwriting_label(log_mock):
+    """Should not ovewrite existing previously label."""
+    task1 = task('/t1', labels={'source_key': '__val__'})
+    append_additional_labels_to_tasks(
+        {'source_key': TaskLabelRegexGenerator('__(.*)__', '\\1', 'non_existing_key')},
+        [task1])
+    assert task1.labels['source_key'] == '__val__'
+    log_mock.debug.assert_called_once()

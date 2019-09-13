@@ -22,7 +22,8 @@ from wca.allocators import RDTAllocation
 from wca.platforms import RDTInformation
 from wca.resctrl import ResGroup
 from wca.resctrl_allocations import RDTAllocationValue, RDTGroups, _parse_schemata_file_row, \
-    _count_enabled_bits, check_cbm_mask, _is_rdt_suballocation_changed, _validate_domains
+    _count_enabled_bits, check_cbm_mask, _is_rdt_suballocation_changed, _validate_domains, \
+    _normalize_mb_value
 from tests.testing import create_open_mock, allocation_metric
 
 
@@ -268,3 +269,25 @@ def test_validate_domain_ok(domains, platform_sockets):
 def test_validate_domain_invalid(domains, platform_sockets, exception_match):
     with pytest.raises(InvalidAllocations, match=exception_match):
         _validate_domains(domains, platform_sockets)
+
+
+@pytest.mark.parametrize(
+    'mb_value, mb_min_bandwidth, mb_bandwidth_gran, expected_mb_value', [
+        (10, 10, 10, 10),
+        (12, 10, 10, 20),
+        (17, 10, 10, 20),
+    ]
+)
+def test_normalize_mb_value(mb_value, mb_min_bandwidth, mb_bandwidth_gran, expected_mb_value):
+    assert expected_mb_value == _normalize_mb_value(mb_value, mb_min_bandwidth, mb_bandwidth_gran)
+
+
+@pytest.mark.parametrize(
+    'mb_value, mb_min_bandwidth, mb_bandwidth_gran', [
+        (2, 10, 10),
+        (7, 10, 10),
+    ]
+)
+def test_invalid_allocations_normalize_mb_value(mb_value, mb_min_bandwidth, mb_bandwidth_gran):
+    with pytest.raises(InvalidAllocations):
+        _normalize_mb_value(mb_value, mb_min_bandwidth, mb_bandwidth_gran)

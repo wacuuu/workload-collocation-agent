@@ -31,7 +31,7 @@ from wca.kubernetes import have_tasks_qos_label, are_all_tasks_of_single_qos
 from wca.metrics import Metric, MetricType
 from wca.nodes import Task
 from wca.resctrl_allocations import (RDTAllocationValue, RDTGroups,
-                                     validate_mb_string,
+                                     normalize_mb_string,
                                      validate_l3_string)
 from wca.runners.detection import AnomalyStatistics
 from wca.runners.measurement import MeasurementRunner, TaskLabelGenerator
@@ -188,6 +188,7 @@ class AllocationRunner(MeasurementRunner):
             (defaults to instructions, cycles, cache-misses, memstalls)
         enable_derived_metrics: enable derived metrics ips, ipc and cache_hit_ratio
             (based on enabled_event names), default to False
+        task_label_generators: component to generate additional labels for tasks
     """
 
     def __init__(
@@ -206,7 +207,7 @@ class AllocationRunner(MeasurementRunner):
             remove_all_resctrl_groups: bool = False,
             event_names: Optional[List[str]] = None,
             enable_derived_metrics: bool = False,
-            tasks_label_generator: Dict[str, TaskLabelGenerator] = None,
+            task_label_generators: Dict[str, TaskLabelGenerator] = None,
     ):
 
         self._allocation_configuration = allocation_configuration or AllocationConfiguration()
@@ -214,7 +215,7 @@ class AllocationRunner(MeasurementRunner):
         super().__init__(node, metrics_storage, action_delay, rdt_enabled,
                          extra_labels, _allocation_configuration=self._allocation_configuration,
                          event_names=event_names, enable_derived_metrics=enable_derived_metrics,
-                         tasks_label_generator=tasks_label_generator)
+                         task_label_generators=task_label_generators)
 
         # Allocation specific.
         self._allocator = allocator
@@ -273,10 +274,16 @@ class AllocationRunner(MeasurementRunner):
                                    platform.rdt_information.min_cbm_bits)
 
             if root_rdt_mb is not None:
-                validate_mb_string(root_rdt_mb, platform.sockets,
-                                   platform.rdt_information.mb_min_bandwidth)
-
-            resctrl.cleanup_resctrl(root_rdt_l3, root_rdt_mb, self._remove_all_resctrl_groups)
+                normalized_root_rdt_mb = normalize_mb_string(
+                        root_rdt_mb,
+                        platform.sockets,
+                        platform.rdt_information.mb_min_bandwidth,
+                        platform.rdt_information.mb_bandwidth_gran)
+                resctrl.cleanup_resctrl(
+                        root_rdt_l3, normalized_root_rdt_mb, self._remove_all_resctrl_groups)
+            else:
+                resctrl.cleanup_resctrl(
+                        root_rdt_l3, root_rdt_mb, self._remove_all_resctrl_groups)
         except InvalidAllocations as e:
             log.error('Cannot initialize RDT subsystem: %s', e)
             return False
