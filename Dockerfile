@@ -27,6 +27,10 @@ RUN pip install pipenv
 
 WORKDIR /wca
 
+COPY Pipfile Pipfile
+COPY Pipfile.lock Pipfile.lock
+RUN pipenv install --dev --deploy
+
 RUN [ ! -d confluent-kafka-python ] && git clone https://github.com/confluentinc/confluent-kafka-python
 RUN cd confluent-kafka-python && git checkout v1.0.1
 
@@ -34,8 +38,8 @@ RUN cd confluent-kafka-python && git checkout v1.0.1
 COPY . .
 
 RUN git clean -fdx
-RUN pipenv install --dev
-RUN pipenv run make wca_package OPTIONAL_FEATURES=kafka_storage
+ENV OPTIONAL_FEATURES=kafka_storage
+RUN make wca_package
 
 
 # Building final container that consists of wca only.
