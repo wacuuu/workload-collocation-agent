@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import pytest
 from unittest.mock import patch
 
+import pytest
+
+from tests.testing import create_json_fixture_mock
 from wca.config import ValidationError
 from wca.kubernetes import KubernetesNode, KubernetesTask, _calculate_pod_resources, \
     _build_cgroup_path, are_all_tasks_of_single_qos, QOS_LABELNAME
-from tests.testing import create_json_fixture_mock
 
 
 def ktask(name, qos):
@@ -78,6 +79,14 @@ def test_get_tasks(get_mock):
     assert len(tasks) == 2
     for i, task in enumerate(tasks):
         assert task == expected_tasks[i]
+
+
+@patch('requests.get', return_value=create_json_fixture_mock('kubeapi_res', __file__))
+@patch('pathlib.Path.open')
+def test_get_tasks_kubeapi(get_mock, pathlib_open_mock):
+    node = KubernetesNode(node_ip="100.64.176.37")
+    tasks = node.get_tasks()
+    assert len(tasks) == 12
 
 
 @patch(
