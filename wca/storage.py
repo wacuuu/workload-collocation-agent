@@ -25,7 +25,7 @@ import pathlib
 import re
 import sys
 import time
-import pathlib
+from collections import UserString
 from typing import List, Tuple, Dict, Optional
 
 from dataclasses import dataclass, field
@@ -163,9 +163,10 @@ def is_convertable_to_prometheus_exposition_format(metrics: List[Metric]) -> (bo
         if not _METRIC_NAME_RE.match(metric.name):
             return (False, "Wrong metric name {}.".format(metric.name))
         for label_key, label_val in metric.labels.items():
-            if not isinstance(label_val, str):
-                return (False, "Label (at key {}) should be str type got {!r}"
-                        .format(label_key, metric.name, type(label_val)))
+            _string = (str, UserString)
+            if not isinstance(label_val, _string):
+                return (False, "Label (at key {}) {} should be {!r} type got {!r}"
+                        .format(label_key, metric.name, _string, type(label_val)))
 
             if not _METRIC_LABEL_NAME_RE.match(label_key):
                 return (False, "Used wrong label name {} in metric {}."
