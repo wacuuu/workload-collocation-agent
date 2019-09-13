@@ -1,0 +1,29 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: wca
+  namespace: wca
+  labels:
+    name: wca
+spec:
+  selector:
+    name: wca
+  ports:
+  - name: web
+    port: 9100
+    targetPort: 9100
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: wca
+  namespace: wca
+  labels:
+    team: monitoring
+spec:
+  selector:
+    matchLabels:
+      name: wca
+  endpoints:
+  - port: web
+    interval: 1s
