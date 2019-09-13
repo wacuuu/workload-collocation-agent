@@ -36,7 +36,8 @@ LABEL_CONTENDING_TASK_ID = 'contending_task_id'
 LABEL_CONTENDED_TASK_ID = 'contended_task_id'
 TasksMeasurements = Dict[TaskId, Measurements]
 TasksResources = Dict[TaskId, Dict[str, float]]
-TasksLabels = Dict[TaskId, Dict[str, str]]
+TaskLabels = Dict[str, str]
+TasksLabels = Dict[TaskId, TaskLabels]
 
 
 class ContendedResource(str, Enum):
