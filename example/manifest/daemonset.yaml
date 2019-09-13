@@ -37,8 +37,7 @@ spec:
       hostIPC: true
       hostNetwork: true
       serviceAccountName: wca-sa
-      nodeSelector:
-        kubernetes.io/hostname: node14
+
 #      affinity:
 #        nodeAffinity:
 #          requiredDuringSchedulingIgnoredDuringExecution:
@@ -80,17 +79,21 @@ spec:
       containers:
 
       - name: wca
-        image: 100.64.176.12:80/wca:nszulc15
+        image: 100.64.176.12:80/wca:nszulc17
         securityContext:
           privileged: true
         env:
           - name: LOG
-            value: info
+            value: debug
           # Env CONFIG have to be this same path as for config created by init-pod wca-set-config
           - name: CONFIG
             value: /var/lib/wca/config.yml
           - name: EXTRA_COMPONENT
             value: '' #example.external_package:ExampleDetector
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
         volumeMounts:
           - name: kubelet-key-crt
             mountPath: /etc/wca/certs/

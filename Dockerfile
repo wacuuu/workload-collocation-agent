@@ -38,7 +38,7 @@ RUN cd confluent-kafka-python && git checkout v1.0.1
 COPY . .
 
 RUN git clean -fdx
-ENV OPTIONAL_FEATURES=kafka_storage
+#ENV OPTIONAL_FEATURES=kafka_storage
 RUN make wca_package
 
 

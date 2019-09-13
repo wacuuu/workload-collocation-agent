@@ -94,7 +94,7 @@ class KubernetesNode(Node):
     kubelet_enabled: bool = False
     kubelet_endpoint: Url = 'https://127.0.0.1:10250'
 
-    node_ip: str = None
+    node_ip: Str = None
 
     # Timeout to access kubernetes agent.
     timeout: Numeric(1, 60) = 5  # [s]
