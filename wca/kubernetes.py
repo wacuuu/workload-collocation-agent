@@ -123,6 +123,8 @@ class KubernetesNode(Node):
             verify=SERVICE_CERT_FILENAME
         )
 
+        if not r.ok():
+            log.error('%i %s - %s', r.status_code, r.reason, r.raw)
         r.raise_for_status()
 
         return r.json()
@@ -144,6 +146,8 @@ class KubernetesNode(Node):
                 json=dict(type='GET_STATE'),
                 timeout=self.timeout)
 
+        if not r.ok():
+            log.error('%i %s - %s', r.status_code, r.reason, r.raw)
         r.raise_for_status()
 
         return r.json()
