@@ -1,0 +1,27 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: state-mterics
+  namespace: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: state-metrics
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: state-metrics
+    spec:
+      serviceAccountName: state-metrics
+      containers:
+        - name: state-metrics
+          image: quay.io/coreos/kube-state-metrics
+          ports:
+            - containerPort: 8080
+              name: metrics
+          readinessProbe:
+            httpGet:
+              port: 8080
+            initialDelaySeconds: 5
+            timeoutSeconds: 5
