@@ -79,7 +79,7 @@ spec:
       containers:
 
       - name: wca
-        image: 100.64.176.12:80/wca:nszulc17
+        image: 100.64.176.12:80/wca:nszulc18
         securityContext:
           privileged: true
         env:

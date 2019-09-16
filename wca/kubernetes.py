@@ -93,7 +93,9 @@ class KubernetesNode(Node):
     # By default use localhost, however kubelet may not listen on it.
     kubelet_enabled: bool = False
     kubelet_endpoint: Url = 'https://127.0.0.1:10250'
-
+    
+    kubeapi_host: Str = None
+    kubeapi_port: Str = None # Because !Env is UserString and another type cast might be problematic
     node_ip: Str = None
 
     # Timeout to access kubernetes agent.
@@ -103,10 +105,7 @@ class KubernetesNode(Node):
     monitored_namespaces: List[Str] = field(default_factory=lambda: ["default"])
 
     def _request_kubeapi(self):
-        # should be a config prep
-        kubeapi_host = os.environ.get(SERVICE_HOST_ENV_NAME)
-        kubeapi_port = os.environ.get(SERVICE_PORT_ENV_NAME)
-        kubeapi_endpoint = "https://{}:{}".format(kubeapi_host, kubeapi_port)
+        kubeapi_endpoint = "https://{}:{}".format(self.kubeapi_host, self.kubeapi_port)
         full_url = urljoin(kubeapi_endpoint, "/api/v1/namespaces/default/pods")
 
         log.debug("Created kubeapi endpoint %s", kubeapi_endpoint)

@@ -29,6 +29,10 @@ data:
         # We support two options: cgroupfs, systemd.
         cgroup_driver: cgroupfs
         monitored_namespaces: ["default"]
+        kubeapi_host: !Env
+          name: KUBERNETES_SERVICE_HOST
+        kubeapi_port: !Env
+          name: KUBERNETES_SERVICE_PORT
         node_ip: !Env
           name: HOST_IP
 
