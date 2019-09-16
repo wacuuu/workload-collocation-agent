@@ -18,11 +18,11 @@ NAMESPACE = 'default'
 LEVEL = logging.INFO
 
 # Model from the past
-# http://100.64.176.12:3000/d/MbAID-cZk/2lm-contention-demo?orgId=1&from=1568224919123&to=1568225041575
-TIME = '1568225041'
+# http://100.64.176.12:3000/d/MbAID-cZk/2lm-contention-demo?orgId=1&from=1568632199577&to=1568632501133
+TIME = '1568632501'
 LOOKBACK = '2m'
 FIT_QUERY = 'avg_over_time(fit_avg{app="%s"}[%s])'
-WEIGHT_MULTIPLER = 50.0
+WEIGHT_MULTIPLER = 20.0
 
 RISK_QUERY = 'avg_over_time(app__contention_risk_on_node{app="%s"}[%s])'
 RISK_THRESHOLD = 0.3 # 30%

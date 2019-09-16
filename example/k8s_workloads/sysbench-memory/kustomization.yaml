@@ -1,5 +1,5 @@
 bases:
-- small
+#- small
 - medium
 - big
 #- big-rnd
