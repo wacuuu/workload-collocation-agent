@@ -4,6 +4,7 @@ bases:
 
 commonLabels:
   app: stress-stream-small
+  size: small
 
 configMapGenerator:
 - name: stress

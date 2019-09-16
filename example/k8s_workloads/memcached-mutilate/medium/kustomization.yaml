@@ -4,6 +4,7 @@ bases:
 
 commonLabels:
   app: memcached-medium
+  size: medium
 
 configMapGenerator:
 - name: mutilate

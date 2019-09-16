@@ -5,6 +5,7 @@ bases:
 
 commonLabels:
   app: sysbench-memory-big
+  size: big
 
 patchesStrategicMerge:
   - resources.yaml

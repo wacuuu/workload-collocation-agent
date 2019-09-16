@@ -4,6 +4,7 @@ bases:
 
 commonLabels:
   app: sysbench-memory-small
+  size: small
 
 patchesStrategicMerge:
   - resources.yaml

@@ -5,6 +5,7 @@ bases:
 
 commonLabels:
   app: redis-medium
+  size: medium
 
 configMapGenerator:
 - name: memtier

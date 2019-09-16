@@ -4,6 +4,7 @@ bases:
 
 commonLabels:
   app: redis-big
+  size: big
 
 configMapGenerator:
 - name: memtier

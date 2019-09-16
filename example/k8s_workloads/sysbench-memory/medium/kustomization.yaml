@@ -5,6 +5,7 @@ bases:
 
 commonLabels:
   app: sysbench-memory-medium
+  size: medium
 
 patchesStrategicMerge:
   - resources.yaml
