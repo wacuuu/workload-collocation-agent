@@ -24,7 +24,7 @@ from wca import logger
 from wca.config import assure_type, Numeric, Url, Str
 from wca.metrics import MetricName
 from wca.nodes import Node, Task, TaskId, TaskSynchronizationException
-from wca.security import SSL
+from wca.security import SSL, HTTPSAdapter
 
 DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.CACHE_MISSES)
 
@@ -97,7 +97,9 @@ class KubernetesNode(Node):
         full_url = urljoin(self.kubelet_endpoint, PODS_PATH)
 
         if self.ssl:
-            r = requests.get(
+            s = requests.Session()
+            s.mount(self.kubelet_endpoint, HTTPSAdapter())
+            r = s.get(
                     full_url,
                     json=dict(type='GET_STATE'),
                     timeout=self.timeout,

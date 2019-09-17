@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from wca.config import assure_type, Numeric, Url
 from wca.metrics import Measurements, Metric
 from wca.nodes import Node, Task, TaskId, TaskSynchronizationException
-from wca.security import SSL
+from wca.security import SSL, HTTPSAdapter
 
 MESOS_TASK_STATE_RUNNING = 'TASK_RUNNING'
 CGROUP_DEFAULT_SUBSYSTEM = 'cpu'
@@ -106,7 +106,9 @@ class MesosNode(Node):
 
         try:
             if self.ssl:
-                r = requests.post(
+                s = requests.Session()
+                s.mount(self.mesos_agent_endpoint, HTTPSAdapter())
+                r = s.post(
                         full_url,
                         json=dict(type=self.METHOD),
                         timeout=self.timeout,
