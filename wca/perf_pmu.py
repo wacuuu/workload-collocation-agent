@@ -88,10 +88,10 @@ class UncorePerfCounters:
                 scaled_measurements_and_factor_per_cpu[cpu] = _parse_event_groups(event_leader_file,
                                                                                   event_names)
             scaled_measurements_and_factor_per_pmu[pmu] = _aggregate_measurements(
-                scaled_measurements_and_factor_per_cpu, event_names)
+                scaled_measurements_and_factor_per_cpu, event_names, 'single pmu')
 
         measurements = _aggregate_measurements(scaled_measurements_and_factor_per_pmu,
-                                               event_names)
+                                               event_names, 'all pmus')
 
         return measurements
 
