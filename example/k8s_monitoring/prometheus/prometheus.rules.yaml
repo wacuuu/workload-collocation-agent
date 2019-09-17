@@ -35,6 +35,8 @@ groups:
     expr: avg(task__memory_rw_ratio) by (app)
   - record: app__count
     expr: count(task__up) by (app)
+  - record: app__memory_transfer_over_5s_gb
+    expr: avg( delta(task__memory_bandwidth[5s])/1e9 ) by (app)
 
   # Metrics for cache-utilization metric (transfered vs wss)
   - record: app__cache_locality  # 50GB/s / 10 GBs
