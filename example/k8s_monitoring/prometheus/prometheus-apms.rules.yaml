@@ -70,24 +70,24 @@ groups:
     expr: apm__throughput
 #--------------------------------------- Targets for Latency [msecs]
   # Memcached latency goal
-  - {record: apm__slo, labels: {app: memcached-big},    expr: "5.0" }
+  - {record: apm__slo, labels: {app: memcached-big},    expr: "8.0" }
   - {record: apm__slo, labels: {app: memcached-medium}, expr: "3.0" }
   - {record: apm__slo, labels: {app: memcached-small},  expr: "1.0" }
 
   # Redis latency goal
-  - {record: apm__slo, labels: {app: redis-big},        expr: "10"}
-  - {record: apm__slo, labels: {app: redis-medium},     expr: "5"}
+  - {record: apm__slo, labels: {app: redis-big},        expr: "14"}
+  - {record: apm__slo, labels: {app: redis-medium},     expr: "10"}
   - {record: apm__slo, labels: {app: redis-small},      expr: "5"}
 
     # Stress average duration for one bogus operation (maximum)
-  - {record: apm__slo, labels: {app: stress-stream-big},    expr: "1000"}      #  4 threads
+  - {record: apm__slo, labels: {app: stress-stream-big},    expr: "1500"}      #  4 threads
   - {record: apm__slo, labels: {app: stress-stream-medium}, expr: "15000"}      #  1 thread
-  - {record: apm__slo, labels: {app: stress-stream-small},  expr: "6000"}       #  1 thread
+  - {record: apm__slo, labels: {app: stress-stream-small},  expr: "7000"}       #  1 thread
 
     # Sysbench average durations [ms]  of copying 1GB (maximum)
-  - {record: apm__slo, labels: {app: sysbench-memory-big}, expr: "150"}
-  - {record: apm__slo, labels: {app: sysbench-memory-medium}, expr: "150"}
-  - {record: apm__slo, labels: {app: sysbench-memory-small}, expr: "250"}
+  - {record: apm__slo, labels: {app: sysbench-memory-big}, expr: "200"}
+  - {record: apm__slo, labels: {app: sysbench-memory-medium}, expr: "200"}
+  - {record: apm__slo, labels: {app: sysbench-memory-small}, expr: "380"}
 
   #--------------------------------------- Targets for Throughtpu [msecs]
   # Memcached QPS goal
