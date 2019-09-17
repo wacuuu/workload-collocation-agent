@@ -28,7 +28,7 @@ spec:
             - bash
             - -c
             - 'echo sleeping...;
-            sleep 5;
+            sleep 30;
             shopt -s extglob;
             identifier=${podname#memtier-};
             service=${identifier%-+([[:digit:]])};
