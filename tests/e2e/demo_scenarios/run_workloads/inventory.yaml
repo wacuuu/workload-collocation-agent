@@ -1,31 +1,6 @@
 application_hosts:
   vars:
     workloads:
-      twemcache_mutilate:
-        default:
-          count: 1
-          slo: 500
-          communication_port: 11211
-          twemcache:
-            env:
-              worker_threads: 2
-              max_memory: 4024
-            resources:
-              cpu: 2
-              ram: 20
-              disk: 20
-          mutilate:
-            env:
-              sli_percentile: 95
-              threads: 2
-              connections: 1
-              warmup_time: 20
-              qps: 20000
-            resources:
-              cpu: 2
-              ram: 10
-              disk: 20
-
       redis_rpc_perf:
         default:
           count: 1
@@ -137,21 +112,3 @@ application_hosts:
             cpu: 1
             ram: 2
             disk: 2
-
-      tensorflow_benchmark_prediction:
-        default:
-          count: 1
-          slo: 0.03
-          resources:
-            cpu: 5
-            ram: 30
-            disk: 30
-
-      tensorflow_benchmark_train:
-        default:
-          count: 1
-          slo: 0.03
-          resources:
-            cpu: 5
-            ram: 30
-            disk: 30

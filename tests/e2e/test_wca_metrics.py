@@ -71,11 +71,8 @@ def _fetch_metrics(url):
     'stress_ng',
     'cassandra_ycsb',
     'specjbb',
-    'twemcache_mutilate',
     'twemcache_rpc_perf',
     'redis_rpc_perf',
-    'tensorflow_benchmark_prediction',
-    'tensorflow_benchmark_train'
 ])
 def test_wca_metrics(workload_name):
     assert 'PROMETHEUS' in os.environ, 'prometheus host to connect'

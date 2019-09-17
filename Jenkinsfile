@@ -75,18 +75,6 @@ pipeline {
                     '''
                     }
                 }
-                stage("Build and push Tensorflow Benchmark Docker image") {
-                    when {expression{return params.BUILD_IMAGES}}
-                    steps {
-                    sh '''
-                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/tensorflow_benchmark:${GIT_COMMIT}
-                    IMAGE_DIR=${WORKSPACE}/workloads/tensorflow_benchmark
-                    cp -r dist ${IMAGE_DIR}
-                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
-                    docker push ${IMAGE_NAME}
-                    '''
-                    }
-                }
                 stage("Build and push Redis Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -158,18 +146,6 @@ pipeline {
                     '''
                     }
                 }
-                stage("Build and push mutilate Docker image") {
-                    when {expression{return params.BUILD_IMAGES}}
-                    steps {
-                    sh '''
-                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/mutilate:${GIT_COMMIT}
-                    IMAGE_DIR=${WORKSPACE}/workloads/mutilate
-                    cp -r dist ${IMAGE_DIR}
-                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
-                    docker push ${IMAGE_NAME}
-                    '''
-                    }
-                }
                 stage("Build and push SpecJBB Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -218,7 +194,7 @@ pipeline {
                 LABELS="{additional_labels: {build_number: \"${BUILD_NUMBER}\", build_node_name: \"${NODE_NAME}\", build_commit: \"${GIT_COMMIT}\"}}"
                 RUN_WORKLOADS_SLEEP_TIME = 300
                 INVENTORY="tests/e2e/demo_scenarios/common/inventory.yaml"
-                TAGS = "twemcache_mutilate,redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,specjbb,stress_ng,tensorflow_benchmark_prediction,tensorflow_benchmark_train"
+                TAGS = "redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,specjbb,stress_ng"
             }
             failFast true
             parallel {
