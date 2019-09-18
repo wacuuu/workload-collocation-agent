@@ -37,9 +37,9 @@ groups:
   - record: apm__latency
     expr: apm__redis_latency
 
-  # -------------Stress-----------------
+  # -------------Stress-stream-----------------
   - record: apm__stress_bogo_ops
-    expr: rate(apm__stress_ng_bogo_ops_counter[60s]) and rate(apm__stress_ng_stdout_lines[15s]) > 0
+    expr: rate(apm__stress_ng_bogo_ops_counter[90s]) and rate(apm__stress_ng_stdout_lines[15s]) > 0
   - record: apm__stress_bogo_ops_per_task
     expr: apm__stress_bogo_ops * on(task_name) group_right() task__up
     # T & L
@@ -48,7 +48,7 @@ groups:
   - record: apm__latency          # average milliseconds to perform one bogus operation (ms)
     expr: 1e3 / apm__stress_bogo_ops_per_task
 
-  # -------------Sysbench-----------------
+  # -------------Sysbench-memory-----------------
   - record: apm__sysbench_alive
     expr: ceil(rate(apm__sysbench_stdout_lines[15s])>0)
   - record: apm__sysbench_mbps    # MiB/sec
