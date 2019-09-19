@@ -1,3 +1,8 @@
+#########################################################
+############ DEPRACTED JUST FOR HISTORICAL REASONS
+##########################################################
+# NOW MOVED TO prometheus-operator/prometheus.rules
+
 # reload rules with
 # promtool check rules /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.rules.yaml && pkill -HUP prometheus
 

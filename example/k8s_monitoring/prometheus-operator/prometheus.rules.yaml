@@ -6,10 +6,144 @@ metadata:
   name: prometheus-rules
   namespace: prometheus
 spec:
-  # reload rules with
-  # promtool check rules /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.rules.yaml && pkill -HUP prometheus
-
   groups:
+    - name: SLOS
+      rules:
+        # -------------Memcached + Mutilate-----------------
+        - record: apm__mutilate_alive
+          expr: ceil(rate(apm__mutilate_stdout_lines[30s])>0)
+        - record: apm__mutilate_qps
+          expr: avg_over_time(apm__mutilate_scan_qps[60s]) and apm__mutilate_alive
+        - record: apm__mutilate_latency
+          expr: avg_over_time(apm__mutilate_scan_read_p99[60s]) and apm__mutilate_alive
+        - record: apm__memcached_latency  # ms p99
+          expr: ((label_replace(apm__mutilate_latency, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)) / 1e3
+        - record: apm__memcached_qps
+          expr: (label_replace(apm__mutilate_qps, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task__last_seen/task__last_seen)
+        # T & L
+        - record: apm__throughput
+          expr: apm__memcached_qps
+        - record: apm__latency    # percentile99 [ms]
+          expr: apm__memcached_latency
+
+        # -------------Redis + Memtier-----------------
+        # intermediary
+        - record: apm__memtier_alive
+          expr: ceil(rate(apm__memtier_stdout_lines[1m])>0)
+        - record: apm__memtier_ops
+          expr: avg_over_time(apm__memtier_scan_ops_sec[1m]) and apm__memtier_alive
+        - record: apm__memtier_latency
+          expr: avg_over_time(apm__memtier_scan_latency[1m]) and apm__memtier_alive
+        # common apm metrics
+        - record: apm__redis_latency  # msec latency
+          expr: (label_replace(apm__memtier_latency, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() task__up
+        - record: apm__redis_qps
+          expr: (label_replace(apm__memtier_ops, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() task__up
+        # T & L per app
+        - record: apm__throughput
+          expr: apm__redis_qps
+        - record: apm__latency
+          expr: apm__redis_latency
+
+        # -------------Stress-stream-----------------
+        - record: apm__stress_bogo_ops
+          expr: rate(apm__stress_ng_bogo_ops_counter[90s]) and rate(apm__stress_ng_stdout_lines[15s]) > 0
+        - record: apm__stress_bogo_ops_per_task
+          expr: apm__stress_bogo_ops * on(task_name) group_right() task__up
+          # T & L
+        - record: apm__throughput      # bogo/ops (group_right to get labels from tasks)
+          expr: apm__stress_bogo_ops_per_task
+        - record: apm__latency          # average milliseconds to perform one bogus operation (ms)
+          expr: 1e3 / apm__stress_bogo_ops_per_task
+
+        # -------------Sysbench-memory-----------------
+        - record: apm__sysbench_alive
+          expr: ceil(rate(apm__sysbench_stdout_lines[15s])>0)
+        - record: apm__sysbench_mbps    # MiB/sec
+          expr: avg_over_time(apm__sysbench_qps[90s]) and apm__sysbench_alive
+        - record: apm__sysbench_mbps_per_task
+          expr: apm__sysbench_mbps  * on(task_name) group_right() task__up
+          # T & L
+        - record: apm__throughput       # MiB/sec (group_right to get labels from tasks)
+          expr: apm__sysbench_mbps_per_task
+        - record: apm__latency          # average mili seconds (ms) to transfer 1GB
+          expr: 1e3 / (apm__sysbench_mbps_per_task/1e3)
+
+        #--------------------------------------- GENERIC FOR ALL WORKLODAS
+        - record: apm__sli          #  SLI based on latency
+          expr: apm__latency
+
+          #--------------------------------------- GENERIC FOR ALL WORKLODAS
+        - record: apm__sli2          #  SLI based on throughput
+          expr: apm__throughput
+        #--------------------------------------- Targets for Latency [msecs]
+        # Memcached latency goal
+        - {record: apm__slo, labels: {app: memcached-big},    expr: "8.0" }
+        - {record: apm__slo, labels: {app: memcached-medium}, expr: "3.0" }
+        - {record: apm__slo, labels: {app: memcached-small},  expr: "1.0" }
+
+        # Redis latency goal
+        - {record: apm__slo, labels: {app: redis-big},        expr: "14"}
+        - {record: apm__slo, labels: {app: redis-medium},     expr: "10"}
+        - {record: apm__slo, labels: {app: redis-small},      expr: "5"}
+
+        # Stress average duration for one bogus operation (maximum)
+        - {record: apm__slo, labels: {app: stress-stream-big},    expr: "1500"}      #  4 threads
+        - {record: apm__slo, labels: {app: stress-stream-medium}, expr: "15000"}      #  1 thread
+        - {record: apm__slo, labels: {app: stress-stream-small},  expr: "7000"}       #  1 thread
+
+        # Sysbench average durations [ms]  of copying 1GB (maximum)
+        - {record: apm__slo, labels: {app: sysbench-memory-big}, expr: "200"}
+        - {record: apm__slo, labels: {app: sysbench-memory-medium}, expr: "200"}
+        - {record: apm__slo, labels: {app: sysbench-memory-small}, expr: "380"}
+
+        #--------------------------------------- Targets for Throughtpu [msecs]
+        # Memcached QPS goal
+        - {record: apm__slo2, labels: {app: memcached-big},    expr: "20000" }
+        - {record: apm__slo2, labels: {app: memcached-medium}, expr: "40000" }
+        - {record: apm__slo2, labels: {app: memcached-small},  expr: "50000" }
+
+        # Redis QPS goal
+        - {record: apm__slo2, labels: {app: redis-big},        expr: "60000"}
+        - {record: apm__slo2, labels: {app: redis-medium},     expr: "60000"}
+        - {record: apm__slo2, labels: {app: redis-small},      expr: "70000"}
+
+        # Number of bogs per seconds
+        - {record: apm__slo2, labels: {app: stress-stream-big},    expr: "1000"}
+        - {record: apm__slo2, labels: {app: stress-stream-medium}, expr: "15000"}
+        - {record: apm__slo2, labels: {app: stress-stream-small},  expr: "6000"}
+
+        # Sysbench number of copy operations
+        - {record: apm__slo2, labels: {app: sysbench-memory-big}, expr: "150"}
+        - {record: apm__slo2, labels: {app: sysbench-memory-medium}, expr: "150"}
+        - {record: apm__slo2, labels: {app: sysbench-memory-small}, expr: "250"}
+
+        ##--------------------------------------- normalized
+        #  # Memcached QPS goal
+        #  - {record: apm__slo, labels: {app: memcached-big}, expr: 500}
+        #  - {record: apm__slo, labels: {app: memcached-medium}, expr: 500}
+        #  - {record: apm__slo, labels: {app: memcached-small}, expr: 500}
+        #  # Redis QPS goal
+        #  - {record: apm__slo, labels: {app: redis-big}, expr: 100000}
+        #  - {record: apm__slo, labels: {app: redis-medium}, expr: 100000}
+        #  - {record: apm__slo, labels: {app: redis-small}, expr: 100000}
+        #  # Stress Bogo / sec goal
+        #  - {record: apm__slo, labels: {app: stress-stream-big}, expr: 50}
+        #  - {record: apm__slo, labels: {app: stress-stream-medium}, expr: 50}
+        #  - {record: apm__slo, labels: {app: stress-stream-small}, expr: 50}
+        #  # Sysbench MB/s target
+        #  - {record: apm__slo, labels: {app: sysbench-memory-big}, expr: 50000}
+        #  - {record: apm__slo, labels: {app: sysbench-memory-medium}, expr: 50000}
+        #  - {record: apm__slo, labels: {app: sysbench-memory-small}, expr: 50000}
+
+        # NORMALIZED ACCORDING THE GOALS 1
+        - record: apm__sli_normalized
+          expr: apm__sli / on (app) group_left apm__slo
+
+        # NORMALIZED ACCORDING THE GOALS 2
+        - record: apm__sli2_normalized
+          expr: apm__sli2 / on (app) group_left apm__slo2
+
     # ----------------------------- APP -------------------------------------
     - name: app
       rules:
@@ -18,8 +152,8 @@ spec:
           expr: avg(rate(task__mem_inst_retired_all_loads__rd081[15s]) + rate(task__mem_inst_retired_all_stores__rd082[15s])) by (app) / 1e9
         - record: app__bw  # GB/s
           expr: avg(rate(task__memory_bandwidth[15s])) by (app) / 1e9
-        - record: app__wss # GB
-          expr: avg(avg_over_time(task__wss_referenced_mb[15s])) by (app) / 1000
+        - record: app__wss # GB  collected over 5s
+          expr: (avg(avg_over_time(task__wss_referenced_mb[15s])) by (app) / 1000)
         - record: app__rss # GB
           expr: avg by(app) (avg_over_time(task__memory_usage_per_task_bytes[15s])) / 1e9
         - record: app__tlb_misses
@@ -39,12 +173,15 @@ spec:
           expr: avg(task__dram_miss) by (app)
         ### Consumer/Producer analysis
         - record: app__rw
-          expr: clamp_min( avg(task__memory_rw_ratio) by (app), 1.0)
+          #    expr: clamp_min( avg(task__memory_rw_ratio) by (app), 1.0)   # for DEMO1
+          expr: avg(task__memory_rw_ratio) by (app)
         - record: app__count
           expr: count(task__up) by (app)
+        - record: app__memory_transfer_over_5s_gb
+          expr: avg( delta(task__memory_bandwidth[5s])/1e9 ) by (app)
 
         # Metrics for cache-utilization metric (transfered vs wss)
-        - record: app__cache_locality
+        - record: app__cache_locality  # 50GB/s / 10 GBs
           expr: app__bw / app__wss
         # Memory utilization = WSS/RSS  (used vs allocated)
         - record: app__memory_utilization
@@ -55,8 +192,8 @@ spec:
 
           ### I. Cache utilization (PawelP)
           # Cache utilization = RW * (BW/WSS) * (BW/100)
-        - record: app__cache_utilization
-          expr: app__cache_locality * app__rw * app__memory_intensity
+          #  - record: app__cache_utilization
+          #    expr: app__cache_locality * app__rw * app__memory_intensity
 
           ### II. 2LM Friend (MaciejM)
           # 2LM Friend = RW / (BW * WSS)
@@ -70,7 +207,8 @@ spec:
 
         ### IV Contention sensitivity (Pawel v2) based on MaciejM but invereted and normalized
         - record: app__contention_sensitivity
-          expr: clamp_max(app__memory_intensity * app__memory_utilization / app__rw, 5)
+          expr: clamp_max(app__memory_intensity * app__memory_utilization / app__rw, 5)  # for DEMO1
+    #    expr:  app__memory_intensity * app__memory_utilization / app__rw / app__cache_locality
 
 
     # ----------------------------- NODE -------------------------------------
@@ -106,11 +244,12 @@ spec:
         - record: node__contention_risk
           expr: 1 - node__dram_hit
 
+
     # ----------------------------- CLUSTER -------------------------------------
     - name: cluster
       rules:
         # over appsj
-        - {record: cluster__cache_utilization,        expr: sum(app__cache_utilization)     }
+        #  - {record: cluster__cache_utilization,        expr: sum(app__cache_utilization)     }
         - {record: cluster__rw,                       expr: sum(app__rw)                    }
         - {record: cluster__2lm_friend,               expr: sum(app__2lm_friend)            }
         - {record: cluster__contention_sensitivity,   expr: sum(app__contention_sensitivity)}
@@ -123,12 +262,15 @@ spec:
     - name: appnorm
       rules:
         # Cache utilization normalized to cluster avg_app_utilization
-        - record: appnorm__cache_utilization
-          expr: app__cache_utilization / scalar(cluster__cache_utilization)
+        #  - record: appnorm__cache_utilization
+        #    expr: app__cache_utilization / scalar(cluster__cache_utilization)
         - record: appnorm__rw
           expr: app__rw / scalar(cluster__rw)
         - record: appnorm__contention_sensitivity
-          expr: app__contention_sensitivity / scalar(cluster__contention_sensitivity)
+          #expr: app__contention_sensitivity / scalar(cluster__contention_sensitivity)   # for DEMO1
+          #expr: app__contention_sensitivity / scalar(sum(app__contention_sensitivity))  # NAIVE
+          expr: (app__contention_sensitivity - scalar(avg(app__contention_sensitivity))) / scalar(stddev(app__contention_sensitivity)) # Z-normalization
+
         - record: appnorm__contention_insensitivity
           expr: 1 - appnorm__contention_sensitivity
 
@@ -208,6 +350,23 @@ spec:
         - record: fit_avg
           expr: avg_over_time(fit{node="node14"}[15s])
 
+    # ------------------------------ FIT v2 ------------------------------------------------------
+    #
+    - name: contention_risk_on_node
+      rules:
+        - record: app__contention_risk_on_node
+          expr: scaled__app_contention_sensitivity * on() group_left(node) scaled__node_contention_risk{node="node11"}
+        - record: app__contention_risk_on_node
+          expr: scaled__app_contention_sensitivity * on() group_left(node) scaled__node_contention_risk{node="node12"}
+        - record: app__contention_risk_on_node
+          expr: scaled__app_contention_sensitivity * on() group_left(node) scaled__node_contention_risk{node="node13"}
+        - record: app__contention_risk_on_node
+          expr: scaled__app_contention_sensitivity * on() group_left(node) scaled__node_contention_risk{node="node14"}
+
+    - name: fit_without_risk
+      rules:
+        - record: fit_without_risk
+          expr: clamp_min(fit_avg - app__contention_risk_on_node, 0)
     # ----------------------------- FIT (according (node_cache_utilization-app_cache_utilization) -------------------------------------
     #- name: aep_apps_fits
     #
@@ -278,6 +437,10 @@ spec:
           expr: rate(task__mem_load_retired_local_pmm__rd180[15s]) / rate(task__mem_inst_retired_all_loads__rd081[15s])
         - record: task__memory_rw_ratio
           expr: rate(task__mem_inst_retired_all_loads__rd081[15s]) / rate(task__mem_inst_retired_all_stores__rd082[15s])
+        - record: task__memory_operations
+          expr: task__mem_inst_retired_all_loads__rd081 + task__mem_inst_retired_all_stores__rd082
+        - record: task__memory_operations_mbps  # assuming every operation takes 1bytes (underestimate, but includes data from all cache layers)
+          expr: rate(task__memory_operations[15s]) / 1e6
         - record: task__dtlb_load_misses_ratio
           expr: task__dtlb_load_misses__r080e / task__mem_inst_retired_all_loads__rd081
         - record: task__cpus_usage       # [cpus/s]
@@ -288,20 +451,22 @@ spec:
       rules:
         # PMM
         - record: platform__pmm_reads_mb_per_second
-          expr: rate(platform__pmm_bandwidth_read[15s]) * 64 / 1e6
+          expr: rate(platform__pmm_bandwidth_read[60s]) * 64 / 1e6
         - record: platform__pmm_writes_mb_per_second
-          expr: rate(platform__pmm_bandwidth_write[15s]) * 64 / 1e6
+          expr: rate(platform__pmm_bandwidth_write[60s]) * 64 / 1e6
         - record: platform__pmm_total_mb_per_second
           expr: platform__pmm_reads_mb_per_second + platform__pmm_writes_mb_per_second
 
         # DRAM
         - record: platform__dram_reads_mb_per_second
-          expr: rate(platform__cas_count_read[15s]) * 64 / 1e6
+          expr: rate(platform__cas_count_read[60s]) * 64 / 1e6
         - record: platform__dram_writes_mb_per_second
-          expr: rate(platform__cas_count_write[15s]) * 64 / 1e6
+          expr: rate(platform__cas_count_write[60s]) * 64 / 1e6
         - record: platform__dram_total_mb_per_second
           expr: platform__dram_reads_mb_per_second + platform__dram_writes_mb_per_second
 
         # HIT
         - record: platform__dram_hit
           expr: platform__dram_total_mb_per_second / (platform__pmm_total_mb_per_second + platform__dram_total_mb_per_second)
+
+
