@@ -52,14 +52,13 @@ junit:
 	pipenv run env PYTHONPATH=.:workloads/wrapper pytest --cov-report term-missing --cov=wca tests --junitxml=unit_results.xml -vvv -s --ignore=tests/e2e/test_wca_metrics.py
 	env PIPENV_QUIET=true pipenv uninstall flask
 
-WCA_IMAGE := wca
-WCA_TAG ?= $(shell git rev-parse HEAD)
+wca_package_in_docker: WCA_IMAGE := wca
+wca_package_in_docker: WCA_TAG := $(shell git rev-parse HEAD)
 wca_package_in_docker:
 	@echo Building wca pex file inside docker and copying to ./dist/wca.pex
-	@echo WCA image name is: $(WCA_IMAGE):$(WCA_TAG)
-	sudo docker build --network host --target wca -f Dockerfile -t $(WCA_IMAGE):$(WCA_TAG) .
-
-    # Extract pex to dist folder
+	# target: standalone
+	sudo docker build --target standalone -f Dockerfile -t $(WCA_IMAGE):$(WCA_TAG) .
+	# Extract pex to dist folder
 	rm -rf .cidfile && sudo docker create --cidfile=.cidfile $(WCA_IMAGE)
 	CID=$$(cat .cidfile); \
 	mkdir -p dist; \
@@ -67,6 +66,15 @@ wca_package_in_docker:
 	sudo docker rm $$CID && \
 	sudo chown -R $$USER:$$USER dist/wca.pex && sudo rm .cidfile
 	@echo WCA image name is: $(WCA_IMAGE):$(WCA_TAG)
+
+wca_docker_devel: WCA_IMAGE ?= wca
+wca_docker_devel: WCA_TAG ?= devel
+wca_docker_devel: REPO ?= 100.64.176.12:80/
+wca_docker_devel:
+	@echo "Preparing development WCA container (only source code without pex)"
+	sudo docker build --target devel -f Dockerfile -t $(REPO)$(WCA_IMAGE):$(WCA_TAG) .
+	@echo WCA image name is: ${REPO}$(WCA_IMAGE):$(WCA_TAG)
+	@echo Push info: sudo docker push ${REPO}$(WCA_IMAGE):$(WCA_TAG)
 
 wca_package:
 	@echo Building wca pex file.
