@@ -13,17 +13,11 @@
 # limitations under the License.
 
 #### Getting started
-# 1.
-# Build manualy like this:
-# docker build -t wca:extender .
-# and push
-# docker tag wca:extender 100.64.176.12:80/wca:extender
-# docker push 100.64.176.12:80/wca:extender
+# 1. Build
+# docker build -t wca:latest .
 
-
-# 2.
-# To verify that image is working correctly:
-# sudo docker run -it --privileged --rm wca:extender -c /wca/configs/extra/static_measurements.yaml -0
+# 2. Run
+# sudo docker run -it --privileged --rm wca -c /wca/configs/extra/static_measurements.yaml -0
 # should output some metrics
 
 # ------------------------ devel ----------------------
