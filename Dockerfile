@@ -34,8 +34,10 @@ ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 RUN pipenv install --dev --deploy
 
+COPY wca .
+COPY configs .
+COPY example .
 # Cache will be propably invalidated here.
-COPY . .
 
 ENV PYTHONPATH=/wca
 ENTRYPOINT ["pipenv", "run", "python3.6", "wca/main.py"]
@@ -43,6 +45,8 @@ ENTRYPOINT ["pipenv", "run", "python3.6", "wca/main.py"]
 # ------------------------ pex ----------------------
 # "pex" stage includes pex file in /usr/bin/
 FROM devel AS pex
+# required for getting version from git-commit
+COPY .git .
 RUN make wca_package
 RUN cp /wca/dist/wca.pex /usr/bin/
 ENTRYPOINT /usr/bin/wca.pex

@@ -1,0 +1,34 @@
+# Full example for Kubernetes running as daemonset (in-cluster k8s config)
+# Requires environment variables:
+# - KUBERNETES_SERVICE_HOST - provided by default by Kuberenetes
+# - KUBERNETES_SERVICE_PORT - provided by default by Kubernetes
+# - HOST_IP - need to explictly enabled in Pod spec using downward-api
+# - HOSTNAME - default provided by OS
+
+runner: !MeasurementRunner
+  action_delay: 5.0
+  rdt_enabled: false
+  enable_derived_metrics: True
+  node: !KubernetesNode
+    cgroup_driver: cgroupfs
+    monitored_namespaces: ["default"]
+    kubeapi_host: !Env
+      name: KUBERNETES_SERVICE_HOST
+    kubeapi_port: !Env
+      name: KUBERNETES_SERVICE_PORT
+    node_ip: !Env
+      name: HOST_IP
+
+  metrics_storage: !LogStorage
+    overwrite: True
+    output_filename: /var/lib/wca/metrics.prom
+  anomalies_storage: !LogStorage
+    overwrite: True
+    output_filename: /var/lib/wca/anomalies.prom
+  allocations_storage: !LogStorage
+    overwrite: True
+    output_filename: /var/lib/wca/allocations.prom
+
+  extra_labels:
+    node: !Env
+      name: HOSTNAME

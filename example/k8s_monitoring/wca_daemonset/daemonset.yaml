@@ -17,7 +17,6 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: wca
-  namespace: wca
   labels:
     name: wca
 spec:
@@ -35,22 +34,14 @@ spec:
       terminationGracePeriodSeconds: 10
       hostPID: true
       hostIPC: true
-      hostNetwork: true
       serviceAccountName: wca
       containers:
 
       - name: wca
-        image: 100.64.176.12:80/wca:mmucek
+        image: 100.64.176.12:80/wca:devel
         securityContext:
           privileged: true
         env:
-          - name: LOG
-            value: info
-          # Env CONFIG have to be this same path as for config created by init-pod wca-set-config
-          - name: CONFIG
-            value: /var/lib/wca/config.yml
-          - name: EXTRA_COMPONENT
-            value: '' #example.external_package:ExampleDetector
           - name: HOST_IP
             valueFrom:
               fieldRef:
@@ -65,12 +56,10 @@ spec:
           - name: dev-cpu
             mountPath: /dev/cpu
 
-        command:
-          - python36
-          - /usr/bin/wca.pex
-          - "--config=$CONFIG"
-          - "--log=$LOG"
-          - --root
+        args:
+        - "--config=$CONFIG"
+        - "--log=$LOG"
+        - --root
 
       - name: node-exporter
         image: prom/node-exporter:v0.18.1
