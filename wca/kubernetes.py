@@ -173,7 +173,9 @@ class KubernetesNode(Node):
             # Kubeapi returns all pods in cluster
             if not self.kubelet_enabled:
                 assert self.node_ip is not None, 'improperly configured kubernetes!'
-                if self.node_ip.strip() != pod["status"]["hostIP"]:
+                # TODO: properly initialize Env special kind, because UserString is mutable
+                # and all str methods behave differently!!!
+                if str(self.node_ip).strip() != pod["status"]["hostIP"]:
                     continue
 
             # Lacking needed information.

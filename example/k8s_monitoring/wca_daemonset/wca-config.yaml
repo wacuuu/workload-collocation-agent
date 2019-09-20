@@ -7,7 +7,7 @@
 
 runner: !MeasurementRunner
   action_delay: 5.0
-  rdt_enabled: false
+  rdt_enabled: true
   enable_derived_metrics: True
   node: !KubernetesNode
     cgroup_driver: cgroupfs
@@ -22,12 +22,6 @@ runner: !MeasurementRunner
   metrics_storage: !LogStorage
     overwrite: True
     output_filename: /var/lib/wca/metrics.prom
-  anomalies_storage: !LogStorage
-    overwrite: True
-    output_filename: /var/lib/wca/anomalies.prom
-  allocations_storage: !LogStorage
-    overwrite: True
-    output_filename: /var/lib/wca/allocations.prom
 
   extra_labels:
     node: !Env

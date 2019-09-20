@@ -175,4 +175,6 @@ def debug():
 
 
 if __name__ == '__main__':
+    if 'WCA_DEBUG' in os.environ and os.environ['WCA_DEBUG'] == 'True':
+        debug()
     main()

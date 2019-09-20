@@ -31,14 +31,20 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9100"
     spec:
-      terminationGracePeriodSeconds: 10
+      nodeSelector:
+        #kubernetes.io/hostname: node11
+        # kubectl get nodes --show-labels
+        goal: service
+
+      terminationGracePeriodSeconds: 1
       hostPID: true
       hostIPC: true
       serviceAccountName: wca
       containers:
 
       - name: wca
-        image: 100.64.176.12:80/wca:devel
+        imagePullPolicy: Always # for debugging purpose and stream the development!
+        image: wca
         securityContext:
           privileged: true
         env:
@@ -55,11 +61,15 @@ spec:
             mountPath: /sys/fs/resctrl/
           - name: dev-cpu
             mountPath: /dev/cpu
-
+          - name: wca-config
+            mountPath: /etc/wca/
+#        command:
+#          - sleep
+#          - inf
         args:
-        - "--config=$CONFIG"
-        - "--log=$LOG"
-        - --root
+        - "--config=/etc/wca/wca-config.yaml"
+        - "--log=info"
+        - "--root"
 
       - name: node-exporter
         image: prom/node-exporter:v0.18.1
