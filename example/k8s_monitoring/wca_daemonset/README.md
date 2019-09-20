@@ -23,8 +23,9 @@ images:
     newTag: devel
 ```
 
-3. (optionally) Choose (disable defaults goal=service) nodes to deploy owca using node selector
-```
+3. (optionally) Choose (**disable the default goal=service**) nodes to deploy owca using node selector
+
+```yaml
 # daemonset.yaml
 spec:
     node-selector:
@@ -34,17 +35,12 @@ spec:
 
 3. Create namespace
 
-```bash
+```shell
 kubectl create namespace wca
 ```
 
-4. Deploy wca
+4. Deploy wca (using kustomize)
 
-```bash
+```shell
 kubectl apply -k .
 ```
-
-
-
-
-use `kubectl apply -k .` in current directory.
