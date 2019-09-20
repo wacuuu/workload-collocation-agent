@@ -74,7 +74,9 @@ wca_docker_devel:
 	@echo "Preparing development WCA container (only source code without pex)"
 	sudo docker build --target devel -f Dockerfile -t $(REPO)$(WCA_IMAGE):$(WCA_TAG) .
 	@echo WCA image name is: ${REPO}$(WCA_IMAGE):$(WCA_TAG)
-	@echo Push info: sudo docker push ${REPO}$(WCA_IMAGE):$(WCA_TAG)
+	@echo Push: sudo docker push ${REPO}$(WCA_IMAGE):$(WCA_TAG)
+	@echo Run: sudo docker run --privileged -ti --rm ${REPO}$(WCA_IMAGE):$(WCA_TAG) -0 -c /wca/configs/extra/static_measurements.yaml
+
 
 wca_package:
 	@echo Building wca pex file.
