@@ -1,9 +1,9 @@
 Getting started
 ===============
 
-To run wca in deamonset: 
+To run wca in daemon set: 
 
-1. Build image
+1. Build image (from main project repo)
 
 ```
 make REPO=100.64.176.12:80 wca_docker_devel
