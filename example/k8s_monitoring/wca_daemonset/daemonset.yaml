@@ -39,6 +39,7 @@ spec:
       terminationGracePeriodSeconds: 1
       hostPID: true
       hostIPC: true
+      hostNetwork: true
       serviceAccountName: wca
       containers:
 
