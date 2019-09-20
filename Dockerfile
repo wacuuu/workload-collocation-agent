@@ -46,19 +46,9 @@ RUN make wca_package
 FROM centos:7
 
 ENV CONFIG=/etc/wca/wca_config.yml \
-    EXTRA_COMPONENT=example.external_package:ExampleDetector \
-    LOG=info \
-    OWN_IP=0.0.0.0 \
-    ENV_UNIQ_ID=0
+    LOG=info
 
 RUN yum install -y epel-release
 RUN yum install -y python36
 
 COPY --from=wca /wca/dist/wca.pex /usr/bin/
-
-ENTRYPOINT \
-    python36 /usr/bin/wca.pex \
-        --config $CONFIG \
-        --log $LOG \
-        -0 \
-        $WCA_EXTRA_PARAMS

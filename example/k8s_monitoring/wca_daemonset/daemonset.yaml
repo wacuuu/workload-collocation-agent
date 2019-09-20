@@ -36,50 +36,11 @@ spec:
       hostPID: true
       hostIPC: true
       hostNetwork: true
-      serviceAccountName: wca-sa
-
-#      affinity:
-#        nodeAffinity:
-#          requiredDuringSchedulingIgnoredDuringExecution:
-#            nodeSelectorTerms:
-#              - matchExpressions:
-#                  - key: own_ip
-#                    operator: In
-#                    values:
-#                      - 100.64.176.33
-#                      - 100.64.176.34
-
-      initContainers:
-
-      - name: wca-set-config
-        image: busybox
-        env:
-          # Env CONFIG have to be this same path as for config from volume mounts wca-config
-          - name: CONFIG
-            value: /etc/wca/wca_config.yml
-          - name: OWN_IP
-            valueFrom:
-              fieldRef:
-                fieldPath: status.podIP
-          - name: ENV_UNIQ_ID
-            value: "'0'"
-        command: ['sh', '-c',
-                  'sed
-                  -e "s/\$OWN_IP_TO_BE_REPLACED/$OWN_IP/g"
-                  -e " s/\$ENV_UNIQ_ID_TO_BE_REPLACED/$ENV_UNIQ_ID/g"
-                  $CONFIG > /var/lib/wca/config.yml']
-        volumeMounts:
-          # Read only config
-          - name: wca-config
-            mountPath: /etc/wca/
-          # Directory with config and logs
-          - name: var-lib-wca
-            mountPath: /var/lib/wca/
-
+      serviceAccountName: wca
       containers:
 
       - name: wca
-        image: 100.64.176.12:80/wca:nszulc18
+        image: 100.64.176.12:80/wca:mmucek
         securityContext:
           privileged: true
         env:
@@ -95,9 +56,6 @@ spec:
               fieldRef:
                 fieldPath: status.hostIP
         volumeMounts:
-          - name: kubelet-key-crt
-            mountPath: /etc/wca/certs/
-            readOnly: true
           - name: var-lib-wca
             mountPath: /var/lib/wca/
           - name: cgroup
@@ -106,6 +64,13 @@ spec:
             mountPath: /sys/fs/resctrl/
           - name: dev-cpu
             mountPath: /dev/cpu
+
+        command:
+          - python36
+          - /usr/bin/wca.pex
+          - "--config=$CONFIG"
+          - "--log=$LOG"
+          - --root
 
       - name: node-exporter
         image: prom/node-exporter:v0.18.1
@@ -130,10 +95,6 @@ spec:
             mountPath: /rootfs
 
       volumes:
-        # Client private key and cert to communicate with kubelet
-        - name: kubelet-key-crt
-          secret:
-            secretName: kubelet-key-crt
         # Config for wca
         - name: wca-config
           configMap:

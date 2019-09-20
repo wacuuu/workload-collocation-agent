@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: wca-sa
+  name: wca
   namespace: wca
 
 ---
@@ -40,7 +40,7 @@ metadata:
   namespace: wca
 subjects:
 - kind: ServiceAccount
-  name: wca-sa
+  name: wca
   namespace: wca
 roleRef:
   kind: Role
@@ -55,7 +55,7 @@ metadata:
   namespace: wca
 subjects:
 - kind: ServiceAccount
-  name: wca-sa
+  name: wca
   namespace: wca
 roleRef:
   kind: ClusterRole

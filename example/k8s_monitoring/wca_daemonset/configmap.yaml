@@ -21,7 +21,7 @@ metadata:
 data:
   wca_config.yml: |
 
-    runner: !AllocationRunner
+    runner: !MeasurementRunner
       action_delay: 5.0
       rdt_enabled: false
       enable_derived_metrics: True
@@ -47,15 +47,5 @@ data:
         output_filename: /var/lib/wca/allocations.prom
 
       extra_labels:
-        env_uniq_id: $ENV_UNIQ_ID_TO_BE_REPLACED
-        own_ip: $OWN_IP_TO_BE_REPLACED
         node: !Env
           name: HOSTNAME
-
-
-      allocator: !StaticAllocator
-        rules:
-        - name: Default rule for all tasks.
-          allocations:
-            cpu_quota: 1.
-
