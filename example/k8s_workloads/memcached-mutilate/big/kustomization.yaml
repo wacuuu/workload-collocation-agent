@@ -11,7 +11,7 @@ configMapGenerator:
   behavior: merge
   literals:
   - value=25000      # 25k * 1M  = 25GB
-  - qps=1000000      # 2M
+  - qps=20000      # 2M
 
 patchesStrategicMerge:
   - resources.yaml

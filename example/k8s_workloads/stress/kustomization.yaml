@@ -2,3 +2,7 @@ bases:
 - stream-small
 - stream-medium
 - stream-big
+
+
+commonLabels:
+  fit: 1lm

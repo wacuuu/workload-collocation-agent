@@ -171,8 +171,10 @@ class KubernetesNode(Node):
             container_statuses = pod.get('status').get('containerStatuses')
 
             # Kubeapi returns all pods in cluster
-            if self.node_ip.strip() != pod["status"]["hostIP"]:
-                continue
+            if not self.kubelet_enabled:
+                assert self.node_ip is not None, 'improperly configured kubernetes!'
+                if self.node_ip.strip() != pod["status"]["hostIP"]:
+                    continue
 
             # Lacking needed information.
             if not container_statuses:

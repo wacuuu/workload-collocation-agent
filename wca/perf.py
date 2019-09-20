@@ -127,7 +127,7 @@ def _parse_event_groups(file, event_names) -> Measurements:
     return measurements
 
 
-def _aggregate_measurements(measurements_per_cpu, event_names) -> Measurements:
+def _aggregate_measurements(measurements_per_cpu, event_names, logctx='') -> Measurements:
     """Sums measurements values from all cpus, handles average and max scaling factors"""
     # because we later add 2 non-standard metrics,
     # we shouldn't return them when they are dependent on other events
@@ -160,8 +160,9 @@ def _aggregate_measurements(measurements_per_cpu, event_names) -> Measurements:
     for metric_name in event_names:
         if aggregated_measurements[metric_name] == 0:
             empty_metrics.add(metric_name)
-    if len(empty_metrics) > 0:
-        log.warning('number of measurements with 0 value: %d (%s)', len(empty_metrics), ', '.join(empty_metrics))
+    if len(empty_metrics) > 0 and logctx == 'all pmus':
+        log.warning('number of measurements for %s with 0 value: %d (%s)', logctx,
+                    len(empty_metrics), ', '.join(empty_metrics))
 
     return aggregated_measurements
 
@@ -390,7 +391,8 @@ class PerfCounters:
             scaled_measurements_and_factor_per_cpu[cpu] = _parse_event_groups(event_leader_file,
                                                                               self._event_names)
 
-        return _aggregate_measurements(scaled_measurements_and_factor_per_cpu, self._event_names)
+        return _aggregate_measurements(scaled_measurements_and_factor_per_cpu,
+                                       self._event_names, 'task')
 
 
 class UnableToOpenPerfEvents(Exception):

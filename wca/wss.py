@@ -16,7 +16,7 @@ class WSS:
     def get_measurements(self) -> Measurements:
         self._cycle += 1
         measurements = {}
-        pids = set(self.get_pids())
+        pids = set(self.get_pids(include_threads=False))
         all_pids = os.listdir('/proc')
         all_pids = set(filter(lambda x: x.isdecimal(), all_pids))
         pids = pids & all_pids

@@ -79,7 +79,7 @@ class ContainerInterface(ABC):
         ...
 
     @abstractmethod
-    def get_pids(self) -> List[str]:
+    def get_pids(self, include_threads: bool = True) -> List[str]:
         ...
 
     @abstractmethod
@@ -158,10 +158,10 @@ class ContainerSet(ContainerInterface):
     def get_cgroup_path(self) -> str:
         return self._cgroup_path
 
-    def get_pids(self) -> List[str]:
+    def get_pids(self, include_threads=True) -> List[str]:
         all_pids = []
         for container in self._subcontainers.values():
-            all_pids.extend(container.get_pids())
+            all_pids.extend(container.get_pids(include_threads))
         return all_pids
 
     def sync(self):
@@ -280,8 +280,8 @@ class Container(ContainerInterface):
     def get_cgroup_path(self) -> str:
         return self._cgroup_path
 
-    def get_pids(self) -> List[str]:
-        return self._cgroup.get_pids()
+    def get_pids(self, include_threads=True) -> List[str]:
+        return self._cgroup.get_pids(include_threads)
 
     def sync(self):
         """Called every run iteration to keep pids of cgroup and resctrl in sync."""

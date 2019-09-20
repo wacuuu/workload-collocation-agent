@@ -10,7 +10,7 @@ configMapGenerator:
 - name: stress
   behavior: merge
   literals:
-    - extra='--stream 1 --stream-l3-size=1g' # 12GB RSS
+    - extra='--stream 1 --stream-l3-size=1g --stream-index=0' # 12GB RSS
 
 patchesStrategicMerge:
   - resources.yaml

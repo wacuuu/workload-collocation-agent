@@ -3,3 +3,6 @@ bases:
 - medium
 - big
 #- big-rnd
+
+commonLabels:
+  fit: 1lm

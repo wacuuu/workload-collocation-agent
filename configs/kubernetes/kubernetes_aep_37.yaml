@@ -25,6 +25,7 @@ runner: !MeasurementRunner
       server_verify: False
       client_cert_path: "/home/ppalucki/wca_remote_pycharm/apiserver-kubelet-client.crt"
       client_key_path: "/home/ppalucki/wca_remote_pycharm/apiserver-kubelet-client.key"
+    kubelet_enabled: true
     kubelet_endpoint: "https://100.64.176.37:10250"
     monitored_namespaces: ["default"]
   wss_reset_interval: 1

@@ -1,3 +1,8 @@
+#########################################################
+############ DEPRACTED JUST FOR HISTORICAL REASONS
+##########################################################
+# NOW MOVED TO prometheus-operator/prometheus.rules
+
 # reload rules with
 # promtool check rules /home/ppalucki/wca_remote_pycharm/example/k8s_monitoring/prometheus/prometheus.rules.yaml && pkill -HUP prometheus
 
@@ -35,6 +40,8 @@ groups:
     expr: avg(task__memory_rw_ratio) by (app)
   - record: app__count
     expr: count(task__up) by (app)
+  - record: app__memory_transfer_over_5s_gb
+    expr: avg( delta(task__memory_bandwidth[5s])/1e9 ) by (app)
 
   # Metrics for cache-utilization metric (transfered vs wss)
   - record: app__cache_locality  # 50GB/s / 10 GBs
@@ -307,17 +314,17 @@ groups:
   rules:
   # PMM
   - record: platform__pmm_reads_mb_per_second
-    expr: rate(platform__pmm_bandwidth_read[15s]) * 64 / 1e6
+    expr: rate(platform__pmm_bandwidth_read[60s]) * 64 / 1e6
   - record: platform__pmm_writes_mb_per_second
-    expr: rate(platform__pmm_bandwidth_write[15s]) * 64 / 1e6
+    expr: rate(platform__pmm_bandwidth_write[60s]) * 64 / 1e6
   - record: platform__pmm_total_mb_per_second
     expr: platform__pmm_reads_mb_per_second + platform__pmm_writes_mb_per_second
 
   # DRAM
   - record: platform__dram_reads_mb_per_second
-    expr: rate(platform__cas_count_read[15s]) * 64 / 1e6
+    expr: rate(platform__cas_count_read[60s]) * 64 / 1e6
   - record: platform__dram_writes_mb_per_second
-    expr: rate(platform__cas_count_write[15s]) * 64 / 1e6
+    expr: rate(platform__cas_count_write[60s]) * 64 / 1e6
   - record: platform__dram_total_mb_per_second
     expr: platform__dram_reads_mb_per_second + platform__dram_writes_mb_per_second
 
