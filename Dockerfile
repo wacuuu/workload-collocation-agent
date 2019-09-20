@@ -33,13 +33,11 @@ COPY Pipfile.lock Pipfile.lock
 ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 RUN pipenv install --dev --deploy
-
-COPY wca .
-COPY configs .
-COPY example .
-# Cache will be propably invalidated here.
-
 ENV PYTHONPATH=/wca
+
+# Cache will be propably invalidated here.
+COPY wca configs example .
+
 ENTRYPOINT ["pipenv", "run", "python3.6", "wca/main.py"]
 
 # ------------------------ pex ----------------------
