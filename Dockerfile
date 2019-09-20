@@ -36,7 +36,7 @@ RUN pipenv install --dev --deploy
 ENV PYTHONPATH=/wca
 
 # Cache will be propably invalidated here.
-COPY wca configs example .
+COPY wca configs example ./
 
 ENTRYPOINT ["pipenv", "run", "python3.6", "wca/main.py"]
 
