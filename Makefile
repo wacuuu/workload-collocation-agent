@@ -52,17 +52,21 @@ junit:
 	pipenv run env PYTHONPATH=.:workloads/wrapper pytest --cov-report term-missing --cov=wca tests --junitxml=unit_results.xml -vvv -s --ignore=tests/e2e/test_wca_metrics.py
 	env PIPENV_QUIET=true pipenv uninstall flask
 
-WCA_IMAGE := wca-$(shell git rev-parse HEAD)
+WCA_IMAGE := wca
+WCA_TAG ?= $(shell git rev-parse HEAD)
 wca_package_in_docker:
 	@echo Building wca pex file inside docker and copying to ./dist/wca.pex
-	@echo WCA image name is: $(WCA_IMAGE)
-	sudo docker build --network host --target wca -f Dockerfile -t $(WCA_IMAGE) .
+	@echo WCA image name is: $(WCA_IMAGE):$(WCA_TAG)
+	sudo docker build --network host --target wca -f Dockerfile -t $(WCA_IMAGE):$(WCA_TAG) .
+
+    # Extract pex to dist folder
 	rm -rf .cidfile && sudo docker create --cidfile=.cidfile $(WCA_IMAGE)
 	CID=$$(cat .cidfile); \
 	mkdir -p dist; \
 	sudo docker cp $$CID:/wca/dist/wca.pex dist/ && \
 	sudo docker rm $$CID && \
 	sudo chown -R $$USER:$$USER dist/wca.pex && sudo rm .cidfile
+	@echo WCA image name is: $(WCA_IMAGE):$(WCA_TAG)
 
 wca_package:
 	@echo Building wca pex file.

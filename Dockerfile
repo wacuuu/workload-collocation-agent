@@ -12,43 +12,50 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#### Getting started
+# 1.
+# Build manualy like this:
+# docker build -t wca:extender .
+# and push
+# docker tag wca:extender 100.64.176.12:80/wca:extender
+# docker push 100.64.176.12:80/wca:extender
 
-# Building stage first: wca.
-FROM centos:7 AS wca
 
-RUN echo "" && rpm --import https://packages.confluent.io/rpm/5.2/archive.key
-COPY /configs/confluent_repo/confluent.repo /etc/yum.repos.d/confluent.repo
+# 2.
+# To verify that image is working correctly:
+# sudo docker run -it --privileged --rm wca:extender -c /wca/configs/extra/static_measurements.yaml -0
+# should output some metrics
 
-RUN yum -y update
-RUN yum -y install epel-release
-RUN yum -y install python36 python-pip which make git
-RUN yum install -y librdkafka1 librdkafka-devel gcc python36-devel.x86_64
-RUN pip install pipenv
+# ------------------------ devel ----------------------
+FROM centos:7 AS devel
+
+RUN yum -y update && yum -y install python36 python-pip which make git
+RUN pip3.6 install pipenv
 
 WORKDIR /wca
 
 COPY Pipfile Pipfile
 COPY Pipfile.lock Pipfile.lock
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
 RUN pipenv install --dev --deploy
-
-RUN [ ! -d confluent-kafka-python ] && git clone https://github.com/confluentinc/confluent-kafka-python
-RUN cd confluent-kafka-python && git checkout v1.0.1
 
 # Cache will be propably invalidated here.
 COPY . .
 
-RUN git clean -fdx
-#ENV OPTIONAL_FEATURES=kafka_storage
+ENV PYTHONPATH=/wca
+ENTRYPOINT ["pipenv", "run", "python3.6", "wca/main.py"]
+
+# ------------------------ pex ----------------------
+# "pex" stage includes pex file in /usr/bin/
+FROM devel AS pex
 RUN make wca_package
+RUN cp /wca/dist/wca.pex /usr/bin/
+ENTRYPOINT /usr/bin/wca.pex
 
-
-# Building final container that consists of wca only.
-FROM centos:7
-
-ENV CONFIG=/etc/wca/wca_config.yml \
-    LOG=info
-
-RUN yum install -y epel-release
-RUN yum install -y python36
-
-COPY --from=wca /wca/dist/wca.pex /usr/bin/
+## ------------------------ standalone ----------------------
+## Building final container that consists of wca only.
+FROM centos:7 AS standalone
+RUN yum -y update && yum -y install python36
+COPY --from=pex /wca/dist/wca.pex /usr/bin/
+ENTRYPOINT /usr/bin/wca.pex

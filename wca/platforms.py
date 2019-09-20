@@ -161,61 +161,73 @@ def create_metrics(platform: Platform) -> List[Metric]:
 
     # RETURN MEMORY DIMM DETAILS based on lshw
     global _platform_static_information
-    if not len(_platform_static_information):
+    if not 'initialized' in _platform_static_information:
         # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
-        ipmctl_output = subprocess.check_output(shlex.split('ipmctl show -u B -memoryresources')).decode("utf-8")
-        memorymode_size = 0
-        for line in ipmctl_output.splitlines():
-            if 'MemoryCapacity' in line:
-                memorymode_size = line.split('=')[1].split(' ')[0]
+        try:
+            ipmctl_output = subprocess.check_output(shlex.split('ipmctl show -u B -memoryresources')).decode("utf-8")
+            memorymode_size = 0
+            for line in ipmctl_output.splitlines():
+                if 'MemoryCapacity' in line:
+                    memorymode_size = line.split('=')[1].split(' ')[0]
+            _platform_static_information['memorymode_size'] = memorymode_size
+        except FileNotFoundError:
+            log.warning('ipmctl unavailable, cannot read memory mode size')
 
-        lshw_raw = subprocess.check_output(shlex.split('lshw -class memory -json -quiet -sanitize -notime'))
-        lshw_str = lshw_raw.decode("utf-8")
-        lshw_str = lshw_str.rstrip()
-        lshw_str = '[' + lshw_str[0:(len(lshw_str) - 1)] + ']'
-        lshw_data = json.loads(lshw_str)
-        nvm_dimm_count = 0
-        ram_dimm_count = 0
-        nvm_dimm_size = 0
-        ram_dimm_size = 0
-        for system in lshw_data:
-            if system['id'] == 'memory' and 'children' in system:
-                for bank in system['children']:
-                    if '[empty]' in bank['description']:
-                        continue
-                    elif 'DDR4' in bank['description']:
-                        assert bank['units'] == 'bytes'
-                        ram_dimm_count += 1
-                        ram_dimm_size += bank['size']
-                    elif 'Non-volatile' in bank['description']:
-                        assert bank['units'] == 'bytes'
-                        nvm_dimm_count += 1
-                        nvm_dimm_size += bank['size']
+        try:
+            lshw_raw = subprocess.check_output(shlex.split('lshw -class memory -json -quiet -sanitize -notime'))
+            lshw_str = lshw_raw.decode("utf-8")
+            lshw_str = lshw_str.rstrip()
+            lshw_str = '[' + lshw_str[0:(len(lshw_str) - 1)] + ']'
+            lshw_data = json.loads(lshw_str)
+            nvm_dimm_count = 0
+            ram_dimm_count = 0
+            nvm_dimm_size = 0
+            ram_dimm_size = 0
+            for system in lshw_data:
+                if system['id'] == 'memory' and 'children' in system:
+                    for bank in system['children']:
+                        if '[empty]' in bank['description']:
+                            continue
+                        elif 'DDR4' in bank['description']:
+                            assert bank['units'] == 'bytes'
+                            ram_dimm_count += 1
+                            ram_dimm_size += bank['size']
+                        elif 'Non-volatile' in bank['description']:
+                            assert bank['units'] == 'bytes'
+                            nvm_dimm_count += 1
+                            nvm_dimm_size += bank['size']
 
-        _platform_static_information['ram_dimm_count'] = ram_dimm_count
-        _platform_static_information['nvm_dimm_count'] = nvm_dimm_count
-        _platform_static_information['ram_dimm_size'] = ram_dimm_size
-        _platform_static_information['nvm_dimm_size'] = nvm_dimm_size
-        _platform_static_information['memorymode_size'] = memorymode_size
+            _platform_static_information['ram_dimm_count'] = ram_dimm_count
+            _platform_static_information['nvm_dimm_count'] = nvm_dimm_count
+            _platform_static_information['ram_dimm_size'] = ram_dimm_size
+            _platform_static_information['nvm_dimm_size'] = nvm_dimm_size
+        except FileNotFoundError:
+            log.warning('lshw unavailable, cannot read memory topology size')
 
-    platform_metrics.extend([
-        # RAM
-        Metric(name=PLATFORM_PREFIX + 'dimm_count',
-               value=_platform_static_information['ram_dimm_count'],
-               labels={'type': 'ram'}),
-        Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
-               value=_platform_static_information['ram_dimm_size'],
-               labels={'type': 'ram'}),
-        # NVM
-        Metric(name=PLATFORM_PREFIX + 'dimm_count',
-               value=_platform_static_information['nvm_dimm_count'],
-               labels={'type': 'nvm'}),
-        Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
-               value=_platform_static_information['nvm_dimm_size'],
-               labels={'type': 'nvm'}),
-        Metric(name=PLATFORM_PREFIX + 'memory_mode_size_bytes',
-               value=_platform_static_information['memorymode_size']),
-    ])
+    _platform_static_information['initialized'] = True
+
+    if 'ram_dimm_count' in _platform_static_information:
+        platform_metrics.extend([
+            # RAM
+            Metric(name=PLATFORM_PREFIX + 'dimm_count',
+                   value=_platform_static_information['ram_dimm_count'],
+                   labels={'type': 'ram'}),
+            Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
+                   value=_platform_static_information['ram_dimm_size'],
+                   labels={'type': 'ram'}),
+            # NVM
+            Metric(name=PLATFORM_PREFIX + 'dimm_count',
+                   value=_platform_static_information['nvm_dimm_count'],
+                   labels={'type': 'nvm'}),
+            Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
+                   value=_platform_static_information['nvm_dimm_size'],
+                   labels={'type': 'nvm'}),
+        ])
+    if 'memorymode_size' in _platform_static_information:
+        platform_metrics.extend([
+            Metric(name=PLATFORM_PREFIX + 'memory_mode_size_bytes',
+                   value=_platform_static_information['memorymode_size']),
+        ])
 
     return platform_metrics
 
