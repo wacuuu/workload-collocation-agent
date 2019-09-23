@@ -13,16 +13,16 @@
 # limitations under the License.
 
 
-# Building stage first: wca.
-FROM centos:7 AS wca
+# Single staged Dockerfile to build wca as pex file that includes 
+# confluent kafka python library build from sources.
+FROM centos:7
 
 RUN echo "" && rpm --import https://packages.confluent.io/rpm/5.2/archive.key
 COPY /configs/confluent_repo/confluent.repo /etc/yum.repos.d/confluent.repo
 
-RUN yum -y update
-RUN yum -y install epel-release
-RUN yum -y install python36 python-pip which make git
-RUN yum install -y librdkafka1 librdkafka-devel gcc python36-devel.x86_64
+RUN yum -y update && yum -y install epel-release
+RUN yum -y install python36 python-pip which make git \
+        librdkafka1 librdkafka-devel gcc python36-devel.x86_64
 RUN pip install pipenv
 
 WORKDIR /wca
@@ -31,24 +31,12 @@ COPY Pipfile Pipfile
 COPY Pipfile.lock Pipfile.lock
 RUN pipenv install --dev --deploy
 
-RUN [ ! -d confluent-kafka-python ] && git clone https://github.com/confluentinc/confluent-kafka-python
+RUN git clone https://github.com/confluentinc/confluent-kafka-python
 RUN cd confluent-kafka-python && git checkout v1.0.1
 
 # Cache will be propably invalidated here.
 COPY . .
 
 RUN git clean -fdx
-#ENV OPTIONAL_FEATURES=kafka_storage
+ENV OPTIONAL_FEATURES=kafka_storage
 RUN make wca_package
-
-
-# Building final container that consists of wca only.
-FROM centos:7
-
-ENV CONFIG=/etc/wca/wca_config.yml \
-    LOG=info
-
-RUN yum install -y epel-release
-RUN yum install -y python36
-
-COPY --from=wca /wca/dist/wca.pex /usr/bin/

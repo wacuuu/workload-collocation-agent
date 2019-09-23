@@ -59,13 +59,30 @@ wca_package_in_docker:
 	# target: standalone
 	sudo docker build --target standalone -f Dockerfile -t $(WCA_IMAGE):$(WCA_TAG) .
 	# Extract pex to dist folder
-	rm -rf .cidfile && sudo docker create --cidfile=.cidfile $(WCA_IMAGE)
+	rm -rf .cidfile && sudo docker create --cidfile=.cidfile $(WCA_IMAGE):$(WCA_TAG)
+	CID=$$(cat .cidfile); \
+	mkdir -p dist; \
+	sudo docker cp $$CID:/usr/bin/wca.pex dist/ && \
+	sudo docker rm $$CID && \
+	sudo chown -R $$USER:$$USER dist/wca.pex && sudo rm .cidfile
+	@echo WCA image name is: $(WCA_IMAGE):$(WCA_TAG)
+	@echo WCA pex file: dist/wca.pex
+
+wca_package_in_docker_with_kafka: WCA_IMAGE := wca
+wca_package_in_docker_with_kafka: WCA_TAG := $(shell git rev-parse HEAD)
+wca_package_in_docker_with_kafka:
+	@echo "Building wca pex (version with Kafka) file inside docker and copying to ./dist/wca.pex"
+	# target: standalone
+	sudo docker build -f Dockerfile.kafka -t $(WCA_IMAGE):$(WCA_TAG) .
+	# Extract pex to dist folder
+	rm -rf .cidfile && sudo docker create --cidfile=.cidfile $(WCA_IMAGE):$(WCA_TAG)
 	CID=$$(cat .cidfile); \
 	mkdir -p dist; \
 	sudo docker cp $$CID:/wca/dist/wca.pex dist/ && \
 	sudo docker rm $$CID && \
 	sudo chown -R $$USER:$$USER dist/wca.pex && sudo rm .cidfile
 	@echo WCA image name is: $(WCA_IMAGE):$(WCA_TAG)
+	@echo WCA pex file: dist/wca.pex
 
 wca_docker_devel: WCA_IMAGE ?= wca
 wca_docker_devel: WCA_TAG ?= devel

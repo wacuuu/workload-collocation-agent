@@ -12,7 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#### Getting started
+#### Multistage Dockerfile
+# to build wca in three flavors:
+# 1. development version (without verision
+# 2. pex based Dockerfile that includes version number based on .git repo
+# 3. standalone  
+
+## Testing 
 # 1. Build
 # docker build -t wca:latest .
 
@@ -45,8 +51,7 @@ ENTRYPOINT ["pipenv", "run", "python3.6", "wca/main.py"]
 # ------------------------ pex ----------------------
 # "pex" stage includes pex file in /usr/bin/
 FROM devel AS pex
-# required for getting version from git-commit
-COPY .git .
+COPY . .
 RUN make wca_package
 RUN cp /wca/dist/wca.pex /usr/bin/
 ENTRYPOINT /usr/bin/wca.pex
