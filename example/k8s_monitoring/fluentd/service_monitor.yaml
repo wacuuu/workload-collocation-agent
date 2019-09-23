@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: fluentd
+  namespace: fluentd
+  labels:
+    team: monitoring
+spec:
+  selector:
+    matchLabels:
+      app: fluentd
+  endpoints:
+    - port: web
+      interval: 1s
