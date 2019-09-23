@@ -1,8 +1,7 @@
 namespace: kube-state-metrics
 
 resources:
-- ./kube-state-metrics-cluster-role-binding.yaml
-- ./kube-state-metrics-cluster-role.yaml
-- ./kube-state-metrics-deployment.yaml
-- ./kube-state-metrics-service-account.yaml
-- ./kube-state-metrics-service.yaml
+- deployment.yaml
+- service_account.yaml
+- service.yaml
+- service_monitor.yaml

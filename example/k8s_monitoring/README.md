@@ -78,3 +78,8 @@ kubectl get namespace wca -o json | sed '/kubernetes/d' | curl -k -H "Content-Ty
 ```
 
 
+### Service Monitor configuration
+
+https://github.com/coreos/prometheus-operator/blob/master/Documentation/troubleshooting.md#L38
+
+
