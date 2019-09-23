@@ -14,6 +14,7 @@
 import logging
 import os
 import json
+from json.decoder import JSONDecodeError
 import re
 import shlex
 import socket
@@ -120,44 +121,10 @@ class Platform:
 
     measurements: Measurements
 
+# cached data about platform static information
+_platform_static_information = {}
 
-_platform_static_information = {
-
-}
-
-def create_metrics(platform: Platform) -> List[Metric]:
-    """Creates a list of Metric objects from data in Platform object"""
-    PLATFORM_PREFIX='platform__'
-    platform_metrics = list()
-    platform_metrics.append(
-        Metric.create_metric_with_metadata(
-            name=PLATFORM_PREFIX + MetricName.MEM_USAGE,
-            value=platform.total_memory_used)
-    )
-    for cpu_id, cpu_usage in platform.cpus_usage.items():
-        platform_metrics.append(
-            Metric.create_metric_with_metadata(
-                name=PLATFORM_PREFIX + MetricName.CPU_USAGE_PER_CPU,
-                value=cpu_usage,
-                labels={"cpu": str(cpu_id)}
-            )
-        )
-
-    for metric_name, metric_value in platform.measurements.items():
-        platform_metrics.append(
-            Metric.create_metric_with_metadata(
-                name=PLATFORM_PREFIX + metric_name,
-                value=metric_value,
-            )
-        )
-
-
-    platform_metrics.extend([
-        Metric(name=PLATFORM_PREFIX + 'topology_cores', value=platform.cores),
-        Metric(name=PLATFORM_PREFIX + 'topology_cpus', value=platform.cpus),
-        Metric(name=PLATFORM_PREFIX + 'topology_sockets', value=platform.sockets),
-        Metric(name=PLATFORM_PREFIX + 'last_seen', value=time.time()),
-    ])
+def get_platform_static_information():
 
     # RETURN MEMORY DIMM DETAILS based on lshw
     global _platform_static_information
@@ -202,31 +169,75 @@ def create_metrics(platform: Platform) -> List[Metric]:
             _platform_static_information['ram_dimm_size'] = ram_dimm_size
             _platform_static_information['nvm_dimm_size'] = nvm_dimm_size
         except FileNotFoundError:
-            log.warning('lshw unavailable, cannot read memory topology size')
+            log.warning('lshw unavailable, cannot read memory topology size!')
+        except JSONDecodeError:
+            log.warning('lshw unavailable (incorrect version or missing data), ' 
+                        'cannot parse output, cannot read memory topology size!')
 
     _platform_static_information['initialized'] = True
 
-    if 'ram_dimm_count' in _platform_static_information:
+    return _platform_static_information
+
+def create_metrics(platform: Platform) -> List[Metric]:
+    """Creates a list of Metric objects from data in Platform object"""
+    PLATFORM_PREFIX='platform__'
+    platform_metrics = list()
+    platform_metrics.append(
+        Metric.create_metric_with_metadata(
+            name=PLATFORM_PREFIX + MetricName.MEM_USAGE,
+            value=platform.total_memory_used)
+    )
+    for cpu_id, cpu_usage in platform.cpus_usage.items():
+        platform_metrics.append(
+            Metric.create_metric_with_metadata(
+                name=PLATFORM_PREFIX + MetricName.CPU_USAGE_PER_CPU,
+                value=cpu_usage,
+                labels={"cpu": str(cpu_id)}
+            )
+        )
+
+    for metric_name, metric_value in platform.measurements.items():
+        platform_metrics.append(
+            Metric.create_metric_with_metadata(
+                name=PLATFORM_PREFIX + metric_name,
+                value=metric_value,
+            )
+        )
+
+
+    platform_metrics.extend([
+        Metric(name=PLATFORM_PREFIX + 'topology_cores', value=platform.cores),
+        Metric(name=PLATFORM_PREFIX + 'topology_cpus', value=platform.cpus),
+        Metric(name=PLATFORM_PREFIX + 'topology_sockets', value=platform.sockets),
+        Metric(name=PLATFORM_PREFIX + 'last_seen', value=time.time()),
+    ])
+
+    platform_static_information = get_platform_static_information()
+
+    # PMEM HW info
+    if 'ram_dimm_count' in platform_static_information:
         platform_metrics.extend([
             # RAM
             Metric(name=PLATFORM_PREFIX + 'dimm_count',
-                   value=_platform_static_information['ram_dimm_count'],
+                   value=platform_static_information['ram_dimm_count'],
                    labels={'type': 'ram'}),
             Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
-                   value=_platform_static_information['ram_dimm_size'],
+                   value=platform_static_information['ram_dimm_size'],
                    labels={'type': 'ram'}),
             # NVM
             Metric(name=PLATFORM_PREFIX + 'dimm_count',
-                   value=_platform_static_information['nvm_dimm_count'],
+                   value=platform_static_information['nvm_dimm_count'],
                    labels={'type': 'nvm'}),
             Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
-                   value=_platform_static_information['nvm_dimm_size'],
+                   value=platform_static_information['nvm_dimm_size'],
                    labels={'type': 'nvm'}),
         ])
-    if 'memorymode_size' in _platform_static_information:
+
+    # PMEM HW configuration
+    if 'memorymode_size' in platform_static_information:
         platform_metrics.extend([
             Metric(name=PLATFORM_PREFIX + 'memory_mode_size_bytes',
-                   value=_platform_static_information['memorymode_size']),
+                   value=platform_static_information['memorymode_size']),
         ])
 
     return platform_metrics
