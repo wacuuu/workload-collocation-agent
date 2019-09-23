@@ -41,6 +41,22 @@ URL: http://prometheus.prometheus:9090
 Access: Server(default)
 ```
 
+# Configuring Kubernetes-app for Grafana
+
+Parameters:
+
+- URL: https://100.64.176.36:6443
+- TLS Client Auth: checked
+- With CA Cert: checked
+
+```shell
+# CA cert
+kubectl config view --raw -ojsonpath="{@.clusters[0].cluster.certificate-authority-data}" | base64 -d
+# Client cert
+kubectl config view --raw -ojsonpath="{@.users[0].user.client-certificate-data}" | base64 -d
+# Client key
+kubectl config view --raw -ojsonpath="{@.clusters[0].cluster.certificate-authority-data}" | base64 -d
+```
 
 # Troubleshooting
 
