@@ -27,7 +27,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
@@ -147,7 +147,7 @@
         "#5794F2",
         "#5794F2"
       ],
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "decimals": null,
       "format": "none",
       "gauge": {
@@ -240,7 +240,7 @@
       "type": "text"
     },
     {
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "description": "",
       "gridPos": {
         "h": 8,
@@ -296,7 +296,7 @@
       "type": "bargauge"
     },
     {
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "gridPos": {
         "h": 8,
         "w": 6,
@@ -353,7 +353,7 @@
     {
       "activePatternIndex": 1,
       "cacheTimeout": null,
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "defaultPattern": {
         "bgColors": "green|orange|red",
         "bgColors_overrides": "0->green|2->red|1->yellow",
@@ -703,7 +703,7 @@
     },
     {
       "activePatternIndex": 0,
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "debug_mode": false,
       "defaultPattern": {
         "bgColors": "green|orange|red",
@@ -1144,7 +1144,7 @@
     },
     {
       "activePatternIndex": 0,
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "debug_mode": false,
       "defaultPattern": {
         "bgColors": "green|orange|red",
@@ -1264,7 +1264,7 @@
     {
       "activePatternIndex": 0,
       "cacheTimeout": null,
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "defaultPattern": {
         "bgColors": "green|orange|red",
         "bgColors_overrides": "0->green|2->red|1->yellow",
@@ -1379,7 +1379,7 @@
     {
       "activePatternIndex": 0,
       "cacheTimeout": null,
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "defaultPattern": {
         "bgColors": "green|orange|red",
         "bgColors_overrides": "0->green|2->red|1->yellow",
@@ -1501,7 +1501,7 @@
     },
     {
       "activePatternIndex": 0,
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "debug_mode": false,
       "defaultPattern": {
         "bgColors": "green|orange|red",
@@ -1758,7 +1758,7 @@
       "type": "yesoreyeram-boomtable-panel"
     },
     {
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "gridPos": {
         "h": 16,
         "w": 15,
@@ -1810,7 +1810,7 @@
       "type": "bargauge"
     },
     {
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "gridPos": {
         "h": 4,
         "w": 24,

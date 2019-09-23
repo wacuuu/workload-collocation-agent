@@ -29,7 +29,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus-k8s-cluster2",
+      "datasource": "Prometheus",
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
