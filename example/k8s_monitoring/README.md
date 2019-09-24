@@ -15,12 +15,17 @@ Files in this folder will deploy:
 kubectl create -f namespaces.yaml
 ```
 
-2. Create hostPath based directory as grafana volume.
+2. Create hostPath based directory as grafana volume and Prometheus (PV).
 
 ```shell 
 # on master node
 sudo mkdir /var/lib/grafana
-sudo chown o+rw /var/lib/grafana
+sudo chmod o+rw /var/lib/grafana
+sudo mkdir /var/lib/prometheus
+sudo chmod o+rw /var/lib/prometheus
+
+
+kubectl create -f prometheus/persistent_volume.yaml
 ```
 
 Grafana is deployed on master and hostPath as volume at accessible `/var/lib/grafana`
@@ -102,7 +107,8 @@ Both applications are running in **host** network namespace as daemonsets on por
 
 ### Cleaning up
 
-**Warning!**: this removes all the objects (excluding CRDs and namespaces)
+**Warning!**: this removes all the objects (excluding CRDs and namespaces), but it will not remove
+ hostPath based data for Grafana and Prometheus.
 
 ```shell
 bash cleanup.sh
@@ -111,6 +117,8 @@ kubectl delete namespace fluentd
 kubectl delete namespace grafana
 kubectl delete namespace prometheus
 kubectl delete namespace wca
+
+kubectl delete -f prometheus/persistent_volume.yaml
 ```
 
 ### Remove namespace if stuck in "Terminating" state
@@ -133,4 +141,16 @@ https://github.com/coreos/prometheus-operator/blob/master/Documentation/troubles
 This setup uses new version of node_exporter (>18.0) and Grafana kubernetes-app is based on old naminch scheme 
 from node_exporter v 0.16
 Prometheus rules "16-compatibilit-rules-new-to-old" are used to configured new evaluation rules from backward compatibility.
+
+
+## Usefull links
+
+- extra dashboards: https://github.com/coreos/kube-prometheus/blob/master/manifests/grafana-dashboardDefinitions.yaml
+- coreos/kube-prometheus: https://github.com/coreos/kube-prometheus
+- compatibility rules for node-exporter: https://github.com/prometheus/node_exporter/blob/master/docs/V0_16_UPGRADE_GUIDE.md
+- prometheus operator API spec for Prometheus: https://github.com/coreos/prometheus-operator/blob/master/Documentation/api.md#prometheusspec
+- Kubernetes-app for Grafana: https://grafana.com/grafana/plugins/grafana-kubernetes-app
+- Boomtable widget for Grafana: https://grafana.com/grafana/plugins/yesoreyeram-boomtable-panel
+- hostPath support for Prometheus operator: https://github.com/coreos/prometheus-operator/pull/1455
+
 
