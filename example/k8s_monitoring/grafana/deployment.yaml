@@ -12,6 +12,12 @@ spec:
       labels:
         name: grafana
     spec:
+      tolerations:
+        - key: master
+          operator: Exists
+          effect: NoSchedule
+      nodeSelector:
+        node-role.kubernetes.io/master: ""
       containers:
       - name: grafana
         image: grafana/grafana
@@ -30,4 +36,5 @@ spec:
           value: "grafana-kubernetes-app"
       volumes:
       - name: grafana-storage
-        emptyDir: {}
+        hostPath:
+          path: /var/lib/grafana

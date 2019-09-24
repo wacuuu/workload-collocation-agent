@@ -10,14 +10,14 @@ spec:
   endpoints:
   - port: https-metrics
     scheme: https
-    interval: 30s
+    interval: 5s
     tlsConfig:
       insecureSkipVerify: true
     bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
   - port: https-metrics
     scheme: https
     path: /metrics/cadvisor
-    interval: 30s
+    interval: 5s
     honorLabels: true
     tlsConfig:
       insecureSkipVerify: true

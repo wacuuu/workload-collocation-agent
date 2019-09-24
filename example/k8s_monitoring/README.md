@@ -28,6 +28,16 @@ Note: in case of
 warnings, please run `kubectl apply -k .` once again. This is a problem of invalid order of objects
 when CRDs are created by kustomize and prometheus-operator.
 
+# Grafana storage
+
+Grafana is deployed on master and hostPath as volume at accessible `/var/lib/grafana`
+
+```shell 
+# on master node
+sudo mkdir /var/lib/grafana
+sudo chown o+rw /var/lib/grafana
+```
+
 # Access
 
 **Prometheus** is exposed at: http://worker-node:30900/graph
@@ -55,7 +65,7 @@ kubectl config view --raw -ojsonpath="{@.clusters[0].cluster.certificate-authori
 # Client cert
 kubectl config view --raw -ojsonpath="{@.users[0].user.client-certificate-data}" | base64 -d
 # Client key
-kubectl config view --raw -ojsonpath="{@.clusters[0].cluster.certificate-authority-data}" | base64 -d
+kubectl config view --raw -ojsonpath="{@.users[0].user.client-key-data}" | base64 -d
 ```
 
 # Troubleshooting
@@ -98,4 +108,10 @@ kubectl get namespace wca -o json | sed '/kubernetes/d' | curl -k -H "Content-Ty
 
 https://github.com/coreos/prometheus-operator/blob/master/Documentation/troubleshooting.md#L38
 
+
+### Missing metrics from node_exporter (e.g. node_cpu)
+
+This setup uses new version of node_exporter (>18.0) and Grafana kubernetes-app is based on old naminch scheme 
+from node_exporter v 0.16
+Prometheus rules "16-compatibilit-rules-new-to-old" are used to configured new evaluation rules from backward compatibility.
 
