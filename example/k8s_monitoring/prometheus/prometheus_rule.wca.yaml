@@ -3,8 +3,7 @@ kind: PrometheusRule
 metadata:
   labels:
     role: prometheus-rules
-  name: prometheus-rules
-  namespace: prometheus
+  name: prometheus-rules-16-compatibility-rules-new-to-old
 spec:
   groups:
     - name: SLOS
