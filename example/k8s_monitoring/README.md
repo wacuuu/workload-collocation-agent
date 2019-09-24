@@ -28,6 +28,9 @@ Note: in case of
 warnings, please run `kubectl apply -k .` once again. This is a problem of invalid order of objects
 when CRDs are created by kustomize and prometheus-operator.
 
+
+You can check progress of deployment using `kubectl get -k .`.
+
 # Grafana storage
 
 Grafana is deployed on master and hostPath as volume at accessible `/var/lib/grafana`
