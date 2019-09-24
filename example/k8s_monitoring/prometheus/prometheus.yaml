@@ -18,4 +18,8 @@ spec:
     requests:
       memory: 400Mi
   enableAdminAPI: true
+  storage:
+    volumeClaimTemplate:
+      spec:
+        storageClassName: manual
 ---
