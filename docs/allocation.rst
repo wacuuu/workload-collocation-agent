@@ -305,7 +305,7 @@ cpu_set
 ^^^^^^^
 **Experimental** support for cpu pinning:
 
-- requires specific isolator for Mesos
+- requires specific isolator `cpuset` enabled for Mesos,
 - may conflict with ``cpu manager`` feature in Kubernetes
 
 TODO: example configuration

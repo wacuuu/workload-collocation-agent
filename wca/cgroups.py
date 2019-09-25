@@ -125,18 +125,24 @@ class Cgroup:
 
         raise NotImplementedError(cgroup_control_type)
 
-    def _read(self, cgroup_control_file: str, cgroup_control_type: CgroupType) -> int:
+    def _read_raw(self, cgroup_control_file: str, cgroup_control_type: CgroupType) -> str:
         """Read helper to store any and convert value from cgroup control file."""
         path = self._get_proper_path(cgroup_control_file, cgroup_control_type)
         try:
             with open(path) as file:
-                raw_value = int(file.read())
+                raw_value = file.read()
                 log.log(logger.TRACE, 'cgroup: read %s=%r', file.name, raw_value)
         except FileNotFoundError as e:
             raise MissingAllocationException(
                 'File {} is missing. Allocation unavailable.'.format(e.filename))
 
         return raw_value
+
+    def _read(self, cgroup_control_file: str, cgroup_control_type: CgroupType) -> int:
+        """Read helper to store any and convert value to int from cgroup control file."""
+        raw_value = self._read_raw(cgroup_control_file, cgroup_control_type)
+        value = int(raw_value)
+        return value
 
     def _write(
             self, cgroup_control_file: str, value: Union[int, str],
@@ -173,6 +179,7 @@ class Cgroup:
         return {
             AllocationType.QUOTA: self._get_normalized_quota(),
             AllocationType.SHARES: self._get_normalized_shares(),
+            AllocationType.CPUSET: self._get_cpuset(),
         }
 
     def get_pids(self) -> List[str]:
@@ -243,3 +250,13 @@ class Cgroup:
             log.warning(
                     'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
                         CgroupResource.CPUSET_MEMS, normalized_mems, self.cgroup_cpuset_fullpath))
+
+    def _get_cpuset(self) -> str:
+        """Get current cpuset.cpus."""
+
+        try:
+            return self._read_raw(CgroupResource.CPUSET_CPUS, CgroupType.CPUSET)
+        except PermissionError:
+            log.warning(
+                    'Cannot read {}: "{}"! Permission denied.'.format(
+                        CgroupResource.CPUSET_CPUS, self.cgroup_cpuset_fullpath))

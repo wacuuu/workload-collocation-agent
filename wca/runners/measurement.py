@@ -109,7 +109,7 @@ class MeasurementRunner(Runner):
             action_delay: Numeric(0, 60) = 1.,  # [s]
             rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
             extra_labels: Dict[Str, Str] = None,
-            event_names: List[str] = None,
+            event_names: List[str] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
             task_label_generators: Dict[str, TaskLabelGenerator] = None,
             _allocation_configuration: Optional[AllocationConfiguration] = None,
@@ -127,7 +127,7 @@ class MeasurementRunner(Runner):
         self._finish = False  # Guard to stop iterations.
         self._last_iteration = time.time()  # Used internally by wait function.
         self._allocation_configuration = _allocation_configuration
-        self._event_names = event_names or DEFAULT_EVENTS
+        self._event_names = event_names
         self._enable_derived_metrics = enable_derived_metrics
 
         # Default value for task_labels_generator.

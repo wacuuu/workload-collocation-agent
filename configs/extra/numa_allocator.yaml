@@ -1,0 +1,20 @@
+runner: !AllocationRunner
+  action_delay: 5
+  node: !StaticNode
+    tasks:
+      - task1
+      # - task2
+      # - task3
+  allocator: !NUMAAllocator
+  event_names: []
+  #rdt_enabled: false  # force RDT disabled, by default is auto detected
+
+  # Metrics to files
+  metrics_storage: !LogStorage
+    output_filename: 'metrics.prom'
+    overwrite: true
+  allocations_storage: !LogStorage
+    output_filename: 'allocations.prom'
+    overwrite: true
+  anomalies_storage: !LogStorage
+    output_filename: /dev/null

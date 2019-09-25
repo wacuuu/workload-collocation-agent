@@ -42,8 +42,10 @@ class RDTAllocation:
     # defaults to TaskId from TasksAllocations
     name: Optional[str] = None
     # CAT: optional - when no provided doesn't change the existing allocation
+    # e.g. 0:01100,1:001
     l3: Str = None
     # MBM: optional - when no provided doesn't change the existing allocation
+    # eg. '0:20,1:80'
     mb: Str = None
 
 

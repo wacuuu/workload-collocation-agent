@@ -33,6 +33,7 @@ from wca import mesos
 from wca import kubernetes
 from wca import storage
 from wca.extra import static_node
+from wca.extra import numa_allocator
 from wca import security
 
 
@@ -49,6 +50,7 @@ def register_components(extra_components: List[str]):
     config.register(allocators.AllocationConfiguration)
     config.register(kubernetes.CgroupDriverType)
     config.register(static_node.StaticNode)
+    config.register(numa_allocator.NUMAAllocator)
     config.register(static_allocator.StaticAllocator)
     config.register(security.SSL)
     config.register(TaskLabelRegexGenerator)
