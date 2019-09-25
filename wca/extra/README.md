@@ -62,7 +62,7 @@ sudo cgexec -g cpu:task2 -g perf_event:task2 -g cpuset:task2 -g memory:task2 str
 ### 4. Run WCA 
 
 ```shell
-sudo env PYTHONPATH=. `pipenv --py` wca/main.py  --root --config $PWD/configs/extra/numa_allocator.yaml -l info -l numa_allocator:debug
+sudo env PYTHONPATH=. `pipenv --py` wca/main.py  --root --config $PWD/configs/extra/numa_allocator.yaml -l info -l wca.extra.numa_allocator:debug
 ```
 
 ### 5. Observe output (metrics, allocations)
