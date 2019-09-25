@@ -17,7 +17,7 @@ from typing import Dict, Tuple, Optional, List
 from wca.allocations import AllocationValue, BoxedNumeric, InvalidAllocations, LabelsUpdater
 from wca.allocators import AllocationType
 from wca.containers import ContainerInterface
-from wca.cgroups import QUOTA_NORMALIZED_MAX
+from wca.cgroups import QUOTA_NORMALIZED_MAX, _parse_cpuset
 from wca.metrics import Metric, MetricType
 
 
@@ -128,26 +128,5 @@ class CPUSetAllocationValue(AllocationValue):
         self.cgroup.set_cpuset(cpus, mems)
 
 
-def _parse_cpuset(value: str) -> List[int]:
-    cores = set()
-
-    if not value:
-        return list()
-
-    ranges = value.split(',')
-
-    for r in ranges:
-        boundaries = r.split('-')
-
-        if len(boundaries) == 1:
-            cores.add(int(boundaries[0]))
-        elif len(boundaries) == 2:
-            start = int(boundaries[0])
-            end = int(boundaries[1])
-
-            for i in range(start, end + 1):
-                cores.add(i)
-
-    return list(sorted(cores))
 
 

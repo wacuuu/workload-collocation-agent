@@ -69,6 +69,29 @@ class CgroupResource(str, Enum):
         return repr(self.value)
 
 
+def _parse_cpuset(value: str) -> List[int]:
+    cores = set()
+
+    if not value:
+        return list()
+
+    ranges = value.split(',')
+
+    for r in ranges:
+        boundaries = r.split('-')
+
+        if len(boundaries) == 1:
+            cores.add(int(boundaries[0]))
+        elif len(boundaries) == 2:
+            start = int(boundaries[0])
+            end = int(boundaries[1])
+
+            for i in range(start, end + 1):
+                cores.add(i)
+
+    return list(sorted(cores))
+
+
 def _normalize_cpuset(cores: List[int]) -> str:
     all(isinstance(core, int) for core in cores)
     if len(cores) > 0:
@@ -266,7 +289,9 @@ class Cgroup:
         """Get current cpuset.cpus."""
 
         try:
-            return _normalize_cpuset(self._read_raw(CgroupResource.CPUSET_CPUS, CgroupType.CPUSET).strip())
+            cpus = _parse_cpuset(self._read_raw(CgroupResource.CPUSET_CPUS,
+                                                CgroupType.CPUSET).strip())
+            return _normalize_cpuset(cpus)
         except PermissionError:
             log.warning(
                     'Cannot read {}: "{}"! Permission denied.'.format(
