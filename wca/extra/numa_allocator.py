@@ -24,7 +24,7 @@ class NUMAAllocator(Allocator):
             tasks_labels: TasksLabels,
             tasks_allocations: TasksAllocations,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
-        log.info('NUMA allocator policy here....')
+        log.info('NUMA allocator random policy here....')
         log.debug('NUMA allocator input data:')
 
         print('Measurements:')
