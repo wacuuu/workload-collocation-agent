@@ -99,4 +99,5 @@ def test_main_valid_config_file_wrong_acl(os_stat, mock_exit, mock_log_error):
 
     mock_log_error.assert_called_with(
         'Error: The config \'/etc/configs/see_yaml_config_variable_above.yaml\' is not valid. '
-        'It does not have correct ACLs. Only owner should be able to write.')
+        'It does not have correct ACLs. Only owner should be able to write.'
+    )

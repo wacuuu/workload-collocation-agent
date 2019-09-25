@@ -38,8 +38,9 @@ def valid_config_file(config):
 
     if not os.path.isabs(config):
         log.error(
-            'Error: The config path \'%s\' is not valid. The path must be absolute.'
-            % config)
+            'Error: The config path %r is not valid. The path must be absolute.'
+            '(Hint: try adding $PWD in front like this: \'$PWD/%s\')'
+            % (config, config))
         exit(1)
 
     file_owner_uid = os.stat(config).st_uid
@@ -59,7 +60,8 @@ def valid_config_file(config):
         log.error(
             'Error: The config \'%s\' is not valid. It does not have correct ACLs. '
             'Only owner should be able to write.'
-            % config)
+            '(Hint: try \'chmod og-rw %s\' to fix the problem).'
+            % (config, config))
         exit(1)
 
 

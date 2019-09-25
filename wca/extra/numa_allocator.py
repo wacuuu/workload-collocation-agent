@@ -38,7 +38,7 @@ class NUMAAllocator(Allocator):
 
         allocations = {
             'task1': {
-                'cpus': '4,5',
+                'cpu_set': '4,5',
                 'cpu_quota': 0.5,
                 'cpu_shares': 20,
                 # only when rdt is enabled!
@@ -48,7 +48,7 @@ class NUMAAllocator(Allocator):
                 #     mb = '0:100,1:20',
                 # )
             }
-        },
+        }
 
         # You can put any metrics here for debugging purposes.
         extra_metrics = [Metric('some_debug', value=1)]
