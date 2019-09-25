@@ -1,6 +1,7 @@
 import logging
 from pprint import pprint
 from typing import List
+import random
 
 from dataclasses import dataclass
 
@@ -36,11 +37,16 @@ class NUMAAllocator(Allocator):
         pprint(tasks_allocations)
         pprint(platform)
 
+        # Example stupid policy
+        cpu = random.randint(0, platform.cpus-1)
+        log.debug('random cpu: %s', cpu)
+
         allocations = {
             'task1': {
-                'cpu_set': '4,5',
-                'cpu_quota': 0.5,
-                'cpu_shares': 20,
+                'cpu_set': '%s' % cpu,
+                # Other options:
+                # 'cpu_quota': 0.5,
+                # 'cpu_shares': 20,
                 # only when rdt is enabled!
                 # 'rdt': RDTAllocation(
                 #     name = 'be',

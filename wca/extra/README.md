@@ -21,6 +21,9 @@ git clone https://github.com/ppalucki/owca/ wca
 cd wca
 git checkout ppalucki/numa
 
+# set proper ACLs for config file
+chmod og-rw configs/extra/numa_allocator.yaml
+
 # Install runtime, tools and stress-ng as workload ...
 sudo yum install -y epel-release
 sudo yum install -y python3.6 stress-ng libcgroup-tools
@@ -57,10 +60,14 @@ sudo cgexec -g cpu:task2 -g perf_event:task2 -g cpuset:task2 -g memory:task2 str
 
 
 ### 4. Run WCA 
+
+```shell
+sudo env PYTHONPATH=. `pipenv --py` wca/main.py  --root --config $PWD/configs/extra/numa_allocator.yaml -l info -l numa_allocator:debug
 ```
 
+### 5. Observe output (metrics, allocations)
+
+```shell
+watch -n1 head /sys/fs/cgroup/cpuset/{task1,task2}/cpuset.{mems,cpus}
 ```
-
-
-### 5. Observe output from plugin 
 

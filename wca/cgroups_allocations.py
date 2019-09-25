@@ -123,9 +123,9 @@ class CPUSetAllocationValue(AllocationValue):
 
     def perform_allocations(self):
         self.validate()
-        normalized_cpus = _normalize_cpuset(self.value)
-        normalized_mems = _normalize_cpuset(list(range(0, self.cgroup.platform_sockets)))
-        self.cgroup.set_cpuset(normalized_cpus, normalized_mems)
+        cpus = self.value
+        mems = list(range(0, self.cgroup.platform_sockets))
+        self.cgroup.set_cpuset(cpus, mems)
 
 
 def _parse_cpuset(value: str) -> List[int]:
@@ -151,9 +151,3 @@ def _parse_cpuset(value: str) -> List[int]:
     return list(sorted(cores))
 
 
-def _normalize_cpuset(cores: List[int]) -> str:
-    all(isinstance(core, int) for core in cores)
-    if len(cores) > 0:
-        return str(cores[0])+''.join(','+str(core) for core in cores[1:])
-    else:
-        return ''

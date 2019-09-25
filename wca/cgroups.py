@@ -69,6 +69,14 @@ class CgroupResource(str, Enum):
         return repr(self.value)
 
 
+def _normalize_cpuset(cores: List[int]) -> str:
+    all(isinstance(core, int) for core in cores)
+    if len(cores) > 0:
+        return str(cores[0])+''.join(','+str(core) for core in cores[1:])
+    else:
+        return ''
+
+
 @dataclass
 class Cgroup:
     cgroup_path: str
@@ -233,8 +241,11 @@ class Cgroup:
 
         self._write(CgroupResource.CPU_QUOTA, quota, CgroupType.CPU)
 
-    def set_cpuset(self, normalized_cpus: str, normalized_mems: str):
+    def set_cpuset(self, cpus: str, mems: str):
         """Set cpuset.cpus and cpuset.mems."""
+        normalized_cpus = _normalize_cpuset(cpus)
+        normalized_mems = _normalize_cpuset(mems)
+
         assert normalized_cpus is not None
         assert normalized_mems is not None
 
@@ -255,7 +266,7 @@ class Cgroup:
         """Get current cpuset.cpus."""
 
         try:
-            return self._read_raw(CgroupResource.CPUSET_CPUS, CgroupType.CPUSET)
+            return _normalize_cpuset(self._read_raw(CgroupResource.CPUSET_CPUS, CgroupType.CPUSET).strip())
         except PermissionError:
             log.warning(
                     'Cannot read {}: "{}"! Permission denied.'.format(
