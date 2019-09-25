@@ -142,7 +142,7 @@ class Cgroup:
 
         try:
             with open(os.path.join(self.cgroup_memory_fullpath,
-                                   CgroupResource.MEMORY_USAGE)) as memory_usage_file:
+                                   CgroupResource.MEMORY_LIMIT)) as memory_usage_file:
                 memory_limit = int(memory_usage_file.read())
             measurements[MetricName.MEM_LIMIT_PER_TASK] = memory_limit
         except FileNotFoundError as e:
