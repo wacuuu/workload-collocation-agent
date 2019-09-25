@@ -64,7 +64,9 @@ class CgroupResource(str, Enum):
     CPUSET_CPUS = 'cpuset.cpus'
     CPUSET_MEMS = 'cpuset.mems'
     MEMORY_USAGE = 'memory.usage_in_bytes'
+    MEMORY_MAX_USAGE = 'memory.max_usage_in_bytes'
     MEMORY_LIMIT = 'memory.limit_in_bytes'
+    MEMORY_SOFT_LIMIT = 'memory.soft_limit_in_bytes'
 
     def __repr__(self):
         return repr(self.value)
@@ -131,23 +133,22 @@ class Cgroup:
 
         measurements = {MetricName.CPU_USAGE_PER_TASK: cpu_usage}
 
-        try:
-            with open(os.path.join(self.cgroup_memory_fullpath,
-                                   CgroupResource.MEMORY_USAGE)) as memory_usage_file:
-                memory_usage = int(memory_usage_file.read())
-            measurements[MetricName.MEM_USAGE_PER_TASK] = memory_usage
-        except FileNotFoundError as e:
-            raise MissingMeasurementException(
-                'File {} is missing. Memory usage unavailable.'.format(e.filename))
+        for cgroup_resource, metric_name in [
+            [CgroupResource.MEMORY_USAGE,      MetricName.MEM_USAGE_PER_TASK],
+            [CgroupResource.MEMORY_MAX_USAGE,  MetricName.MEM_MAX_USAGE_PER_TASK],
+            [CgroupResource.MEMORY_LIMIT,      MetricName.MEM_LIMIT_PER_TASK],
+            [CgroupResource.MEMORY_SOFT_LIMIT, MetricName.MEM_SOFT_LIMIT_PER_TASK],
+        ]:
 
-        try:
-            with open(os.path.join(self.cgroup_memory_fullpath,
-                                   CgroupResource.MEMORY_LIMIT)) as memory_usage_file:
-                memory_limit = int(memory_usage_file.read())
-            measurements[MetricName.MEM_LIMIT_PER_TASK] = memory_limit
-        except FileNotFoundError as e:
-            raise MissingMeasurementException(
-                'File {} is missing. Memory usage unavailable.'.format(e.filename))
+            try:
+                with open(os.path.join(self.cgroup_memory_fullpath,
+                                       cgroup_resource)) as resource_file:
+                    value = int(resource_file.read())
+                measurements[metric_name] = value
+            except FileNotFoundError as e:
+                raise MissingMeasurementException(
+                    'File {} is missing. Metric unavailable.'.format(e.filename))
+
 
         return measurements
 
