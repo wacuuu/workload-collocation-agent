@@ -31,6 +31,7 @@ class MetricName(str, Enum):
     CPU_USAGE_PER_TASK = 'cpu_usage_per_task'
     MEM_BW = 'memory_bandwidth'
     MEM_USAGE_PER_TASK = 'memory_usage_per_task_bytes'
+    MEM_LIMIT_PER_TASK = 'memory_limit_per_task_bytes'
     LLC_OCCUPANCY = 'llc_occupancy'
     MEM_USAGE = 'memory_usage'
     MEMSTALL = 'stalls_mem_load'

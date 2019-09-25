@@ -64,6 +64,7 @@ class CgroupResource(str, Enum):
     CPUSET_CPUS = 'cpuset.cpus'
     CPUSET_MEMS = 'cpuset.mems'
     MEMORY_USAGE = 'memory.usage_in_bytes'
+    MEMORY_LIMIT = 'memory.limit_in_bytes'
 
     def __repr__(self):
         return repr(self.value)
@@ -135,6 +136,15 @@ class Cgroup:
                                    CgroupResource.MEMORY_USAGE)) as memory_usage_file:
                 memory_usage = int(memory_usage_file.read())
             measurements[MetricName.MEM_USAGE_PER_TASK] = memory_usage
+        except FileNotFoundError as e:
+            raise MissingMeasurementException(
+                'File {} is missing. Memory usage unavailable.'.format(e.filename))
+
+        try:
+            with open(os.path.join(self.cgroup_memory_fullpath,
+                                   CgroupResource.MEMORY_USAGE)) as memory_usage_file:
+                memory_limit = int(memory_usage_file.read())
+            measurements[MetricName.MEM_LIMIT_PER_TASK] = memory_limit
         except FileNotFoundError as e:
             raise MissingMeasurementException(
                 'File {} is missing. Memory usage unavailable.'.format(e.filename))
