@@ -5,6 +5,9 @@ runner: !AllocationRunner
       - task1
       # - task2
       # - task3
+    default_resources:
+      cpus: 3.
+
   allocator: !NUMAAllocator
   #event_names: []  # if uncommented disables metrics from perf event subsystem
   #rdt_enabled: false  # force RDT disabled, by default is auto detected
