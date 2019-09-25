@@ -113,7 +113,9 @@ def main():
     # Register internal & external components.
     components.register_components(extra_components=args.components)
 
-    valid_config_file(args.config)
+    if platforms.get_wca_version() != 'unknown_version':
+        # DISABLE FOR development
+        valid_config_file(args.config)
 
     # Initialize all necessary objects.
     try:
