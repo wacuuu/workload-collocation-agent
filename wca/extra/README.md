@@ -61,3 +61,6 @@ sudo cgexec -g cpu:task2 -g perf_event:task2 -g cpuset:task2 -g memory:task2 str
 
 ```
 
+
+### 5. Observe output from plugin 
+
