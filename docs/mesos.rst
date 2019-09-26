@@ -30,7 +30,7 @@ Required agent options
 ------------------------------
 
 - ``containerizers=mesos`` - to enable PID based cgroup discovery,
-- ``isolation=cgroups/cpu,cgroups/perf_event`` - to enable CPU shares management and perf event monitoring,
+- ``isolation=cgroups/cpu,cgroups/perf_event,cgroups/mem`` - to enable CPU shares management and perf event monitoring,
 - ``perf_events=cycles`` and ``perf_interval=360days`` - to enable perf event subsystem cgroup management without actual counter collection.
 
 Following exact setup was verified to work with provided `workloads </workloads>`_:
@@ -69,3 +69,11 @@ Please refer to `example configuration file for mesos <../configs/mesos/mesos_ex
         METHOD = 'GET_STATE'
         api_path = '/api/v1'
 
+
+Task's metrics labels for Mesos
+===============================
+Task metrics (e.g. cycles, cache_misses_per_kilo_instructions) have labels which are generated in the manner:
+
+- task's label sanitized (replaced '.' with '_', removed prefixes like 'org.aurora'),
+- additional label **task_name** which value is equal to task name (for Aurora e.g. 'example/root/staging/stress_ng'),
+- additional label **task_id** which value is equal to task id.

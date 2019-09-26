@@ -15,11 +15,14 @@
 from unittest.mock import patch
 
 import pytest
+import requests
+from unittest.mock import patch
 
-from tests.testing import create_json_fixture_mock
 from wca.config import ValidationError
 from wca.kubernetes import KubernetesNode, KubernetesTask, _calculate_pod_resources, \
     _build_cgroup_path, are_all_tasks_of_single_qos, QOS_LABELNAME
+from wca.nodes import TaskSynchronizationException
+from tests.testing import create_json_fixture_mock
 
 
 def ktask(name, qos):
@@ -42,12 +45,11 @@ def ktask(name, qos):
 def test_get_tasks(get_mock):
 
     expected_tasks = [KubernetesTask(
-                          name='test',
+                          name='default/test',
                           task_id='4d6a81df-3448-11e9-8e1d-246e96663c22',
                           qos='burstable',
                           labels={'exampleKey': 'value',
-                                  QOS_LABELNAME: 'burstable',
-                                  'task_name': 'default/test'},
+                                  QOS_LABELNAME: 'burstable'},
                           resources={'requests_cpu': 0.25,
                                      'requests_memory': float(64*1024**2),
                                      'cpus': 0.25,
@@ -60,10 +62,10 @@ def test_get_tasks(get_mock):
                                             'fc034ea8898b19faa0e27c7b2'
                                             '0b8eb254fda361cceacf8e90']),
                       KubernetesTask(
-                          name='test2',
+                          name='default/test2',
                           task_id='567975a0-3448-11e9-8e1d-246e96663c22',
                           qos='besteffort',
-                          labels={QOS_LABELNAME: 'besteffort', 'task_name': 'default/test2'},
+                          labels={QOS_LABELNAME: 'besteffort'},
                           resources={},
                           cgroup_path='/kubepods/besteffort/pod567975a0-3448-'
                                       '11e9-8e1d-246e96663c22',
@@ -173,3 +175,10 @@ def test_find_cgroup_path_pod_cgroupfs(qos, expected_cgroup_path):
 ))
 def test_are_all_tasks_of_single_qos(tasks, expected_result):
     assert are_all_tasks_of_single_qos(tasks) == expected_result
+
+
+@patch('requests.post', side_effect=requests.exceptions.ConnectionError())
+def test_get_tasks_synchronization_error(request):
+    node = KubernetesNode()
+    with pytest.raises(TaskSynchronizationException):
+        node.get_tasks()

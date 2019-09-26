@@ -25,8 +25,8 @@ from dataclasses import dataclass, field
 from wca import logger
 from wca.config import assure_type, Numeric, Url, Str
 from wca.metrics import MetricName
-from wca.nodes import Node, Task, TaskId, TaskSynchornizationException
-from wca.security import SSL
+from wca.nodes import Node, Task, TaskId, TaskSynchronizationException
+from wca.security import SSL, HTTPSAdapter
 
 DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.CACHE_MISSES)
 
@@ -93,7 +93,7 @@ class KubernetesNode(Node):
     # By default use localhost, however kubelet may not listen on it.
     kubelet_enabled: bool = False
     kubelet_endpoint: Url = 'https://127.0.0.1:10250'
-    
+
     kubeapi_host: Str = None
     kubeapi_port: Str = None # Because !Env is UserString and another type cast might be problematic
     node_ip: Str = None
@@ -133,12 +133,14 @@ class KubernetesNode(Node):
         full_url = urljoin(self.kubelet_endpoint, PODS_PATH)
 
         if self.ssl:
-            r = requests.get(
-                full_url,
-                json=dict(type='GET_STATE'),
-                timeout=self.timeout,
-                verify=self.ssl.server_verify,
-                cert=self.ssl.get_client_certs())
+            s = requests.Session()
+            s.mount(self.kubelet_endpoint, HTTPSAdapter())
+            r = s.get(
+                    full_url,
+                    json=dict(type='GET_STATE'),
+                    timeout=self.timeout,
+                    verify=self.ssl.server_verify,
+                    cert=self.ssl.get_client_certs())
         else:
             r = requests.get(
                 full_url,
@@ -190,6 +192,7 @@ class KubernetesNode(Node):
             pod_id = pod.get('metadata').get('uid')
             pod_name = pod.get('metadata').get('name')
             qos = pod.get('status').get('qosClass').lower()
+            task_name = pod.get('metadata').get('namespace') + "/" + pod_name
             assert QosClass.has_value(qos)
             if pod.get('metadata').get('labels'):
                 labels = {_sanitize_label(key): value
@@ -198,8 +201,6 @@ class KubernetesNode(Node):
             else:
                 labels = {}
             labels[_sanitize_label(QOS_LABELNAME)] = qos  # Add label with QOS class of the pod.
-            # Extend labels with 'task_name'.
-            labels['task_name'] = pod.get('metadata').get('namespace') + "/" + pod_name
 
             # Apart from obvious part of the loop it checks whether all
             # containers are in ready state -
@@ -226,7 +227,7 @@ class KubernetesNode(Node):
 
             container_spec = pod.get('spec').get('containers')
             tasks.append(KubernetesTask(
-                name=pod_name, task_id=pod_id, qos=qos, labels=labels,
+                name=task_name, task_id=pod_id, qos=qos, labels=labels,
                 resources=_calculate_pod_resources(container_spec),
                 cgroup_path=_build_cgroup_path(self.cgroup_driver, qos, pod_id),
                 subcgroups_paths=containers_cgroups))
@@ -257,8 +258,8 @@ def _build_cgroup_path(cgroup_driver, qos, pod_id, container_id=''):
 
 
 # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#meaning-of-memory
-_MEMORY_UNITS = {'Ki': 1024, 'Mi': 1024 ** 2, 'Gi': 1024 ** 3, 'Ti': 1024 ** 4,
-                 'K': 1000, 'M': 1000 ** 2, 'G': 1000 ** 3, 'T': 1000 ** 4}
+_MEMORY_UNITS = {'Ki': 1024, 'Mi': 1024**2, 'Gi': 1024**3, 'Ti': 1024**4,
+                 'K': 1000, 'M': 1000**2, 'G': 1000**3, 'T': 1000**4}
 _CPU_UNITS = {'m': 0.001}
 _RESOURCE_TYPES = ['requests', 'limits']
 _MAPPING = {'requests_memory': 'mem', 'ephemeral-storage': 'disk', 'requests_cpu': 'cpus'}

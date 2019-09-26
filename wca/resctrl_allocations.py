@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import math
 from typing import Callable, List, Optional, Dict
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from wca.allocations import AllocationValue, InvalidAllocations, LabelsUpdater
 from wca.allocators import RDTAllocation
@@ -248,9 +249,13 @@ class RDTAllocationValue(AllocationValue):
             if not self.rdt_information.rdt_mb_control_enabled:
                 raise InvalidAllocations('Allocator requested RDT MB allocation but '
                                          'RDT memory bandwidth is not enabled!')
-            validate_mb_string(self.rdt_allocation.mb,
-                               self.platform_sockets,
-                               self.rdt_information.mb_min_bandwidth)
+            normalized_mb_string = normalize_mb_string(
+                                        self.rdt_allocation.mb,
+                                        self.platform_sockets,
+                                        self.rdt_information.mb_min_bandwidth,
+                                        self.rdt_information.mb_bandwidth_gran)
+
+            replace(self.rdt_allocation, mb=normalized_mb_string)
 
         self.rdt_groups.validate(self)
 
@@ -289,7 +294,7 @@ class RDTAllocationValue(AllocationValue):
 
 def _parse_schemata_file_row(line: str) -> Dict[str, str]:
     """Parse RDTAllocation.l3 and RDTAllocation.mb strings based on
-    https://elixir.bootlin.com/linux/latest/source/arch/x86/kernel/cpu/intel_rdt_ctrlmondata.c#lL206
+    https://github.com/torvalds/linux/blob/9cf6b756cdf2cd38b8b0dac2567f7c6daf5e79d5/arch/x86/kernel/cpu/resctrl/ctrlmondata.c#L254
     and return dict mapping and domain id to its configuration (value).
     Resource type (e.g. mb, l3) is dropped.
 
@@ -387,8 +392,11 @@ def validate_l3_string(l3, platform_sockets, rdt_cbm_mask, rdt_min_cbm_bits):
                        rdt_min_cbm_bits)
 
 
-def validate_mb_string(mb, platform_sockets, mb_min_bandwidth):
+def normalize_mb_string(mb: str, platform_sockets: int, mb_min_bandwidth: int,
+                        mb_bandwidth_gran: int) -> str:
     assert mb_min_bandwidth is not None
+    assert mb_bandwidth_gran is not None
+
     if not mb.startswith('MB:'):
         raise InvalidAllocations(
             'mb resources setting should start with "MB:" prefix (got %r)' % mb)
@@ -396,20 +404,32 @@ def validate_mb_string(mb, platform_sockets, mb_min_bandwidth):
     domains = _parse_schemata_file_row(mb)
     _validate_domains(domains, platform_sockets)
 
-    for mb_value in domains.values():
-        check_mb_value(mb_value, mb_min_bandwidth)
+    normalized_mb_string = 'MB:'
+    for domain in domains:
+        try:
+            mb_value = int(domains[domain])
+        except ValueError:
+            raise InvalidAllocations("{} is not integer format".format(domains[domain]))
+
+        normalized_mb_value = _normalize_mb_value(mb_value, mb_min_bandwidth, mb_bandwidth_gran)
+        normalized_mb_string += '{}={};'.format(domain, normalized_mb_value)
+
+    normalized_mb_string = normalized_mb_string[:-1]
+
+    return normalized_mb_string
 
 
-def check_mb_value(mb_value: str, mb_min_bandwidth):
-    try:
-        mb_value = int(mb_value)
-    except ValueError:
-        raise InvalidAllocations("{} is not integer format".format(mb_value))
-
+def _normalize_mb_value(mb_value: int, mb_min_bandwidth: int, mb_bandwidth_gran: int) -> int:
+    """Ceil mb value to match granulation."""
     if mb_value < mb_min_bandwidth:
         raise InvalidAllocations(
                 "mb allocation smaller than minimum value {}"
                 .format(str(mb_min_bandwidth)))
+
+    if mb_bandwidth_gran > 0:
+        return math.ceil(mb_value/mb_bandwidth_gran) * mb_bandwidth_gran
+    else:
+        return mb_value
 
 
 def _count_enabled_bits(hexstr: str) -> int:

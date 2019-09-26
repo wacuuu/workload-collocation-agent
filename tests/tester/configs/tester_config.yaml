@@ -81,7 +81,38 @@ tests:
         labels:
           task: wcatask2
         value: 10
-
+      - !MetricCheck
+        name: cycles
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: instructions
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: cache_misses
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: cache_references
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: cycles
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: instructions
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: cache_misses
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: cache_references
+        labels:
+          task_id: wcatask2
   - test_case_name2:
     tasks:
       - /wcatask2
@@ -107,3 +138,35 @@ tests:
         subvalue: '0'
       - !MetricCheck
         name: anomaly_count
+      - !MetricCheck
+        name: cycles
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: instructions
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: cache_misses
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: cache_references
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: cycles
+        labels:
+          task_id: wcatask4
+      - !MetricCheck
+        name: instructions
+        labels:
+          task_id: wcatask4
+      - !MetricCheck
+        name: cache_misses
+        labels:
+          task_id: wcatask4
+      - !MetricCheck
+        name: cache_references
+        labels:
+          task_id: wcatask4

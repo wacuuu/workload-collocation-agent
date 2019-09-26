@@ -42,15 +42,11 @@ bandit_pex:
 
 unit:
 	@echo Running unit tests.
-	env PIPENV_QUIET=true pipenv install flask
 	pipenv run env PYTHONPATH=.:workloads/wrapper pytest --cov-report term-missing --cov=wca tests --ignore=tests/e2e/test_wca_metrics.py
-	env PIPENV_QUIET=true pipenv uninstall flask
 
 junit:
 	@echo Running unit tests.	
-	env PIPENV_QUIET=true pipenv install flask
 	pipenv run env PYTHONPATH=.:workloads/wrapper pytest --cov-report term-missing --cov=wca tests --junitxml=unit_results.xml -vvv -s --ignore=tests/e2e/test_wca_metrics.py
-	env PIPENV_QUIET=true pipenv uninstall flask
 
 wca_package_in_docker: WCA_IMAGE := wca
 wca_package_in_docker: WCA_TAG := $(shell git rev-parse HEAD)
@@ -122,9 +118,6 @@ wrapper_package:
 	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/specjbb_wrapper.pex -m wrapper.parser_specjbb
 	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/ycsb_wrapper.pex -m wrapper.parser_ycsb
 	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/rpc_perf_wrapper.pex -m wrapper.parser_rpc_perf
-	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/tensorflow_benchmark_training_wrapper.pex -m wrapper.parser_tensorflow_benchmark_training
-	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/tensorflow_benchmark_prediction_wrapper.pex -m wrapper.parser_tensorflow_benchmark_prediction
-	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/mutilate_wrapper.pex -m wrapper.parser_mutilate
 	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/cassandra_stress_wrapper.pex -m wrapper.parser_cassandra_stress
 	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/stress_ng_wrapper.pex -m wrapper.parser_stress_ng
 	pipenv run $(ENV_UNSAFE) pex . -D workloads/wrapper $(PEX_OPTIONS) -o dist/memtier_benchmark_wrapper.pex -m wrapper.parser_memtier

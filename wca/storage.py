@@ -33,6 +33,8 @@ from dataclasses import dataclass, field
 from wca import logger
 from wca.config import Numeric, Path, Str, IpPort, ValidationError
 from wca.metrics import Metric, MetricType
+from wca.security import SSL, SECURE_CIPHERS
+
 
 log = logging.getLogger(__name__)
 try:
@@ -293,34 +295,83 @@ class KafkaConsumerInitializationException(Exception):
     pass
 
 
+class SSLConfigError(Exception):
+    pass
+
+
 @dataclass
 class KafkaStorage(Storage):
     """Storage for saving metrics in Kafka.
 
     Args:
-        brokers_ips:  list of addresses with ports of all kafka brokers (kafka nodes)
         topic: name of a kafka topic where message should be saved
+        brokers_ips:  list of addresses with ports of all kafka brokers (kafka nodes)
         max_timeout_in_seconds: if a message was not delivered in maximum_timeout seconds
             self.store will throw FailedDeliveryException
-        producer_config: additionall key value pairs that will be passed to kafka driver
+        extra_config: additionall key value pairs that will be passed to kafka driver
             https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
             e.g. {'debug':'broker,topic,msg'} to enable logging for kafka producer threads
+        ssl: secure socket layer object
     """
     topic: Str
     brokers_ips: List[IpPort] = field(default=("127.0.0.1:9092",))
     max_timeout_in_seconds: Numeric(0, 5) = 0.5  # defaults half of a second
     extra_config: Dict[Str, Str] = None
+    ssl: Optional[SSL] = None
 
     def __post_init__(self) -> None:
         check_kafka_dependency()
         try:
+            self._get_ssl_config()
             self.producer = create_kafka_consumer(self.brokers_ips, self.extra_config)
         except Exception as e:
             log.exception('Exception during kafka consumer initialization:')
             raise KafkaConsumerInitializationException(str(e))
+
         self.error_from_callback = None
         """used to pass error from within callback_on_delivery
           (called from different thread) to KafkaStorage instance"""
+
+    def _get_ssl_config(self) -> None:
+        """https://github.com/edenhill/librdkafka/wiki/Using-SSL-with-librdkafka"""
+
+        if self.ssl is None:
+            return
+
+        if self.extra_config is None:
+            self.extra_config = dict()
+
+        self.extra_config['security.protocol'] = 'ssl'
+
+        if isinstance(self.ssl.server_verify, str):
+            if 'ssl.ca.location' in self.extra_config:
+                log.warning('KafkaStorage `ssl.ca.location` in config replaced with SSL object!')
+            self.extra_config['ssl.ca.location'] = self.ssl.server_verify
+        elif self.ssl.server_verify is True:
+            raise SSLConfigError("It's necessary to provide CA cert path if you want to check it!")
+
+        client_certs = self.ssl.get_client_certs()
+        if isinstance(client_certs, tuple):
+            if 'ssl.certificate.location' in self.extra_config:
+                log.warning('KafkaStorage `ssl.certificate.location` '
+                            'in config replaced with SSL object!')
+            self.extra_config['ssl.certificate.location'] = client_certs[0]
+
+            if 'ssl.key.location' in self.extra_config:
+                log.warning('KafkaStorage `ssl.key.location` '
+                            'in config replaced with SSL object!')
+            self.extra_config['ssl.key.location'] = client_certs[1]
+        else:
+            raise SSLConfigError("It's necessary to provide both client cert and key paths!")
+
+        if 'ssl.cipher.suites' in self.extra_config:
+            log.warning('KafkaStorage SSL uses extra config cipher suites!')
+        else:
+            self.extra_config['ssl.cipher.suites'] = SECURE_CIPHERS
+
+        if 'ssl.enabled.protocols' in self.extra_config:
+            log.warn('KafkaStorage SSL `ssl.enabled.protocols` not supported!')
+            self.extra_config.pop('ssl.enabled.protocols')
 
     def callback_on_delivery(self, err, msg) -> None:
         """Called once for each message produced to indicate delivery result.

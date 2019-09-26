@@ -115,7 +115,7 @@ job_name                 yes                      Used as Aurora job_name (last 
 job_id                   yes                      Name of an application being a          - cassandra
                                                   component of the workload. This         - ycsb
                                                   parameter is used in                    - memcached
-                                                  `run_workloads.yaml`_                   - mutilate
+                                                  `run_workloads.yaml`_                   
                                                                                           - rpc-perf
 job_uniq_id              yes                      A workload instance unique identifier   - 11211 (memcache port)
                                                   (unique among instances running on      - 6789 (redis port)

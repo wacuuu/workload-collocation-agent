@@ -16,9 +16,11 @@
 from unittest.mock import patch
 
 import pytest
+import requests
 
 from wca.config import ValidationError
 from wca.mesos import MesosNode, MesosTask
+from wca.nodes import TaskSynchronizationException
 from tests.testing import create_json_fixture_mock, create_open_mock
 
 
@@ -38,13 +40,12 @@ def test_get_tasks(find_cgroup_mock, post_mock):
         container_id='ceab3bec-9282-43aa-b05f-095736cc169e',
         executor_id='thermos-root-staging14-cassandra--9043-0-9ee9fbf1-b51b-4bb3-9748-6a4327fd7e0e',
         executor_pid=32620,
-        labels={'org.apache.aurora.tier': 'preemptible',
-                'org.apache.aurora.metadata.env_uniq_id': '14',
-                'org.apache.aurora.metadata.name': 'cassandra--9043',
-                'org.apache.aurora.metadata.workload_uniq_id': '9043',
-                'org.apache.aurora.metadata.application': 'cassandra',
-                'org.apache.aurora.metadata.load_generator': 'ycsb',
-                'task_name': 'root/staging14/cassandra--9043'},
+        labels={'aurora_tier': 'preemptible',
+                'env_uniq_id': '14',
+                'name': 'cassandra--9043',
+                'workload_uniq_id': '9043',
+                'application': 'cassandra',
+                'load_generator': 'ycsb'},
         name='root/staging14/cassandra--9043',
         task_id='root-staging14-cassandra--9043-0-9ee9fbf1-b51b-4bb3-9748-6a4327fd7e0e',
         resources={'mem': 2048.0, 'cpus': 8.0, 'disk': 10240.0}
@@ -81,3 +82,10 @@ def test_invalid_data_in_response(find_cgroup_mock, json_mock):
         node = MesosNode()
         with pytest.raises(ValidationError):
             node.get_tasks()
+
+
+@patch('requests.post', side_effect=requests.exceptions.ConnectionError())
+def test_get_tasks_synchronization_error(request):
+    node = MesosNode()
+    with pytest.raises(TaskSynchronizationException):
+        node.get_tasks()

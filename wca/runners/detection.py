@@ -76,6 +76,7 @@ class DetectionRunner(MeasurementRunner):
             (defaults to instructions, cycles, cache-misses, memstalls)
         enable_derived_metrics: enable derived metrics ips, ipc and cache_hit_ratio
             (based on enabled_event names), default to False
+        task_label_generators: component to generate additional labels for tasks
     """
 
     def __init__(
@@ -89,21 +90,18 @@ class DetectionRunner(MeasurementRunner):
             extra_labels: Dict[Str, Str] = None,
             event_names: Optional[List[str]] = None,
             enable_derived_metrics: bool = False,
-            tasks_label_generator: Dict[str, TaskLabelGenerator] = None,
+            task_label_generators: Dict[str, TaskLabelGenerator] = None,
             wss_reset_interval: int = 0,
             task_derived_metrics_generators_factory: BaseGeneratorFactory = None,
             platform_derived_metrics_generators_factory: BaseGeneratorFactory = None,
     ):
-        super().__init__(
-            node, metrics_storage,
-            action_delay, rdt_enabled,
-            extra_labels, event_names,
-            enable_derived_metrics,
-            tasks_label_generator,
-            enable_derived_metrics,
-            wss_reset_interval=wss_reset_interval,
-            task_derived_metrics_generators_factory=task_derived_metrics_generators_factory,
-            platform_derived_metrics_generators_factory=platform_derived_metrics_generators_factory
+        super().__init__(node, metrics_storage,
+                         action_delay, rdt_enabled,
+                         extra_labels, event_names,
+                         enable_derived_metrics, task_label_generators,
+                         wss_reset_interval=wss_reset_interval,
+                         task_derived_metrics_generators_factory=task_derived_metrics_generators_factory,
+                         platform_derived_metrics_generators_factory=platform_derived_metrics_generators_factory
         )
         self._detector = detector
 

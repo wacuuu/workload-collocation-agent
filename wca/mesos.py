@@ -22,8 +22,8 @@ from dataclasses import dataclass
 
 from wca.config import assure_type, Numeric, Url
 from wca.metrics import Measurements, Metric
-from wca.nodes import Node, Task, TaskId, TaskSynchornizationException
-from wca.security import SSL
+from wca.nodes import Node, Task, TaskId, TaskSynchronizationException
+from wca.security import SSL, HTTPSAdapter
 
 MESOS_TASK_STATE_RUNNING = 'TASK_RUNNING'
 CGROUP_DEFAULT_SUBSYSTEM = 'cpu'
@@ -106,7 +106,9 @@ class MesosNode(Node):
 
         try:
             if self.ssl:
-                r = requests.post(
+                s = requests.Session()
+                s.mount(self.mesos_agent_endpoint, HTTPSAdapter())
+                r = s.post(
                         full_url,
                         json=dict(type=self.METHOD),
                         timeout=self.timeout,
@@ -118,7 +120,7 @@ class MesosNode(Node):
                         json=dict(type=self.METHOD),
                         timeout=self.timeout)
         except requests.exceptions.ConnectionError as e:
-            raise TaskSynchornizationException('%s' % e) from e
+            raise TaskSynchronizationException('%s' % e) from e
 
         r.raise_for_status()
         state = r.json()
@@ -154,11 +156,8 @@ class MesosNode(Node):
                             'Ignoring this task. Reason: %s', task_name, e)
                 continue
 
-            task_name = launched_task['name']
-
-            labels = {label['key']: label['value'] for label in launched_task['labels']['labels']}
-            # Extend labels with 'task_name'.
-            labels['task_name'] = task_name
+            labels = {sanitize_label(label['key']): label['value']
+                      for label in launched_task['labels']['labels']}
 
             # Extract scalar resources.
             resources = dict()
@@ -194,3 +193,21 @@ def create_metrics(task_measurements: Measurements) -> List[Metric]:
         metric = Metric.create_metric_with_metadata(name=metric_name, value=metric_value)
         metrics.append(metric)
     return metrics
+
+
+MESOS_LABELS_PREFIXES_TO_DROP = ('org.apache.', 'aurora.metadata.')
+
+
+def sanitize_label(label_key):
+    """Removes unwanted prefixes from Aurora & Mesos e.g. 'org.apache.aurora'
+    and replaces invalid characters like "." with underscore.
+    """
+    # Drop unwanted prefixes
+    for unwanted_prefix in MESOS_LABELS_PREFIXES_TO_DROP:
+        if label_key.startswith(unwanted_prefix):
+            label_key = label_key.replace(unwanted_prefix, '')
+
+    # Prometheus labels cannot contain ".".
+    label_key = label_key.replace('.', '_')
+
+    return label_key

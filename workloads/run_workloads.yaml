@@ -287,46 +287,6 @@
       tags: twemcache_rpc_perf
 
 
-    - name: Create twemcache/mutilate workload
-      vars:
-        workload_name: twemcache_mutilate
-        job_uniq_id: "{{communication_port}}"
-        application: twemcache
-        load_generator: mutilate
-      environment: "{{workload_version[job_id].env | default({}) }}"
-      block:
-      - name: Create twemcache for mutilate
-        vars:
-          job_id: twemcache
-          own_ip: "{{application_host_ip}}"
-        block:
-        - name: Mesos | Create twemcache
-          shell: "{{create_job_command}}"
-          loop: "{{instances_version_iterator}}"
-          when: orchestrator == "Mesos"
-        - name: Kubernetes | Create twemcache
-          shell: "{{create_job_command_k8s}}"
-          loop: "{{instances_version_iterator}}"
-          when: orchestrator == "Kubernetes"
-        tags: twemcache_mutilate--twemcache
-      - name: Create mutilate for twemcache
-        vars:
-          job_id: mutilate
-          own_ip: "{{load_generator_host_ip}}"
-        block:
-        - name: Mesos | Create mutilate
-          shell: "{{create_job_command}}"
-          loop: "{{instances_version_iterator}}"
-          when: orchestrator == "Mesos"
-        - name: Kubernetes | Create mutilate
-          shell: "{{create_job_command_k8s}}"
-          loop: "{{instances_version_iterator}}"
-          when: orchestrator == "Kubernetes"
-        tags: twemcache_mutilate--mutilate
-      delegate_to: localhost
-      tags: twemcache_mutilate
-
-
     - name: Create specjbb workload
       vars:
         workload_name: specjbb
@@ -386,60 +346,6 @@
         tags: specjbb--controller
       delegate_to: localhost
       tags: specjbb
-
-
-    - name: Create tensorflow-benchmark/train workload
-      vars:
-        workload_name: tensorflow_benchmark_train
-        job_uniq_id: "{{item.workload_instance_index}}"
-        application: tensorflow
-        aurora_file: tensorflow_benchmark/tensorflow-benchmark-training.aurora
-        load_generator: benchmark_train
-        resources: "{{workload_version.resources | default(default_resources)}}"
-        job_id: tensorflow_benchmark_train
-        image_subname: tensorflow_benchmark
-        job_name: "{{job_id}}.{{workload_version_name}}--{{job_uniq_id}}"
-        own_ip: "{{application_host_ip}}"
-        communication_port: 0
-      environment: "{{workload_version.env | default({}) }}"
-      block:
-      - name: Mesos | Create tensorflow-benchmark/train workload
-        shell: "{{create_job_command}}"
-        loop: "{{instances_version_iterator}}"
-        when: orchestrator == "Mesos"
-      - name: Kubernetes | Create tensorflow-benchmark/train workload
-        shell: "python36 tensorflow_benchmark/tensorflow-benchmark-training.py | tee .pod_definition__{{job_id}}.yaml | kubectl create -f -"
-        loop: "{{instances_version_iterator}}"
-        when: orchestrator == "Kubernetes"
-      delegate_to: localhost
-      tags: tensorflow_benchmark_train
-
-
-    - name: Create tensorflow-benchmark/prediction workload
-      vars:
-        workload_name: tensorflow_benchmark_prediction
-        job_uniq_id: "{{item.workload_instance_index}}"
-        application: tensorflow
-        aurora_file: tensorflow_benchmark/tensorflow-benchmark-prediction.aurora
-        load_generator: benchmark_prediction
-        resources: "{{workload_version.resources | default(default_resources)}}"
-        job_id: tensorflow_benchmark_prediction
-        image_subname: tensorflow_benchmark
-        job_name: "{{job_id}}.{{workload_version_name}}--{{job_uniq_id}}"
-        own_ip: "{{application_host_ip}}"
-        communication_port: 0
-      environment: "{{workload_version.env | default({}) }}"
-      block:
-      - name: Mesos | Create tensorflow-benchmark/prediction workload
-        shell: "{{create_job_command}}"
-        loop: "{{instances_version_iterator}}"
-        when: orchestrator == "Mesos"
-      - name: Kubernetes | Create tensorflow-benchmark/prediction workload
-        shell: "python36 tensorflow_benchmark/tensorflow-benchmark-prediction.py | tee .pod_definition__{{job_id}}.yaml | kubectl create -f -"
-        loop: "{{instances_version_iterator}}"
-        when: orchestrator == "Kubernetes"
-      delegate_to: localhost
-      tags: tensorflow_benchmark_prediction
 
 
     - name: Create stress_ng workload

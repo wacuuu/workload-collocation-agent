@@ -17,6 +17,7 @@ import pytest
 from unittest import mock
 
 from wca.metrics import Metric, MetricType
+from wca.security import SECURE_CIPHERS, SSL
 import wca.storage as storage
 
 
@@ -121,6 +122,97 @@ def test_when_brocker_unavailable(mock_fun, mock_producer, sample_metrics):
     with pytest.raises(storage.FailedDeliveryException, match="Maximum timeout"):
         kafka_storage.store(sample_metrics)
     kafka_storage.producer.flush.assert_called_once()
+
+
+@mock.patch('wca.storage.create_kafka_consumer')
+def test_kafkastorage_ssl_replace_ca_location(mock_create_kafka_consumer):
+    kafka = storage.KafkaStorage(
+            'test', extra_config={'ssl.ca.location': 'location'},
+            ssl=SSL('/ca', '/cert', '/key'))
+    assert kafka.extra_config['ssl.ca.location'] == '/ca'
+
+
+@pytest.mark.skip
+@mock.patch('wca.storage.create_kafka_consumer')
+def test_kafkastorage_ssl_log_replace_ca_location(mock_create_kafka_consumer, caplog):
+    storage.KafkaStorage(
+            'test', extra_config={'ssl.ca.location': 'location'},
+            ssl=SSL('/ca', '/cert', '/key'))
+    assert 'KafkaStorage `ssl.ca.location` in config replaced with SSL object!' in caplog.messages
+
+
+@mock.patch('wca.storage.create_kafka_consumer')
+def test_kafkastorage_ssl_exception_no_ca_cert_path(mock_create_kafka_consumer):
+    with pytest.raises(storage.KafkaConsumerInitializationException):
+        storage.KafkaStorage('test', ssl=SSL(True, '/cert', '/key'))
+
+
+@mock.patch('wca.storage.create_kafka_consumer')
+def test_kafkastorage_ssl_replace_client_cert_path(mock_create_kafka_consumer):
+    kafka = storage.KafkaStorage(
+            'test', extra_config={'ssl.certificate.location': 'location'},
+            ssl=SSL('/ca', '/cert', '/key'))
+
+    assert kafka.extra_config['ssl.certificate.location'] == '/cert'
+
+
+@pytest.mark.skip
+@mock.patch('wca.storage.create_kafka_consumer')
+def test_kafkastorage_ssl_log_replace_client_cert_path(mock_create_kafka_consumer, caplog):
+    storage.KafkaStorage(
+            'test', extra_config={'ssl.certificate.location': 'location'},
+            ssl=SSL('/ca', '/cert', '/key'))
+    assert 'KafkaStorage `ssl.certificate.location` '\
+           'in config replaced with SSL object!' in caplog.messages
+
+
+@mock.patch('wca.storage.create_kafka_consumer')
+def test_kafkastorage_ssl_replace_client_key_path(mock_create_kafka_consumer):
+    kafka = storage.KafkaStorage(
+            'test', extra_config={'ssl.key.location': 'location'},
+            ssl=SSL('/ca', '/cert', '/key'))
+
+    assert kafka.extra_config['ssl.key.location'] == '/key'
+
+
+@pytest.mark.skip
+@mock.patch('wca.storage.create_kafka_consumer')
+def test_kafkastorage_ssl_log_replace_client_key_path(mock_create_kafka_consumer, caplog):
+    storage.KafkaStorage(
+            'test', extra_config={'ssl.key.location': 'location'},
+            ssl=SSL('/ca', '/cert', '/key'))
+    assert 'KafkaStorage `ssl.key.location` '\
+           'in config replaced with SSL object!' in caplog.messages
+
+
+@mock.patch('wca.storage.create_kafka_consumer')
+def test_kafkastorage_ssl_exception_no_both_client_key_cert(mock_create_kafka_consumer):
+    with pytest.raises(storage.KafkaConsumerInitializationException):
+        storage.KafkaStorage('test', ssl=SSL('/ca', '/cert'))
+
+
+@mock.patch('wca.storage.create_kafka_consumer')
+def test_kafkastorage_ssl_assign_cipher_suites(mock_create_kafka_consumer):
+    assert storage.KafkaStorage('test', ssl=SSL('/ca', '/cert', '/key'))\
+            .extra_config['ssl.cipher.suites'] == SECURE_CIPHERS
+
+
+@pytest.mark.skip
+@mock.patch('wca.storage.create_kafka_consumer')
+def test_kafkastorage_ssl_log_using_own_cipher_suites(mock_create_kafka_consumer, caplog):
+    storage.KafkaStorage(
+            'test', extra_config={'ssl.cipher.suites': 'ciphers'}, ssl=SSL('/ca', '/cert', '/key'))
+    assert 'KafkaStorage SSL uses extra config cipher suites!' in caplog.messages
+
+
+@pytest.mark.skip
+def test_kafkastorage_ssl_assign_protocols():
+    assert False
+
+
+@pytest.mark.skip
+def test_kafkastorage_ssl_log_using_own_protocols(caplog):
+    assert False
 
 
 def test_is_convertable_to_prometheus_exposition_format(
