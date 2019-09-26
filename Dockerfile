@@ -32,7 +32,16 @@ FROM centos:7 AS devel
 RUN yum -y update && yum -y install python36 python-pip which make git
 RUN pip3.6 install pipenv
 
+# 2LM binries for topology discovery (WIP) -- TO BE REMOVED FROM master/1.0.x
+RUN yum install -y wget lshw
+RUN (cd /etc/yum.repos.d/; \
+        wget https://copr.fedorainfracloud.org/coprs/jhli/ipmctl/repo/epel-7/jhli-ipmctl-epel-7.repo; \
+        wget https://copr.fedorainfracloud.org/coprs/jhli/safeclib/repo/epel-7/jhli-safeclib-epel-7.repo)
+RUN yum install -y ndctl ndctl-libs ndctl-devel libsafec ipmctl
+# --- TODO: consider moving that to init container just responsilbe for preparing this data
+
 WORKDIR /wca
+
 
 COPY Pipfile Pipfile
 COPY Pipfile.lock Pipfile.lock
@@ -40,6 +49,8 @@ ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 RUN pipenv install --dev --deploy
 ENV PYTHONPATH=/wca
+
+
 
 # note: Cache will be propably invalidated here.
 COPY configs ./configs
