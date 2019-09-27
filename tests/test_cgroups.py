@@ -12,43 +12,52 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch, mock_open, MagicMock, call
+from unittest.mock import patch, mock_open, MagicMock, call, Mock
 
 import pytest
 
 from wca.allocators import AllocationConfiguration
 from wca.cgroups import Cgroup, CgroupType, CgroupResource
 from wca.metrics import MetricName, MissingMeasurementException
-from tests.testing import create_open_mock
+from wca.platforms import Platform
+from tests.testing import create_open_mock, platform_mock
 
 
 @patch('wca.cgroups.log.warning')
 @patch('builtins.open', side_effect=FileNotFoundError())
 def test_get_measurements_not_found_cgroup(mock_file, mock_log_warning):
-    cgroup = Cgroup('/some/foo1', platform_cpus=1)
+    cgroup = Cgroup('/some/foo1')
     with pytest.raises(MissingMeasurementException):
         cgroup.get_measurements()
 
 
-@patch('builtins.open', create_open_mock(
-    {'/sys/fs/cgroup/cpu/some/foo1/cpuacct.usage': '100',
-     '/sys/fs/cgroup/memory/some/foo1/memory.usage_in_bytes': '100'}))
+@patch('builtins.open', create_open_mock({
+    '/sys/fs/cgroup/cpu/some/foo1/cpuacct.usage': '100',
+    '/sys/fs/cgroup/memory/some/foo1/memory.usage_in_bytes': '101',
+    '/sys/fs/cgroup/memory/some/foo1/memory.max_usage_in_bytes': '999',
+    '/sys/fs/cgroup/memory/some/foo1/memory.limit_in_bytes': '2000',
+    '/sys/fs/cgroup/memory/some/foo1/memory.soft_limit_in_bytes': '1500',
+}))
 def test_get_measurements():
-    cgroup = Cgroup('/some/foo1', platform_cpus=1)
+    cgroup = Cgroup('/some/foo1')
     measurements = cgroup.get_measurements()
     assert measurements == {MetricName.CPU_USAGE_PER_TASK: 100,
-                            MetricName.MEM_USAGE_PER_TASK: 100}
+                            MetricName.MEM_USAGE_PER_TASK: 101,
+                            MetricName.MEM_MAX_USAGE_PER_TASK: 999,
+                            MetricName.MEM_LIMIT_PER_TASK: 2000,
+                            MetricName.MEM_SOFT_LIMIT_PER_TASK: 1500,
+                            }
 
 
 @patch('builtins.open', mock_open(read_data='100'))
 def test_cgroup_read():
-    cgroup = Cgroup('/some/foo1', platform_cpus=1)
+    cgroup = Cgroup('/some/foo1', platform=platform_mock)
     value = cgroup._read('some_ctr_file', CgroupType.CPU)
     assert value == 100
 
 
 def test_cgroup_write():
-    cgroup = Cgroup('/some/foo1', platform_cpus=1)
+    cgroup = Cgroup('/some/foo1', platform=platform_mock)
     ctrl_file_mock = MagicMock()
     full_path = '/sys/fs/cgroup/cpu/some/foo1/some_ctrl_file'
     open_mock = create_open_mock({full_path: ctrl_file_mock})
@@ -60,7 +69,7 @@ def test_cgroup_write():
 
 @patch('wca.cgroups.Cgroup._read', return_value=1000)
 def test_get_normalized_shares(_read_mock):
-    cgroup = Cgroup('/some/foo1', platform_cpus=1,
+    cgroup = Cgroup('/some/foo1', platform=platform_mock,
                     allocation_configuration=AllocationConfiguration())
     assert cgroup._get_normalized_shares() == pytest.approx(1, 0.01)
 
@@ -70,7 +79,7 @@ def test_get_normalized_shares(_read_mock):
     '/sys/fs/cgroup/cpu/some/foo1/cpu.cfs_quota_us': '-1',
 }))
 def test_get_normalized_quota():
-    cgroup = Cgroup('/some/foo1', platform_cpus=1,
+    cgroup = Cgroup('/some/foo1', platform=platform_mock,
                     allocation_configuration=AllocationConfiguration())
     assert cgroup._get_normalized_quota() == 1.0
 
@@ -80,8 +89,8 @@ def test_get_normalized_quota():
     '/sys/fs/cgroup/cpu/foo2/tasks': '',
 }))
 def test_cgroup_get_pids():
-    assert Cgroup('/some/foo1', platform_cpus=1).get_pids() == ['101', '102']
-    assert Cgroup('/foo2', platform_cpus=1).get_pids() == []
+    assert Cgroup('/some/foo1', platform=platform_mock).get_pids() == ['101', '102']
+    assert Cgroup('/foo2', platform=platform_mock).get_pids() == []
 
 
 @pytest.mark.parametrize(
@@ -94,7 +103,7 @@ def test_cgroup_get_pids():
 )
 def test_set_normalized_shares(normalized_shares, allocation_configuration, expected_shares_write):
     with patch('wca.cgroups.Cgroup._write') as write_mock:
-        cgroup = Cgroup('/some/foo1', platform_cpus=1,
+        cgroup = Cgroup('/some/foo1', platform=platform_mock,
                         allocation_configuration=allocation_configuration)
         cgroup.set_shares(normalized_shares)
         write_mock.assert_called_with(
@@ -120,9 +129,13 @@ def test_set_normalized_shares(normalized_shares, allocation_configuration, expe
 )
 def test_set_normalized_quota(normalized_quota, cpu_quota_period, platforms_cpu,
                               initial_period_value, expected_period_write, expected_quota_write):
+    platform_mock = Mock(
+        spec=Platform,
+        cpus=platforms_cpu,
+    )
     with patch('wca.cgroups.Cgroup._read', return_value=initial_period_value):
         with patch('wca.cgroups.Cgroup._write') as write_mock:
-            cgroup = Cgroup('/some/foo1', platform_cpus=platforms_cpu,
+            cgroup = Cgroup('/some/foo1', platform=platform_mock,
                             allocation_configuration=AllocationConfiguration(
                                 cpu_quota_period=cpu_quota_period))
             cgroup.set_quota(normalized_quota)
@@ -133,19 +146,27 @@ def test_set_normalized_quota(normalized_quota, cpu_quota_period, platforms_cpu,
                         [call(CgroupResource.CPU_PERIOD, expected_period_write, CgroupType.CPU)])
 
 
+# two socket with ht enabled but only one core per socket
+_test_topology = {0: {0: [0, 1]}, 1: {0: [2, 3]}}
+
+
 @pytest.mark.parametrize(
-    'normalized_cpus, normalized_mems, platforms_cpu, platform_sockets, '
+    'cpus, mems, platform_topology,'
     'expected_cpus_write, expected_mems_write', [
-        ('0,1,2,3,4', '0', 4, 1, '0,1,2,3,4', '0')
+        ([0, 1, 2, 3, 4], [0], {}, '0,1,2,3,4', '0'),
+        ([0, 1], None, _test_topology, '0,1', '0'),
+        ([1, 3], None, _test_topology, '1,3', '0,1'),
     ]
 )
-def test_set_normalized_cpuset(
-        normalized_cpus, normalized_mems, platforms_cpu,
-        platform_sockets, expected_cpus_write, expected_mems_write):
+def test_set_cpuset(
+        cpus, mems, platform_topology, expected_cpus_write, expected_mems_write):
+    platform_mock = Mock(
+        spec=Platform,
+        topology=platform_topology,
+    )
     with patch('wca.cgroups.Cgroup._write') as write_mock:
-        cgroup = Cgroup('/some/foo1', platform_cpus=platforms_cpu,
-                        platform_sockets=platform_sockets)
-        cgroup.set_cpuset(normalized_cpus, normalized_mems)
+        cgroup = Cgroup('/some/foo1', platform=platform_mock)
+        cgroup.set_cpuset(cpus, mems)
         write_mock.assert_has_calls(
                 [call(CgroupResource.CPUSET_CPUS, expected_cpus_write, CgroupType.CPUSET)])
         write_mock.assert_has_calls(

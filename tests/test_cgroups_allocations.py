@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch, call
+from unittest.mock import patch, call, Mock
 
 from wca.allocators import AllocationConfiguration
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
                                     CPUSetAllocationValue
 from wca.containers import Container
-from wca.platforms import RDTInformation
+from wca.platforms import RDTInformation, Platform
 from tests.testing import allocation_metric
 
 
@@ -26,12 +26,14 @@ from tests.testing import allocation_metric
 @patch('wca.cgroups.Cgroup')
 def test_cgroup_allocations(Cgroup_mock, PerfCounters_mock):
     rdt_information = RDTInformation(True, True, True, True, '0', '0', 0, 0, 0)
+
+    platform_mock = Mock(spec=Platform, cpus=10, sockets=1)
+
     foo_container = Container(
-            '/somepath', platform_cpus=10,
-            platform_sockets=1, rdt_information=rdt_information)
+            '/somepath', platform=platform_mock,
+            rdt_information=rdt_information)
     foo_container._cgroup.allocation_configuration = AllocationConfiguration()
-    foo_container._cgroup.platform_cpus = 10
-    foo_container._cgroup.platform_sockets = 1
+    foo_container._cgroup.platform = platform_mock
 
     quota_allocation_value = QuotaAllocationValue(0.2, foo_container, dict(foo='bar'))
     quota_allocation_value.perform_allocations()
@@ -56,5 +58,5 @@ def test_cgroup_allocations(Cgroup_mock, PerfCounters_mock):
     Cgroup_mock.assert_has_calls([
         call().set_quota(0.2),
         call().set_shares(0.5),
-        call().set_cpuset('0,1,2,4,6,7,8', '0')
+        call().set_cpuset([0, 1, 2, 4, 6, 7, 8])
     ], True)

@@ -154,8 +154,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
             return ContainerSet(
                 cgroup_path=cgroup_path,
                 cgroup_paths=subcgroups_paths,
-                platform_cpus=1,
-                platform_sockets=1,
+                platform=platform_mock,
                 allocation_configuration=AllocationConfiguration() if with_config else None,
                 resgroup=ResGroup(name=resgroup_name) if rdt_enabled else None,
                 rdt_information=RDTInformation(
@@ -165,8 +164,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
         else:
             return Container(
                 cgroup_path=cgroup_path,
-                platform_cpus=1,
-                platform_sockets=1,
+                platform=platform_mock,
                 rdt_information=RDTInformation(True, True,
                                                True, True, '0', '0',
                                                0, 0, 0),
@@ -214,7 +212,9 @@ class DummyRunner(Runner):
 
 platform_mock = Mock(
     spec=platforms.Platform,
+    cpus=4,
     sockets=1,
+    topology={},
     rdt_information=RDTInformation(
         cbm_mask='fffff',
         min_cbm_bits='1',

@@ -101,6 +101,18 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         MetricMetadata(
             MetricType.GAUGE,
             '[bytes] Memory usage_in_bytes per tasks returned from cgroup memory subsystem.'),
+    MetricName.MEM_MAX_USAGE_PER_TASK:
+        MetricMetadata(
+            MetricType.GAUGE,
+            '[bytes] Memory max_usage_in_bytes per tasks returned from cgroup memory subsystem.'),
+    MetricName.MEM_LIMIT_PER_TASK:
+        MetricMetadata(
+            MetricType.GAUGE,
+            '[bytes] Memory limit_in_bytes per tasks returned from cgroup memory subsystem.'),
+    MetricName.MEM_SOFT_LIMIT_PER_TASK:
+        MetricMetadata(
+            MetricType.GAUGE,
+            '[bytes] Memory soft_limit_in_bytes per tasks returned from cgroup memory subsystem.'),
     MetricName.LLC_OCCUPANCY:
         MetricMetadata(
             MetricType.GAUGE,

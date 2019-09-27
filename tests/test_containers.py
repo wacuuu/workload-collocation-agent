@@ -22,7 +22,7 @@ from wca.cgroups import Cgroup
 from wca.platforms import RDTInformation
 from wca.perf import PerfCounters
 from wca.resctrl import ResGroup
-from tests.testing import task, container
+from tests.testing import task, container, platform_mock
 from wca.allocators import AllocationConfiguration
 
 
@@ -153,8 +153,7 @@ def test_sync_containers_state(_, get_pids_mock, sync_mock, perf_counters_mock,
 
     rdt_information = RDTInformation(True, True, True, True, 'fff', '1', 0, 0, 0)
     containers_manager = ContainerManager(rdt_information=rdt_information,
-                                          platform_cpus=1,
-                                          platform_sockets=1,
+                                          platform=platform_mock,
                                           allocation_configuration=AllocationConfiguration(),
                                           event_names=[],
                                           )

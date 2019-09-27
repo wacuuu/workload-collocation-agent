@@ -20,7 +20,7 @@ import pytest
 from wca.metrics import Metric, MetricName
 from wca.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
     collect_topology_information, collect_platform_information, RDTInformation
-from tests.testing import create_open_mock
+from tests.testing import create_open_mock, relative_module_path
 
 
 @pytest.mark.parametrize("raw_meminfo_output,expected", [
@@ -57,44 +57,21 @@ def test_parse_proc_state(raw_proc_state_output, expected):
     assert parse_proc_stat(raw_proc_state_output) == expected
 
 
-@patch('builtins.open', new=create_open_mock({
-    "/sys/devices/system/cpu/cpu0/topology/physical_package_id": "0",
-    "/sys/devices/system/cpu/cpu0/topology/core_id": "0",
-    "/sys/devices/system/cpu/cpu1/topology/physical_package_id": "0",
-    "/sys/devices/system/cpu/cpu1/topology/core_id": "0",
-    "/sys/devices/system/cpu/cpu1/online": "1",
-    "/sys/devices/system/cpu/cpu2/online": "0",
-    "/sys/devices/system/cpu/cpu3/online": "0",
-}))
-@patch('os.listdir', return_value=['cpu0', 'cpuidle', 'uevent', 'nohz_full', 'hotplug',
-                                   'cpu1', 'cpu2', 'possible', 'offline', 'present',
-                                   'power', 'microcode', 'cpu3', 'online',
-                                   'vulnerabilities', 'cpufreq', 'intel_pstate',
-                                   'isolated', 'kernel_max', 'modalias'])
-def test_collect_topology_information_2_cpus_in_1_core_offline_rest_online(*mocks):
-    assert (2, 1, 1) == collect_topology_information()
-
-
-@patch('builtins.open', new=create_open_mock({
-    "/sys/devices/system/cpu/cpu0/topology/physical_package_id": "0",
-    "/sys/devices/system/cpu/cpu0/topology/core_id": "0",
-    "/sys/devices/system/cpu/cpu1/topology/physical_package_id": "0",
-    "/sys/devices/system/cpu/cpu1/topology/core_id": "1",
-    "/sys/devices/system/cpu/cpu1/online": "1",
-    "/sys/devices/system/cpu/cpu2/topology/physical_package_id": "1",
-    "/sys/devices/system/cpu/cpu2/topology/core_id": "0",
-    "/sys/devices/system/cpu/cpu2/online": "1",
-    "/sys/devices/system/cpu/cpu3/topology/physical_package_id": "1",
-    "/sys/devices/system/cpu/cpu3/topology/core_id": "1",
-    "/sys/devices/system/cpu/cpu3/online": "1",
-}))
-@patch('os.listdir', return_value=['cpu0', 'cpuidle', 'uevent', 'nohz_full', 'hotplug',
-                                   'cpu1', 'cpu2', 'possible', 'offline', 'present',
-                                   'power', 'microcode', 'cpu3', 'online',
-                                   'vulnerabilities', 'cpufreq', 'intel_pstate',
-                                   'isolated', 'kernel_max', 'modalias'])
-def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks):
-    assert (4, 4, 2) == collect_topology_information()
+@pytest.mark.parametrize("filename,expected_cpus,expected_cores,expected_sockets", [
+    ('fixtures/procinfo_1socket_4cores_8cpus.txt', 8, 4, 1),
+    ('fixtures/procinfo_2sockets_ht.txt', 72, 36, 2),
+    ('fixtures/procinfo_2sockets_noht.txt', 28, 28, 2),
+])
+def test_collect_topology_information(filename, expected_cpus, expected_cores,
+                                      expected_sockets):
+    with patch('builtins.open',
+               new=create_open_mock(
+                   {"/proc/cpuinfo": open(relative_module_path(__file__, filename)).read()})
+               ):
+        got_cpus, got_cores, got_sockets, got_topology = collect_topology_information()
+        assert got_cpus == expected_cpus
+        assert got_cores == expected_cores
+        assert got_sockets == expected_sockets
 
 
 @patch('builtins.open', new=create_open_mock({
@@ -117,11 +94,11 @@ def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks)
 @patch('socket.gethostname', return_value="test_host")
 @patch('wca.platforms.parse_proc_meminfo', return_value=1337)
 @patch('wca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
-@patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1))
+@patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1, {}))
 @patch('time.time', return_value=1536071557.123456)
 def test_collect_platform_information(*mocks):
     assert collect_platform_information() == (
-        Platform(1, 1, 2, 'intel xeon', {0: 100, 1: 200}, 1337, 1536071557.123456,
+        Platform(1, 1, 2, {}, 'intel xeon', {0: 100, 1: 200}, 1337, 1536071557.123456,
                  RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20)),
         [
             Metric.create_metric_with_metadata(

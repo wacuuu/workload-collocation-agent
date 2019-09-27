@@ -74,7 +74,7 @@ class CPUSetAllocationValue(AllocationValue):
         # First core
         self.min_value = 0
         # Last core
-        self.max_value = self.cgroup.platform_cpus - 1
+        self.max_value = self.cgroup.platform.cpus - 1
 
     def __repr__(self):
         return repr(self.value)
@@ -124,9 +124,4 @@ class CPUSetAllocationValue(AllocationValue):
     def perform_allocations(self):
         self.validate()
         cpus = self.value
-        mems = list(range(0, self.cgroup.platform_sockets))
-        self.cgroup.set_cpuset(cpus, mems)
-
-
-
-
+        self.cgroup.set_cpuset(cpus)

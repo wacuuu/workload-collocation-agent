@@ -14,11 +14,12 @@
 import logging
 import os
 from enum import Enum
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 
 from dataclasses import dataclass
 
 from wca import logger
+from wca import platforms
 from wca.allocations import MissingAllocationException
 from wca.allocators import TaskAllocations, AllocationType, AllocationConfiguration
 from wca.metrics import Measurements, MetricName, MissingMeasurementException
@@ -95,10 +96,10 @@ def _parse_cpuset(value: str) -> List[int]:
     return list(sorted(cores))
 
 
-def _normalize_cpuset(cores: List[int]) -> str:
-    all(isinstance(core, int) for core in cores)
-    if len(cores) > 0:
-        return str(cores[0])+''.join(','+str(core) for core in cores[1:])
+def _encode_cpuset(cpus: List[int]) -> str:
+    all(isinstance(cpu, int) for cpu in cpus)
+    if len(cpus) > 0:
+        return str(cpus[0])+''.join(','+str(cpu) for cpu in cpus[1:])
     else:
         return ''
 
@@ -108,9 +109,8 @@ class Cgroup:
     cgroup_path: str
 
     # Values used for normalization of allocations
-    platform_cpus: int = None  # required for quota normalization (None by default until others PRs)
-    platform_sockets: int = 0  # required for cpuset.mems
     allocation_configuration: Optional[AllocationConfiguration] = None
+    platform: Optional[platforms.Platform] = None
 
     def __post_init__(self):
         assert self.cgroup_path.startswith('/'), 'Provide cgroup_path with leading /'
@@ -148,7 +148,6 @@ class Cgroup:
             except FileNotFoundError as e:
                 raise MissingMeasurementException(
                     'File {} is missing. Metric unavailable.'.format(e.filename))
-
 
         return measurements
 
@@ -213,7 +212,7 @@ class Cgroup:
         if current_quota == QUOTA_NOT_SET:
             return QUOTA_NORMALIZED_MAX
         # Period 0 is invalid argument for cgroup cpu subsystem. so division is safe.
-        return current_quota / current_period / self.platform_cpus
+        return current_quota / current_period / self.platform.cpus
 
     def get_allocations(self) -> TaskAllocations:
         assert self.allocation_configuration is not None, \
@@ -265,7 +264,7 @@ class Cgroup:
         else:
             # synchronize period if necessary
             quota = int(normalized_quota * self.allocation_configuration.cpu_quota_period *
-                        self.platform_cpus)
+                        self.platform.cpus)
             # Minimum quota detected
             if quota < QUOTA_MINIMUM_VALUE:
                 log.warning('Quota is smaller than allowed minimum. '
@@ -275,26 +274,37 @@ class Cgroup:
 
         self._write(CgroupResource.CPU_QUOTA, quota, CgroupType.CPU)
 
-    def set_cpuset(self, cpus: str, mems: str):
+    def set_cpuset(self, cpus: List[int], mems: List[int] = None):
         """Set cpuset.cpus and cpuset.mems."""
-        normalized_cpus = _normalize_cpuset(cpus)
-        normalized_mems = _normalize_cpuset(mems)
+        encoded_cpus = _encode_cpuset(cpus)
 
-        assert normalized_cpus is not None
-        assert normalized_mems is not None
+        # Auto set mems based on cpu -> socket mapping
+        # Warning! - it will not work with SNC - we need proper SNC discovery
+        # based on /proc/schedstat or better /sys/devices/system/node
+        if mems is None:
+            sockets = set()
+            cpu2socket = build_cpu_to_socket_mapping(self.platform.topology)
+            for cpu in cpus:
+                sockets.add(cpu2socket[cpu])
+            mems = list(sockets)
+
+        encoded_mems = _encode_cpuset(mems)
+
+        assert encoded_cpus is not None
+        assert encoded_mems is not None
 
         try:
-            self._write(CgroupResource.CPUSET_CPUS, normalized_cpus, CgroupType.CPUSET)
+            self._write(CgroupResource.CPUSET_CPUS, encoded_cpus, CgroupType.CPUSET)
         except PermissionError:
             log.warning(
                     'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
-                        CgroupResource.CPUSET_CPUS, normalized_cpus, self.cgroup_cpuset_fullpath))
+                        CgroupResource.CPUSET_CPUS, encoded_cpus, self.cgroup_cpuset_fullpath))
         try:
-            self._write(CgroupResource.CPUSET_MEMS, normalized_mems, CgroupType.CPUSET)
+            self._write(CgroupResource.CPUSET_MEMS, encoded_mems, CgroupType.CPUSET)
         except PermissionError:
             log.warning(
                     'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
-                        CgroupResource.CPUSET_MEMS, normalized_mems, self.cgroup_cpuset_fullpath))
+                        CgroupResource.CPUSET_MEMS, encoded_mems, self.cgroup_cpuset_fullpath))
 
     def _get_cpuset(self) -> str:
         """Get current cpuset.cpus."""
@@ -302,8 +312,17 @@ class Cgroup:
         try:
             cpus = _parse_cpuset(self._read_raw(CgroupResource.CPUSET_CPUS,
                                                 CgroupType.CPUSET).strip())
-            return _normalize_cpuset(cpus)
+            return _encode_cpuset(cpus)
         except PermissionError:
             log.warning(
                     'Cannot read {}: "{}"! Permission denied.'.format(
                         CgroupResource.CPUSET_CPUS, self.cgroup_cpuset_fullpath))
+
+
+def build_cpu_to_socket_mapping(topology: Dict[int, Dict[int, List[int]]]) -> Dict[int, int]:
+    mapping = {}
+    for socket, cores in topology.items():
+        for core, cpus in cores.items():
+            for cpu in cpus:
+                mapping[cpu] = socket
+    return mapping

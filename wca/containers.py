@@ -25,7 +25,7 @@ from wca import resctrl
 from wca.allocators import AllocationConfiguration, TaskAllocations
 from wca.metrics import Measurements, merge_measurements, DerivedMetricsGenerator
 from wca.nodes import Task
-from wca.platforms import RDTInformation
+from wca.platforms import RDTInformation, Platform
 from wca.profiling import profiler
 from wca.resctrl import ResGroup
 from wca.logger import TRACE
@@ -101,8 +101,7 @@ class ContainerInterface(ABC):
 
 class ContainerSet(ContainerInterface):
     def __init__(self,
-                 cgroup_path: str, cgroup_paths: List[str], platform_cpus: int,
-                 platform_sockets: int,
+                 cgroup_path: str, cgroup_paths: List[str], platform: Platform,
                  rdt_information: Optional[RDTInformation],
                  allocation_configuration: Optional[AllocationConfiguration] = None,
                  resgroup: ResGroup = None,
@@ -119,8 +118,7 @@ class ContainerSet(ContainerInterface):
         # Create Cgroup object representing itself.
         self._cgroup = cgroups.Cgroup(
             cgroup_path=self._cgroup_path,
-            platform_cpus=platform_cpus,
-            platform_sockets=platform_sockets,
+            platform=platform,
             allocation_configuration=allocation_configuration)
 
         # Create Cgroup objects for children.
@@ -129,8 +127,7 @@ class ContainerSet(ContainerInterface):
             self._subcontainers[cgroup_path] = Container(
                 cgroup_path=cgroup_path,
                 rdt_information=None,
-                platform_cpus=platform_cpus,
-                platform_sockets=platform_sockets,
+                platform=platform,
                 allocation_configuration=allocation_configuration,
                 event_names=event_names,
                 enable_derived_metrics=enable_derived_metrics,
@@ -208,8 +205,8 @@ class ContainerSet(ContainerInterface):
 
 
 class Container(ContainerInterface):
-    def __init__(self, cgroup_path: str, platform_cpus: int,
-                 platform_sockets: int,
+    def __init__(self, cgroup_path: str,
+                 platform: Platform,
                  rdt_information: Optional[RDTInformation],
                  resgroup: ResGroup = None,
                  allocation_configuration:
@@ -226,8 +223,7 @@ class Container(ContainerInterface):
 
         self._cgroup = cgroups.Cgroup(
             cgroup_path=self._cgroup_path,
-            platform_cpus=platform_cpus,
-            platform_sockets=platform_sockets,
+            platform=platform,
             allocation_configuration=allocation_configuration)
 
         self._derived_metrics_generator = None
@@ -316,14 +312,12 @@ class ContainerManager:
     """Responsible for synchronizing state between found orchestration software tasks,
     their containers and resctrl system. """
 
-    def __init__(self, rdt_information: Optional[RDTInformation], platform_cpus: int,
-                 platform_sockets: int,
+    def __init__(self, rdt_information: Optional[RDTInformation], platform: Platform,
                  allocation_configuration: Optional[AllocationConfiguration],
                  event_names: List[str], enable_derived_metrics: bool = False):
         self.containers: Dict[Task, ContainerInterface] = {}
         self._rdt_information = rdt_information
-        self._platform_cpus = platform_cpus
-        self._platform_sockets = platform_sockets
+        self._platform = platform
         self._allocation_configuration = allocation_configuration
         self._event_names = event_names
         self._enable_derived_metrics = enable_derived_metrics
@@ -337,8 +331,7 @@ class ContainerManager:
                 cgroup_path=task.cgroup_path,
                 cgroup_paths=task.subcgroups_paths,
                 rdt_information=self._rdt_information,
-                platform_cpus=self._platform_cpus,
-                platform_sockets=self._platform_sockets,
+                platform=self._platform,
                 allocation_configuration=self._allocation_configuration,
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
@@ -347,8 +340,7 @@ class ContainerManager:
             container = Container(
                 cgroup_path=task.cgroup_path,
                 rdt_information=self._rdt_information,
-                platform_cpus=self._platform_cpus,
-                platform_sockets=self._platform_sockets,
+                platform=self._platform,
                 allocation_configuration=self._allocation_configuration,
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
