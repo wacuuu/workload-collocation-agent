@@ -39,8 +39,7 @@ class NUMAAllocator(Allocator):
 
         # Example stupid policy
         cpu1 = random.randint(0, platform.cpus-1)
-        cpu2 = random.randint(0, platform.cpus-1)
-        cpu1, cpu2 = sorted([cpu1, cpu2])
+        cpu2 = random.randint(cpu1, platform.cpus-1)
         log.debug('random cpus: %s-%s', cpu1, cpu2)
 
         allocations = {
