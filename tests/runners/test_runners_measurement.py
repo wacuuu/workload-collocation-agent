@@ -25,7 +25,7 @@ from wca.resctrl import ResGroup
 from wca.runners.measurement import MeasurementRunner, _build_tasks_metrics, _prepare_tasks_data, \
     TaskLabelRegexGenerator, TaskLabelGenerator, append_additional_labels_to_tasks
 from tests.testing import assert_metric, redis_task_with_default_labels, prepare_runner_patches, \
-    TASK_CPU_USAGE, WCA_MEMORY_USAGE, metric, DEFAULT_METRIC_VALUE, task
+    TASK_CPU_USAGE, WCA_MEMORY_USAGE, metric, DEFAULT_METRIC_VALUE, task, platform_mock
 
 
 @prepare_runner_patches
@@ -134,7 +134,7 @@ def test_prepare_task_data_resgroup_not_found(*mocks):
     rdt_information = RDTInformation(True, True, True, True, '0', '0', 0, 0, 0)
     containers = {
         task('/t1', labels={'label_key': 'label_value'}, resources={'cpu': 3}):
-            Container('/t1', 1, 1, rdt_information, resgroup=ResGroup('/t1'))
+            Container('/t1', platform_mock, rdt_information, resgroup=ResGroup('/t1'))
     }
     tasks_measurements, tasks_resources, tasks_labels = \
         _prepare_tasks_data(containers)

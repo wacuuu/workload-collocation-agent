@@ -17,7 +17,9 @@ import re
 import socket
 import time
 import glob
-from typing import List, Dict, Set, Tuple, Optional
+from typing import List, Dict, Optional
+from collections import defaultdict
+from itertools import groupby
 
 from wca.metrics import Metric, MetricName
 from wca.profiling import profiler
@@ -99,6 +101,8 @@ class Platform:
     sockets: int  # number of sockets
     cores: int  # number of physical cores in total (sum over all sockets)
     cpus: int  # logical processors equal to the output of "nproc" Linux command
+
+    topology: Dict[int, Dict[int, List[int]]]
 
     cpu_model: str
 
@@ -260,52 +264,39 @@ def read_proc_stat() -> str:
     return out
 
 
-def collect_topology_information() -> (int, int, int):
+def collect_topology_information() -> (int, int, int, Dict[int, Dict[int, List[int]]]):
     """
     Reads files from /sys/devices/system/cpu to collect topology information
-    :return: tuple (nr_of_online_cpus, nr_of_cores, nr_of_sockets)
+    :return: tuple (nr_of_online_cpus, nr_of_cores, nr_of_sockets,
+                    mapping from [socket][core] -> list of cpus)
     """
+    procinfo = open('/proc/cpuinfo').read()
 
-    def read_cpu_info_file(cpu, rel_file_path) -> int:
-        with open(os.path.join(sys_devices_system_cpu_path,
-                               cpu, rel_file_path)) as f:
-            return int(f.read())
+    processors = [
+        dict(
+            [list(map(str.strip, line.split(':'))) for line in proc.split('\n')]
+        ) for proc in list(filter(None, procinfo.split('\n\n')))
+    ]
 
-    sys_devices_system_cpu_path = "/sys/devices/system/cpu"
-    cpus = os.listdir(sys_devices_system_cpu_path)
-    # Filter out all unneeded folders
-    cpu_regex = re.compile(r'cpu[0-9]+')
-    cpus = [cpu for cpu in cpus if cpu_regex.match(cpu)]
-    cores_sockets_pairs: Set[Tuple[int, int]] = set()
-    sockets = set()
-    nr_of_online_cpus = 0
+    def by_physical_id(processor): return int(processor['physical id'])
+    def by_core_id(processor): return int(processor['core id'])
+    topology = defaultdict(dict)
 
-    for cpu in cpus:
-        # Check whether current cpu is online
-        # There is no online status file for cpu0 so we omit checking it
-        # and assume it is online
-        if cpu != "cpu0":
-            cpu_online_status = read_cpu_info_file(cpu, "online")
-            if 1 == cpu_online_status:
-                nr_of_online_cpus += 1
-            else:
-                # If the cpu is not online, files topology/{physical_package_id, core_id}
-                # do not exist, so we continue
-                continue
-        else:
-            nr_of_online_cpus += 1
+    for physical_id, socket_processors in groupby(
+            sorted(processors, key=by_physical_id), key=by_physical_id):
+        for core_id, core_processors in groupby(
+                sorted(list(socket_processors), key=by_core_id), key=by_core_id):
+            topology[int(physical_id)][
+                int(core_id)] = [int(p['processor']) for p in core_processors]
 
-        socket_id = read_cpu_info_file(cpu, "topology/physical_package_id")
-        core_id = read_cpu_info_file(cpu, "topology/core_id")
-        cores_sockets_pairs.add((socket_id, core_id))
-        sockets.add(socket_id)
+    # get rid of defaultdict
+    topology = dict(topology)
 
-    # Get nr of cores by counting unique (socket_id, core_id) tuples
-    nr_of_cores = len(cores_sockets_pairs)
-    # Get nr of sockets by counting unique socket_ids
-    nr_of_sockets = len(sockets)
+    nr_of_online_cpus = len(processors)
+    nr_of_cores = sum(len(core_ids) for core_ids in topology.values())
+    nr_of_sockets = len(topology)
 
-    return nr_of_online_cpus, nr_of_cores, nr_of_sockets
+    return nr_of_online_cpus, nr_of_cores, nr_of_sockets, topology
 
 
 BASE_RESCTRL_PATH = '/sys/fs/resctrl'
@@ -377,7 +368,7 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
 
     """
     # Static information
-    nr_of_cpus, nr_of_cores, no_of_sockets = collect_topology_information()
+    nr_of_cpus, nr_of_cores, no_of_sockets, topology = collect_topology_information()
     if rdt_enabled:
         rdt_information = _collect_rdt_information()
     else:
@@ -391,6 +382,7 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
         sockets=no_of_sockets,
         cores=nr_of_cores,
         cpus=nr_of_cpus,
+        topology=topology,
         cpu_model=get_cpu_model(),
         cpus_usage=cpus_usage,
         total_memory_used=total_memory_used,

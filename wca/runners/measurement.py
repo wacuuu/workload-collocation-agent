@@ -190,9 +190,6 @@ class MeasurementRunner(Runner):
             if not rdt_initialization_ok:
                 return 1
 
-        # Postpone the container manager initialization after rdt checks were performed.
-        platform_cpus, _, platform_sockets = platforms.collect_topology_information()
-
         platform, _, _ = platforms.collect_platform_information(self._rdt_enabled)
         rdt_information = platform.rdt_information
 
@@ -204,8 +201,7 @@ class MeasurementRunner(Runner):
 
         self._containers_manager = ContainerManager(
             rdt_information=rdt_information,
-            platform_cpus=platform_cpus,
-            platform_sockets=platform_sockets,
+            platform=platform,
             allocation_configuration=self._allocation_configuration,
             event_names=self._event_names,
             enable_derived_metrics=self._enable_derived_metrics,

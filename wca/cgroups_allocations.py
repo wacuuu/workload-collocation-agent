@@ -74,7 +74,7 @@ class CPUSetAllocationValue(AllocationValue):
         # First core
         self.min_value = 0
         # Last core
-        self.max_value = self.cgroup.platform_cpus - 1
+        self.max_value = self.cgroup.platform.cpus - 1
 
     def __repr__(self):
         return repr(self.value)
@@ -124,9 +124,23 @@ class CPUSetAllocationValue(AllocationValue):
     def perform_allocations(self):
         self.validate()
         cpus = self.value
-        mems = list(range(0, self.cgroup.platform_sockets))
-        self.cgroup.set_cpuset(cpus, mems)
+        self.cgroup.set_cpuset(cpus)
 
 
 
+class CPUSetMemoryMigrateAllocationValue(BoxedNumeric):
 
+    def __init__(self, value: bool, container: ContainerInterface, common_labels: Dict[str, str]):
+        self.value = value
+        self.cgroup = container.get_cgroup()
+        super().__init__(value=value, common_labels=common_labels, min_value=0, max_value=1)
+
+    def generate_metrics(self):
+        metrics = super().generate_metrics()
+        for metric in metrics:
+            metric.labels.update(allocation_type=AllocationType.CPUSET_MEM_MIGRATE)
+            metric.name = 'allocation_%s' % AllocationType.CPUSET_MEM_MIGRATE.value
+        return metrics
+
+    def perform_allocations(self):
+        self.cgroup._set_memory_migrate(self.value)

@@ -308,7 +308,12 @@ cpu_set
 - requires specific isolator `cpuset` enabled for Mesos,
 - may conflict with ``cpu manager`` feature in Kubernetes
 
-TODO: example configuration
+
+cpu_set_memory_migrate
+^^^^^^^^^^^^^^^^^^^^^^
+
+Allowed value (int): **0** or **1**
+
 
 Extended topology information
 -----------------------------

@@ -5,7 +5,7 @@ import random
 
 from dataclasses import dataclass
 
-from wca.allocators import Allocator, TasksAllocations  # , RDTAllocation
+from wca.allocators import Allocator, TasksAllocations, AllocationType
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, Anomaly
 from wca.metrics import Metric
 from wca.platforms import Platform
@@ -38,12 +38,16 @@ class NUMAAllocator(Allocator):
         pprint(platform)
 
         # Example stupid policy
-        cpu = random.randint(0, platform.cpus-1)
-        log.debug('random cpu: %s', cpu)
+        cpu1 = random.randint(0, platform.cpus-1)
+        cpu2 = random.randint(cpu1, platform.cpus-1)
+        log.debug('random cpus: %s-%s', cpu1, cpu2)
+        memory_migrate = random.randint(0, 1)
+        log.debug('random memory_migrate: %s-%s', cpu1, cpu2)
 
         allocations = {
             'task1': {
-                'cpu_set': '%s' % cpu,
+                AllocationType.CPUSET: '%s-%s' % (cpu1, cpu2),
+                AllocationType.CPUSET_MEM_MIGRATE: memory_migrate,
                 # Other options:
                 # 'cpu_quota': 0.5,
                 # 'cpu_shares': 20,
