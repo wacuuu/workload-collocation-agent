@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from wca import logger
 from wca.allocations import MissingAllocationException
 from wca.allocators import TaskAllocations, AllocationType, AllocationConfiguration
-from wca.metrics import Measurements, MetricName, MissingMeasurementException
+from wca.metrics import Measurements, MetricName, MissingMeasurementException, Metric, MetricType
 
 log = logging.getLogger(__name__)
 
@@ -67,6 +67,7 @@ class CgroupResource(str, Enum):
     MEMORY_MAX_USAGE = 'memory.max_usage_in_bytes'
     MEMORY_LIMIT = 'memory.limit_in_bytes'
     MEMORY_SOFT_LIMIT = 'memory.soft_limit_in_bytes'
+    NUMA_STAT = 'memory.numa_stat'
 
     def __repr__(self):
         return repr(self.value)
@@ -148,6 +149,21 @@ class Cgroup:
             except FileNotFoundError as e:
                 raise MissingMeasurementException(
                     'File {} is missing. Metric unavailable.'.format(e.filename))
+
+        # NUMA stats
+        try:
+            with open(os.path.join(self.cgroup_memory_fullpath,
+                                    CgroupResource.NUMA_STAT)) as resource_file:
+                for line in resource_file.readlines():
+                    if line.startswith("hierarchical_total="):
+                        for stat in line.split()[1:]:
+                            k, v = stat.split("=")
+                            name = "memory_numa_stat"
+                            measurements[name+"_"+k[1:]] = int(v)
+                        break
+        except FileNotFoundError as e:
+            raise MissingMeasurementException(
+                'File {} is missing. Metric unavailable.'.format(e.filename))
 
 
         return measurements

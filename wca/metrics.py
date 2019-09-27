@@ -39,6 +39,7 @@ class MetricName(str, Enum):
     MEMSTALL = 'stalls_mem_load'
     SCALING_FACTOR_AVG = 'scaling_factor_avg'
     SCALING_FACTOR_MAX = 'scaling_factor_max'
+    MEM_NUMA_STAT = 'memory_numa_stat'
 
 
 class DerivedMetricName(str, Enum):
