@@ -64,6 +64,7 @@ class CgroupResource(str, Enum):
     CPU_SHARES = 'cpu.shares'
     CPUSET_CPUS = 'cpuset.cpus'
     CPUSET_MEMS = 'cpuset.mems'
+    CPUSET_MEMORY_MIGRATE = 'cpuset.memory_migrate'
     MEMORY_USAGE = 'memory.usage_in_bytes'
     MEMORY_MAX_USAGE = 'memory.max_usage_in_bytes'
     MEMORY_LIMIT = 'memory.limit_in_bytes'
@@ -221,6 +222,7 @@ class Cgroup:
             AllocationType.QUOTA: self._get_normalized_quota(),
             AllocationType.SHARES: self._get_normalized_shares(),
             AllocationType.CPUSET: self._get_cpuset(),
+            AllocationType.CPUSET_MEM_MIGRATE: self._get_memory_migrate(),
         }
 
     def get_pids(self) -> List[str]:
@@ -318,6 +320,12 @@ class Cgroup:
             log.warning(
                     'Cannot read {}: "{}"! Permission denied.'.format(
                         CgroupResource.CPUSET_CPUS, self.cgroup_cpuset_fullpath))
+
+    def _set_memory_migrate(self, value: int):
+        self._write(CgroupResource.CPUSET_MEMORY_MIGRATE, value, CgroupType.CPUSET)
+
+    def _get_memory_migrate(self) -> int:
+        return self._read(CgroupResource.CPUSET_MEMORY_MIGRATE, CgroupType.CPUSET)
 
 
 def build_cpu_to_socket_mapping(topology: Dict[int, Dict[int, List[int]]]) -> Dict[int, int]:

@@ -22,7 +22,7 @@ from wca.allocations import AllocationsDict, InvalidAllocations, AllocationValue
 from wca.allocators import TasksAllocations, AllocationConfiguration, AllocationType, Allocator, \
     TaskAllocations, RDTAllocation
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
-        CPUSetAllocationValue
+    CPUSetAllocationValue, CPUSetMemoryMigrateAllocationValue
 from wca.config import Numeric, Str, assure_type
 from wca.containers import ContainerInterface, Container
 from wca.detectors import convert_anomalies_to_metrics, \
@@ -96,6 +96,7 @@ class TasksAllocationsValues(AllocationsDict):
             AllocationType.QUOTA: QuotaAllocationValue,
             AllocationType.SHARES: SharesAllocationValue,
             AllocationType.CPUSET: CPUSetAllocationValue,
+            AllocationType.CPUSET_MEM_MIGRATE: CPUSetMemoryMigrateAllocationValue,
         }
 
         if rdt_enabled:
@@ -275,15 +276,15 @@ class AllocationRunner(MeasurementRunner):
 
             if root_rdt_mb is not None:
                 normalized_root_rdt_mb = normalize_mb_string(
-                        root_rdt_mb,
-                        platform.sockets,
-                        platform.rdt_information.mb_min_bandwidth,
-                        platform.rdt_information.mb_bandwidth_gran)
+                    root_rdt_mb,
+                    platform.sockets,
+                    platform.rdt_information.mb_min_bandwidth,
+                    platform.rdt_information.mb_bandwidth_gran)
                 resctrl.cleanup_resctrl(
-                        root_rdt_l3, normalized_root_rdt_mb, self._remove_all_resctrl_groups)
+                    root_rdt_l3, normalized_root_rdt_mb, self._remove_all_resctrl_groups)
             else:
                 resctrl.cleanup_resctrl(
-                        root_rdt_l3, root_rdt_mb, self._remove_all_resctrl_groups)
+                    root_rdt_l3, root_rdt_mb, self._remove_all_resctrl_groups)
         except InvalidAllocations as e:
             log.error('Cannot initialize RDT subsystem: %s', e)
             return False

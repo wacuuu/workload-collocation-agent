@@ -32,6 +32,7 @@ class AllocationType(str, Enum):
     SHARES = 'cpu_shares'
     RDT = 'rdt'
     CPUSET = 'cpu_set'
+    CPUSET_MEM_MIGRATE = 'cpu_set_memory_migrate'
 
     def __repr__(self):
         return repr(self.value)
