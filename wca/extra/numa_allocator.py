@@ -38,12 +38,14 @@ class NUMAAllocator(Allocator):
         pprint(platform)
 
         # Example stupid policy
-        cpu = random.randint(0, platform.cpus-1)
-        log.debug('random cpu: %s', cpu)
+        cpu1 = random.randint(0, platform.cpus-1)
+        cpu2 = random.randint(0, platform.cpus-1)
+        cpu1, cpu2 = sorted([cpu1, cpu2])
+        log.debug('random cpus: %s-%s', cpu1, cpu2)
 
         allocations = {
             'task1': {
-                'cpu_set': '%s' % cpu,
+                'cpu_set': '%s-%s' % (cpu1, cpu2),
                 # Other options:
                 # 'cpu_quota': 0.5,
                 # 'cpu_shares': 20,

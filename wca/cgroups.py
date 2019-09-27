@@ -287,6 +287,7 @@ class Cgroup:
             for cpu in cpus:
                 sockets.add(cpu2socket[cpu])
             mems = list(sockets)
+            log.debug('auto NUMA node assigments: %r based on cpus list: %r', cpus, mems)
 
         encoded_mems = _encode_cpuset(mems)
 
