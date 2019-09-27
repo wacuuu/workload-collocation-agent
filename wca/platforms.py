@@ -247,11 +247,10 @@ def collect_topology_information() -> (int, int, int, Dict[int, Dict[int, List[i
         ) for proc in list(filter(None, procinfo.split('\n\n')))
     ]
 
-    def by_physical_id(processor): int(processor['physical id'])
-    def by_core_id(processor): int(processor['core id'])
-    processors = sorted(processors, key=by_physical_id)
-
+    def by_physical_id(processor): return int(processor['physical id'])
+    def by_core_id(processor): return int(processor['core id'])
     topology = defaultdict(dict)
+
     for physical_id, socket_processors in groupby(
             sorted(processors, key=by_physical_id), key=by_physical_id):
         for core_id, core_processors in groupby(
