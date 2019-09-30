@@ -12,18 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-import os
-from enum import Enum
-from typing import Optional, List, Union, Dict
+from typing import Optional, List, Union, Dict, Set
 
+import os
 from dataclasses import dataclass
+from enum import Enum
 
 from wca import logger
 from wca import platforms
 from wca.allocations import MissingAllocationException
 from wca.allocators import TaskAllocations, AllocationType, AllocationConfiguration
 from wca.metrics import Measurements, MetricName, MissingMeasurementException
-from wca.platforms import _parse_cpuset
+from wca.platforms import decode_listformat, encode_listformat
 
 log = logging.getLogger(__name__)
 
@@ -76,14 +76,6 @@ class CgroupResource(str, Enum):
         return repr(self.value)
 
 
-def _encode_cpuset(cpus: List[int]) -> str:
-    all(isinstance(cpu, int) for cpu in cpus)
-    if len(cpus) > 0:
-        return str(cpus[0])+''.join(','+str(cpu) for cpu in cpus[1:])
-    else:
-        return ''
-
-
 @dataclass
 class Cgroup:
     cgroup_path: str
@@ -98,7 +90,7 @@ class Cgroup:
         self.cgroup_cpu_fullpath = os.path.join(CgroupSubsystem.CPU, relative_cgroup_path)
         self.cgroup_cpuset_fullpath = os.path.join(CgroupSubsystem.CPUSET, relative_cgroup_path)
         self.cgroup_perf_event_fullpath = os.path.join(
-                CgroupSubsystem.PERF_EVENT, relative_cgroup_path)
+            CgroupSubsystem.PERF_EVENT, relative_cgroup_path)
         self.cgroup_memory_fullpath = os.path.join(CgroupSubsystem.MEMORY,
                                                    relative_cgroup_path)
 
@@ -114,9 +106,9 @@ class Cgroup:
         measurements = {MetricName.CPU_USAGE_PER_TASK: cpu_usage}
 
         for cgroup_resource, metric_name in [
-            [CgroupResource.MEMORY_USAGE,      MetricName.MEM_USAGE_PER_TASK],
-            [CgroupResource.MEMORY_MAX_USAGE,  MetricName.MEM_MAX_USAGE_PER_TASK],
-            [CgroupResource.MEMORY_LIMIT,      MetricName.MEM_LIMIT_PER_TASK],
+            [CgroupResource.MEMORY_USAGE, MetricName.MEM_USAGE_PER_TASK],
+            [CgroupResource.MEMORY_MAX_USAGE, MetricName.MEM_MAX_USAGE_PER_TASK],
+            [CgroupResource.MEMORY_LIMIT, MetricName.MEM_LIMIT_PER_TASK],
             [CgroupResource.MEMORY_SOFT_LIMIT, MetricName.MEM_SOFT_LIMIT_PER_TASK],
         ]:
 
@@ -131,19 +123,19 @@ class Cgroup:
 
         # NUMA stats
         try:
-            with open(os.path.join(self.cgroup_memory_fullpath,
-                                    CgroupResource.NUMA_STAT)) as resource_file:
+            with open(os.path.join(
+                    self.cgroup_memory_fullpath, CgroupResource.NUMA_STAT)) as resource_file:
                 for line in resource_file.readlines():
+                    # Requires mem.use_hierarchy = 1
                     if line.startswith("hierarchical_total="):
                         for stat in line.split()[1:]:
                             k, v = stat.split("=")
                             name = "memory_numa_stat"
-                            measurements[name+"_"+k[1:]] = int(v)
+                            measurements[name + "_" + k[1:]] = int(v)
                         break
         except FileNotFoundError as e:
             raise MissingMeasurementException(
                 'File {} is missing. Metric unavailable.'.format(e.filename))
-
 
         return measurements
 
@@ -251,8 +243,8 @@ class Cgroup:
 
         if current_period != self.allocation_configuration.cpu_quota_period:
             self._write(
-                    CgroupResource.CPU_PERIOD, self.allocation_configuration.cpu_quota_period,
-                    CgroupType.CPU)
+                CgroupResource.CPU_PERIOD, self.allocation_configuration.cpu_quota_period,
+                CgroupType.CPU)
 
         if normalized_quota >= QUOTA_NORMALIZED_MAX:
             if normalized_quota > QUOTA_NORMALIZED_MAX:
@@ -271,22 +263,19 @@ class Cgroup:
 
         self._write(CgroupResource.CPU_QUOTA, quota, CgroupType.CPU)
 
-    def set_cpuset(self, cpus: List[int], mems: List[int] = None):
+    def set_cpuset(self, cpus: Set[int], mems: Set[int] = None):
         """Set cpuset.cpus and cpuset.mems."""
-        encoded_cpus = _encode_cpuset(cpus)
+        encoded_cpus = encode_listformat(cpus)
 
         # Auto set mems based on cpu -> socket mapping
-        # Warning! - it will not work with SNC - we need proper SNC discovery
-        # based on /proc/schedstat or better /sys/devices/system/node
         if mems is None:
-            sockets = set()
-            cpu2socket = build_cpu_to_socket_mapping(self.platform.numa_nodes)
+            mems = set()
+            cpu_to_numa = build_cpu_to_socket_mapping(self.platform.node_cpus)
             for cpu in cpus:
-                sockets.add(cpu2socket[cpu])
-            mems = list(sockets)
-            log.debug('auto NUMA node assigments: %r based on cpus list: %r', cpus, mems)
+                mems.add(cpu_to_numa[cpu])
+            log.debug('auto NUMA node assigment: %r based on cpus list: %r', cpus, mems)
 
-        encoded_mems = _encode_cpuset(mems)
+        encoded_mems = encode_listformat(mems)
 
         assert encoded_cpus is not None
         assert encoded_mems is not None
@@ -295,26 +284,26 @@ class Cgroup:
             self._write(CgroupResource.CPUSET_CPUS, encoded_cpus, CgroupType.CPUSET)
         except PermissionError:
             log.warning(
-                    'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
-                        CgroupResource.CPUSET_CPUS, encoded_cpus, self.cgroup_cpuset_fullpath))
+                'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
+                    CgroupResource.CPUSET_CPUS, encoded_cpus, self.cgroup_cpuset_fullpath))
         try:
             self._write(CgroupResource.CPUSET_MEMS, encoded_mems, CgroupType.CPUSET)
         except PermissionError:
             log.warning(
-                    'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
-                        CgroupResource.CPUSET_MEMS, encoded_mems, self.cgroup_cpuset_fullpath))
+                'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
+                    CgroupResource.CPUSET_MEMS, encoded_mems, self.cgroup_cpuset_fullpath))
 
     def _get_cpuset(self) -> str:
-        """Get current cpuset.cpus."""
+        """Get current cpuset.cpus (encoded as comma seperated sorted list of cpus)."""
 
         try:
-            cpus = _parse_cpuset(self._read_raw(CgroupResource.CPUSET_CPUS,
-                                                CgroupType.CPUSET).strip())
-            return _encode_cpuset(cpus)
+            cpus = decode_listformat(self._read_raw(CgroupResource.CPUSET_CPUS,
+                                                    CgroupType.CPUSET).strip())
+            return encode_listformat(cpus)
         except PermissionError:
             log.warning(
-                    'Cannot read {}: "{}"! Permission denied.'.format(
-                        CgroupResource.CPUSET_CPUS, self.cgroup_cpuset_fullpath))
+                'Cannot read {}: "{}"! Permission denied.'.format(
+                    CgroupResource.CPUSET_CPUS, self.cgroup_cpuset_fullpath))
 
     def _set_memory_migrate(self, value: int):
         self._write(CgroupResource.CPUSET_MEMORY_MIGRATE, value, CgroupType.CPUSET)
@@ -323,9 +312,9 @@ class Cgroup:
         return self._read(CgroupResource.CPUSET_MEMORY_MIGRATE, CgroupType.CPUSET)
 
 
-def build_cpu_to_socket_mapping(numa_nodes: Dict[int, List[int]]) -> Dict[int, int]:
+def build_cpu_to_socket_mapping(node_cpus: Dict[int, Set[int]]) -> Dict[int, int]:
     mapping = {}
-    for numa_node, cpus in numa_nodes.items():
+    for node, cpus in node_cpus.items():
         for cpu in cpus:
-            mapping[cpu] = numa_node
+            mapping[cpu] = node
     return mapping

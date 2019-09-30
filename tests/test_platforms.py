@@ -20,8 +20,8 @@ import pytest
 from tests.testing import create_open_mock, relative_module_path
 from wca.metrics import Metric, MetricName
 from wca.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
-    collect_topology_information, collect_platform_information, RDTInformation, _read_numa_nodes, \
-    _parse_cpuset
+    collect_topology_information, collect_platform_information, RDTInformation, \
+    decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat
 
 
 @pytest.mark.parametrize("raw_meminfo_output,expected", [
@@ -80,9 +80,9 @@ def test_collect_topology_information(filename, expected_cpus, expected_cores,
     "/sys/devices/system/node/node1/cpulist": "3,4,5-6",
 }))
 @patch('os.listdir', return_value=['node0', 'node1', 'ble', 'cpu'])
-def test_read_numa_nodes(*mocks):
-    numa_nodes = _read_numa_nodes()
-    assert numa_nodes == {0: [1, 2, 6, 7, 8], 1: [3, 4, 5, 6]}
+def test_parse_node_cpus(*mocks):
+    node_cpus = parse_node_cpus()
+    assert node_cpus == {0: {1, 2, 6, 7, 8}, 1: {3, 4, 5, 6}}
 
 
 @patch('builtins.open', new=create_open_mock({
@@ -105,13 +105,25 @@ def test_read_numa_nodes(*mocks):
 @patch('socket.gethostname', return_value="test_host")
 @patch('wca.platforms.parse_proc_meminfo', return_value=1337)
 @patch('wca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
-@patch('wca.platforms._read_numa_nodes', return_value={})
+@patch('wca.platforms.parse_node_cpus', return_value={})
+@patch('wca.platforms.parse_node_meminfo', return_value=[1, 2])
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1, {}))
 @patch('time.time', return_value=1536071557.123456)
 def test_collect_platform_information(*mocks):
     assert collect_platform_information() == (
-        Platform(1, 1, 2, {}, {}, 'intel xeon', {0: 100, 1: 200}, 1337, 1536071557.123456,
-                 RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20)),
+        Platform(sockets=1,
+                 cores=1,
+                 cpus=2,
+                 topology={},
+                 cpu_model='intel xeon',
+                 cpus_usage={0: 100, 1: 200},
+                 total_memory_used=1337,
+                 timestamp=1536071557.123456,  # timestamp,
+                 node_memory_free=1,
+                 node_memory_used=2,
+                 node_cpus={},
+                 rdt_information=RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20)
+                 ),
         [
             Metric.create_metric_with_metadata(
                 name=MetricName.MEM_USAGE, value=1337
@@ -130,12 +142,35 @@ def test_collect_platform_information(*mocks):
 
 @pytest.mark.parametrize(
     'raw_cpulist, expected_cpus', [
-        ('1,2,3-4,10-11', [1, 2, 3, 4, 10, 11]),
-        ('1-2', [1, 2]),
-        ('5,1-2', [1, 2, 5]),
-        ('1,  2', [1, 2]),
-        ('5,1- 2', [1, 2, 5]),
+        ('1,2,3-4,10-11', {1, 2, 3, 4, 10, 11}),
+        ('1-2', {1, 2}),
+        ('5,1-2', {1, 2, 5}),
+        ('1,  2', {1, 2}),
+        ('5,1- 2', {1, 2, 5}),
     ])
-def test_parse_cpu_set(raw_cpulist, expected_cpus):
-    got_cpus = _parse_cpuset(raw_cpulist)
+def test_decode_listform(raw_cpulist, expected_cpus):
+    got_cpus = decode_listformat(raw_cpulist)
     assert got_cpus == expected_cpus
+
+
+@pytest.mark.parametrize(
+    'intset, expected_encoded', [
+        ({1, 2, 3, 4, 10, 11}, '1,2,3,4,10,11'),
+        ({1, 2}, '1,2'),
+        ({2, 1}, '1,2'),
+        ({}, ''),
+    ])
+def test_encode_listformat(intset, expected_encoded):
+    got_encoded = encode_listformat(intset)
+    assert got_encoded == expected_encoded
+
+
+@patch('builtins.open', new=create_open_mock(
+    {'/sys/devices/system/node/node0/meminfo': open(
+        relative_module_path(__file__, 'fixtures/sys-devices-system-nodex-meminfo.txt')).read()})
+       )
+@patch('os.listdir', return_value=['node0'])
+def test_parse_node_meminfo(*mocks):
+    expected_node_free, expected_node_used = parse_node_meminfo()
+    assert expected_node_free == {0: 454466117632}
+    assert expected_node_used == {0: 77696421888}

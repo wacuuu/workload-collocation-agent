@@ -11,13 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import glob
 import logging
 import socket
 import time
 from collections import defaultdict
 from itertools import groupby
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Set
 
 import os
 import re
@@ -104,8 +103,6 @@ class Platform:
 
     # mapping from socket, core id to CPU based on /proc/cpuinfo
     topology: Dict[int, Dict[int, List[int]]]
-    # mapping from numa node id to CPU (to support SNC), based on /sys/devices/system/numa
-    numa_nodes: Dict[int, List[int]]
 
     cpu_model: str
 
@@ -121,7 +118,8 @@ class Platform:
     # NUMA info
     node_memory_free: Dict[NodeId, int]
     node_memory_used: Dict[NodeId, int]
-    node_cpus: Dict[NodeId, str]
+    # mapping from numa node id to CPU (to support SNC), based on /sys/devices/system/numa
+    node_cpus: Dict[int, Set[int]]
 
     # [unix timestamp] Recorded timestamp of finishing data gathering (as returned from time.time)
     timestamp: float
@@ -201,30 +199,41 @@ def read_proc_meminfo() -> str:
     return out
 
 
+BASE_SYSFS_NODES_PATH = '/sys/devices/system/node'
+
+
 def parse_node_meminfo() -> (Dict[NodeId, int], Dict[NodeId, int]):
     """Parses /sys/devices/system/node/node*/meminfo and returns free/used"""
     node_free = {}
     node_used = {}
-    for fn in glob.glob("/sys/devices/system/node/node*/meminfo"):
-        with open(fn) as f:
-            for line in f.readlines():
-                s = line.split()
-                if len(s) != 5:
-                    continue
-                if s[2] == "MemFree:":
-                    node_free[int(s[1])] = int(s[3]) << 10
-                if s[2] == "MemUsed:":
-                    node_used[int(s[1])] = int(s[3]) << 10
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            meminfo_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'meminfo')
+            with open(meminfo_filename) as f:
+                for line in f.readlines():
+                    s = line.split()
+                    if len(s) != 5:
+                        continue
+                    if s[2] == "MemFree:":
+                        node_free[int(s[1])] = int(s[3]) << 10
+                    if s[2] == "MemUsed:":
+                        node_used[int(s[1])] = int(s[3]) << 10
     return node_free, node_used
 
 
-def parse_node_cpus() -> Dict[NodeId, str]:
-    "Parses /sys/devices/system/node/node*/cpulist"
+def parse_node_cpus() -> Dict[NodeId, Set[int]]:
+    """
+    Parses /sys/devices/system/node/node*/cpulist"
+    Read CPU to NUMA node mapping based on /sys/devices/system/node
+    :return: mapping from numa_node -> list of cpus (as List of int)
+    """
     node_cpus = {}
-    for fn in glob.glob("/sys/devices/system/node/node*/cpulist"):
-        node_id = int(os.path.basename(os.path.dirname(fn))[4:])
-        with open(fn) as f:
-            node_cpus[node_id] = f.read().strip()
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            node_id = int(nodedir[4:])
+            cpu_list_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'cpulist')
+            with open(cpu_list_filename) as cpu_list_file:
+                node_cpus[node_id] = decode_listformat(cpu_list_file.read())
     return node_cpus
 
 
@@ -267,22 +276,6 @@ def read_proc_stat() -> str:
     with open('/proc/stat') as f:
         out = f.read()
     return out
-
-
-def _read_numa_nodes() -> Dict[int, List[int]]:
-    """
-    Read CPU to NUMA node mapping based on /sys/devices/system/node
-    :return: mapping from numa_node -> list of cpus
-    """
-    numa_nodes = {}
-    BASE_SYSFS_NODES_PATH = '/sys/devices/system/node'
-    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
-        if nodedir.startswith('node'):
-            node_id = int(nodedir[4:])
-            cpu_list_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'cpulist')
-            with open(cpu_list_filename) as cpu_list_file:
-                numa_nodes[node_id] = _parse_cpuset(cpu_list_file.read())
-    return numa_nodes
 
 
 def collect_topology_information() -> (int, int, int,
@@ -403,9 +396,6 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     else:
         rdt_information = None
 
-    # NUMA nodes
-    numa_nodes = _read_numa_nodes()
-
     # Dynamic information
     cpus_usage = parse_proc_stat(read_proc_stat())
     total_memory_used = parse_proc_meminfo(read_proc_meminfo())
@@ -415,7 +405,6 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
         cores=nr_of_cores,
         cpus=nr_of_cpus,
         topology=topology,
-        numa_nodes=numa_nodes,
         cpu_model=get_cpu_model(),
         cpus_usage=cpus_usage,
         total_memory_used=total_memory_used,
@@ -430,11 +419,12 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     return platform, create_metrics(platform), create_labels(platform)
 
 
-def _parse_cpuset(value: str) -> List[int]:
+def decode_listformat(value: str) -> Set[int]:
+    """Parse "List Format" as describe by man cpuset(7)"""
     cores = set()
 
     if not value:
-        return list()
+        return set()
 
     ranges = value.split(',')
 
@@ -450,4 +440,14 @@ def _parse_cpuset(value: str) -> List[int]:
             for i in range(start, end + 1):
                 cores.add(i)
 
-    return list(sorted(cores))
+    return set(cores)
+
+
+def encode_listformat(ints: Set[int]) -> str:
+    """ Encode as "List Format" man cpuset(7) list of ints as comma separated list of cpus.
+    Works for numa nodes as well.
+    Assumptions:
+    - returned list is sorted and always comma separated.
+    """
+    assert all(isinstance(i, int) for i in ints), 'simple type check'
+    return ','.join(map(str, sorted(ints)))

@@ -14,12 +14,13 @@
 
 from unittest.mock import patch, call, Mock
 
-from wca.allocators import AllocationConfiguration
-from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
-                                    CPUSetAllocationValue
-from wca.containers import Container
-from wca.platforms import RDTInformation, Platform
 from tests.testing import allocation_metric
+from wca.allocators import AllocationConfiguration, AllocationType
+from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
+    CPUSetAllocationValue
+from wca.containers import Container
+from wca.metrics import Metric, MetricType
+from wca.platforms import RDTInformation, Platform
 
 
 @patch('wca.perf.PerfCounters')
@@ -30,8 +31,8 @@ def test_cgroup_allocations(Cgroup_mock, PerfCounters_mock):
     platform_mock = Mock(spec=Platform, cpus=10, sockets=1)
 
     foo_container = Container(
-            '/somepath', platform=platform_mock,
-            rdt_information=rdt_information)
+        '/somepath', platform=platform_mock,
+        rdt_information=rdt_information)
     foo_container._cgroup.allocation_configuration = AllocationConfiguration()
     foo_container._cgroup.platform = platform_mock
 
@@ -52,11 +53,13 @@ def test_cgroup_allocations(Cgroup_mock, PerfCounters_mock):
     cpuset_allocation_value.perform_allocations()
 
     assert cpuset_allocation_value.generate_metrics() == [
-        allocation_metric('cpuset', [0, 1, 2, 4, 6, 7, 8], foo='bar')
+        Metric(name='allocation_cpuset_number_of_cpus', value=7,
+               labels={'allocation_type': AllocationType.CPUSET, 'foo': 'bar'},
+               type=MetricType.GAUGE)
     ]
 
     Cgroup_mock.assert_has_calls([
         call().set_quota(0.2),
         call().set_shares(0.5),
-        call().set_cpuset([0, 1, 2, 4, 6, 7, 8])
+        call().set_cpuset({0, 1, 2, 4, 6, 7, 8})
     ], True)

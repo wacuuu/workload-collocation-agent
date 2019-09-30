@@ -19,7 +19,7 @@ from wca.allocators import AllocationType
 from wca.cgroups import QUOTA_NORMALIZED_MAX
 from wca.containers import ContainerInterface
 from wca.metrics import Metric, MetricType
-from wca.platforms import _parse_cpuset
+from wca.platforms import decode_listformat
 
 
 class QuotaAllocationValue(BoxedNumeric):
@@ -69,7 +69,7 @@ class CPUSetAllocationValue(AllocationValue):
         assert isinstance(value, str)
         self.cgroup = container.get_cgroup()
         self._original_value = value
-        self.value = _parse_cpuset(value)
+        self.value = decode_listformat(value)
         self.common_labels = common_labels
         self.labels_updater = LabelsUpdater(common_labels or {})
         # First core
@@ -101,26 +101,26 @@ class CPUSetAllocationValue(AllocationValue):
             return current, None
 
     def generate_metrics(self) -> List[Metric]:
-        assert isinstance(self.value, list)
+        assert isinstance(self.value, set), 'expected is a set of ints'
         metrics = [Metric(
-            name='allocation_cpuset',
-            value=self.value,
+            name='allocation_cpuset_number_of_cpus',
+            value=len(self.value),
             type=MetricType.GAUGE,
-            labels=dict(allocation_type='cpuset')
+            labels=dict(allocation_type=AllocationType.CPUSET)
         )]
         self.labels_updater.update_labels(metrics)
         return metrics
 
     def validate(self):
+        as_sorted_list = list(sorted(self.value))
         if len(self.value) > 0:
-            if self.value[0] < self.min_value or self.value[-1] > self.max_value:
+            if as_sorted_list[0] < self.min_value or as_sorted_list[-1] > self.max_value:
                 raise InvalidAllocations(
-                    '{} not in range <{};{}>'
-                        .format(self._original_value, self.min_value, self.max_value))
+                    '{} not in range <{};{}>'.format(self._original_value, self.min_value,
+                                                     self.max_value))
         else:
             raise InvalidAllocations(
-                '{} is invalid argument!'
-                    .format(self._original_value))
+                '{} is invalid argument!'.format(self._original_value))
 
     def perform_allocations(self):
         self.validate()

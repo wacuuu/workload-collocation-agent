@@ -37,6 +37,7 @@ def test_get_measurements_not_found_cgroup(mock_file, mock_log_warning):
     '/sys/fs/cgroup/memory/some/foo1/memory.max_usage_in_bytes': '999',
     '/sys/fs/cgroup/memory/some/foo1/memory.limit_in_bytes': '2000',
     '/sys/fs/cgroup/memory/some/foo1/memory.soft_limit_in_bytes': '1500',
+    '/sys/fs/cgroup/memory/some/foo1/memory.numa_stat': 'hierarchical_total=1 N0=123 N1=234',
 }))
 def test_get_measurements():
     cgroup = Cgroup('/some/foo1')
@@ -46,6 +47,8 @@ def test_get_measurements():
                             MetricName.MEM_MAX_USAGE_PER_TASK: 999,
                             MetricName.MEM_LIMIT_PER_TASK: 2000,
                             MetricName.MEM_SOFT_LIMIT_PER_TASK: 1500,
+                            'memory_numa_stat_0': 123,
+                            'memory_numa_stat_1': 234,
                             }
 
 
@@ -147,22 +150,22 @@ def test_set_normalized_quota(normalized_quota, cpu_quota_period, platforms_cpu,
 
 
 # two numa nodes 0->0,1 and 1->2,3
-_test_numa_nodes = {0: [0, 1], 1: [2, 3]}
+_test_node_cpus = {0: {0, 1}, 1: {2, 3}}
 
 
 @pytest.mark.parametrize(
-    'cpus, mems, platform_numa_nodes,'
+    'cpus, mems, node_cpus,'
     'expected_cpus_write, expected_mems_write', [
-        ([0, 1, 2, 3, 4], [0], {}, '0,1,2,3,4', '0'),
-        ([0, 1], None, _test_numa_nodes, '0,1', '0'),
-        ([1, 3], None, _test_numa_nodes, '1,3', '0,1'),
+        ({0, 1, 2, 3, 4}, {0}, {}, '0,1,2,3,4', '0'),
+        ({0, 1}, None, _test_node_cpus, '0,1', '0'),
+        ({1, 3}, None, _test_node_cpus, '1,3', '0,1'),
     ]
 )
 def test_set_cpuset(
-        cpus, mems, platform_numa_nodes, expected_cpus_write, expected_mems_write):
+        cpus, mems, node_cpus, expected_cpus_write, expected_mems_write):
     platform_mock = Mock(
         spec=Platform,
-        numa_nodes=platform_numa_nodes
+        node_cpus=node_cpus,
     )
     with patch('wca.cgroups.Cgroup._write') as write_mock:
         cgroup = Cgroup('/some/foo1', platform=platform_mock)

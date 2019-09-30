@@ -1,15 +1,13 @@
 import logging
 from pprint import pprint
 from typing import List
-import random
-from copy import deepcopy
 
 from dataclasses import dataclass
 
 from wca.allocators import Allocator, TasksAllocations, AllocationType
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, Anomaly
 from wca.metrics import Metric, MetricName
-from wca.platforms import Platform
+from wca.platforms import Platform, encode_listformat, decode_listformat
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +87,7 @@ class NUMAAllocator(Allocator):
 
         for task, memory, preferences in tasks_memory:
             log.debug("Task: %s Memory: %d Preferences: %s" % (task, memory, preferences))
-            current_node = _get_current_node(tasks_allocations[task]['cpu_set'], platform.node_cpus)
+            current_node = _get_current_node(decode_listformat(tasks_allocations[task]['cpu_set']), platform.node_cpus)
             log.debug("Task current node: %d", current_node)
             # print("Current node: %d" % current_node)
             if current_node >= 0:
@@ -133,14 +131,14 @@ class NUMAAllocator(Allocator):
         print(balance_task, balance_task_node)
 
         if balance_task is not None and balance_task_node is not None:
-                allocations[balance_task] = {
-                    AllocationType.CPUSET_MEM_MIGRATE: 1,
-                    AllocationType.CPUSET: platform.node_cpus[balance_task_node],
-                }
+            allocations[balance_task] = {
+                AllocationType.CPUSET_MEM_MIGRATE: 1,
+                AllocationType.CPUSET: encode_listformat(platform.node_cpus[balance_task_node]),
+            }
 
         # for node in balanced_memory:
         #     for task, _ in balanced_memory[node]:
-        #         if tasks_allocations[task]['cpu_set'] == platform.node_cpus[node]:
+        #         if decode_listformat(tasks_allocations[task]['cpu_set']) == platform.node_cpus[node]:
         #             continue
         #         allocations[task] = {
         #             AllocationType.CPUSET_MEM_MIGRATE: 1,
@@ -207,7 +205,7 @@ def _get_current_node(cpus, nodes):
 def _get_best_memory_node(memory, balanced_memory):
     d = {}
     for node in balanced_memory:
-        d[node] = memory / (sum([k[1] for k in balanced_memory[node]])+memory)
+        d[node] = memory / (sum([k[1] for k in balanced_memory[node]]) + memory)
     pprint(d)
     return sorted(d.items(), reverse=True, key=lambda x: x[1])[0][0]
 
