@@ -2,14 +2,19 @@ runner: !AllocationRunner
   action_delay: 5
   node: !StaticNode
     tasks:
-      - task1
-      # - task2
+      #- task1
+      #- task2
       # - task3
+            - specjbb2015/Group1
+            - specjbb2015/Group2
+            - specjbb2015/Group3
+            - specjbb2015/Group4
+            - specjbb2015/controller
     default_resources:
       cpus: 3.
 
   allocator: !NUMAAllocator
-  #event_names: []  # if uncommented disables metrics from perf event subsystem
+  event_names: []  # if uncommented disables metrics from perf event subsystem
   #rdt_enabled: false  # force RDT disabled, by default is auto detected
 
   # Metrics to files

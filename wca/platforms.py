@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import glob
 import logging
 import socket
 import time
@@ -35,6 +36,7 @@ log = logging.getLogger(__name__)
 
 # 0-based logical processor number (matches the value of "processor" in /proc/cpuinfo)
 CpuId = int
+NodeId = int
 
 
 def get_wca_version():
@@ -116,6 +118,11 @@ class Platform:
     # difference between MemTotal and MemAvail (or MemFree)
     total_memory_used: int
 
+    # NUMA info
+    node_memory_free: Dict[NodeId, int]
+    node_memory_used: Dict[NodeId, int]
+    node_cpus: Dict[NodeId, str]
+
     # [unix timestamp] Recorded timestamp of finishing data gathering (as returned from time.time)
     timestamp: float
 
@@ -192,6 +199,33 @@ def read_proc_meminfo() -> str:
     with open('/proc/meminfo') as f:
         out = f.read()
     return out
+
+
+def parse_node_meminfo() -> (Dict[NodeId, int], Dict[NodeId, int]):
+    """Parses /sys/devices/system/node/node*/meminfo and returns free/used"""
+    node_free = {}
+    node_used = {}
+    for fn in glob.glob("/sys/devices/system/node/node*/meminfo"):
+        with open(fn) as f:
+            for line in f.readlines():
+                s = line.split()
+                if len(s) != 5:
+                    continue
+                if s[2] == "MemFree:":
+                    node_free[int(s[1])] = int(s[3]) << 10
+                if s[2] == "MemUsed:":
+                    node_used[int(s[1])] = int(s[3]) << 10
+    return node_free, node_used
+
+
+def parse_node_cpus() -> Dict[NodeId, str]:
+    "Parses /sys/devices/system/node/node*/cpulist"
+    node_cpus = {}
+    for fn in glob.glob("/sys/devices/system/node/node*/cpulist"):
+        node_id = int(os.path.basename(os.path.dirname(fn))[4:])
+        with open(fn) as f:
+            node_cpus[node_id] = f.read().strip()
+    return node_cpus
 
 
 def parse_proc_stat(proc_stat_output) -> Dict[CpuId, int]:
@@ -375,6 +409,7 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     # Dynamic information
     cpus_usage = parse_proc_stat(read_proc_stat())
     total_memory_used = parse_proc_meminfo(read_proc_meminfo())
+    node_free, node_used = parse_node_meminfo()
     platform = Platform(
         sockets=no_of_sockets,
         cores=nr_of_cores,
@@ -385,7 +420,10 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
         cpus_usage=cpus_usage,
         total_memory_used=total_memory_used,
         timestamp=time.time(),
-        rdt_information=rdt_information
+        rdt_information=rdt_information,
+        node_memory_free=node_free,
+        node_memory_used=node_used,
+        node_cpus=parse_node_cpus()
     )
     assert len(platform.cpus_usage) == platform.cpus, \
         "Inconsistency in cpu data returned by kernel"
