@@ -17,10 +17,11 @@ from unittest.mock import patch
 
 import pytest
 
+from tests.testing import create_open_mock, relative_module_path
 from wca.metrics import Metric, MetricName
 from wca.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
-    collect_topology_information, collect_platform_information, RDTInformation
-from tests.testing import create_open_mock, relative_module_path
+    collect_topology_information, collect_platform_information, RDTInformation, _read_numa_nodes, \
+    _parse_cpuset
 
 
 @pytest.mark.parametrize("raw_meminfo_output,expected", [
@@ -75,6 +76,16 @@ def test_collect_topology_information(filename, expected_cpus, expected_cores,
 
 
 @patch('builtins.open', new=create_open_mock({
+    "/sys/devices/system/node/node0/cpulist": "1-2,6-8",
+    "/sys/devices/system/node/node1/cpulist": "3,4,5-6",
+}))
+@patch('os.listdir', return_value=['node0', 'node1', 'ble', 'cpu'])
+def test_read_numa_nodes(*mocks):
+    numa_nodes = _read_numa_nodes()
+    assert numa_nodes == {0: [1, 2, 6, 7, 8], 1: [3, 4, 5, 6]}
+
+
+@patch('builtins.open', new=create_open_mock({
     "/sys/fs/resctrl/info/L3/cbm_mask": "fffff",
     "/sys/fs/resctrl/info/L3/min_cbm_bits": "2",
     "/sys/fs/resctrl/info/L3/num_closids": "16",
@@ -94,11 +105,12 @@ def test_collect_topology_information(filename, expected_cpus, expected_cores,
 @patch('socket.gethostname', return_value="test_host")
 @patch('wca.platforms.parse_proc_meminfo', return_value=1337)
 @patch('wca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
+@patch('wca.platforms._read_numa_nodes', return_value={})
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1, {}))
 @patch('time.time', return_value=1536071557.123456)
 def test_collect_platform_information(*mocks):
     assert collect_platform_information() == (
-        Platform(1, 1, 2, {}, 'intel xeon', {0: 100, 1: 200}, 1337, 1536071557.123456,
+        Platform(1, 1, 2, {}, {}, 'intel xeon', {0: 100, 1: 200}, 1337, 1536071557.123456,
                  RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20)),
         [
             Metric.create_metric_with_metadata(
@@ -114,3 +126,16 @@ def test_collect_platform_information(*mocks):
         {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
          "wca_version": "0.1", "cpu_model": "intel xeon"}
     )
+
+
+@pytest.mark.parametrize(
+    'raw_cpulist, expected_cpus', [
+        ('1,2,3-4,10-11', [1, 2, 3, 4, 10, 11]),
+        ('1-2', [1, 2]),
+        ('5,1-2', [1, 2, 5]),
+        ('1,  2', [1, 2]),
+        ('5,1- 2', [1, 2, 5]),
+    ])
+def test_parse_cpu_set(raw_cpulist, expected_cpus):
+    got_cpus = _parse_cpuset(raw_cpulist)
+    assert got_cpus == expected_cpus

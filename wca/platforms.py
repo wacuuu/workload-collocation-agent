@@ -12,25 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-import os
-import re
 import socket
 import time
-from typing import List, Dict, Optional
 from collections import defaultdict
 from itertools import groupby
+from typing import List, Dict, Optional
+
+import os
+import re
+from dataclasses import dataclass
 
 from wca.metrics import Metric, MetricName
 from wca.profiling import profiler
-
-from dataclasses import dataclass
 
 try:
     from pkg_resources import get_distribution, DistributionNotFound
 except ImportError:
     # When running from pex use vendored library from pex.
     from pex.vendor._vendored.setuptools.pkg_resources import get_distribution, DistributionNotFound
-
 
 log = logging.getLogger(__name__)
 
@@ -71,21 +70,21 @@ class RDTInformation:
 
     # Monitoring.
     rdt_cache_monitoring_enabled: bool  # based /sys/fs/resctrl/mon_data/mon_L3_00/llc_occupancy
-    rdt_mb_monitoring_enabled: bool   # based on /sys/fs/resctrl/mon_data/mon_L3_00/mbm_total_bytes
+    rdt_mb_monitoring_enabled: bool  # based on /sys/fs/resctrl/mon_data/mon_L3_00/mbm_total_bytes
 
     # Allocation.
-    rdt_cache_control_enabled: bool   # based on 'L3:' in /sys/fs/resctrl/schemata
-    rdt_mb_control_enabled: bool      # based on 'MB:' in /sys/fs/resctrl/schemata
+    rdt_cache_control_enabled: bool  # based on 'L3:' in /sys/fs/resctrl/schemata
+    rdt_mb_control_enabled: bool  # based on 'MB:' in /sys/fs/resctrl/schemata
 
     # Cache control read-only parameters. Available only if CAT control
     # is supported by platform,otherwise set to None.
-    cbm_mask: Optional[str]           # based on /sys/fs/resctrl/info/L3/cbm_mask
-    min_cbm_bits: Optional[str]       # based on /sys/fs/resctrl/info/L3/min_cbm_bits
-    num_closids: Optional[int]        # based on /sys/fs/resctrl/info/L3/num_closids
+    cbm_mask: Optional[str]  # based on /sys/fs/resctrl/info/L3/cbm_mask
+    min_cbm_bits: Optional[str]  # based on /sys/fs/resctrl/info/L3/min_cbm_bits
+    num_closids: Optional[int]  # based on /sys/fs/resctrl/info/L3/num_closids
 
     # MB control read-only parameters.
     mb_bandwidth_gran: Optional[int]  # based on /sys/fs/resctrl/info/MB/bandwidth_gran
-    mb_min_bandwidth: Optional[int]   # based on /sys/fs/resctrl/info/MB/min_bandwidth
+    mb_min_bandwidth: Optional[int]  # based on /sys/fs/resctrl/info/MB/min_bandwidth
 
     def is_control_enabled(self):
         return self.rdt_mb_control_enabled or self.rdt_cache_control_enabled
@@ -101,7 +100,10 @@ class Platform:
     cores: int  # number of physical cores in total (sum over all sockets)
     cpus: int  # logical processors equal to the output of "nproc" Linux command
 
+    # mapping from socket, core id to CPU based on /proc/cpuinfo
     topology: Dict[int, Dict[int, List[int]]]
+    # mapping from numa node id to CPU (to support SNC), based on /sys/devices/system/numa
+    numa_nodes: Dict[int, List[int]]
 
     cpu_model: str
 
@@ -233,11 +235,31 @@ def read_proc_stat() -> str:
     return out
 
 
-def collect_topology_information() -> (int, int, int, Dict[int, Dict[int, List[int]]]):
+def _read_numa_nodes() -> Dict[int, List[int]]:
+    """
+    Read CPU to NUMA node mapping based on /sys/devices/system/node
+    :return: mapping from numa_node -> list of cpus
+    """
+    numa_nodes = {}
+    BASE_SYSFS_NODES_PATH = '/sys/devices/system/node'
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            node_id = int(nodedir[4:])
+            cpu_list_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'cpulist')
+            with open(cpu_list_filename) as cpu_list_file:
+                numa_nodes[node_id] = _parse_cpuset(cpu_list_file.read())
+    return numa_nodes
+
+
+def collect_topology_information() -> (int, int, int,
+                                       Dict[int, Dict[int, List[int]]],
+                                       Dict[int, List[int]]
+                                       ):
     """
     Reads files from /sys/devices/system/cpu to collect topology information
     :return: tuple (nr_of_online_cpus, nr_of_cores, nr_of_sockets,
                     mapping from [socket][core] -> list of cpus)
+
     """
     procinfo = open('/proc/cpuinfo').read()
 
@@ -247,8 +269,12 @@ def collect_topology_information() -> (int, int, int, Dict[int, Dict[int, List[i
         ) for proc in list(filter(None, procinfo.split('\n\n')))
     ]
 
-    def by_physical_id(processor): return int(processor['physical id'])
-    def by_core_id(processor): return int(processor['core id'])
+    def by_physical_id(processor):
+        return int(processor['physical id'])
+
+    def by_core_id(processor):
+        return int(processor['core id'])
+
     topology = defaultdict(dict)
 
     for physical_id, socket_processors in groupby(
@@ -343,6 +369,9 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     else:
         rdt_information = None
 
+    # NUMA nodes
+    numa_nodes = _read_numa_nodes()
+
     # Dynamic information
     cpus_usage = parse_proc_stat(read_proc_stat())
     total_memory_used = parse_proc_meminfo(read_proc_meminfo())
@@ -351,6 +380,7 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
         cores=nr_of_cores,
         cpus=nr_of_cpus,
         topology=topology,
+        numa_nodes=numa_nodes,
         cpu_model=get_cpu_model(),
         cpus_usage=cpus_usage,
         total_memory_used=total_memory_used,
@@ -360,3 +390,26 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     assert len(platform.cpus_usage) == platform.cpus, \
         "Inconsistency in cpu data returned by kernel"
     return platform, create_metrics(platform), create_labels(platform)
+
+
+def _parse_cpuset(value: str) -> List[int]:
+    cores = set()
+
+    if not value:
+        return list()
+
+    ranges = value.split(',')
+
+    for r in ranges:
+        boundaries = r.split('-')
+
+        if len(boundaries) == 1:
+            cores.add(int(boundaries[0].strip()))
+        elif len(boundaries) == 2:
+            start = int(boundaries[0].strip())
+            end = int(boundaries[1].strip())
+
+            for i in range(start, end + 1):
+                cores.add(i)
+
+    return list(sorted(cores))

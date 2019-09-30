@@ -16,9 +16,10 @@ from typing import Dict, Tuple, Optional, List
 
 from wca.allocations import AllocationValue, BoxedNumeric, InvalidAllocations, LabelsUpdater
 from wca.allocators import AllocationType
+from wca.cgroups import QUOTA_NORMALIZED_MAX
 from wca.containers import ContainerInterface
-from wca.cgroups import QUOTA_NORMALIZED_MAX, _parse_cpuset
 from wca.metrics import Metric, MetricType
+from wca.platforms import _parse_cpuset
 
 
 class QuotaAllocationValue(BoxedNumeric):
@@ -114,18 +115,17 @@ class CPUSetAllocationValue(AllocationValue):
         if len(self.value) > 0:
             if self.value[0] < self.min_value or self.value[-1] > self.max_value:
                 raise InvalidAllocations(
-                        '{} not in range <{};{}>'
+                    '{} not in range <{};{}>'
                         .format(self._original_value, self.min_value, self.max_value))
         else:
             raise InvalidAllocations(
-                    '{} is invalid argument!'
+                '{} is invalid argument!'
                     .format(self._original_value))
 
     def perform_allocations(self):
         self.validate()
         cpus = self.value
         self.cgroup.set_cpuset(cpus)
-
 
 
 class CPUSetMemoryMigrateAllocationValue(BoxedNumeric):

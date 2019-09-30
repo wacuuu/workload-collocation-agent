@@ -23,6 +23,7 @@ from wca import platforms
 from wca.allocations import MissingAllocationException
 from wca.allocators import TaskAllocations, AllocationType, AllocationConfiguration
 from wca.metrics import Measurements, MetricName, MissingMeasurementException
+from wca.platforms import _parse_cpuset
 
 log = logging.getLogger(__name__)
 
@@ -72,29 +73,6 @@ class CgroupResource(str, Enum):
 
     def __repr__(self):
         return repr(self.value)
-
-
-def _parse_cpuset(value: str) -> List[int]:
-    cores = set()
-
-    if not value:
-        return list()
-
-    ranges = value.split(',')
-
-    for r in ranges:
-        boundaries = r.split('-')
-
-        if len(boundaries) == 1:
-            cores.add(int(boundaries[0]))
-        elif len(boundaries) == 2:
-            start = int(boundaries[0])
-            end = int(boundaries[1])
-
-            for i in range(start, end + 1):
-                cores.add(i)
-
-    return list(sorted(cores))
 
 
 def _encode_cpuset(cpus: List[int]) -> str:
@@ -285,7 +263,7 @@ class Cgroup:
         # based on /proc/schedstat or better /sys/devices/system/node
         if mems is None:
             sockets = set()
-            cpu2socket = build_cpu_to_socket_mapping(self.platform.topology)
+            cpu2socket = build_cpu_to_socket_mapping(self.platform.numa_nodes)
             for cpu in cpus:
                 sockets.add(cpu2socket[cpu])
             mems = list(sockets)
@@ -328,10 +306,9 @@ class Cgroup:
         return self._read(CgroupResource.CPUSET_MEMORY_MIGRATE, CgroupType.CPUSET)
 
 
-def build_cpu_to_socket_mapping(topology: Dict[int, Dict[int, List[int]]]) -> Dict[int, int]:
+def build_cpu_to_socket_mapping(numa_nodes: Dict[int, List[int]]) -> Dict[int, int]:
     mapping = {}
-    for socket, cores in topology.items():
-        for core, cpus in cores.items():
-            for cpu in cpus:
-                mapping[cpu] = socket
+    for numa_node, cpus in numa_nodes.items():
+        for cpu in cpus:
+            mapping[cpu] = numa_node
     return mapping

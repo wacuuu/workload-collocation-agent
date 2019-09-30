@@ -15,15 +15,15 @@
 
 """Module for independent simple helper functions."""
 
-import functools
-import os
 import json
 from typing import List, Dict, Union, Optional
 from unittest.mock import mock_open, Mock, patch
 
+import functools
+import os
+
 from wca import platforms
 from wca.allocators import AllocationConfiguration
-from wca.runners.measurement import DEFAULT_EVENTS
 from wca.containers import Container, ContainerSet, ContainerInterface
 from wca.detectors import ContendedResource, ContentionAnomaly, LABEL_WORKLOAD_INSTANCE, \
     _create_uuid_from_tasks_ids
@@ -32,14 +32,15 @@ from wca.nodes import TaskId, Task
 from wca.platforms import RDTInformation
 from wca.resctrl import ResGroup
 from wca.runners import Runner
+from wca.runners.measurement import DEFAULT_EVENTS
 
 
 def create_json_fixture_mock(name, path=__file__, status_code=200):
     """ Helper function to shorten the notation. """
     return Mock(
-                json=Mock(return_value=json.load(
-                    open(relative_module_path(path, 'fixtures/' + name + '.json')))),
-                status_code=status_code,)
+        json=Mock(return_value=json.load(
+            open(relative_module_path(path, 'fixtures/' + name + '.json')))),
+        status_code=status_code, )
 
 
 def relative_module_path(module_file, relative_path):
@@ -142,7 +143,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
               should_patch=True, resgroup_name='',
               rdt_enabled=True, rdt_mb_control_enabled=True,
               rdt_cache_control_enabled=True) \
-              -> ContainerInterface:
+        -> ContainerInterface:
     """Helper method to create Container or ContainerSet
         (depends if subcgroups_paths is empty or not),
         optionally with patched subsystems."""
@@ -214,7 +215,8 @@ platform_mock = Mock(
     spec=platforms.Platform,
     cpus=4,
     sockets=1,
-    topology={},
+    topology={0: {0: [0, 1], 1: [2, 3]}},
+    numa_nodes={0: [0, 1, 2, 3]},
     rdt_information=RDTInformation(
         cbm_mask='fffff',
         min_cbm_bits='1',
@@ -342,8 +344,8 @@ def assert_metric(got_metrics: List[Metric],
                 break
     if not found_metric:
         raise AssertionError(
-                'metric %r not found (labels=%s)' %
-                (expected_metric_name, expected_metric_some_labels))
+            'metric %r not found (labels=%s)' %
+            (expected_metric_name, expected_metric_some_labels))
     # Check values as well
     if expected_metric_value is not None:
         assert found_metric.value == expected_metric_value, \

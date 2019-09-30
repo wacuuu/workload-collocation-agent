@@ -16,7 +16,7 @@
 import pytest
 
 from wca import config
-from wca import testing
+from tests import testing
 from wca.config import ConfigLoadError
 
 

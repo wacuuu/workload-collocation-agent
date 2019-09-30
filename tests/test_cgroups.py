@@ -16,11 +16,11 @@ from unittest.mock import patch, mock_open, MagicMock, call, Mock
 
 import pytest
 
+from tests.testing import create_open_mock, platform_mock
 from wca.allocators import AllocationConfiguration
 from wca.cgroups import Cgroup, CgroupType, CgroupResource
 from wca.metrics import MetricName, MissingMeasurementException
 from wca.platforms import Platform
-from tests.testing import create_open_mock, platform_mock
 
 
 @patch('wca.cgroups.log.warning')
@@ -107,7 +107,7 @@ def test_set_normalized_shares(normalized_shares, allocation_configuration, expe
                         allocation_configuration=allocation_configuration)
         cgroup.set_shares(normalized_shares)
         write_mock.assert_called_with(
-                CgroupResource.CPU_SHARES, expected_shares_write, CgroupType.CPU)
+            CgroupResource.CPU_SHARES, expected_shares_write, CgroupType.CPU)
 
 
 @pytest.mark.parametrize(
@@ -140,34 +140,34 @@ def test_set_normalized_quota(normalized_quota, cpu_quota_period, platforms_cpu,
                                 cpu_quota_period=cpu_quota_period))
             cgroup.set_quota(normalized_quota)
             write_mock.assert_has_calls(
-                    [call(CgroupResource.CPU_QUOTA, expected_quota_write, CgroupType.CPU)])
+                [call(CgroupResource.CPU_QUOTA, expected_quota_write, CgroupType.CPU)])
             if expected_period_write:
                 write_mock.assert_has_calls(
-                        [call(CgroupResource.CPU_PERIOD, expected_period_write, CgroupType.CPU)])
+                    [call(CgroupResource.CPU_PERIOD, expected_period_write, CgroupType.CPU)])
 
 
-# two socket with ht enabled but only one core per socket
-_test_topology = {0: {0: [0, 1]}, 1: {0: [2, 3]}}
+# two numa nodes 0->0,1 and 1->2,3
+_test_numa_nodes = {0: [0, 1], 1: [2, 3]}
 
 
 @pytest.mark.parametrize(
-    'cpus, mems, platform_topology,'
+    'cpus, mems, platform_numa_nodes,'
     'expected_cpus_write, expected_mems_write', [
         ([0, 1, 2, 3, 4], [0], {}, '0,1,2,3,4', '0'),
-        ([0, 1], None, _test_topology, '0,1', '0'),
-        ([1, 3], None, _test_topology, '1,3', '0,1'),
+        ([0, 1], None, _test_numa_nodes, '0,1', '0'),
+        ([1, 3], None, _test_numa_nodes, '1,3', '0,1'),
     ]
 )
 def test_set_cpuset(
-        cpus, mems, platform_topology, expected_cpus_write, expected_mems_write):
+        cpus, mems, platform_numa_nodes, expected_cpus_write, expected_mems_write):
     platform_mock = Mock(
         spec=Platform,
-        topology=platform_topology,
+        numa_nodes=platform_numa_nodes
     )
     with patch('wca.cgroups.Cgroup._write') as write_mock:
         cgroup = Cgroup('/some/foo1', platform=platform_mock)
         cgroup.set_cpuset(cpus, mems)
         write_mock.assert_has_calls(
-                [call(CgroupResource.CPUSET_CPUS, expected_cpus_write, CgroupType.CPUSET)])
+            [call(CgroupResource.CPUSET_CPUS, expected_cpus_write, CgroupType.CPUSET)])
         write_mock.assert_has_calls(
-                [call(CgroupResource.CPUSET_MEMS, expected_mems_write, CgroupType.CPUSET)])
+            [call(CgroupResource.CPUSET_MEMS, expected_mems_write, CgroupType.CPUSET)])
