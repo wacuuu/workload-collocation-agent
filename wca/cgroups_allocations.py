@@ -63,36 +63,28 @@ class SharesAllocationValue(BoxedNumeric):
         self.cgroup.set_shares(self.value)
 
 
-class CPUSetAllocationValue(AllocationValue):
-
+class ListFormatBasedAllocationValue(AllocationValue):
     def __init__(self, value: str, container: ContainerInterface, common_labels: dict):
         assert isinstance(value, str)
         self.cgroup = container.get_cgroup()
-        self._original_value = value
-        self.value = decode_listformat(value)
+        self.value = value
         self.common_labels = common_labels
         self.labels_updater = LabelsUpdater(common_labels or {})
-        # First core
         self.min_value = 0
-        # Last core
-        self.max_value = self.cgroup.platform.cpus - 1
+        self.max_value = None  # TO BE UPDATED by subclass
 
-    def __repr__(self):
-        return repr(self.value)
+    def __eq__(self, other) -> bool:
+        """Compare listformat based value to another value by taking value into consideration."""
+        assert isinstance(other, self.__class__)
+        return decode_listformat(self.value) == decode_listformat(other.value)
 
-    def __eq__(self, other: 'CPUSetAllocationValue') -> bool:
-        """Compare cpuset value to another value by taking value into consideration."""
-        assert isinstance(other, CPUSetAllocationValue)
-        return self.value == other.value
-
-    def calculate_changeset(self, current: 'CPUSetAllocationValue') \
-            -> Tuple['CPUSetAllocationValue', Optional['CPUSetAllocationValue']]:
+    def calculate_changeset(self, current) \
+            -> Tuple['ListFormatBasedAllocationValue', Optional['ListFormatBasedAllocationValue']]:
         if current is None:
             # There is no old value, so there is a change
             value_changed = True
         else:
             # If we have old value compare them.
-            assert isinstance(current, CPUSetAllocationValue)
             value_changed = (self != current)
 
         if value_changed:
@@ -100,32 +92,64 @@ class CPUSetAllocationValue(AllocationValue):
         else:
             return current, None
 
+    def validate(self):
+        try:
+            value = decode_listformat(self.value)
+        except ValueError as e:
+            raise InvalidAllocations('cannot decode list format %r: %s' % (self.value, e)) from e
+        as_sorted_list = list(sorted(value))
+        assert self.max_value is not None, 'should be initialized by subclass'
+        if len(self.value) > 0:
+            if as_sorted_list[0] < self.min_value or as_sorted_list[-1] > self.max_value:
+                raise InvalidAllocations(
+                    '{} not in range <{};{}>'.format(self.value, self.min_value,
+                                                     self.max_value))
+        else:
+            raise InvalidAllocations(
+                '{} is invalid argument! No data provided!'.format(self.value))
+
+
+class CPUSetCPUSAllocationValue(ListFormatBasedAllocationValue):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_value = self.cgroup.platform.cpus - 1
+
     def generate_metrics(self) -> List[Metric]:
-        assert isinstance(self.value, set), 'expected is a set of ints'
+        cpus = decode_listformat(self.value)
         metrics = [Metric(
-            name='allocation_cpuset_number_of_cpus',
-            value=len(self.value),
+            name='allocation_cpuset_cpus_number_of_cpus',
+            value=len(cpus),
             type=MetricType.GAUGE,
-            labels=dict(allocation_type=AllocationType.CPUSET)
+            labels=dict(allocation_type=AllocationType.CPUSET_CPUS)
         )]
         self.labels_updater.update_labels(metrics)
         return metrics
 
-    def validate(self):
-        as_sorted_list = list(sorted(self.value))
-        if len(self.value) > 0:
-            if as_sorted_list[0] < self.min_value or as_sorted_list[-1] > self.max_value:
-                raise InvalidAllocations(
-                    '{} not in range <{};{}>'.format(self._original_value, self.min_value,
-                                                     self.max_value))
-        else:
-            raise InvalidAllocations(
-                '{} is invalid argument!'.format(self._original_value))
+    def perform_allocations(self):
+        cpus = decode_listformat(self.value)
+        self.cgroup.set_cpuset_cpus(cpus)
+
+
+class CPUSetMEMSAllocationValue(ListFormatBasedAllocationValue):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_value = len(self.cgroup.platform.node_cpus) - 1
+
+    def generate_metrics(self) -> List[Metric]:
+        mems = decode_listformat(self.value)
+        metrics = [Metric(
+            name='allocation_cpuset_mems_number_of_mems',
+            value=len(mems),
+            type=MetricType.GAUGE,
+            labels=dict(allocation_type=AllocationType.CPUSET_MEMS)
+        )]
+        self.labels_updater.update_labels(metrics)
+        return metrics
 
     def perform_allocations(self):
-        self.validate()
-        cpus = self.value
-        self.cgroup.set_cpuset(cpus)
+        self.cgroup.set_cpuset_mems(decode_listformat(self.value))
 
 
 class CPUSetMemoryMigrateAllocationValue(BoxedNumeric):

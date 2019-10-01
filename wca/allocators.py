@@ -31,7 +31,8 @@ class AllocationType(str, Enum):
     QUOTA = 'cpu_quota'
     SHARES = 'cpu_shares'
     RDT = 'rdt'
-    CPUSET = 'cpu_set'
+    CPUSET_CPUS = 'cpuset_cpus'
+    CPUSET_MEMS = 'cpuset_mems'
     CPUSET_MEM_MIGRATE = 'cpu_set_memory_migrate'
 
     def __repr__(self):

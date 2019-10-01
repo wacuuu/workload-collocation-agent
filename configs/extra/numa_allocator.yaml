@@ -1,6 +1,8 @@
 runner: !AllocationRunner
   action_delay: 5
   node: !StaticNode
+    # mkdir -p /sys/fs/cgroup/{cpu,cpuset,perf_event,cpuset,memory}/specjbb2015/Group{1,2,3,4,5}
+    require_pids: true  # This will ignore cgroups without tasks - no more empty measurements.
     tasks:
       #- task1
       #- task2

@@ -61,4 +61,4 @@ def test_merge_measurements(measurements_list, expected_merge):
 
 def test_metric_meta_exists():
     for metric_name in chain(MetricName, DerivedMetricName):
-        assert metric_name in METRICS_METADATA
+        assert metric_name in METRICS_METADATA, 'missing metadata for metric %s' % metric_name

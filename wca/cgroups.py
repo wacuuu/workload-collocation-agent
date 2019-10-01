@@ -208,7 +208,8 @@ class Cgroup:
         return {
             AllocationType.QUOTA: self._get_normalized_quota(),
             AllocationType.SHARES: self._get_normalized_shares(),
-            AllocationType.CPUSET: self._get_cpuset(),
+            AllocationType.CPUSET_CPUS: self._get_cpuset_cpus(),
+            AllocationType.CPUSET_MEMS: self._get_cpuset_mems(),
             AllocationType.CPUSET_MEM_MIGRATE: self._get_memory_migrate(),
         }
 
@@ -263,47 +264,35 @@ class Cgroup:
 
         self._write(CgroupResource.CPU_QUOTA, quota, CgroupType.CPU)
 
-    def set_cpuset(self, cpus: Set[int], mems: Set[int] = None):
-        """Set cpuset.cpus and cpuset.mems."""
-        encoded_cpus = encode_listformat(cpus)
-
-        # Auto set mems based on cpu -> socket mapping
-        if mems is None:
-            mems = set()
-            cpu_to_numa = build_cpu_to_socket_mapping(self.platform.node_cpus)
-            for cpu in cpus:
-                mems.add(cpu_to_numa[cpu])
-            log.debug('auto NUMA node assigment: %r based on cpus list: %r', cpus, mems)
-
-        encoded_mems = encode_listformat(mems)
-
-        assert encoded_cpus is not None
-        assert encoded_mems is not None
-
+    def _write_listformat(self, intset: Set[int], resource: CgroupResource,
+                          cgroup_type: CgroupType):
+        encoded_value = encode_listformat(intset)
         try:
-            self._write(CgroupResource.CPUSET_CPUS, encoded_cpus, CgroupType.CPUSET)
+            self._write(resource, encoded_value, cgroup_type)
         except PermissionError:
             log.warning(
                 'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
-                    CgroupResource.CPUSET_CPUS, encoded_cpus, self.cgroup_cpuset_fullpath))
-        try:
-            self._write(CgroupResource.CPUSET_MEMS, encoded_mems, CgroupType.CPUSET)
-        except PermissionError:
-            log.warning(
-                'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
-                    CgroupResource.CPUSET_MEMS, encoded_mems, self.cgroup_cpuset_fullpath))
+                    CgroupResource.CPUSET_CPUS, encoded_value, self.cgroup_cpuset_fullpath))
 
-    def _get_cpuset(self) -> str:
-        """Get current cpuset.cpus (encoded as comma seperated sorted list of cpus)."""
+    def _read_listformat(self, resource: CgroupResource, cgroup_type: CgroupType):
+        listformat = decode_listformat(self._read_raw(resource, cgroup_type).strip())
+        return encode_listformat(listformat)
 
-        try:
-            cpus = decode_listformat(self._read_raw(CgroupResource.CPUSET_CPUS,
-                                                    CgroupType.CPUSET).strip())
-            return encode_listformat(cpus)
-        except PermissionError:
-            log.warning(
-                'Cannot read {}: "{}"! Permission denied.'.format(
-                    CgroupResource.CPUSET_CPUS, self.cgroup_cpuset_fullpath))
+    def set_cpuset_cpus(self, cpus: Set[int]):
+        """Set cpuset.cpus."""
+        self._write_listformat(cpus, CgroupResource.CPUSET_CPUS, CgroupType.CPUSET)
+
+    def set_cpuset_mems(self, mems: Set[int] = None):
+        """Set cpuset.mems."""
+        self._write_listformat(mems, CgroupResource.CPUSET_MEMS, CgroupType.CPUSET)
+
+    def _get_cpuset_cpus(self) -> str:
+        """Get current cpuset.cpus (encoded as comma separated sorted normalized list of cpus)."""
+        return self._read_listformat(CgroupResource.CPUSET_CPUS, CgroupType.CPUSET)
+
+    def _get_cpuset_mems(self) -> str:
+        """Get current cpuset.mems (encoded as comma separated sorted normalized list of cpus)."""
+        return self._read_listformat(CgroupResource.CPUSET_MEMS, CgroupType.CPUSET)
 
     def _set_memory_migrate(self, value: int):
         self._write(CgroupResource.CPUSET_MEMORY_MIGRATE, value, CgroupType.CPUSET)

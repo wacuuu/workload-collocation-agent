@@ -22,7 +22,7 @@ from wca.allocations import AllocationsDict, InvalidAllocations, AllocationValue
 from wca.allocators import TasksAllocations, AllocationConfiguration, AllocationType, Allocator, \
     TaskAllocations, RDTAllocation
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
-    CPUSetAllocationValue, CPUSetMemoryMigrateAllocationValue
+    CPUSetCPUSAllocationValue, CPUSetMemoryMigrateAllocationValue, CPUSetMEMSAllocationValue
 from wca.config import Numeric, Str, assure_type
 from wca.containers import ContainerInterface, Container
 from wca.detectors import convert_anomalies_to_metrics, \
@@ -95,7 +95,8 @@ class TasksAllocationsValues(AllocationsDict):
         registry = {
             AllocationType.QUOTA: QuotaAllocationValue,
             AllocationType.SHARES: SharesAllocationValue,
-            AllocationType.CPUSET: CPUSetAllocationValue,
+            AllocationType.CPUSET_CPUS: CPUSetCPUSAllocationValue,
+            AllocationType.CPUSET_MEMS: CPUSetMEMSAllocationValue,
             AllocationType.CPUSET_MEM_MIGRATE: CPUSetMemoryMigrateAllocationValue,
         }
 

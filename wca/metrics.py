@@ -144,6 +144,11 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricType.GAUGE,
             'Perf metric scaling factor, average from all CPUs'
         ),
+    MetricName.MEM_NUMA_STAT:
+        MetricMetadata(
+            MetricType.GAUGE,
+            'NUMA Stat TODO!',  # TODO: fix me!
+        ),
     DerivedMetricName.IPC:
         MetricMetadata(
             MetricType.GAUGE,

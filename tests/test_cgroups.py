@@ -156,9 +156,12 @@ _test_node_cpus = {0: {0, 1}, 1: {2, 3}}
 @pytest.mark.parametrize(
     'cpus, mems, node_cpus,'
     'expected_cpus_write, expected_mems_write', [
-        ({0, 1, 2, 3, 4}, {0}, {}, '0,1,2,3,4', '0'),
-        ({0, 1}, None, _test_node_cpus, '0,1', '0'),
-        ({1, 3}, None, _test_node_cpus, '1,3', '0,1'),
+        ({0, 1, 2, 3, 4}, {0}, _test_node_cpus,
+         '0,1,2,3,4', '0'),
+        ({0, 1}, {0, 1}, _test_node_cpus,
+         '0,1', '0,1'),
+        ({1, 3}, {0}, _test_node_cpus,
+         '1,3', '0'),
     ]
 )
 def test_set_cpuset(
@@ -169,8 +172,10 @@ def test_set_cpuset(
     )
     with patch('wca.cgroups.Cgroup._write') as write_mock:
         cgroup = Cgroup('/some/foo1', platform=platform_mock)
-        cgroup.set_cpuset(cpus, mems)
+        cgroup.set_cpuset_cpus(cpus)
         write_mock.assert_has_calls(
             [call(CgroupResource.CPUSET_CPUS, expected_cpus_write, CgroupType.CPUSET)])
+
+        cgroup.set_cpuset_mems(mems)
         write_mock.assert_has_calls(
             [call(CgroupResource.CPUSET_MEMS, expected_mems_write, CgroupType.CPUSET)])

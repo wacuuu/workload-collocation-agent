@@ -45,7 +45,8 @@ class NUMAAllocator(Allocator):
         # log.debug('random memory_migrate: %s-%s', cpu1, cpu2)
         # allocations = {
         #     'task1': {
-        #         AllocationType.CPUSET: '%s-%s' % (cpu1, cpu2),
+        #         AllocationType.CPUSET_CPUS: '%s-%s' % (cpu1, cpu2),
+        #         AllocationType.CPUSET_MEMS: '%s-%s' % (cpu1, cpu2),
         #         AllocationType.CPUSET_MEM_MIGRATE: memory_migrate,
         #         # Other options:
         #         # 'cpu_quota': 0.5,
@@ -87,12 +88,17 @@ class NUMAAllocator(Allocator):
 
         for task, memory, preferences in tasks_memory:
             log.debug("Task: %s Memory: %d Preferences: %s" % (task, memory, preferences))
-            current_node = _get_current_node(decode_listformat(tasks_allocations[task]['cpu_set']), platform.node_cpus)
+            current_node = _get_current_node(decode_listformat(tasks_allocations[task][AllocationType.CPUSET_CPUS]), platform.node_cpus)
             log.debug("Task current node: %d", current_node)
             # print("Current node: %d" % current_node)
             if current_node >= 0:
                 log.debug("task already placed, taking next")
                 balanced_memory[current_node].append((task, memory))
+                continue
+
+            if memory == 0:
+                # Handle missing data for "ghost" tasks e.g. cgroup without processes when using StaticNode
+                log.warning('skip allocation for %r task - not enough data - maybe there are no processes there!', task)
                 continue
 
             most_used_node = _get_most_used_node(preferences)
@@ -133,7 +139,8 @@ class NUMAAllocator(Allocator):
         if balance_task is not None and balance_task_node is not None:
             allocations[balance_task] = {
                 AllocationType.CPUSET_MEM_MIGRATE: 1,
-                AllocationType.CPUSET: encode_listformat(platform.node_cpus[balance_task_node]),
+                AllocationType.CPUSET_CPUS: encode_listformat(platform.node_cpus[balance_task_node]),
+                AllocationType.CPUSET_MEMS: encode_listformat({balance_task_node}),
             }
 
         # for node in balanced_memory:
