@@ -2,7 +2,7 @@
 # Requires environment variables:
 # - KUBERNETES_SERVICE_HOST - provided by default by Kuberenetes
 # - KUBERNETES_SERVICE_PORT - provided by default by Kubernetes
-# - HOST_IP - need to explictly enabled in Pod spec using downward-api
+# - HOST_IP - need to explicitly enabled in Pod spec using downward-api
 # - HOSTNAME - default provided by OS
 
 runner: !MeasurementRunner
@@ -26,3 +26,14 @@ runner: !MeasurementRunner
   extra_labels:
     node: !Env
       name: HOSTNAME
+
+  ### ---- Required for 2LM demo
+  event_names:
+    - instructions
+    - cycles
+    - cache_misses
+    - mem_load_retired_local_pmm__rd180   # Retired load instructions with local Optane DC persistent memory as the data source  and the data request missed L3
+    - mem_inst_retired_all_loads__rd081
+    - mem_inst_retired_all_stores__rd082
+    #- dtlb_load_misses__r080e             # https://elixir.bootlin.com/linux/latest/source/arch/x86/events/intel/core.c#L469
+  wss_reset_interval: 1

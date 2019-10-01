@@ -11,4 +11,4 @@ resources:
   - operator/deployment.yaml
   - operator/service_account.yaml
   - operator/service.yaml
-  - persistent_storage.yaml
+  - storage_class.yaml

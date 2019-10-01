@@ -4,6 +4,8 @@ metadata:
   name: prometheus
   namespace: prometheus
 spec:
+  version: v2.12.0
+  evaluationInterval: 1s
   retention: 60d
   serviceAccountName: prometheus
   serviceMonitorNamespaceSelector:
@@ -18,8 +20,18 @@ spec:
     requests:
       memory: 400Mi
   enableAdminAPI: true
+  # Node binding to master
+  tolerations:
+    - key: master
+      operator: Exists
+      effect: NoSchedule
+  nodeSelector:
+    node-role.kubernetes.io/master: ""
   storage:
     volumeClaimTemplate:
       spec:
         storageClassName: manual
----
+        resources:
+          requests:
+            storage: 10Gi
+

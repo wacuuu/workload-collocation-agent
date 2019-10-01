@@ -3,3 +3,7 @@ bases:
 - grafana
 - prometheus
 - wca
+- kube-state-metrics
+
+resources:
+- kube-system/service_monitor.yaml

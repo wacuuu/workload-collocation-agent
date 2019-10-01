@@ -64,6 +64,8 @@ spec:
             mountPath: /dev/cpu
           - name: wca-config
             mountPath: /etc/wca/
+          - name: proc
+            mountPath: /proc
 #        command:
 #          - sleep
 #          - inf

@@ -12,14 +12,15 @@ log = logging.getLogger(__name__)
 
 # PUBLIC CONFIG
 PORT = 12345
-PROMETHEUS = 'http://100.64.176.36:9090'
+PROMETHEUS = 'http://100.64.176.36:30900'
 NAMESPACE = 'default'
 
 LEVEL = logging.INFO
 
 # Model from the past
 # http://100.64.176.12:3000/d/MbAID-cZk/2lm-contention-demo?orgId=1&from=1568632199577&to=1568632501133
-TIME = '1568632501'
+#http://100.64.176.36:32135/d/MbAID-cZk/2lm-contention-demo?orgId=1&from=1569479156221&to=1569479280097
+TIME = '1569479280'
 LOOKBACK = '2m'
 FIT_QUERY = 'avg_over_time(fit_avg{app="%s"}[%s])'
 WEIGHT_MULTIPLER = 20.0

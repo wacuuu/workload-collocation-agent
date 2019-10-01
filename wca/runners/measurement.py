@@ -124,7 +124,8 @@ class MeasurementRunner(Runner):
         self._rdt_mb_control_required = False
         # Disabled by default, to overridden by subclasses.
         self._rdt_cache_control_required = False
-        self._extra_labels = extra_labels or dict()
+        # QUICK FIX for Str from ENV TODO: fix me
+        self._extra_labels = {k:str(v) for k,v in extra_labels.items()} if extra_labels else dict()
         self._finish = False  # Guard to stop iterations.
         self._last_iteration = time.time()  # Used internally by wait function.
         self._allocation_configuration = _allocation_configuration
