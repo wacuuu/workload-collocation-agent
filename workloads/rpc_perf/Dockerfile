@@ -24,7 +24,7 @@ ENV RUSTUP_HOME=/usr/local/rustup \
 RUN yum install -y gcc git make wget patch
 
 RUN curl https://sh.rustup.rs -sSf | \
-    sh -s -- --default-toolchain stable -y
+    sh -s -- --default-toolchain $RUST_VERSION -y
 
 RUN git clone https://github.com/twitter/rpc-perf.git
 WORKDIR /rpc-perf

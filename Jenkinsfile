@@ -201,11 +201,12 @@ pipeline {
                 stage('WCA E2E for Kubernetes') {
                     agent { label 'kubernetes' }
                     environment {
-                        KUBERNETES_HOST='100.64.176.34'
+                        KUBERNETES_HOST='100.64.176.17'
                         CRT_PATH = '/etc/kubernetes/ssl'
                         CONFIG = 'wca_config_kubernetes.yaml'
                         HOST_INVENTORY='tests/e2e/demo_scenarios/common/inventory-kubernetes.yaml'
                         CERT='true'
+                        KUBECONFIG="${HOME}/admin.conf"
                     }
                     steps {
                         wca_and_workloads_check()
@@ -219,7 +220,6 @@ pipeline {
                 stage('WCA E2E for Mesos') {
                     agent { label 'mesos' }
                     environment {
-                        MESOS_MASTER_HOST='100.64.176.23'
                         MESOS_AGENT='100.64.176.14'
                         CONFIG = 'wca_config_mesos.yaml'
                         HOST_INVENTORY='tests/e2e/demo_scenarios/common/inventory-mesos.yaml'
