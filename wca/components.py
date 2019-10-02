@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import os
+import functools
 from collections import UserString
 from typing import List
 
@@ -42,9 +43,12 @@ from wca.perf_pmu import DefaultPlatformDerivedMetricsGeneratorsFactory
 class Env(UserString):
     """Env class allows using environment variables as values in wca config"""
 
-    def __init__(self, name: str):
-        seq = os.environ.get(name, "")
-        super().__init__(seq)
+    def _get_env(self, value: str):
+        seq = os.environ.get(value, "")
+        return seq
+
+    def function(self, value: str):
+        return functools.partial(self._get_env, value=value)
 
 
 def register_components(extra_components: List[str]):
@@ -68,7 +72,7 @@ def register_components(extra_components: List[str]):
     config.register(aep_detector.AEPDetector)
     config.register(DefaultTaskDerivedMetricsGeneratorFactory)
     config.register(DefaultPlatformDerivedMetricsGeneratorsFactory)
-    config.register(Env)
+    #config.register(Env)
 
     for component in extra_components:
         # Load external class ignored its requirements.

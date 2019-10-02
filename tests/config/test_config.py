@@ -78,12 +78,16 @@ def test_config_with_simple_classes():
 
 
 def test_config_with_env_class():
-    config.register(Env, strict_mode=True)
+    #config.register_simple(Env)
+    config.register_env()
 
     test_config_path = testing.relative_module_path(__file__, 'test_config_env.yaml')
     data = config.load_config(test_config_path)
 
-    assert data['from_env'] == os.environ["USER"]
+    user = data['from_env']
+    assert user == os.environ["USER"]
+    assert user.strip() != ''
+
     assert data['unset_env'] == ''
 
 
