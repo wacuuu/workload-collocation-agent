@@ -17,11 +17,11 @@ from unittest.mock import patch
 
 import pytest
 
-from tests.testing import create_open_mock, relative_module_path
+from tests.testing import create_open_mock, relative_module_path, _is_dict_match
 from wca.metrics import Metric, MetricName
-from tests.testing import create_open_mock, relative_module_path, _is_dict_match, \
-    collect_topology_information, collect_platform_information, RDTInformation, \
-    decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat
+from wca.platforms import Platform, CPUCodeName, parse_proc_stat, parse_proc_meminfo, _parse_cpuinfo
+from wca.platforms import collect_topology_information, collect_platform_information, \
+    RDTInformation, decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat
 
 
 @pytest.mark.parametrize("raw_meminfo_output,expected", [
@@ -68,7 +68,7 @@ def test_parse_proc_state(raw_proc_state_output, expected):
     ('fixtures/procinfo_2sockets_ht.txt', 72, {}),
     ('fixtures/procinfo_2sockets_noht.txt', 28, {}),
 ])
-def test_collect_topology_information(filename, expected_cpus, expected_cpu):
+def test_parse_cpu_info(filename, expected_cpus, expected_cpu):
     with patch('builtins.open',
                new=create_open_mock(
                    {"/proc/cpuinfo": open(relative_module_path(__file__, filename)).read()})
@@ -89,7 +89,8 @@ def test_collect_topology_information(filename, expected_cpus, expected_cores,
                new=create_open_mock(
                    {"/proc/cpuinfo": open(relative_module_path(__file__, filename)).read()})
                ):
-        got_cpus, got_cores, got_sockets, got_topology = collect_topology_information()
+        cpuinfo = _parse_cpuinfo()
+        got_cpus, got_cores, got_sockets, got_topology = collect_topology_information(cpuinfo)
         assert got_cpus == expected_cpus
         assert got_cores == expected_cores
         assert got_sockets == expected_sockets
@@ -126,42 +127,44 @@ def test_parse_node_cpus(*mocks):
 @patch('wca.platforms.parse_proc_meminfo', return_value=1337)
 @patch('wca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
 @patch('wca.platforms.parse_node_cpus', return_value={})
-@patch('wca.platforms.parse_node_meminfo', return_value=[1, 2])
+@patch('wca.platforms.parse_node_meminfo', return_value=[{0: 1}, {0: 2}])
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1, {}))
 @patch('wca.platforms._parse_cpuinfo', return_value=[
     {'model': 0x5E, 'model name': 'intel xeon', 'stepping': 1}])
 @patch('time.time', return_value=1536071557.123456)
 def test_collect_platform_information(*mocks):
-    assert collect_platform_information() == (
-        Platform(sockets=1,
-                 cores=1,
-                 cpus=2,
-                 topology={},
-                 cpu_model='intel xeon',
-                 cpu_model_number=0x5E,
-                 cpu_codename=CPUCodeName.SKYLAKE,
-                 cpus_usage={0: 100, 1: 200},
-                 total_memory_used=1337,
-                 timestamp=1536071557.123456,  # timestamp,
-                 node_memory_free=1,
-                 node_memory_used=2,
-                 node_cpus={},
-                 rdt_information=RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20)
-                 ),
-        [
-            Metric.create_metric_with_metadata(
-                name=MetricName.MEM_USAGE, value=1337
-            ),
-            Metric.create_metric_with_metadata(
-                name=MetricName.CPU_USAGE_PER_CPU, value=100, labels={"cpu": "0"}
-            ),
-            Metric.create_metric_with_metadata(
-                name=MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}
-            ),
-        ],
-        {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
-            "wca_version": "0.1", "cpu_model": "intel xeon"}
+    got_platform, got_metrics, got_labels = collect_platform_information()
+
+    assert got_platform == Platform(
+        sockets=1,
+        cores=1,
+        cpus=2,
+        topology={},
+        cpu_model='intel xeon',
+        cpu_model_number=0x5E,
+        cpu_codename=CPUCodeName.SKYLAKE,
+        cpus_usage={0: 100, 1: 200},
+        total_memory_used=1337,
+        timestamp=1536071557.123456,  # timestamp,
+        node_memory_free={0: 1},
+        node_memory_used={0: 2},
+        node_cpus={},
+        rdt_information=RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20)
     )
+
+    assert got_metrics == [
+        Metric.create_metric_with_metadata(
+            name=MetricName.MEM_USAGE, value=1337
+        ),
+        Metric.create_metric_with_metadata(
+            name=MetricName.CPU_USAGE_PER_CPU, value=100, labels={"cpu": "0"}
+        ),
+        Metric.create_metric_with_metadata(
+            name=MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}
+        ),
+    ]
+    assert got_labels == {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
+                          "wca_version": "0.1", "cpu_model": "intel xeon"}
 
 
 @pytest.mark.parametrize(

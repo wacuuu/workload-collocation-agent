@@ -19,11 +19,6 @@ from itertools import groupby
 from typing import List, Dict, Optional, Set
 
 import os
-import re
-from dataclasses import dataclass
-
-import os
-import re
 from dataclasses import dataclass
 from enum import Enum
 
@@ -50,7 +45,7 @@ class CPUCodeName(Enum):
     ICE_LAKE = 'Ice Lake'
 
 
-def _parse_cpuinfo() -> Dict[str, str]:
+def _parse_cpuinfo() -> List[Dict[str, str]]:
     """Make dictionary from '/proc/cpuinfo' file."""
     with open('/proc/cpuinfo') as f:
         cpuinfo_string = f.read()
@@ -68,9 +63,9 @@ def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
 
     # https://elixir.bootlin.com/linux/v5.3/source/arch/x86/include/asm/intel-family.h#L64
     if model in [
-            0x4E, 0x5E,  # Client
-            0x55  # Server
-            ]:
+        0x4E, 0x5E,  # Client
+        0x55  # Server
+    ]:
         # Intel quirk to recognize Cascade Lake:
         # https://github.com/torvalds/linux/blob/54ecb8f7028c5eb3d740bb82b0f1d90f2df63c5c/arch/x86/kernel/cpu/resctrl/core.c#L887
         if stepping > 4:
@@ -78,9 +73,9 @@ def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
         else:
             return CPUCodeName.SKYLAKE
     elif model in [
-            0x3D, 0x47,  # Client
-            0x4F, 0x56  # Server
-            ]:
+        0x3D, 0x47,  # Client
+        0x4F, 0x56  # Server
+    ]:
         return CPUCodeName.BROADWELL
     else:
         return CPUCodeName.UNKNOWN
@@ -322,23 +317,16 @@ def read_proc_stat() -> str:
     return out
 
 
-def collect_topology_information() -> (int, int, int,
-                                       Dict[int, Dict[int, List[int]]],
-                                       Dict[int, List[int]]
-                                       ):
+def collect_topology_information(parsed_cpuinfo: List[Dict[str, str]]) -> (int, int, int,
+                                                                           Dict[int, Dict[
+                                                                               int, List[int]]],
+                                                                           Dict[int, List[int]]
+                                                                           ):
     """
     Reads files from /sys/devices/system/cpu to collect topology information
     :return: tuple (nr_of_online_cpus, nr_of_cores, nr_of_sockets,
                     mapping from [socket][core] -> list of cpus)
-
     """
-    procinfo = open('/proc/cpuinfo').read()
-
-    processors = [
-        dict(
-            [list(map(str.strip, line.split(':'))) for line in proc.split('\n')]
-        ) for proc in list(filter(None, procinfo.split('\n\n')))
-    ]
 
     def by_physical_id(processor):
         return int(processor['physical id'])
@@ -349,7 +337,7 @@ def collect_topology_information() -> (int, int, int,
     topology = defaultdict(dict)
 
     for physical_id, socket_processors in groupby(
-            sorted(processors, key=by_physical_id), key=by_physical_id):
+            sorted(parsed_cpuinfo, key=by_physical_id), key=by_physical_id):
         for core_id, core_processors in groupby(
                 sorted(list(socket_processors), key=by_core_id), key=by_core_id):
             topology[int(physical_id)][
@@ -358,7 +346,7 @@ def collect_topology_information() -> (int, int, int,
     # get rid of defaultdict
     topology = dict(topology)
 
-    nr_of_online_cpus = len(processors)
+    nr_of_online_cpus = len(parsed_cpuinfo)
     nr_of_cores = sum(len(core_ids) for core_ids in topology.values())
     nr_of_sockets = len(topology)
 
@@ -433,8 +421,9 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     Note: returned metrics should be consistent with information covered by platform
 
     """
+    cpu_info = _parse_cpuinfo()
     # Static information
-    nr_of_cpus, nr_of_cores, no_of_sockets, topology = collect_topology_information()
+    nr_of_cpus, nr_of_cores, no_of_sockets, topology = collect_topology_information(cpu_info)
     if rdt_enabled:
         rdt_information = _collect_rdt_information()
     else:
@@ -444,7 +433,6 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     cpus_usage = parse_proc_stat(read_proc_stat())
     total_memory_used = parse_proc_meminfo(read_proc_meminfo())
     node_free, node_used = parse_node_meminfo()
-    cpu_info = _parse_cpuinfo()
 
     # All information are based on first CPU.
     cpu_model = cpu_info[0]['model name']

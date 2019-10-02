@@ -11,13 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 import time
-from enum import Enum
 from typing import Dict, Union, List, Tuple, Callable
 
 from dataclasses import dataclass, field
-
-import logging
+from enum import Enum
 
 log = logging.getLogger(__name__)
 
@@ -29,7 +28,7 @@ class MetricName(str, Enum):
     CACHE_MISSES = 'cache_misses'
     CACHE_REFERENCES = 'cache_references'
     MEMSTALL = 'stalls_mem_load'
-    OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD =\
+    OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD = \
         'offcore_requests_outstanding_l3_miss_demand_data_rd'
     OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD = 'offcore_requests_l3_miss_demand_data_rd'
 
@@ -39,13 +38,14 @@ class MetricName(str, Enum):
 
     # Cgroup based.
     CPU_USAGE_PER_TASK = 'cpu_usage_per_task'
-
-    # Resctrl based.
-    MEM_BW = 'memory_bandwidth'
     MEM_USAGE_PER_TASK = 'memory_usage_per_task_bytes'
     MEM_MAX_USAGE_PER_TASK = 'memory_max_usage_per_task_bytes'
     MEM_LIMIT_PER_TASK = 'memory_limit_per_task_bytes'
     MEM_SOFT_LIMIT_PER_TASK = 'memory_soft_limit_per_task_bytes'
+    MEM_NUMA_STAT = 'memory_numa_stat'
+
+    # Resctrl based.
+    MEM_BW = 'memory_bandwidth'
     LLC_OCCUPANCY = 'llc_occupancy'
     MEMORY_BANDWIDTH_LOCAL = 'memory_bandwidth_local'
     MEMORY_BANDWIDTH_REMOTE = 'memory_bandwidth_remote'

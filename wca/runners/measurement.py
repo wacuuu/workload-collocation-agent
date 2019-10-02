@@ -11,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from abc import abstractmethod
-from dataclasses import dataclass
 import logging
-import resource
 import time
 from typing import Dict, List, Tuple, Optional
+
 import re
+import resource
+from abc import abstractmethod
+from dataclasses import dataclass
 
 from wca import nodes, storage, platforms, profiling, perf_const as pc
 from wca import resctrl
@@ -195,7 +196,7 @@ class MeasurementRunner(Runner):
         rdt_information = platform.rdt_information
 
         self._event_names = _filter_out_event_names_for_cpu(
-                self._event_names, platform.cpu_codename)
+            self._event_names, platform.cpu_codename)
 
         # We currently do not support RDT without monitoring.
         if self._rdt_enabled and not rdt_information.is_monitoring_enabled():

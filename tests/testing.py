@@ -23,7 +23,6 @@ from unittest.mock import mock_open, Mock, patch
 import functools
 import os
 
-from wca import platforms
 from wca.allocators import AllocationConfiguration
 from wca.containers import Container, ContainerSet, ContainerInterface
 from wca.detectors import ContendedResource, ContentionAnomaly, LABEL_WORKLOAD_INSTANCE, \
@@ -158,6 +157,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 sockets=1,
                 cores=1,
                 cpus=2,
+                topology={0: {0: [1, 2]}},
                 cpu_model='intel xeon',
                 cpu_model_number=0x5E,
                 cpu_codename=CPUCodeName.SKYLAKE,
@@ -166,7 +166,10 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 timestamp=time.time(),
                 rdt_information=RDTInformation(
                     True, True, rdt_mb_control_enabled,
-                    rdt_cache_control_enabled, '0', '0', 0, 0, 0)
+                    rdt_cache_control_enabled, '0', '0', 0, 0, 0),
+                node_memory_free={0: 1},
+                node_memory_used={0: 1},
+                node_cpus={0: {0, 1}},
             )
             return ContainerSet(
                 cgroup_path=cgroup_path,
@@ -180,6 +183,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 sockets=1,
                 cores=1,
                 cpus=2,
+                topology={0: {0: [1, 2]}},
                 cpu_model='intel xeon',
                 cpu_model_number=0x5E,
                 cpu_codename=CPUCodeName.SKYLAKE,
@@ -187,7 +191,10 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 total_memory_used=10,
                 timestamp=time.time(),
                 rdt_information=RDTInformation(
-                    True, True, True, True, '0', '0', 0, 0, 0)
+                    True, True, True, True, '0', '0', 0, 0, 0),
+                node_memory_free={0: 1},
+                node_memory_used={0: 1},
+                node_cpus={0: {0, 1}},
             )
             return Container(
                 cgroup_path=cgroup_path,

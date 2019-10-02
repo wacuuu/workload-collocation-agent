@@ -27,7 +27,6 @@ from wca.allocators import AllocationConfiguration, TaskAllocations
 from wca.logger import TRACE
 from wca.metrics import Measurements, merge_measurements, DerivedMetricsGenerator
 from wca.nodes import Task
-from wca.platforms import RDTInformation, Platform
 from wca.platforms import Platform
 from wca.profiling import profiler
 from wca.resctrl import ResGroup

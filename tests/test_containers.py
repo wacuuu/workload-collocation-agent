@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch, Mock
 from typing import List
+from unittest.mock import patch, Mock
+
 import pytest
 
+from tests.testing import task, container
+from wca.allocators import AllocationConfiguration
+from wca.cgroups import Cgroup
 from wca.containers import ContainerSet, Container, \
     ContainerManager, ContainerInterface, _find_new_and_dead_tasks
-from wca.cgroups import Cgroup
-from wca.platforms import Platform, RDTInformation
 from wca.perf import PerfCounters
+from wca.platforms import Platform, RDTInformation
 from wca.resctrl import ResGroup
-from tests.testing import task, container, platform_mock
-from wca.allocators import AllocationConfiguration
 
 
 def assert_equal_containers(a: ContainerInterface, b: ContainerInterface):
@@ -53,28 +54,28 @@ def assert_equal_containers_list(containers_a: List[ContainerInterface],
 @pytest.mark.parametrize(
     'discovered_tasks, containers, '
     'expected_new_tasks, expected_containers_to_delete', (
-        # 1) One new task (t1) was discovered - before there was no containers.
-        ([task('/t1')], [],
-         [task('/t1')], []),
-        # 2) No changes in environment - no actions are expected.
-        ([task('/t1')], [container('/t1')],
-         [], []),
-        # 3) One new task (t2) was discovered.
-        ([task('/t1'), task('/t2')], [container('/t1')],
-         [task('/t2')], []),
-        # 4) No changes in environment - no actions are expected
-        #    (but now two containers already are running).
-        ([task('/t1'), task('/t2')], [container('/t1'), container('/t2')],
-         [], []),
-        # 5) First task just disappeared - corresponding container should be removed.
-        ([task('/t2')], [container('/t1'), container('/t2')],
-         [], [container('/t1')]),
-        # 6) Two new task were discovered.
-        ([task('/t1'), task('/t2')], [],
-         [task('/t1'), task('/t2')], []),
-        # 7) New task was discovered and one task disappeared.
-        ([task('/t1'), task('/t3')], [container('/t1'), container('/t2')],
-         [task('/t3')], [container('/t2')]),
+            # 1) One new task (t1) was discovered - before there was no containers.
+            ([task('/t1')], [],
+             [task('/t1')], []),
+            # 2) No changes in environment - no actions are expected.
+            ([task('/t1')], [container('/t1')],
+             [], []),
+            # 3) One new task (t2) was discovered.
+            ([task('/t1'), task('/t2')], [container('/t1')],
+             [task('/t2')], []),
+            # 4) No changes in environment - no actions are expected
+            #    (but now two containers already are running).
+            ([task('/t1'), task('/t2')], [container('/t1'), container('/t2')],
+             [], []),
+            # 5) First task just disappeared - corresponding container should be removed.
+            ([task('/t2')], [container('/t1'), container('/t2')],
+             [], [container('/t1')]),
+            # 6) Two new task were discovered.
+            ([task('/t1'), task('/t2')], [],
+             [task('/t1'), task('/t2')], []),
+            # 7) New task was discovered and one task disappeared.
+            ([task('/t1'), task('/t3')], [container('/t1'), container('/t2')],
+             [task('/t3')], [container('/t2')]),
     ))
 def test_find_new_and_dead_tasks(discovered_tasks, containers,
                                  expected_new_tasks, expected_containers_to_delete):
@@ -97,23 +98,23 @@ def test_find_new_and_dead_tasks(discovered_tasks, containers,
     'expected_running_containers_, labels_relation_,'
     'pre_running_labels_relation_',
     (
-        # 1) Before the start - expecting no running containers.
-        ([], {}, {},
-         {}, {}, {}),
-        # 2) One new task arrived - expecting that new container will be created.
-        (['/t1'], {}, {},
-         {'/t1': '/t1'}, {'/t1': {'some_label': 'some_value'}},
-         {}),
-        # 3) One task disappeared, one appeared.
-        (['/t1'], {'/t2': '/t2'}, {'be': ['t2', 't1']},
-         {'/t1': '/t1'}, {'/t1': {'some_label': 'new_value'}},
-         {'/t1': {'some_label': 'some_value'}}),
-        # 4) One (of two) task disappeared (t2 has it's own resgroup).
-        (['/t1'], {'/t1': '/t1', '/t2': '/t2'}, {'t2': ['t2']},
-         {'/t1': '/t1'}, {}, {'/t1': {'some_label': 'new_value'}}),
-        # 5) Two task (of two) disappeared.
-        ([], {'/t1': '/t1', '/t2': '/t2'}, {},
-         {}, {}, {}),
+            # 1) Before the start - expecting no running containers.
+            ([], {}, {},
+             {}, {}, {}),
+            # 2) One new task arrived - expecting that new container will be created.
+            (['/t1'], {}, {},
+             {'/t1': '/t1'}, {'/t1': {'some_label': 'some_value'}},
+             {}),
+            # 3) One task disappeared, one appeared.
+            (['/t1'], {'/t2': '/t2'}, {'be': ['t2', 't1']},
+             {'/t1': '/t1'}, {'/t1': {'some_label': 'new_value'}},
+             {'/t1': {'some_label': 'some_value'}}),
+            # 4) One (of two) task disappeared (t2 has it's own resgroup).
+            (['/t1'], {'/t1': '/t1', '/t2': '/t2'}, {'t2': ['t2']},
+             {'/t1': '/t1'}, {}, {'/t1': {'some_label': 'new_value'}}),
+            # 5) Two task (of two) disappeared.
+            ([], {'/t1': '/t1', '/t2': '/t2'}, {},
+             {}, {}, {}),
     )
 )
 def test_sync_containers_state(_, get_pids_mock, sync_mock, perf_counters_mock,
@@ -180,8 +181,8 @@ def test_sync_containers_state(_, get_pids_mock, sync_mock, perf_counters_mock,
         assert_equal_containers(expected_running_containers[t], got_running_containers[t])
 
     # Check container objects has proper resgroup assigned.
-    got_container_resgroup_names = {c.get_name():
-                                    c.get_resgroup().name for c in got_running_containers.values()}
+    got_container_resgroup_names = {c.get_name(): c.get_resgroup().name for c in
+                                    got_running_containers.values()}
     for expected_resgroup_name, container_names in mon_groups_relation.items():
         for container_name in container_names:
             if container_name in got_container_resgroup_names:
@@ -227,6 +228,7 @@ def _smart_get_pids():
            return [1,2], on second [3,4], and so forth."""
         calls_count[0] += 2
         return [str(calls_count[0] - 2), str(calls_count[0] - 1)]
+
     return fun
 
 
