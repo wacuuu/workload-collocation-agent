@@ -21,6 +21,8 @@ from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue,
 from wca.containers import Container
 from wca.metrics import Metric, MetricType
 from wca.platforms import RDTInformation, Platform
+from wca.platforms import Platform, RDTInformation
+from tests.testing import allocation_metric
 
 
 @patch('wca.perf.PerfCounters')
@@ -28,11 +30,18 @@ from wca.platforms import RDTInformation, Platform
 def test_cgroup_allocations(Cgroup_mock, PerfCounters_mock):
     rdt_information = RDTInformation(True, True, True, True, '0', '0', 0, 0, 0)
 
-    platform_mock = Mock(spec=Platform, cpus=10, sockets=1, node_cpus={0: [0, 1], 1: [2, 3]})
+    platform_mock = Mock(
+        spec=Platform,
+        cpus=10,
+        sockets=1,
+        rdt_information = rdt_information,
+        node_cpus={0: [0, 1], 1: [2, 3]},
+    )
 
     foo_container = Container(
-        '/somepath', platform=platform_mock,
-        rdt_information=rdt_information)
+        '/somepath', platform=platform_mock)
+
+    foo_container = Container('/somepath', platform=platform_mock)
     foo_container._cgroup.allocation_configuration = AllocationConfiguration()
     foo_container._cgroup.platform = platform_mock
 

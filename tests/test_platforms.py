@@ -19,7 +19,7 @@ import pytest
 
 from tests.testing import create_open_mock, relative_module_path
 from wca.metrics import Metric, MetricName
-from wca.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
+from tests.testing import create_open_mock, relative_module_path, _is_dict_match, \
     collect_topology_information, collect_platform_information, RDTInformation, \
     decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat
 
@@ -56,6 +56,26 @@ def test_parse_proc_meminfo(raw_meminfo_output, expected):
 ])
 def test_parse_proc_state(raw_proc_state_output, expected):
     assert parse_proc_stat(raw_proc_state_output) == expected
+
+
+@pytest.mark.parametrize("filename,expected_cpus,expected_cpu", [
+    ('fixtures/procinfo_1socket_4cores_8cpus.txt', 8, {
+        'model name': 'Intel(R) Core(TM) i7-4790 CPU @ 3.60GHz',
+        'microcode': '0x25',
+        'cpu MHz': '800.024',
+        'cache size': '8192 KB'
+    }),
+    ('fixtures/procinfo_2sockets_ht.txt', 72, {}),
+    ('fixtures/procinfo_2sockets_noht.txt', 28, {}),
+])
+def test_collect_topology_information(filename, expected_cpus, expected_cpu):
+    with patch('builtins.open',
+               new=create_open_mock(
+                   {"/proc/cpuinfo": open(relative_module_path(__file__, filename)).read()})
+               ):
+        got_data = _parse_cpuinfo()
+        assert len(got_data) == expected_cpus
+        assert _is_dict_match(got_data[0], expected_cpu), 'some keys do not match!'
 
 
 @pytest.mark.parametrize("filename,expected_cpus,expected_cores,expected_sockets", [
@@ -108,6 +128,8 @@ def test_parse_node_cpus(*mocks):
 @patch('wca.platforms.parse_node_cpus', return_value={})
 @patch('wca.platforms.parse_node_meminfo', return_value=[1, 2])
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1, {}))
+@patch('wca.platforms._parse_cpuinfo', return_value=[
+    {'model': 0x5E, 'model name': 'intel xeon', 'stepping': 1}])
 @patch('time.time', return_value=1536071557.123456)
 def test_collect_platform_information(*mocks):
     assert collect_platform_information() == (
@@ -116,6 +138,8 @@ def test_collect_platform_information(*mocks):
                  cpus=2,
                  topology={},
                  cpu_model='intel xeon',
+                 cpu_model_number=0x5E,
+                 cpu_codename=CPUCodeName.SKYLAKE,
                  cpus_usage={0: 100, 1: 200},
                  total_memory_used=1337,
                  timestamp=1536071557.123456,  # timestamp,
@@ -136,7 +160,7 @@ def test_collect_platform_information(*mocks):
             ),
         ],
         {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
-         "wca_version": "0.1", "cpu_model": "intel xeon"}
+            "wca_version": "0.1", "cpu_model": "intel xeon"}
     )
 
 

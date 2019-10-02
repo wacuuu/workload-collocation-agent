@@ -22,6 +22,11 @@ import os
 import re
 from dataclasses import dataclass
 
+import os
+import re
+from dataclasses import dataclass
+from enum import Enum
+
 from wca.metrics import Metric, MetricName
 from wca.profiling import profiler
 
@@ -32,6 +37,54 @@ except ImportError:
     from pex.vendor._vendored.setuptools.pkg_resources import get_distribution, DistributionNotFound
 
 log = logging.getLogger(__name__)
+
+
+class CPUCodeName(Enum):
+    """Only Server platforms. """
+    UNKNOWN = 'unknown'
+    HASWELL = 'Haswell'
+    BROADWELL = 'Broadwell'
+    SKYLAKE = 'Skylake'
+    CASCADE_LAKE = 'Cascade Lake'
+    COOPER_LAKE = 'Cooper Lake'
+    ICE_LAKE = 'Ice Lake'
+
+
+def _parse_cpuinfo() -> Dict[str, str]:
+    """Make dictionary from '/proc/cpuinfo' file."""
+    with open('/proc/cpuinfo') as f:
+        cpuinfo_string = f.read()
+    return [
+        dict(
+            [list(map(str.strip, line.split(':')))
+             for line in cpu.split('\n')]
+        )
+        for cpu in filter(None, cpuinfo_string.split('\n\n'))
+    ]
+
+
+def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
+    """Returns CPU codename based on model and stepping information."""
+
+    # https://elixir.bootlin.com/linux/v5.3/source/arch/x86/include/asm/intel-family.h#L64
+    if model in [
+            0x4E, 0x5E,  # Client
+            0x55  # Server
+            ]:
+        # Intel quirk to recognize Cascade Lake:
+        # https://github.com/torvalds/linux/blob/54ecb8f7028c5eb3d740bb82b0f1d90f2df63c5c/arch/x86/kernel/cpu/resctrl/core.c#L887
+        if stepping > 4:
+            return CPUCodeName.CASCADE_LAKE
+        else:
+            return CPUCodeName.SKYLAKE
+    elif model in [
+            0x3D, 0x47,  # Client
+            0x4F, 0x56  # Server
+            ]:
+        return CPUCodeName.BROADWELL
+    else:
+        return CPUCodeName.UNKNOWN
+
 
 # 0-based logical processor number (matches the value of "processor" in /proc/cpuinfo)
 CpuId = int
@@ -50,19 +103,6 @@ def get_wca_version():
         return "unknown_version"
 
     return version
-
-
-def get_cpu_model() -> str:
-    """Returns information about cpu model from /proc/cpuinfo."""
-    if os.path.isfile('/proc/cpuinfo'):
-        with open('/proc/cpuinfo') as fref:
-            for line in fref.readlines():
-                if line.startswith("model name"):
-                    s = re.search("model name\\s*:\\s*(.*)\\s*$", line)
-                    if s:
-                        return s.group(1)
-                    break
-    return "unknown_cpu_model"
 
 
 @dataclass
@@ -87,10 +127,10 @@ class RDTInformation:
     mb_bandwidth_gran: Optional[int]  # based on /sys/fs/resctrl/info/MB/bandwidth_gran
     mb_min_bandwidth: Optional[int]  # based on /sys/fs/resctrl/info/MB/min_bandwidth
 
-    def is_control_enabled(self):
+    def is_control_enabled(self) -> bool:
         return self.rdt_mb_control_enabled or self.rdt_cache_control_enabled
 
-    def is_monitoring_enabled(self):
+    def is_monitoring_enabled(self) -> bool:
         return self.rdt_mb_monitoring_enabled or self.rdt_cache_monitoring_enabled
 
 
@@ -101,6 +141,9 @@ class Platform:
     cores: int  # number of physical cores in total (sum over all sockets)
     cpus: int  # logical processors equal to the output of "nproc" Linux command
 
+    cpu_model: str  # /proc/cpuinfo -> model_name
+    cpu_model_number: int  # /proc/cpuinfo -> model
+    cpu_codename: CPUCodeName
     # mapping from socket, core id to CPU based on /proc/cpuinfo
     topology: Dict[int, Dict[int, List[int]]]
 
@@ -156,7 +199,8 @@ def create_labels(platform: Platform) -> Dict[str, str]:
     # Additional labels
     labels["host"] = socket.gethostname()
     labels["wca_version"] = get_wca_version()
-    labels["cpu_model"] = get_cpu_model()
+    labels["cpu_model"] = platform.cpu_model
+
     return labels
 
 
@@ -400,12 +444,21 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     cpus_usage = parse_proc_stat(read_proc_stat())
     total_memory_used = parse_proc_meminfo(read_proc_meminfo())
     node_free, node_used = parse_node_meminfo()
+    cpu_info = _parse_cpuinfo()
+
+    # All information are based on first CPU.
+    cpu_model = cpu_info[0]['model name']
+    cpu_model_number = int(cpu_info[0]['model'])
+    cpu_codename = get_cpu_codename(int(cpu_info[0]['model']), int(cpu_info[0]['stepping']))
+
     platform = Platform(
         sockets=no_of_sockets,
         cores=nr_of_cores,
         cpus=nr_of_cpus,
         topology=topology,
-        cpu_model=get_cpu_model(),
+        cpu_model=cpu_model,
+        cpu_model_number=cpu_model_number,
+        cpu_codename=cpu_codename,
         cpus_usage=cpus_usage,
         total_memory_used=total_memory_used,
         timestamp=time.time(),

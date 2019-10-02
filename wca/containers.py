@@ -15,20 +15,22 @@
 
 import logging
 import pprint
-from abc import ABC, abstractmethod
 from typing import List, Optional, Dict
+
+from abc import ABC, abstractmethod
 
 from wca import cgroups
 from wca import logger
 from wca import perf
 from wca import resctrl
 from wca.allocators import AllocationConfiguration, TaskAllocations
+from wca.logger import TRACE
 from wca.metrics import Measurements, merge_measurements, DerivedMetricsGenerator
 from wca.nodes import Task
 from wca.platforms import RDTInformation, Platform
+from wca.platforms import Platform
 from wca.profiling import profiler
 from wca.resctrl import ResGroup
-from wca.logger import TRACE
 
 log = logging.getLogger(__name__)
 
@@ -101,8 +103,8 @@ class ContainerInterface(ABC):
 
 class ContainerSet(ContainerInterface):
     def __init__(self,
-                 cgroup_path: str, cgroup_paths: List[str], platform: Platform,
-                 rdt_information: Optional[RDTInformation],
+                 cgroup_path: str, cgroup_paths: List[str],
+                 platform: Platform,
                  allocation_configuration: Optional[AllocationConfiguration] = None,
                  resgroup: ResGroup = None,
                  event_names: List[str] = None,
@@ -112,7 +114,7 @@ class ContainerSet(ContainerInterface):
         self._name = _sanitize_cgroup_path(self._cgroup_path)
         self._allocation_configuration = allocation_configuration
 
-        self._rdt_information = rdt_information
+        self._platform = platform
         self._resgroup = resgroup
 
         # Create Cgroup object representing itself.
@@ -126,7 +128,6 @@ class ContainerSet(ContainerInterface):
         for cgroup_path in cgroup_paths:
             self._subcontainers[cgroup_path] = Container(
                 cgroup_path=cgroup_path,
-                rdt_information=None,
                 platform=platform,
                 allocation_configuration=allocation_configuration,
                 event_names=event_names,
@@ -159,7 +160,7 @@ class ContainerSet(ContainerInterface):
 
     def sync(self):
         """Called every run iteration to keep pids of cgroup and resctrl in sync."""
-        if self._rdt_information:
+        if self._platform.rdt_information:
             self._resgroup.add_pids(pids=self.get_pids(), mongroup_name=self._name)
 
     def get_measurements(self) -> Measurements:
@@ -174,24 +175,27 @@ class ContainerSet(ContainerInterface):
         measurements.update(merged_measurements)
 
         # Resgroup management is entirely done in this class.
-        if self._rdt_information and self._rdt_information.is_monitoring_enabled():
+        if self._platform.rdt_information and \
+                self._platform.rdt_information.is_monitoring_enabled():
+            assert self._resgroup, \
+                'resgroup should be set, when rdt_information and monitoring is enabled!'
             measurements.update(
                 self._resgroup.get_measurements(
-                    self._name, self._rdt_information.rdt_mb_monitoring_enabled,
-                    self._rdt_information.rdt_cache_monitoring_enabled))
+                    self._name, self._platform.rdt_information.rdt_mb_monitoring_enabled,
+                    self._platform.rdt_information.rdt_cache_monitoring_enabled))
 
         return measurements
 
     def cleanup(self):
         for container in self._subcontainers.values():
             container.cleanup()
-        if self._rdt_information:
+        if self._resgroup and self._platform.rdt_information:
             self._resgroup.remove(self._name)
 
     def get_allocations(self) -> TaskAllocations:
         allocations: TaskAllocations = dict()
         allocations.update(self._cgroup.get_allocations())
-        if self._rdt_information and self._rdt_information.is_control_enabled():
+        if self._platform.rdt_information and self._platform.rdt_information.is_control_enabled():
             allocations.update(self._resgroup.get_allocations())
 
         log.debug('allocations on task=%r from resgroup=%r allocations:\n%s',
@@ -207,7 +211,6 @@ class ContainerSet(ContainerInterface):
 class Container(ContainerInterface):
     def __init__(self, cgroup_path: str,
                  platform: Platform,
-                 rdt_information: Optional[RDTInformation],
                  resgroup: ResGroup = None,
                  allocation_configuration:
                  Optional[AllocationConfiguration] = None,
@@ -217,7 +220,7 @@ class Container(ContainerInterface):
         self._name = _sanitize_cgroup_path(self._cgroup_path)
         assert len(self._name) > 0, 'Container name cannot be empty string!'
         self._allocation_configuration = allocation_configuration
-        self._rdt_information = rdt_information
+        self._platform = platform
         self._resgroup = resgroup
         self._event_names = event_names
 
@@ -228,7 +231,10 @@ class Container(ContainerInterface):
 
         self._derived_metrics_generator = None
         if self._event_names:
-            self._perf_counters = perf.PerfCounters(self._cgroup_path, event_names=event_names)
+            self._perf_counters = perf.PerfCounters(
+                self._cgroup_path,
+                event_names=event_names,
+                platform=platform)
             if enable_derived_metrics:
                 self._derived_metrics_generator = DerivedMetricsGenerator(
                     event_names, self._perf_counters.get_measurements)
@@ -258,7 +264,7 @@ class Container(ContainerInterface):
 
     def sync(self):
         """Called every run iteration to keep pids of cgroup and resctrl in sync."""
-        if self._rdt_information:
+        if self._platform.rdt_information:
             self._resgroup.add_pids(self._cgroup.get_pids(), mongroup_name=self._name)
 
     def get_measurements(self) -> Measurements:
@@ -276,11 +282,13 @@ class Container(ContainerInterface):
             perf_measurements = {}
 
         # RDT/resctrl measurements
-        if self._rdt_information and self._rdt_information.is_monitoring_enabled():
+        if self._resgroup is not None and self._platform.rdt_information and \
+                self._platform.rdt_information.is_monitoring_enabled():
+
             rdt_measurements = \
                 self._resgroup.get_measurements(
-                    self._name, self._rdt_information.rdt_mb_monitoring_enabled,
-                    self._rdt_information.rdt_cache_monitoring_enabled)
+                    self._name, self._platform.rdt_information.rdt_mb_monitoring_enabled,
+                    self._platform.rdt_information.rdt_cache_monitoring_enabled)
         else:
             rdt_measurements = {}
 
@@ -293,13 +301,14 @@ class Container(ContainerInterface):
     def cleanup(self):
         if self._event_names:
             self._perf_counters.cleanup()
-        if self._rdt_information:
+        if self._resgroup and self._platform.rdt_information:
             self._resgroup.remove(self._name)
 
     def get_allocations(self) -> TaskAllocations:
         allocations: TaskAllocations = dict()
         allocations.update(self._cgroup.get_allocations())
-        if self._rdt_information and self._rdt_information.is_control_enabled():
+        if self._platform.rdt_information and \
+                self._platform.rdt_information.is_control_enabled():
             allocations.update(self._resgroup.get_allocations())
 
         log.debug('allocations on task=%r from resgroup=%r allocations:\n%s',
@@ -312,11 +321,10 @@ class ContainerManager:
     """Responsible for synchronizing state between found orchestration software tasks,
     their containers and resctrl system. """
 
-    def __init__(self, rdt_information: Optional[RDTInformation], platform: Platform,
+    def __init__(self, platform: Platform,
                  allocation_configuration: Optional[AllocationConfiguration],
                  event_names: List[str], enable_derived_metrics: bool = False):
         self.containers: Dict[Task, ContainerInterface] = {}
-        self._rdt_information = rdt_information
         self._platform = platform
         self._allocation_configuration = allocation_configuration
         self._event_names = event_names
@@ -330,7 +338,6 @@ class ContainerManager:
             container = ContainerSet(
                 cgroup_path=task.cgroup_path,
                 cgroup_paths=task.subcgroups_paths,
-                rdt_information=self._rdt_information,
                 platform=self._platform,
                 allocation_configuration=self._allocation_configuration,
                 event_names=self._event_names,
@@ -339,7 +346,6 @@ class ContainerManager:
         else:
             container = Container(
                 cgroup_path=task.cgroup_path,
-                rdt_information=self._rdt_information,
                 platform=self._platform,
                 allocation_configuration=self._allocation_configuration,
                 event_names=self._event_names,
@@ -391,8 +397,8 @@ class ContainerManager:
         # Prepare state of currently assigned resgroups
         # and remove some orphaned resgroups.
         container_name_to_ctrl_group = {}
-        if self._rdt_information:
-            assert self._rdt_information.is_monitoring_enabled(), \
+        if self._platform.rdt_information:
+            assert self._platform.rdt_information.is_monitoring_enabled(), \
                 "rdt_enabled requires RDT monitoring for keeping groups relation."
             mon_groups_relation = resctrl.read_mon_groups_relation()
             log.log(TRACE, 'mon_groups_relation (before cleanup): %s',
@@ -418,7 +424,7 @@ class ContainerManager:
         # Sync "state" of individual containers.
         # Note: only pids are synchronized, not allocations.
         for container in self.containers.values():
-            if self._rdt_information:
+            if self._platform.rdt_information:
                 if container.get_name() in container_name_to_ctrl_group:
                     resgroup_name = container_name_to_ctrl_group[container.get_name()]
                     container.set_resgroup(ResGroup(name=resgroup_name))

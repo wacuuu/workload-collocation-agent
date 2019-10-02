@@ -19,7 +19,7 @@ import pytest
 from wca.containers import ContainerSet, Container, \
     ContainerManager, ContainerInterface, _find_new_and_dead_tasks
 from wca.cgroups import Cgroup
-from wca.platforms import RDTInformation
+from wca.platforms import Platform, RDTInformation
 from wca.perf import PerfCounters
 from wca.resctrl import ResGroup
 from tests.testing import task, container, platform_mock
@@ -152,11 +152,17 @@ def test_sync_containers_state(_, get_pids_mock, sync_mock, perf_counters_mock,
          for t, c in expected_running_containers_.items()}
 
     rdt_information = RDTInformation(True, True, True, True, 'fff', '1', 0, 0, 0)
-    containers_manager = ContainerManager(rdt_information=rdt_information,
-                                          platform=platform_mock,
+    platform_mock = Mock(
+        spec=Platform,
+        sockets=1,
+        cores=1,
+        cpus=1,
+        rdt_information=rdt_information)
+    containers_manager = ContainerManager(platform=platform_mock,
                                           allocation_configuration=AllocationConfiguration(),
                                           event_names=[],
                                           )
+
     # Put in into ContainerManager our input dict of containers.
     containers_manager.containers = dict(pre_running_containers)
 

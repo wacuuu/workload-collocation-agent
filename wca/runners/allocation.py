@@ -129,7 +129,7 @@ class TasksAllocationsValues(AllocationsDict):
             else:
                 container = task_id_to_containers[task_id]
                 # Check consistency of container with RDT state.
-                assert (container._rdt_information is not None) == rdt_enabled
+                assert (container._platform.rdt_information is not None) == rdt_enabled
                 extra_labels = dict(container_name=container.get_name(), task=task_id)
                 extra_labels.update(task_id_to_labels[task_id])
                 allocation_value = TaskAllocationsValues.create(

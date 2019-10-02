@@ -19,7 +19,7 @@ import time
 from typing import Dict, List, Tuple, Optional
 import re
 
-from wca import nodes, storage, platforms, profiling
+from wca import nodes, storage, platforms, profiling, perf_const as pc
 from wca import resctrl
 from wca import security
 from wca.allocators import AllocationConfiguration
@@ -31,6 +31,7 @@ from wca.mesos import create_metrics
 from wca.metrics import Metric, MetricType, MetricName, \
     MissingMeasurementException
 from wca.nodes import Task, TaskSynchronizationException
+from wca.platforms import CPUCodeName
 from wca.profiling import profiler
 from wca.runners import Runner
 from wca.storage import MetricPackage, DEFAULT_STORAGE
@@ -193,6 +194,9 @@ class MeasurementRunner(Runner):
         platform, _, _ = platforms.collect_platform_information(self._rdt_enabled)
         rdt_information = platform.rdt_information
 
+        self._event_names = _filter_out_event_names_for_cpu(
+                self._event_names, platform.cpu_codename)
+
         # We currently do not support RDT without monitoring.
         if self._rdt_enabled and not rdt_information.is_monitoring_enabled():
             log.error('RDT monitoring is required - please enable CAT '
@@ -200,7 +204,6 @@ class MeasurementRunner(Runner):
             return 1
 
         self._containers_manager = ContainerManager(
-            rdt_information=rdt_information,
             platform=platform,
             allocation_configuration=self._allocation_configuration,
             event_names=self._event_names,
@@ -367,3 +370,28 @@ def _get_internal_metrics(tasks: List[Task]) -> List[Metric]:
     ]
 
     return metrics
+
+
+def _filter_out_event_names_for_cpu(
+        event_names: List[str], cpu_codename: CPUCodeName) -> List[MetricName]:
+    """Filter out events that cannot be collected on given cpu."""
+
+    filtered_event_names = []
+
+    for event_name in event_names:
+        if event_name in pc.HardwareEventNameMap:
+            # Universal metrics that works on all cpus.
+            filtered_event_names.append(event_name)
+        elif event_name in pc.PREDEFINED_RAW_EVENTS:
+            if cpu_codename in pc.PREDEFINED_RAW_EVENTS[event_name]:
+                filtered_event_names.append(event_name)
+            else:
+                log.warning('Event %r not supported for %s!', event_name, cpu_codename.value)
+                continue
+        elif '__r' in event_name:
+            # Pass all raw events.
+            filtered_event_names.append(event_name)
+        else:
+            raise Exception('Unknown event name %r!' % event_name)
+
+    return filtered_event_names
