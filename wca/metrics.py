@@ -23,18 +23,32 @@ log = logging.getLogger(__name__)
 
 
 class MetricName(str, Enum):
+    # Perf events based.
     INSTRUCTIONS = 'instructions'
     CYCLES = 'cycles'
     CACHE_MISSES = 'cache_misses'
     CACHE_REFERENCES = 'cache_references'
-    CPU_USAGE_PER_CPU = 'cpu_usage_per_cpu'
-    CPU_USAGE_PER_TASK = 'cpu_usage_per_task'
-    MEM_BW = 'memory_bandwidth'
-    LLC_OCCUPANCY = 'llc_occupancy'
-    MEM_USAGE = 'memory_usage'
     MEMSTALL = 'stalls_mem_load'
+    OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD =\
+        'offcore_requests_outstanding_l3_miss_demand_data_rd'
+    OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD = 'offcore_requests_l3_miss_demand_data_rd'
+
+    # Extra perf based.
     SCALING_FACTOR_AVG = 'scaling_factor_avg'
     SCALING_FACTOR_MAX = 'scaling_factor_max'
+
+    # Cgroup based.
+    CPU_USAGE_PER_TASK = 'cpu_usage_per_task'
+
+    # Resctrl based.
+    MEM_BW = 'memory_bandwidth'
+    LLC_OCCUPANCY = 'llc_occupancy'
+    MEMORY_BANDWIDTH_LOCAL = 'memory_bandwidth_local'
+    MEMORY_BANDWIDTH_REMOTE = 'memory_bandwidth_remote'
+
+    # /proc based (platform scope).
+    CPU_USAGE_PER_CPU = 'cpu_usage_per_cpu'
+    MEM_USAGE = 'memory_usage'
 
 
 class DerivedMetricName(str, Enum):
@@ -122,6 +136,27 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         MetricMetadata(
             MetricType.GAUGE,
             'Perf metric scaling factor, average from all CPUs'
+        ),
+    MetricName.MEMORY_BANDWIDTH_LOCAL:
+        MetricMetadata(
+            MetricType.COUNTER,
+            '[bytes] Total local memory bandwidth using Memory Bandwidth Monitoring.'
+        ),
+    MetricName.MEMORY_BANDWIDTH_REMOTE:
+        MetricMetadata(
+            MetricType.COUNTER,
+            '[bytes] Total remote memory bandwidth using Memory Bandwidth Monitoring.'
+        ),
+    MetricName.OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD:
+        MetricMetadata(
+            MetricType.COUNTER,
+            'Increment each cycle of the number of offcore outstanding demand data read '
+            'requests from SQ that missed L3.'
+        ),
+    MetricName.OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD:
+        MetricMetadata(
+            MetricType.COUNTER,
+            'Demand data read requests that missed L3.'
         ),
     DerivedMetricName.IPC:
         MetricMetadata(

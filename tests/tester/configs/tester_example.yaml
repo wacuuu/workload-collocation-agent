@@ -7,9 +7,9 @@ runner: !AllocationRunner
   anomalies_storage: *tester
   allocations_storage: *tester
   allocator: *tester
-  rdt_enabled: true
   event_names:
     - 'cycles'
     - 'instructions'
     - 'cache_misses'
     - 'cache_references'
+    - 'offcore_requests_l3_miss_demand_data_rd'
