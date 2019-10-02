@@ -86,14 +86,25 @@ class NUMAAllocator(Allocator):
         balance_task = None
         balance_task_node = None
 
+        # First, get current state of the system
+        for task, memory, preferences in tasks_memory:
+            current_node = _get_current_node(decode_listformat(tasks_allocations[task][AllocationType.CPUSET_CPUS]), platform.node_cpus)
+            log.debug("Task: %s Memory: %d Preferences: %s, Current node: %d" % (task, memory, preferences, current_node))
+            if current_node >= 0:
+                log.debug("task already placed, recording state")
+                balanced_memory[current_node].append((task, memory))
+
+
+        log.debug("Current state of the system: %s" % balanced_memory)
+
+        log.debug("Starting re-balancing")
         for task, memory, preferences in tasks_memory:
             log.debug("Task: %s Memory: %d Preferences: %s" % (task, memory, preferences))
             current_node = _get_current_node(decode_listformat(tasks_allocations[task][AllocationType.CPUSET_CPUS]), platform.node_cpus)
-            log.debug("Task current node: %d", current_node)
-            # print("Current node: %d" % current_node)
+            #log.debug("Task current node: %d", current_node)
             if current_node >= 0:
-                log.debug("task already placed, taking next")
-                balanced_memory[current_node].append((task, memory))
+                log.debug("task already placed on the node %d, taking next" % current_node)
+                #balanced_memory[current_node].append((task, memory))
                 continue
 
             if memory == 0:
@@ -112,7 +123,13 @@ class NUMAAllocator(Allocator):
             log.debug("Task %s: Most used node: %d, Best free node: %d, Best memory node: %d" %
                       (task, most_used_node, most_free_memory_node, best_memory_node))
 
-            if most_used_node == most_free_memory_node or most_used_node == best_memory_node:
+            # Give a chance for AutoNUMA to re-balance memory
+            if preferences[most_used_node] < 0.66:
+                log.debug("not most of the memory balanced, continue")
+                continue
+
+            if most_used_node == best_memory_node or most_used_node == most_free_memory_node:
+            #if most_used_node == most_free_memory_node or most_used_node == best_memory_node:
                 balance_task = task
                 balance_task_node = most_used_node
                 break
@@ -213,7 +230,7 @@ def _get_best_memory_node(memory, balanced_memory):
     d = {}
     for node in balanced_memory:
         d[node] = memory / (sum([k[1] for k in balanced_memory[node]]) + memory)
-    pprint(d)
+    # pprint(d)
     return sorted(d.items(), reverse=True, key=lambda x: x[1])[0][0]
 
 
