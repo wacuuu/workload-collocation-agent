@@ -18,6 +18,15 @@ kubectl delete role --all -n grafana
 echo '---------------- Remaining objects:'
 kubectl api-resources --verbs=list --namespaced -o name | grep -v events | xargs -n 1 kubectl get --show-kind --ignore-not-found  -n grafana
 
+echo ---------------------------------- KUBE-STATE-METRICS -------------------------------------------------------------------
+kubectl delete deploy --all -n kube-state-metrics
+kubectl delete svc --all -n kube-state-metrics
+kubectl delete cm --all -n kube-state-metrics
+kubectl delete rolebinding --all -n kube-state-metrics
+kubectl delete role --all -n kube-state-metrics
+echo '---------------- Remaining objects:'
+kubectl api-resources --verbs=list --namespaced -o name | grep -v events | xargs -n 1 kubectl get --show-kind --ignore-not-found  -n kube-state-metrics
+
 echo ---------------------------------- PROMETHEUS ------------------------------------------------------------------
 kubectl delete deploy --all -n prometheus
 kubectl delete sts --all -n prometheus
