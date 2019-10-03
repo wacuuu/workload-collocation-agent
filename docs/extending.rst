@@ -102,7 +102,7 @@ and then with WCA started like this
 
 .. code-block:: shell
 
-    PYTHONPATH=example PEX_INERHITPATH=1 ./dist/wca.pex -c $PWD/configs/extending/hello_world.yaml -r hello_world_runner:HelloWorldRunner
+    PYTHONPATH=$PWD/example PEX_INHERIT_PATH=fallback ./dist/wca.pex -c $PWD/configs/extending/hello_world.yaml -r hello_world_runner:HelloWorldRunner
 
 :Tip: You can just copy-paste this command, all required example files are already in project, but you have to build pex file first with ``make``.
 
