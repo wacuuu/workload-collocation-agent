@@ -24,8 +24,9 @@ from wca import metrics
 from wca import perf
 from wca import perf_const as pc
 from wca.metrics import MetricName, DerivedMetricName, DerivedMetricsGenerator
-from wca.perf import _parse_raw_event_name
-from tests.testing import create_open_mock
+from wca.perf import _parse_raw_event_name, _get_event_config
+from wca.runners.measurement import _filter_out_event_names_for_cpu
+from wca.platforms import CPUCodeName, Platform
 
 
 @pytest.mark.parametrize("raw_value,time_enabled,time_running,expected_value,expected_factor", [
@@ -65,7 +66,7 @@ def test_create_file_from_invalid_fd():
 ])
 def test_create_event_attributes_disabled_flag(disabled_flag, expected):
     assert perf._create_event_attributes(
-        metrics.MetricName.CYCLES, disabled_flag).flags == expected
+        metrics.MetricName.CYCLES, disabled_flag, CPUCodeName.SKYLAKE).flags == expected
 
 
 @pytest.mark.parametrize("raw_string,expected", [
@@ -145,7 +146,8 @@ def test_aggregate_measurements(measurements_per_cpu, event_names, expected):
 @patch('wca.perf._get_cgroup_fd')
 @patch('wca.perf.PerfCounters._open')
 def test_perf_counters_init(_open_mock, _get_cgroup_fd_mock):
-    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES])
+    platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES], platform_mock)
     assert prf._group_event_leader_files == {}
     _get_cgroup_fd_mock.assert_called_once()
     _open_mock.assert_called_once()
@@ -161,7 +163,8 @@ def test_get_online_cpus(_parse_online_cpu_string_mock, open_mock):
 @patch('wca.perf._get_cgroup_fd')
 @patch('wca.perf.PerfCounters._open')
 def test_read_metrics(_open_mock, _get_cgroup_fd_mock):
-    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES])
+    platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES], platform_mock)
     assert prf.get_measurements() == {metrics.MetricName.CYCLES: 0,
                                       metrics.MetricName.SCALING_FACTOR_AVG: 0,
                                       metrics.MetricName.SCALING_FACTOR_MAX: 0}
@@ -171,7 +174,8 @@ def test_read_metrics(_open_mock, _get_cgroup_fd_mock):
 @patch('wca.perf._get_cgroup_fd')
 @patch('wca.perf.PerfCounters._open')
 def test_reset_and_enable_group_event_leaders(_open_mock, _get_cgroup_fd_mock, ioctl_mock):
-    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES])
+    platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES], platform_mock)
     # cpu0 group event leader mock
     prf._group_event_leader_files = {0: Mock()}
     prf._reset_and_enable_group_event_leaders()
@@ -184,7 +188,8 @@ def test_reset_and_enable_group_event_leaders(_open_mock, _get_cgroup_fd_mock, i
 def test_reset_and_enable_group_event_leaders_reset_fail(
         _open_mock, _get_cgroup_fd_mock, ioctl_mock
 ):
-    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES])
+    platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES], platform_mock)
     # cpu0 group event leader mock
     prf._group_event_leader_files = {0: Mock()}
     with pytest.raises(OSError, match="Cannot reset perf counts"):
@@ -197,7 +202,8 @@ def test_reset_and_enable_group_event_leaders_reset_fail(
 def test_reset_and_enable_group_event_leaders_enable_fail(
         _open_mock, _get_cgroup_fd_mock, ioctl_mock
 ):
-    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES])
+    platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES], platform_mock)
     # cpu0 group event leader mock
     prf._group_event_leader_files = {0: Mock()}
     with pytest.raises(OSError, match="Cannot enable perf counts"):
@@ -208,7 +214,8 @@ def test_reset_and_enable_group_event_leaders_enable_fail(
 @patch('wca.perf._get_cgroup_fd', return_value=10)
 @patch('wca.perf.PerfCounters._open')
 def test_cleanup(_open_mock, _get_cgroup_fd_mock, os_close_mock):
-    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES])
+    platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES], platform_mock)
     file_descriptor_mock = Mock()
     file_descriptor_mock.close = Mock()
     prf._group_event_leader_files = {'mock1': file_descriptor_mock, 'mock2': file_descriptor_mock}
@@ -223,9 +230,10 @@ def test_cleanup(_open_mock, _get_cgroup_fd_mock, os_close_mock):
 @patch('wca.perf._get_cgroup_fd', return_value=10)
 @patch('wca.perf.PerfCounters._open')
 def test_open_for_cpu_wrong_arg(_open_mock, _get_cgroup_fd_mock):
-    prf = perf.PerfCounters('/mycgroup', [])
+    platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [], platform_mock)
     # let's check non-existent type of measurement
-    with pytest.raises(Exception, match='unknown event name'):
+    with pytest.raises(Exception, match='Unknown event name'):
         prf._open_for_cpu(0, 'invalid_event_name')
 
 
@@ -235,7 +243,8 @@ def test_open_for_cpu_wrong_arg(_open_mock, _get_cgroup_fd_mock):
 @patch('wca.perf.PerfCounters._open')
 def test_open_for_cpu(_open_mock, _get_cgroup_fd_mock,
                       _perf_event_open_mock, fdopen_mock):
-    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES])
+    platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES], platform_mock)
     prf._open_for_cpu(0, metrics.MetricName.CYCLES)
     assert prf._group_event_leader_files == {0: mock.ANY}
     assert prf._event_files == []
@@ -258,7 +267,9 @@ def test_open_for_cpu(_open_mock, _get_cgroup_fd_mock,
 def test_open_for_cpu_with_existing_event_group_leader(_open_mock,
                                                        _get_cgroup_fd_mock,
                                                        _perf_event_open_mock, fdopen_mock):
-    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES])
+
+    platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES], platform_mock)
     # Create event group leader
     prf._open_for_cpu(0, metrics.MetricName.CYCLES)
     # Create non leading event
@@ -276,7 +287,8 @@ def test_open_for_cpu_with_existing_event_group_leader(_open_mock,
 @patch('wca.perf._get_cgroup_fd')
 @patch('wca.perf.PerfCounters._open')
 def test_read_events_zero_values_zero_cpus(_open_mock, _get_cgroup_fd_mock):
-    prf = perf.PerfCounters('/mycgroup', [])
+    platform_mock = Mock(Spec=Platform, cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [], platform_mock)
     prf._group_event_leaders = {}
     assert prf._read_events() == {}
 
@@ -284,40 +296,11 @@ def test_read_events_zero_values_zero_cpus(_open_mock, _get_cgroup_fd_mock):
 @patch('wca.perf._get_cgroup_fd')
 @patch('wca.perf.PerfCounters._open')
 def test_read_events_zero_values_one_cpu(_open_mock, _get_cgroup_fd_mock):
-    prf = perf.PerfCounters('/mycgroup', [])
+    platform_mock = Mock(Spec=Platform, cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [], platform_mock)
     # File descriptor mock for single cpu
     prf._group_event_leaders = {0: Mock()}
     assert prf._read_events() == {}
-
-
-@patch('wca.perf.SetEffectiveRootUid')
-@patch('os.path.exists', Mock(return_value=True))
-@patch('builtins.open', new=create_open_mock({
-    "/dev/cpu/0/cpuid": b"\x16\x00\x00\x00\x47\x65\x6e\x75\x6e\x74\x65\x6c\x69\x6e\x65\x49"
-                        b"\x54\x06\x05\x00\x00\x08\x40\x00\xff\xfb\xfe\x7f\xff\xfb\xeb\xbf"
-}))
-def test_read_skylake_cpu_model(*args):
-    assert pc.CPUModel.SKYLAKE == perf._get_cpu_model()
-
-
-@patch('wca.perf.SetEffectiveRootUid')
-@patch('os.path.exists', Mock(return_value=True))
-@patch('builtins.open', new=create_open_mock({
-    "/dev/cpu/0/cpuid": b"\x14\x00\x00\x00\x47\x65\x6e\x75\x6e\x74\x65\x6c\x69\x6e\x65\x49"
-                        b"\xf1\x06\x04\x00\x00\x08\x20\x00\xff\xfb\xfe\x7f\xff\xfb\xeb\xbf"
-}))
-def test_read_broadwell_cpu_model(*args):
-    assert pc.CPUModel.BROADWELL == perf._get_cpu_model()
-
-
-@patch('wca.perf.SetEffectiveRootUid')
-@patch('os.path.exists', Mock(return_value=True))
-@patch('builtins.open', new=create_open_mock({
-    "/dev/cpu/0/cpuid": b"\x0b\x00\x00\x00\x47\x65\x6e\x75\x6e\x74\x65\x6c\x69\x6e\x65\x49"
-                        b"\xe5\x06\x01\x00\x00\x08\x10\x00\xfd\xe3\x98\x00\xff\xfb\xeb\xbf"
-}))
-def test_read_unknown_cpu_model(*args):
-    assert pc.CPUModel.UNKNOWN == perf._get_cpu_model()
 
 
 @pytest.mark.parametrize('event_name, expected_attr_config', [
@@ -344,6 +327,17 @@ def test_parse_raw_event_name(event_name, expected_attr_config):
 def test_parse_raw_event_name_invalid(event_name, expected_match):
     with pytest.raises(Exception, match=expected_match):
         _parse_raw_event_name(event_name)
+
+
+@pytest.mark.parametrize('cpu, event_name, expected_config', [
+    (CPUCodeName.SKYLAKE, MetricName.MEMSTALL, 0x140014A3),
+    (CPUCodeName.BROADWELL, MetricName.MEMSTALL, 0x60006A3),
+    (CPUCodeName.SKYLAKE, MetricName.OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD, 0x00001060),
+    (CPUCodeName.SKYLAKE,
+        MetricName.OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD, 0x000010B0),
+    ])
+def test_get_event_config(cpu, event_name, expected_config):
+    assert expected_config == _get_event_config(cpu, event_name)
 
 
 def test_derived_metrics():
@@ -395,3 +389,38 @@ def test_derived_metrics():
 
     # 10k misses per 10k instructions / 1000 = 10k / 10
     assert measurements[DerivedMetricName.CACHE_MISSES_PER_KILO_INSTRUCTIONS] == 1000
+
+
+@pytest.mark.parametrize('event_names, cpu_codename, expected', [
+    (['cycles', 'instructions', 'cache_misses', 'cache_references'],
+        CPUCodeName.SKYLAKE,
+        ['cache_misses', 'cache_references', 'cycles', 'instructions']),
+    (['__r1234', 'instructions', 'cycles', 'cache_references'],
+        CPUCodeName.SKYLAKE,
+        ['instructions', 'cache_references', 'cycles', '__r1234']),
+    (['offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions',
+        'cache_misses', 'cache_references'],
+        CPUCodeName.SKYLAKE,
+        ['cache_misses', 'cache_references',
+            'offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions']),
+    (['offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions',
+        'cache_misses', 'offcore_requests_l3_miss_demand_data_rd'],
+        CPUCodeName.SKYLAKE,
+        ['cache_misses', 'offcore_requests_l3_miss_demand_data_rd',
+            'offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions']),
+    ])
+def test_parse_event_names(event_names, cpu_codename, expected):
+    parsed_event_names = _filter_out_event_names_for_cpu(event_names, cpu_codename)
+    assert set(parsed_event_names) == set(expected)
+
+
+@pytest.mark.parametrize('event_names, cpu_codename', [
+    (['cycles', 'instructions', 'cache_misses', 'false_metric'], CPUCodeName.SKYLAKE),
+    (['__r1234', 'instructions', 'false_metric', 'cache_references'], CPUCodeName.SKYLAKE),
+    (['offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions',
+        'false_metric', 'cache_references'], CPUCodeName.SKYLAKE),
+    (['offcore_requests_outstanding_l3_miss_demand_data_rd', 'false_metric',
+        'cache_misses', 'offcore_requests_l3_miss_demand_data_rd'], CPUCodeName.SKYLAKE)])
+def test_exception_parse_event_names(event_names, cpu_codename):
+    with pytest.raises(Exception):
+        _filter_out_event_names_for_cpu(event_names, cpu_codename)

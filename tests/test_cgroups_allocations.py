@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import patch, call
+from unittest.mock import patch, call, Mock
 
 from wca.allocators import AllocationConfiguration
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
                                     CPUSetAllocationValue
 from wca.containers import Container
-from wca.platforms import RDTInformation
+from wca.platforms import Platform, RDTInformation
 from tests.testing import allocation_metric
 
 
@@ -26,9 +26,13 @@ from tests.testing import allocation_metric
 @patch('wca.cgroups.Cgroup')
 def test_cgroup_allocations(Cgroup_mock, PerfCounters_mock):
     rdt_information = RDTInformation(True, True, True, True, '0', '0', 0, 0, 0)
-    foo_container = Container(
-            '/somepath', platform_cpus=10,
-            platform_sockets=1, rdt_information=rdt_information)
+    platform_mock = Mock(
+        spec=Platform,
+        sockets=1,
+        cpus=1,
+        rdt_information=rdt_information)
+
+    foo_container = Container('/somepath', platform=platform_mock)
     foo_container._cgroup.allocation_configuration = AllocationConfiguration()
     foo_container._cgroup.platform_cpus = 10
     foo_container._cgroup.platform_sockets = 1
