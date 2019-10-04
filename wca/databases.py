@@ -77,7 +77,7 @@ class LocalDatabase(Database):
     directory: str
 
     def __post_init__(self):
-        os.makedirs(self.directory)
+        os.makedirs(self.directory, exist_ok=True)
 
     def set(self, key: bytes, value: bytes):
         _validate_key(key)
@@ -257,8 +257,7 @@ class EtcdDatabase(Database):
             raise TimeoutOnAllHosts(
                     'EtcdDatabase: Cannot get key "{}": Timeout on all hosts!'.format(key))
 
-        if 'kvs' in response_data:
-            if 'value' in response_data['kvs'][0]:
-                return base64.b64decode(response_data['kvs'][0]['value'])
+        if 'kvs' in response_data and 'value' in response_data['kvs'][0]:
+            return base64.b64decode(response_data['kvs'][0]['value'])
 
         return None

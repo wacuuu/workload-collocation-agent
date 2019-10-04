@@ -24,6 +24,10 @@ TaskId = str
 class TaskSynchornizationException(Exception):
     pass
 
+class TaskSynchronizationException(Exception):
+    pass
+
+
 @dataclass
 class Task:
     """Class used for abstracting information received from orchestration

@@ -29,6 +29,9 @@ from wca.containers import ContainerManager, Container
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, TaskResource
 from wca.logger import trace, get_logging_metrics
 from wca.mesos import create_metrics
+from wca.metrics import Metric, MetricType, MetricName, \
+    MissingMeasurementException
+from wca.nodes import Task, TaskSynchronizationException
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
     BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory
 from wca.nodes import Task, TaskSynchornizationException
@@ -48,34 +51,40 @@ DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES,
 
 class TaskLabelGenerator:
     @abstractmethod
-    def generate(self, tasks) -> None:
-        """add additional labels to each task based on already existing labels"""
+    def generate(self, task: Task) -> Optional[str]:
+        """Generate new label value based on `task` object
+        (e.g. based on other label value or one of task resource).
+        `task` input parameter should not be modified."""
         ...
 
 
 @dataclass
 class TaskLabelRegexGenerator(TaskLabelGenerator):
+    """Generate new label value based on other label value."""
     pattern: str
     repl: str
-    source: str = 'task_name'  # by default use `task_name`: specially created for that purpose
+    source: str = 'task_name'  # by default use `task_name`
 
-    def generate(self, tasks, target) -> None:
-        for task in tasks:
-            source_val = task.labels.get(self.source, None)
-            if source_val is None:
-                err_msg = "Source label {} not found in task {}".format(self.source, task.name)
-                log.warning(err_msg)
-                continue
-            if target in task.labels:
-                err_msg = "Target label {} already existing in task {}. Skipping.".format(
-                    target, task.name)
-                log.debug(err_msg)
-                continue
-            task.labels[target] = re.sub(self.pattern, self.repl, source_val)
-            if task.labels[target] == "" or task.labels[target] is None:
-                log.debug('Label {} for task {} set to empty string.')
-            if task.labels[target] is None:
-                log.debug('Label {} for task {} set to None.')
+    def __post_init__(self):
+        # Verify whether syntax for pattern and repl is correct.
+        re.sub(self.pattern, self.repl, "")
+
+    def generate(self, task: Task) -> Optional[str]:
+        source_val = task.labels.get(self.source, None)
+        if source_val is None:
+            err_msg = "Source label {} not found in task {}".format(self.source, task.name)
+            log.warning(err_msg)
+            return None
+        return re.sub(self.pattern, self.repl, source_val)
+
+
+@dataclass
+class TaskLabelResourceGenerator(TaskLabelGenerator):
+    """Add label based on initial resource assignment of a task."""
+    resource_name: str
+
+    def generate(self, task: Task) -> Optional[str]:
+        return str(task.resources.get(self.resource_name, "unknown"))
 
 
 class MeasurementRunner(Runner):
@@ -96,8 +105,7 @@ class MeasurementRunner(Runner):
             (defaults to instructions, cycles, cache-misses, memstalls)
         enable_derived_metrics: enable derived metrics ips, ipc and cache_hit_ratio
             (based on enabled_event names), default to False
-        task_label_generator: component to add new labels based on sanitized labels read
-            from orchestrator
+        task_label_generators: component to generate additional labels for tasks
     """
 
     def __init__(
@@ -109,7 +117,7 @@ class MeasurementRunner(Runner):
             extra_labels: Dict[Str, Str] = None,
             event_names: List[str] = None,
             enable_derived_metrics: bool = False,
-            tasks_label_generator: Dict[str, TaskLabelGenerator] = None,
+            task_label_generators: Dict[str, TaskLabelGenerator] = None,
             _allocation_configuration: Optional[AllocationConfiguration] = None,
             wss_reset_interval: int = 0,
             task_derived_metrics_generators_factory: BaseGeneratorFactory = DefaultTaskDerivedMetricsGeneratorFactory(),
@@ -132,15 +140,26 @@ class MeasurementRunner(Runner):
         self._event_names = event_names or DEFAULT_EVENTS
         log.info('Enabling %i perf events: %s', len(self._event_names), ', '.join(self._event_names))
         self._enable_derived_metrics = enable_derived_metrics
-        if tasks_label_generator is None:
-            self._tasks_label_generator = {
+
+        # Default value for task_labels_generator.
+        if task_label_generators is None:
+            self._task_label_generators = {
                 'application':
                     TaskLabelRegexGenerator('$', '', 'task_name'),
                 'application_version_name':
                     TaskLabelRegexGenerator('.*$', '', 'task_name'),
             }
         else:
-            self._tasks_label_generator = tasks_label_generator
+            self._task_label_generators = task_label_generators
+        # Generate label value with cpu initial assignment, to simplify
+        #   management of distributed model system for plugin:
+        #   https://github.com/intel/platform-resource-manager/tree/master/prm"""
+        #
+        # To not risk subtle bugs in 1.0.x do not add it to _task_label_generators as default,
+        #   but make it hardcoded here and possible do be removed.
+        self._task_label_generators['initial_task_cpu_assignment'] = \
+            TaskLabelResourceGenerator('cpus')
+
         self._wss_reset_interval = wss_reset_interval
         self._task_derived_metrics_generators_factory = task_derived_metrics_generators_factory
         self._platform_derived_metrics_generators_factory = platform_derived_metrics_generators_factory
@@ -163,11 +182,13 @@ class MeasurementRunner(Runner):
         """Check privileges, RDT availability and prepare internal state.
         Can return error code that should stop Runner.
         """
-        if not security.are_privileges_sufficient(self._rdt_enabled):
-            log.error("Impossible to use perf_event_open/resctrl subsystems. "
-                      "You need to: adjust /proc/sys/kernel/perf_event_paranoid (set to -1); "
-                      "or has CAP_DAC_OVERRIDE and CAP_SETUID capabilities set."
-                      "You can run process as root too.")
+        if not security.are_privileges_sufficient():
+            log.error("Insufficient privileges! "
+                      "Impossible to use perf_event_open/resctrl subsystems. "
+                      "For unprivileged user it is needed to: "
+                      "adjust /proc/sys/kernel/perf_event_paranoid (set to -1), "
+                      "has CAP_DAC_OVERRIDE and CAP_SETUID capabilities and"
+                      "SECBIT_NO_SETUID_FIXUP secure bit set.")
             return 1
 
         # Initialization (auto discovery Intel RDT features).
@@ -241,23 +262,12 @@ class MeasurementRunner(Runner):
         # Get information about tasks.
         try:
             tasks = self._node.get_tasks()
-        except TaskSynchornizationException as e:
+        except TaskSynchronizationException as e:
             log.error('Cannot synchronize tasks with node (error=%s) - skip this iteration!', e)
             self._wait()
             return
-
+        append_additional_labels_to_tasks(self._task_label_generators, tasks)
         log.debug('Tasks detected: %d', len(tasks))
-
-        for task in tasks:
-            sanitized_labels = dict()
-            for label_key, label_value in task.labels.items():
-                sanitized_labels.update({sanitize_label(label_key):
-                                             label_value})
-            task.labels = sanitized_labels
-
-        # Generate new labels.
-        for new_label, task_label_generator in self._tasks_label_generator.items():
-            task_label_generator.generate(tasks, new_label)
 
         # Keep sync of found tasks and internally managed containers.
         containers = self._containers_manager.sync_containers_state(tasks)
@@ -321,6 +331,30 @@ class MeasurementRunner(Runner):
         return True
 
 
+def append_additional_labels_to_tasks(task_label_generators: Dict[str, TaskLabelGenerator],
+                                      tasks: List[Task]) -> None:
+    for task in tasks:
+        # Add labels uniquely identifying a task.
+        task.labels['task_id'] = task.task_id
+        task.labels['task_name'] = task.name
+
+        # Generate new labels based on formula inputted by a user (using TasksLabelGenerator).
+        for target, task_label_generator in task_label_generators.items():
+            if target in task.labels:
+                err_msg = "Target label {} already existing in task {}. Skipping.".format(
+                    target, task.name)
+                log.debug(err_msg)
+                continue
+            val = task_label_generator.generate(task)
+            if val is None:
+                log.debug('Label {} for task {} not set, as its value is None.'
+                          .format(target, task.name))
+            else:
+                if val == "":
+                    log.debug('Label {} for task {} set to empty string.'.format(target, task.name))
+                task.labels[target] = val
+
+
 @profiler.profile_duration('prepare_tasks_data')
 @trace(log, verbose=False)
 def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
@@ -351,19 +385,7 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
         if TaskResource.MEM in task.resources:
             task_measurements[MetricName.MEM.value] = task.resources[TaskResource.MEM.value]
 
-        # Prepare tasks labels based on tasks metadata labels and task id.
-        task_labels = {
-            sanitize_label(label_key): label_value
-            for label_key, label_value
-            in task.labels.items()
-        }
-        task_labels['task_id'] = task.task_id
-
-        # Add additional label with cpu initial assignment, to simplify
-        # management of distributed model system for plugin:
-        # https://github.com/intel/platform-resource-manager/tree/master/prm
-        task_labels['initial_task_cpu_assignment'] = \
-            str(task.resources.get('cpus', task.resources.get('cpu_limits', "unknown")))
+        task_labels = task.labels.copy()
 
 
 
@@ -408,21 +430,3 @@ def _get_internal_metrics(tasks: List[Task]) -> List[Metric]:
     ]
 
     return metrics
-
-
-MESOS_LABELS_PREFIXES_TO_DROP = ('org.apache.', 'aurora.metadata.')
-
-
-def sanitize_label(label_key):
-    """Removes unwanted prefixes from Aurora & Mesos e.g. 'org.apache.aurora'
-    and replaces invalid characters like "." with underscore.
-    """
-    # Drop unwanted prefixes
-    for unwanted_prefix in MESOS_LABELS_PREFIXES_TO_DROP:
-        if label_key.startswith(unwanted_prefix):
-            label_key = label_key.replace(unwanted_prefix, '')
-
-    # Prometheus labels cannot contain ".".
-    label_key = label_key.replace('.', '_')
-
-    return label_key

@@ -26,10 +26,7 @@ application_hosts:
         cassandra_stress: {'default': {'count': 0}}
         redis_rpc_perf: {'default': {'count': 0}}
         twemcache_rpc_perf: {'default': {'count': 0}}
-        twemcache_mutilate: {'default': {'count': 0}}
         specjbb: {'default': {'count': 0}}
-        tensorflow_benchmark_prediction: {'default': {'count': 0}}
-        tensorflow_benchmark_train: {'default': {'count': 0}}
 
   vars:
     # Variables for setting ansible.
@@ -114,40 +111,6 @@ application_hosts:
               ram: 2
               disk: 2
 
-      twemcache_mutilate:
-        small:
-          count: 1
-          slo: 3200
-          communication_port: 11311
-          twemcache:
-            replica_count: 1
-            resources:
-              cpu: 1
-              ram: 1
-              disk: 1
-          mutilate:
-            replica_count: 3
-            resources:
-              cpu: 1
-              ram: 1
-              disk: 1
-        big:
-          count: 1
-          slo: 3200
-          communication_port: 11411
-          twemcache:
-            replica_count: 1
-            resources:
-              cpu: 2
-              ram: 2
-              disk: 2
-          mutilate:
-            replica_count: 2
-            resources:
-              cpu: 2
-              ram: 2
-              disk: 2
-
       specjbb:
         default:
           count: 1
@@ -156,24 +119,6 @@ application_hosts:
           backend:
           injector:
           controller:
-
-      tensorflow_benchmark_train:
-        default:
-          count: 1
-          slo: 0.03
-          resources:
-            cpu: 10
-            ram: 50
-            disk: 30
-
-      tensorflow_benchmark_prediction:
-        default:
-          count: 1
-          slo: 0.03
-          resources:
-            cpu: 10
-            ram: 50
-            disk: 30
 
       stress_ng:
         default:

@@ -87,7 +87,7 @@ class RDTInformation:
 
     # MB control read-only parameters.
     mb_bandwidth_gran: Optional[int]  # based on /sys/fs/resctrl/info/MB/bandwidth_gran
-    mb_min_bandwidth: Optional[int]   # based on /sys/fs/resctrl/info/MB/bandwidth_gran
+    mb_min_bandwidth: Optional[int]   # based on /sys/fs/resctrl/info/MB/min_bandwidth
 
     def is_control_enabled(self):
         return self.rdt_mb_control_enabled or self.rdt_cache_control_enabled

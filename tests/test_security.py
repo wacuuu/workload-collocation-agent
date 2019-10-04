@@ -24,12 +24,12 @@ import wca.security
 @patch('wca.security.LIBC.capget', return_value=-1)
 def test_privileges_failed_capget(capget, read_paranoid):
     with pytest.raises(wca.security.GettingCapabilitiesFailed):
-        wca.security.are_privileges_sufficient(True)
+        wca.security.are_privileges_sufficient()
 
 
 def no_cap_dac_override_no_cap_setuid(header, data):
+    # For reference please read:
     # https://github.com/python/cpython/blob/v3.6.6/Modules/_ctypes/callproc.c#L521
-    # Do not even ask how I managed to find it ;)
     data._obj.effective = 20  # 20 & 128 = 0, 20 & 2 = 0
     return 0
 
@@ -56,14 +56,14 @@ def cap_dac_override_no_cap_setuid(header, data):
 @patch('wca.security._read_paranoid', return_value=2)
 @patch('wca.security.LIBC.capget', side_effect=no_cap_dac_override_no_cap_setuid)
 def test_privileges_root_no_dac_no_paranoid_no_setuid(capget, read_paranoid, geteuid):
-    assert wca.security.are_privileges_sufficient(True)
+    assert wca.security.are_privileges_sufficient()
 
 
 @patch('os.geteuid', return_value=1000)
 @patch('wca.security._read_paranoid', return_value=2)
 @patch('wca.security.LIBC.capget', side_effect=cap_dac_override_cap_setuid)
 def test_privileges_not_root_no_dac_paranoid_cap_setuid(capget, read_paranoid, geteuid):
-    assert not wca.security.are_privileges_sufficient(True)
+    assert not wca.security.are_privileges_sufficient()
 
 
 @patch('os.geteuid', return_value=1000)
@@ -72,28 +72,28 @@ def test_privileges_not_root_no_dac_paranoid_cap_setuid(capget, read_paranoid, g
 def test_privileges_not_root_no_capabilities_no_dac_paranoid_no_setuid(capget,
                                                                        read_paranoid,
                                                                        geteuid):
-    assert not wca.security.are_privileges_sufficient(True)
+    assert not wca.security.are_privileges_sufficient()
 
 
 @patch('os.geteuid', return_value=1000)
 @patch('wca.security._read_paranoid', return_value=0)
 @patch('wca.security.LIBC.capget', side_effect=cap_dac_override_cap_setuid)
 def test_privileges_not_root_capabilities_dac_paranoid_setuid(capget, read_paranoid, geteuid):
-    assert wca.security.are_privileges_sufficient(True)
+    assert wca.security.are_privileges_sufficient()
 
 
 @patch('os.geteuid', return_value=1000)
 @patch('wca.security._read_paranoid', return_value=0)
 @patch('wca.security.LIBC.capget', side_effect=cap_dac_override_no_cap_setuid)
 def test_privileges_not_root_capabilities_dac_paranoid_no_setuid(capget, read_paranoid, geteuid):
-    assert not wca.security.are_privileges_sufficient(True)
+    assert not wca.security.are_privileges_sufficient()
 
 
 @patch('os.geteuid', return_value=1000)
 @patch('wca.security._read_paranoid', return_value=0)
 @patch('wca.security.LIBC.capget', side_effect=no_cap_dac_override_cap_setuid)
 def test_privileges_not_root_capabilities_no_dac_paranoid_setuid(capget, read_paranoid, geteuid):
-    assert not wca.security.are_privileges_sufficient(True)
+    assert not wca.security.are_privileges_sufficient()
 
 
 def test_ssl_error_only_client_key():
