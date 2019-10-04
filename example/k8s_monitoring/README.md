@@ -30,7 +30,7 @@ kubectl create -f prometheus/persistent_volume.yaml
 
 Grafana is deployed on master and hostPath as volume at accessible `/var/lib/grafana`
 
-3. Uusing kustomize (-k) deploy all applications:
+3. Using kustomize (-k) deploy all applications:
 
 ```shell
 kubectl apply -k .
@@ -46,6 +46,10 @@ when CRDs are created by kustomize and prometheus-operator.
 You can check progress of deployment using `kubectl get -k .`.
 
 # Access
+
+**Dashboard**  is exposed at: https://100.64.176.36:6443/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/#
+
+https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md
 
 **Prometheus** is exposed at: http://worker-node:30900/graph
 
