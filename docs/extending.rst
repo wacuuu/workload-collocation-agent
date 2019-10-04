@@ -25,7 +25,7 @@ To provide new functionality using external compoent operator of WCA has to:
 - provide new component defined as **Python class**,
 - **register** this Python class upon starting with extra command line ``--register`` parameter as ``package_name.module_name:class_name``) (package name is optional),
 - **reference** component name in configuration file (using name of class),
-- make Python module **accessible** by Python interpreter for import (``PYTHONPATH`` and ``PEX_INHERITPATH`` environment variables)
+- make Python module **accessible** by Python interpreter for import (``PYTHONPATH`` and ``PEX_INHERIT_PATH`` environment variables)
 
 In this document when referring to **component**, it means a simple Python class that was **registered** and by this allowed to be used in configuration file.
 
