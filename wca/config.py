@@ -45,11 +45,22 @@ from wca import logger
 
 _yaml = yaml.YAML(typ='safe')
 
+
 log = logging.getLogger(__name__)
 
 ROOT_PATH = ''
 
 _registered_tags = set()
+
+
+def _read_env(loader: yaml.loader.Loader, node: yaml.nodes.Node):
+    value = loader.construct_scalar(node)
+    seq = os.environ.get(value, "")
+    return seq
+
+
+_yaml.constructor.add_constructor('!Env', functools.partial(_read_env))
+_registered_tags.add('!Env')
 
 
 class ConfigLoadError(Exception):
@@ -534,42 +545,3 @@ def load_config(filename: str) -> Any:
         raise ConfigLoadError('Cannot find configuration file: %r' % filename)
     with open(filename) as f:
         return _parse(f)
-
-
-class Env(UserString):
-    """Env class allows using environment variables as values in wca config"""
-
-
-def _read_env(loader: yaml.loader.Loader, node: yaml.nodes.Node):
-    value = loader.construct_scalar(node)
-    seq = os.environ.get(value, "")
-    #return seq
-    from wca.components import Env
-    env = Env(seq)
-    return env
-
-
-def register_env():
-    log.log(logger.TRACE, 'registered class %r' % (Env.__name__))
-    _yaml.constructor.add_constructor(
-        '!%s' % Env.__name__, functools.partial(_read_env))
-    _registered_tags.add(Env.__name__)
-
-
-register_env()
-
-
-def register_simple(cls=None):
-    # Just simply register new constructor for given cls.
-    log.log(logger.TRACE, 'registered class %r' % (cls.__name__))
-    _yaml.constructor.add_constructor(
-        '!%s' % cls.__name__, functools.partial(use_parser, cls=cls))
-    _registered_tags.add(cls.__name__)
-    return cls
-
-
-def use_parser(loader: yaml.loader.Loader, node: yaml.nodes.Node, cls: type):
-    value = loader.construct_scalar(node)
-    fun = cls.function(cls, value)
-    seq = fun(value)
-    return seq

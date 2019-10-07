@@ -40,17 +40,6 @@ from wca.metrics import DefaultTaskDerivedMetricsGeneratorFactory
 from wca.perf_pmu import DefaultPlatformDerivedMetricsGeneratorsFactory
 
 
-class Env(UserString):
-    """Env class allows using environment variables as values in wca config"""
-
-    def _get_env(self, value: str):
-        seq = os.environ.get(value, "")
-        return seq
-
-    def function(self, value: str):
-        return functools.partial(self._get_env, value=value)
-
-
 def register_components(extra_components: List[str]):
     config.register(detection.DetectionRunner)
     config.register(allocation.AllocationRunner)
@@ -72,7 +61,6 @@ def register_components(extra_components: List[str]):
     config.register(aep_detector.AEPDetector)
     config.register(DefaultTaskDerivedMetricsGeneratorFactory)
     config.register(DefaultPlatformDerivedMetricsGeneratorsFactory)
-    #config.register(Env)
 
     for component in extra_components:
         # Load external class ignored its requirements.
