@@ -20,7 +20,7 @@ from typing import Dict, List, Tuple, Optional
 
 from dataclasses import dataclass
 
-from wca import nodes, storage, platforms, profiling
+from wca import nodes, storage, platforms, profiling, perf_const as pc
 from wca import resctrl
 from wca import security
 from wca.allocators import AllocationConfiguration
@@ -37,6 +37,7 @@ from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementExcept
 from wca.nodes import Task, TaskSynchornizationException
 from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
     PMUNotAvailable, DefaultPlatformDerivedMetricsGeneratorsFactory
+from wca.platforms import CPUCodeName
 from wca.profiling import profiler
 from wca.runners import Runner
 from wca.storage import MetricPackage, DEFAULT_STORAGE
@@ -115,7 +116,7 @@ class MeasurementRunner(Runner):
             action_delay: Numeric(0, 60) = 1.,  # [s]
             rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
             extra_labels: Dict[Str, Str] = None,
-            event_names: List[str] = None,
+            event_names: List[str] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
             task_label_generators: Dict[str, TaskLabelGenerator] = None,
             _allocation_configuration: Optional[AllocationConfiguration] = None,
@@ -137,7 +138,7 @@ class MeasurementRunner(Runner):
         self._finish = False  # Guard to stop iterations.
         self._last_iteration = time.time()  # Used internally by wait function.
         self._allocation_configuration = _allocation_configuration
-        self._event_names = event_names or DEFAULT_EVENTS
+        self._event_names = event_names
         log.info('Enabling %i perf events: %s', len(self._event_names), ', '.join(self._event_names))
         self._enable_derived_metrics = enable_derived_metrics
 
@@ -215,6 +216,9 @@ class MeasurementRunner(Runner):
         platform, _, _ = platforms.collect_platform_information(self._rdt_enabled)
         rdt_information = platform.rdt_information
 
+        self._event_names = _filter_out_event_names_for_cpu(
+                self._event_names, platform.cpu_codename)
+
         # We currently do not support RDT without monitoring.
         if self._rdt_enabled and not rdt_information.is_monitoring_enabled():
             log.error('RDT monitoring is required - please enable CAT '
@@ -222,9 +226,7 @@ class MeasurementRunner(Runner):
             return 1
 
         self._containers_manager = ContainerManager(
-            rdt_information=rdt_information,
-            platform_cpus=platform_cpus,
-            platform_sockets=platform_sockets,
+            platform=platform,
             allocation_configuration=self._allocation_configuration,
             event_names=self._event_names,
             enable_derived_metrics=self._enable_derived_metrics,
@@ -430,3 +432,28 @@ def _get_internal_metrics(tasks: List[Task]) -> List[Metric]:
     ]
 
     return metrics
+
+
+def _filter_out_event_names_for_cpu(
+        event_names: List[str], cpu_codename: CPUCodeName) -> List[MetricName]:
+    """Filter out events that cannot be collected on given cpu."""
+
+    filtered_event_names = []
+
+    for event_name in event_names:
+        if event_name in pc.HardwareEventNameMap:
+            # Universal metrics that works on all cpus.
+            filtered_event_names.append(event_name)
+        elif event_name in pc.PREDEFINED_RAW_EVENTS:
+            if cpu_codename in pc.PREDEFINED_RAW_EVENTS[event_name]:
+                filtered_event_names.append(event_name)
+            else:
+                log.warning('Event %r not supported for %s!', event_name, cpu_codename.value)
+                continue
+        elif '__r' in event_name:
+            # Pass all raw events.
+            filtered_event_names.append(event_name)
+        else:
+            raise Exception('Unknown event name %r!' % event_name)
+
+    return filtered_event_names

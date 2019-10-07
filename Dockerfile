@@ -16,9 +16,9 @@
 # to build wca in three flavors:
 # 1. development version (without verision
 # 2. pex based Dockerfile that includes version number based on .git repo
-# 3. standalone  
+# 3. standalone
 
-## Testing 
+## Testing
 # 1. Build
 # docker build -t wca:latest .
 

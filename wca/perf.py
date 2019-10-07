@@ -25,7 +25,7 @@ from typing import List, Dict, BinaryIO, Iterable
 from wca import logger
 from wca import perf_const as pc
 from wca.metrics import Measurements, MetricName, MissingMeasurementException
-from wca.security import SetEffectiveRootUid
+from wca.platforms import Platform, CPUCodeName
 
 LIBC = ctypes.CDLL('libc.so.6', use_errno=True)
 
@@ -34,41 +34,8 @@ log = logging.getLogger(__name__)
 SCALING_RATE_WARNING_THRESHOLD = 1.50
 
 
-def _get_cpu_model() -> pc.CPUModel:
-    if not os.path.exists('/dev/cpu/0/cpuid'):
-        log.warning('cannot detect cpu model (file /dev/cpu/0/cpuid does not exists!) '
-                    '- returning unknown')
-        return pc.CPUModel.UNKNOWN
-    with SetEffectiveRootUid():
-        with open("/dev/cpu/0/cpuid", "rb") as f:
-            b = f.read(32)
-            eax = int(b[16]) + (int(b[17]) << 8) + (int(b[18]) << 16) + (int(b[19]) << 24)
-            log.log(logger.TRACE,
-                    '16,17,18,19th bytes from /dev/cpu/0/cpuid: %02x %02x %02x %02x',
-                    b[16], b[17], b[18], b[19])
-            model = (eax >> 4) & 0xF
-            family = (eax >> 8) & 0xF
-            extended_model = (eax >> 16) & 0xF
-            display_model = model
-            if family == 0x6 or family == 0xF:
-                display_model += (extended_model << 4)
-            if display_model in [0x4E, 0x5E, 0x55]:
-                return pc.CPUModel.SKYLAKE
-            elif display_model in [0x3D, 0x47, 0x4F, 0x56]:
-                return pc.CPUModel.BROADWELL
-            else:
-                return pc.CPUModel.UNKNOWN
-
-
-def _get_memstall_config() -> int:
-    model = _get_cpu_model()
-    event, umask, cmask = (0, 0, 0)
-    if model == pc.CPUModel.SKYLAKE:
-        event, umask, cmask = (0xA3, 0x14, 20)
-    elif model == pc.CPUModel.BROADWELL:
-        event, umask, cmask = (0xA3, 0x06, 6)
-    elif model == pc.CPUModel.UNKNOWN:
-        event, umask, cmask = (0, 0, 0)
+def _get_event_config(cpu: CPUCodeName, event_name: str) -> int:
+    event, umask, cmask = pc.PREDEFINED_RAW_EVENTS[event_name][cpu]
     return event | (umask << 8) | (cmask << 24)
 
 
@@ -178,7 +145,7 @@ def _get_cgroup_fd(cgroup) -> int:
     # descriptor we receive from os.open
     try:
         return os.open(path, os.O_RDONLY)
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         raise MissingMeasurementException(
             'cannot initialize perf for cgroup %r - directory not found' % cgroup)
 
@@ -243,13 +210,14 @@ def _parse_raw_event_name(event_name: str) -> (int, int):
         raise Exception('Cannot parse raw event definition: %r: error %s' % (bits, e)) from e
 
 
-def _create_event_attributes(event_name, disabled):
+def _create_event_attributes(event_name, disabled, cpu_code_name: CPUCodeName):
     """Creates perf_event_attr structure for perf_event_open syscall"""
     attr = pc.PerfEventAttr()
     attr.size = pc.PERF_ATTR_SIZE_VER5
-    if event_name == MetricName.MEMSTALL:
+
+    if event_name in pc.PREDEFINED_RAW_EVENTS:
         attr.type = pc.PerfType.PERF_TYPE_RAW
-        attr.config = _get_memstall_config()
+        attr.config = _get_event_config(cpu_code_name, event_name)
     elif event_name in pc.HardwareEventNameMap:
         attr.type = pc.PerfType.PERF_TYPE_HARDWARE
         attr.config = pc.HardwareEventNameMap[event_name]
@@ -257,7 +225,7 @@ def _create_event_attributes(event_name, disabled):
         attr.type = pc.PerfType.PERF_TYPE_RAW
         attr.config, attr.config1 = _parse_raw_event_name(event_name)
     else:
-        raise Exception('unknown event name %r' % event_name)
+        raise Exception('Unknown event name %r' % event_name)
 
     log.log(logger.TRACE,
             'perf: event_attribute: name=%r type=%r config=%r',
@@ -290,7 +258,7 @@ def _create_file_from_fd(pfd):
 class PerfCounters:
     """Perf facade on perf_event_open system call"""
 
-    def __init__(self, cgroup_path: str, event_names: Iterable[MetricName]):
+    def __init__(self, cgroup_path: str, event_names: Iterable[MetricName], platform: Platform):
         # Provide cgroup_path with leading '/'
         assert cgroup_path.startswith('/')
         # cgroup path without leading '/'
@@ -302,8 +270,11 @@ class PerfCounters:
         # perf data file descriptors (only leaders) per cpu
         self._group_event_leader_files: Dict[int, BinaryIO] = {}
 
+        self._platform = platform
+
         # keep event names for output information
         self._event_names: List[MetricName] = event_names
+
         # DO the magic and enabled everything + start counting
         self._open()
 
@@ -352,7 +323,14 @@ class PerfCounters:
             flags = pc.PERF_FLAG_FD_CLOEXEC
             group_fd = group_file.fileno()
 
-        self.attr = _create_event_attributes(event_name, disabled=disabled)
+        attr = _create_event_attributes(event_name, disabled=disabled,
+                                        cpu_code_name=self._platform.cpu_codename)
+
+        if attr is None:
+            # Unsupported event path.
+            return None
+
+        self.attr = attr
 
         pfd = _perf_event_open(perf_event_attr=ctypes.byref(self.attr),
                                pid=pid,

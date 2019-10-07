@@ -35,6 +35,7 @@ INFO = 'info'
 MON_DATA = 'mon_data'
 MON_L3_00 = 'mon_L3_00'
 MBM_TOTAL = 'mbm_total_bytes'
+MBM_LOCAL = 'mbm_local_bytes'
 LLC_OCCUPANCY = 'llc_occupancy'
 RDT_MB = 'rdt_MB'
 RDT_LC = 'rdt_LC'
@@ -200,10 +201,15 @@ class ResGroup:
                          cache_monitoring_enabled) -> Measurements:
         """
         mbm_total: Memory bandwidth - type: counter, unit: [bytes]
+
+        mbm_local: Local memory bandiwdth - type: counter, unit: [bytes]
+
+        mbm_remote: Remote memory bandwidth - type: counter, unit: [bytes]
         :return: Dictionary containing memory bandwidth
         and cpu usage measurements
         """
         mbm_total = 0
+        mbm_local = 0
         llc_occupancy = 0
 
         def _get_event_file(socket_dir, event_name):
@@ -217,6 +223,9 @@ class ResGroup:
                 if mb_monitoring_enabled:
                     with open(_get_event_file(socket_dir, MBM_TOTAL)) as mbm_total_file:
                         mbm_total += int(mbm_total_file.read())
+                    with open(_get_event_file(socket_dir, MBM_LOCAL)) as mbm_local_file:
+                        mbm_local += int(mbm_local_file.read())
+
                 if cache_monitoring_enabled:
                     with open(_get_event_file(socket_dir, LLC_OCCUPANCY)) as llc_occupancy_file:
                         llc_occupancy += int(llc_occupancy_file.read())
@@ -228,6 +237,8 @@ class ResGroup:
         measurements = {}
         if mb_monitoring_enabled:
             measurements[MetricName.MEM_BW] = mbm_total
+            measurements[MetricName.MEMORY_BANDWIDTH_LOCAL] = mbm_local
+            measurements[MetricName.MEMORY_BANDWIDTH_REMOTE] = mbm_total - mbm_local
         if cache_monitoring_enabled:
             measurements[MetricName.LLC_OCCUPANCY] = llc_occupancy
         return measurements
