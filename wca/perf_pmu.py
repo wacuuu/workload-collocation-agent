@@ -14,6 +14,7 @@ from wca.metrics import Measurements, BaseDerivedMetricsGenerator, BaseGenerator
     EvalBasedMetricsGenerator
 from wca.perf import _create_event_attributes, _perf_event_open, _create_file_from_fd, \
     _parse_event_groups, _aggregate_measurements, LIBC
+from wca.platforms import decode_listformat, encode_listformat
 
 log = logging.getLogger(__name__)
 
@@ -187,7 +188,7 @@ def _discover_pmu_uncore_imc_config(events):
         raise PMUNotAvailable()
     assert len(pmu_cpus_set) == 1
     pmu_cpus_csv = list(pmu_cpus_set)[0]
-    cpus = list(map(int, pmu_cpus_csv.split(',')))
+    cpus = list(decode_listformat(pmu_cpus_csv))
     pmu_events = {pmu: events for pmu in pmu_types}
     return cpus, pmu_events
 
