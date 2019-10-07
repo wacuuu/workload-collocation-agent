@@ -8,6 +8,7 @@ Files in this folder will deploy:
 - **prometheus** using (prometheus-opearator) with custom rules for metrics collection, storage and 
   evaluation
 - **wca** as daemonset (on nodes marked with label goal=service)
+- **dashboard** for graphic cluster interface
 
 1. You need to create dedicated namespaces for those applications like this:
 
@@ -45,11 +46,15 @@ when CRDs are created by kustomize and prometheus-operator.
 
 You can check progress of deployment using `kubectl get -k .`.
 
+4. After deploy, token for access to Kubernetes Dashboard is available:
+
+```
+kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
+```
+
 # Access
 
-**Dashboard**  is exposed at: https://100.64.176.36:6443/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/#
-
-https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md
+**Dashboard**  is exposed at: https://worker-node:6443/api/v1/namespaces/kubernetes-dashboard/services/https:kubernetes-dashboard:/proxy/#
 
 **Prometheus** is exposed at: http://worker-node:30900/graph
 
@@ -156,5 +161,5 @@ Prometheus rules "16-compatibilit-rules-new-to-old" are used to configured new e
 - Kubernetes-app for Grafana: https://grafana.com/grafana/plugins/grafana-kubernetes-app
 - Boomtable widget for Grafana: https://grafana.com/grafana/plugins/yesoreyeram-boomtable-panel
 - hostPath support for Prometheus operator: https://github.com/coreos/prometheus-operator/pull/1455
-
-
+- create user for Dashboard: https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md
+- Docker images Kubernetes Dashboard: https://hub.docker.com/r/kubernetesui/dashboard/tags

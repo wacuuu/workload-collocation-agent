@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# From:
+# https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
+
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -231,7 +234,7 @@ kind: Service
 apiVersion: v1
 metadata:
   labels:
-    k8s-app: kubernetes-metrics-scraper
+    k8s-app: dashboard-metrics-scraper
   name: dashboard-metrics-scraper
   namespace: kubernetes-dashboard
 spec:
@@ -239,7 +242,7 @@ spec:
     - port: 8000
       targetPort: 8000
   selector:
-    k8s-app: kubernetes-metrics-scraper
+    k8s-app: dashboard-metrics-scraper
 
 ---
 
@@ -247,23 +250,23 @@ kind: Deployment
 apiVersion: apps/v1
 metadata:
   labels:
-    k8s-app: kubernetes-metrics-scraper
-  name: kubernetes-metrics-scraper
+    k8s-app: dashboard-metrics-scraper
+  name: dashboard-metrics-scraper
   namespace: kubernetes-dashboard
 spec:
   replicas: 1
   revisionHistoryLimit: 10
   selector:
     matchLabels:
-      k8s-app: kubernetes-metrics-scraper
+      k8s-app: dashboard-metrics-scraper
   template:
     metadata:
       labels:
-        k8s-app: kubernetes-metrics-scraper
+        k8s-app: dashboard-metrics-scraper
     spec:
       containers:
-        - name: kubernetes-metrics-scraper
-          image: kubernetesui/metrics-scraper:v1.0.0
+        - name: dashboard-metrics-scraper
+          image: kubernetesui/metrics-scraper:v1.0.1
           ports:
             - containerPort: 8000
               protocol: TCP
@@ -274,8 +277,13 @@ spec:
               port: 8000
             initialDelaySeconds: 30
             timeoutSeconds: 30
+          volumeMounts:
+          - mountPath: /tmp
+            name: tmp-volume
       serviceAccountName: kubernetes-dashboard
       # Comment the following tolerations if Dashboard must not be deployed on master
       tolerations:
         - key: node-role.kubernetes.io/master
           effect: NoSchedule
+      volumes:
+        - name: tmp-volume
