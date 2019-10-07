@@ -34,7 +34,7 @@ from wca.resctrl_allocations import (RDTAllocationValue, RDTGroups,
                                      normalize_mb_string,
                                      validate_l3_string)
 from wca.runners.detection import AnomalyStatistics
-from wca.runners.measurement import MeasurementRunner, TaskLabelGenerator
+from wca.runners.measurement import MeasurementRunner, TaskLabelGenerator, DEFAULT_EVENTS
 from wca.storage import MetricPackage, DEFAULT_STORAGE
 
 log = logging.getLogger(__name__)
@@ -127,7 +127,7 @@ class TasksAllocationsValues(AllocationsDict):
             else:
                 container = task_id_to_containers[task_id]
                 # Check consistency of container with RDT state.
-                assert (container._rdt_information is not None) == rdt_enabled
+                assert (container._platform.rdt_information is not None) == rdt_enabled
                 extra_labels = dict(container_name=container.get_name(), task=task_id)
                 extra_labels.update(task_id_to_labels[task_id])
                 allocation_value = TaskAllocationsValues.create(
@@ -205,7 +205,7 @@ class AllocationRunner(MeasurementRunner):
             extra_labels: Dict[Str, Str] = None,
             allocation_configuration: Optional[AllocationConfiguration] = None,
             remove_all_resctrl_groups: bool = False,
-            event_names: Optional[List[str]] = None,
+            event_names: Optional[List[str]] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
             task_label_generators: Dict[str, TaskLabelGenerator] = None,
     ):

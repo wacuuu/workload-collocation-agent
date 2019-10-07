@@ -53,8 +53,10 @@ def test_resgroup_sync_no_space_left_on_device(makedirs_mock, exists_mock, log_w
 
 
 @patch('builtins.open', new=create_open_mock({
-    "/sys/fs/resctrl/mon_groups/best_efforts/mon_data/1/mbm_total_bytes": "1",
-    "/sys/fs/resctrl/mon_groups/best_efforts/mon_data/2/mbm_total_bytes": "1",
+    "/sys/fs/resctrl/mon_groups/best_efforts/mon_data/1/mbm_total_bytes": "3",
+    "/sys/fs/resctrl/mon_groups/best_efforts/mon_data/2/mbm_total_bytes": "3",
+    "/sys/fs/resctrl/mon_groups/best_efforts/mon_data/1/mbm_local_bytes": "2",
+    "/sys/fs/resctrl/mon_groups/best_efforts/mon_data/2/mbm_local_bytes": "2",
     "/sys/fs/resctrl/mon_groups/best_efforts/mon_data/1/llc_occupancy": "1",
     "/sys/fs/resctrl/mon_groups/best_efforts/mon_data/2/llc_occupancy": "1",
     "/sys/fs/cgroup/cpu/best_efforts/cpuacct.usage": "4",
@@ -62,7 +64,10 @@ def test_resgroup_sync_no_space_left_on_device(makedirs_mock, exists_mock, log_w
 @patch('os.listdir', return_value=['1', '2'])
 def test_get_measurements(*mock):
     resgroup = ResGroup(name=RESCTRL_ROOT_NAME)
-    assert {'memory_bandwidth': 2, 'llc_occupancy': 2} == \
+    assert {'memory_bandwidth': 6,
+            'llc_occupancy': 2,
+            'memory_bandwidth_local': 4,
+            'memory_bandwidth_remote': 2} == \
         resgroup.get_measurements('best_efforts', True, True)
 
 

@@ -15,6 +15,7 @@
 
 import ctypes
 from wca.metrics import MetricName
+from wca.platforms import CPUCodeName
 
 # x86 specific, from arch/x86/include/generated/uapi/asm/unistd_64.h
 PERF_EVENT_OPEN_NR = 298
@@ -75,12 +76,6 @@ class EventType:
     EVTYPE_IBS = 3
 
 
-class CPUModel:
-    UNKNOWN = 0
-    BROADWELL = 1
-    SKYLAKE = 2
-
-
 class EventTypeConfig:
     PERF_COUNT_HW_CPU_CYCLES = 0
     PERF_COUNT_HW_INSTRUCTIONS = 1
@@ -92,7 +87,6 @@ class EventTypeConfig:
     PERF_COUNT_HW_STALLED_CYCLES_FRONTEND = 7
     PERF_COUNT_HW_STALLED_CYCLES_BACKEND = 8
     PERF_COUNT_HW_REF_CPU_CYCLES = 9
-    PERF_CYCLE_ACTIVITY_STALLS_MEM_ANY = -1
 
 
 HardwareEventNameMap = {
@@ -103,9 +97,20 @@ HardwareEventNameMap = {
 }
 
 
-RawEventNameMap = {
-    MetricName.MEMSTALL: EventTypeConfig.PERF_CYCLE_ACTIVITY_STALLS_MEM_ANY,
-}
+# According SDM-vol-3b 19-48
+PREDEFINED_RAW_EVENTS = {
+    # CPUCodeName: tuple(event_id, event_mask, counter_mask)
+    MetricName.MEMSTALL: {
+        CPUCodeName.SKYLAKE: (0xA3, 0x14, 20),
+        CPUCodeName.BROADWELL: (0xA3, 0x06, 6)
+        },
+    MetricName.OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD: {
+        CPUCodeName.SKYLAKE: (0x60, 0x10, 0),
+        },
+    MetricName.OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD: {
+        CPUCodeName.SKYLAKE: (0xB0, 0x10, 0),
+        }
+    }
 
 
 class PerfType:

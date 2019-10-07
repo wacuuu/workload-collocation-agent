@@ -67,7 +67,7 @@ pipeline {
                         sh '''
 			sudo chmod 700 $(pwd)/tests/tester/configs/tester_example.yaml
                         sudo bash -c "
-                        PEX_INHERIT_PATH=prefer PYTHONPATH="$(pwd):$(pwd)/tests/tester" dist/wca.pex -c $(pwd)/tests/tester/configs/tester_example.yaml \
+                        PEX_INHERIT_PATH=fallback PYTHONPATH="$(pwd):$(pwd)/tests/tester" dist/wca.pex -c $(pwd)/tests/tester/configs/tester_example.yaml \
                         -r tester:Tester -r tester:MetricCheck -r tester:FileCheck \
                         --log=debug --root
                         "

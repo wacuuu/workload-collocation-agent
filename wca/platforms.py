@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-import os
-import re
 import socket
 import time
 from typing import List, Dict, Set, Tuple, Optional
 
+import os
+import re
+from dataclasses import dataclass
+from enum import Enum
+
 from wca.metrics import Metric, MetricName
 from wca.profiling import profiler
-
-from dataclasses import dataclass
 
 try:
     from pkg_resources import get_distribution, DistributionNotFound
@@ -29,8 +30,55 @@ except ImportError:
     # When running from pex use vendored library from pex.
     from pex.vendor._vendored.setuptools.pkg_resources import get_distribution, DistributionNotFound
 
-
 log = logging.getLogger(__name__)
+
+
+class CPUCodeName(Enum):
+    """Only Server platforms. """
+    UNKNOWN = 'unknown'
+    HASWELL = 'Haswell'
+    BROADWELL = 'Broadwell'
+    SKYLAKE = 'Skylake'
+    CASCADE_LAKE = 'Cascade Lake'
+    COOPER_LAKE = 'Cooper Lake'
+    ICE_LAKE = 'Ice Lake'
+
+
+def _parse_cpuinfo() -> Dict[str, str]:
+    """Make dictionary from '/proc/cpuinfo' file."""
+    with open('/proc/cpuinfo') as f:
+        cpuinfo_string = f.read()
+    return [
+        dict(
+            [list(map(str.strip, line.split(':')))
+             for line in cpu.split('\n')]
+        )
+        for cpu in filter(None, cpuinfo_string.split('\n\n'))
+    ]
+
+
+def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
+    """Returns CPU codename based on model and stepping information."""
+
+    # https://elixir.bootlin.com/linux/v5.3/source/arch/x86/include/asm/intel-family.h#L64
+    if model in [
+            0x4E, 0x5E,  # Client
+            0x55  # Server
+            ]:
+        # Intel quirk to recognize Cascade Lake:
+        # https://github.com/torvalds/linux/blob/54ecb8f7028c5eb3d740bb82b0f1d90f2df63c5c/arch/x86/kernel/cpu/resctrl/core.c#L887
+        if stepping > 4:
+            return CPUCodeName.CASCADE_LAKE
+        else:
+            return CPUCodeName.SKYLAKE
+    elif model in [
+            0x3D, 0x47,  # Client
+            0x4F, 0x56  # Server
+            ]:
+        return CPUCodeName.BROADWELL
+    else:
+        return CPUCodeName.UNKNOWN
+
 
 # 0-based logical processor number (matches the value of "processor" in /proc/cpuinfo)
 CpuId = int
@@ -50,45 +98,32 @@ def get_wca_version():
     return version
 
 
-def get_cpu_model() -> str:
-    """Returns information about cpu model from /proc/cpuinfo."""
-    if os.path.isfile('/proc/cpuinfo'):
-        with open('/proc/cpuinfo') as fref:
-            for line in fref.readlines():
-                if line.startswith("model name"):
-                    s = re.search("model name\\s*:\\s*(.*)\\s*$", line)
-                    if s:
-                        return s.group(1)
-                    break
-    return "unknown_cpu_model"
-
-
 @dataclass
 class RDTInformation:
     # Reflects state of the system.
 
     # Monitoring.
     rdt_cache_monitoring_enabled: bool  # based /sys/fs/resctrl/mon_data/mon_L3_00/llc_occupancy
-    rdt_mb_monitoring_enabled: bool   # based on /sys/fs/resctrl/mon_data/mon_L3_00/mbm_total_bytes
+    rdt_mb_monitoring_enabled: bool  # based on /sys/fs/resctrl/mon_data/mon_L3_00/mbm_total_bytes
 
     # Allocation.
-    rdt_cache_control_enabled: bool   # based on 'L3:' in /sys/fs/resctrl/schemata
-    rdt_mb_control_enabled: bool      # based on 'MB:' in /sys/fs/resctrl/schemata
+    rdt_cache_control_enabled: bool  # based on 'L3:' in /sys/fs/resctrl/schemata
+    rdt_mb_control_enabled: bool  # based on 'MB:' in /sys/fs/resctrl/schemata
 
     # Cache control read-only parameters. Available only if CAT control
     # is supported by platform,otherwise set to None.
-    cbm_mask: Optional[str]           # based on /sys/fs/resctrl/info/L3/cbm_mask
-    min_cbm_bits: Optional[str]       # based on /sys/fs/resctrl/info/L3/min_cbm_bits
-    num_closids: Optional[int]        # based on /sys/fs/resctrl/info/L3/num_closids
+    cbm_mask: Optional[str]  # based on /sys/fs/resctrl/info/L3/cbm_mask
+    min_cbm_bits: Optional[str]  # based on /sys/fs/resctrl/info/L3/min_cbm_bits
+    num_closids: Optional[int]  # based on /sys/fs/resctrl/info/L3/num_closids
 
     # MB control read-only parameters.
     mb_bandwidth_gran: Optional[int]  # based on /sys/fs/resctrl/info/MB/bandwidth_gran
-    mb_min_bandwidth: Optional[int]   # based on /sys/fs/resctrl/info/MB/min_bandwidth
+    mb_min_bandwidth: Optional[int]  # based on /sys/fs/resctrl/info/MB/min_bandwidth
 
-    def is_control_enabled(self):
+    def is_control_enabled(self) -> bool:
         return self.rdt_mb_control_enabled or self.rdt_cache_control_enabled
 
-    def is_monitoring_enabled(self):
+    def is_monitoring_enabled(self) -> bool:
         return self.rdt_mb_monitoring_enabled or self.rdt_cache_monitoring_enabled
 
 
@@ -99,7 +134,9 @@ class Platform:
     cores: int  # number of physical cores in total (sum over all sockets)
     cpus: int  # logical processors equal to the output of "nproc" Linux command
 
-    cpu_model: str
+    cpu_model: str  # /proc/cpuinfo -> model_name
+    cpu_model_number: int  # /proc/cpuinfo -> model
+    cpu_codename: CPUCodeName
 
     # Utilization (usage):
     # counter like, sum of all modes based on /proc/stat
@@ -145,7 +182,8 @@ def create_labels(platform: Platform) -> Dict[str, str]:
     # Additional labels
     labels["host"] = socket.gethostname()
     labels["wca_version"] = get_wca_version()
-    labels["cpu_model"] = get_cpu_model()
+    labels["cpu_model"] = platform.cpu_model
+
     return labels
 
 
@@ -355,11 +393,20 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     # Dynamic information
     cpus_usage = parse_proc_stat(read_proc_stat())
     total_memory_used = parse_proc_meminfo(read_proc_meminfo())
+    cpu_info = _parse_cpuinfo()
+
+    # All information are based on first CPU.
+    cpu_model = cpu_info[0]['model name']
+    cpu_model_number = int(cpu_info[0]['model'])
+    cpu_codename = get_cpu_codename(int(cpu_info[0]['model']), int(cpu_info[0]['stepping']))
+
     platform = Platform(
         sockets=no_of_sockets,
         cores=nr_of_cores,
         cpus=nr_of_cpus,
-        cpu_model=get_cpu_model(),
+        cpu_model=cpu_model,
+        cpu_model_number=cpu_model_number,
+        cpu_codename=cpu_codename,
         cpus_usage=cpus_usage,
         total_memory_used=total_memory_used,
         timestamp=time.time(),
