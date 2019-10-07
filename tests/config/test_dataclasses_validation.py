@@ -17,8 +17,8 @@ from typing import List, Dict
 import pytest
 from dataclasses import dataclass
 
+from tests import testing
 from wca import config
-from wca import testing
 from wca.config import ConfigLoadError
 
 log = logging.getLogger(__name__)

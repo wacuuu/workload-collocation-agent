@@ -12,16 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-import os
-from enum import Enum
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict, Set
 
+import os
 from dataclasses import dataclass
+from enum import Enum
 
 from wca import logger
+from wca import platforms
 from wca.allocations import MissingAllocationException
 from wca.allocators import TaskAllocations, AllocationType, AllocationConfiguration
 from wca.metrics import Measurements, MetricName, MissingMeasurementException
+from wca.platforms import decode_listformat, encode_listformat
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +66,12 @@ class CgroupResource(str, Enum):
     CPU_SHARES = 'cpu.shares'
     CPUSET_CPUS = 'cpuset.cpus'
     CPUSET_MEMS = 'cpuset.mems'
+    CPUSET_MEMORY_MIGRATE = 'cpuset.memory_migrate'
     MEMORY_USAGE = 'memory.usage_in_bytes'
+    MEMORY_MAX_USAGE = 'memory.max_usage_in_bytes'
+    MEMORY_LIMIT = 'memory.limit_in_bytes'
+    MEMORY_SOFT_LIMIT = 'memory.soft_limit_in_bytes'
+    NUMA_STAT = 'memory.numa_stat'
 
     def __repr__(self):
         return repr(self.value)
@@ -75,9 +82,8 @@ class Cgroup:
     cgroup_path: str
 
     # Values used for normalization of allocations
-    platform_cpus: int = None  # required for quota normalization (None by default until others PRs)
-    platform_sockets: int = 0  # required for cpuset.mems
     allocation_configuration: Optional[AllocationConfiguration] = None
+    platform: Optional[platforms.Platform] = None
 
     def __post_init__(self):
         assert self.cgroup_path.startswith('/'), 'Provide cgroup_path with leading /'
@@ -100,14 +106,37 @@ class Cgroup:
 
         measurements = {MetricName.CPU_USAGE_PER_TASK: cpu_usage}
 
+        for cgroup_resource, metric_name in [
+            [CgroupResource.MEMORY_USAGE, MetricName.MEM_USAGE_PER_TASK],
+            [CgroupResource.MEMORY_MAX_USAGE, MetricName.MEM_MAX_USAGE_PER_TASK],
+            [CgroupResource.MEMORY_LIMIT, MetricName.MEM_LIMIT_PER_TASK],
+            [CgroupResource.MEMORY_SOFT_LIMIT, MetricName.MEM_SOFT_LIMIT_PER_TASK],
+        ]:
+
+            try:
+                with open(os.path.join(self.cgroup_memory_fullpath,
+                                       cgroup_resource)) as resource_file:
+                    value = int(resource_file.read())
+                measurements[metric_name] = value
+            except FileNotFoundError as e:
+                raise MissingMeasurementException(
+                    'File {} is missing. Metric unavailable.'.format(e.filename))
+
+        # NUMA stats
         try:
-            with open(os.path.join(self.cgroup_memory_fullpath,
-                                   CgroupResource.MEMORY_USAGE)) as memory_usage_file:
-                memory_usage = int(memory_usage_file.read())
-            measurements[MetricName.MEM_USAGE_PER_TASK] = memory_usage
+            with open(os.path.join(
+                    self.cgroup_memory_fullpath, CgroupResource.NUMA_STAT)) as resource_file:
+                for line in resource_file.readlines():
+                    # Requires mem.use_hierarchy = 1
+                    if line.startswith("hierarchical_total="):
+                        for stat in line.split()[1:]:
+                            k, v = stat.split("=")
+                            name = "memory_numa_stat"
+                            measurements[name + "_" + k[1:]] = int(v)
+                        break
         except FileNotFoundError as e:
             raise MissingMeasurementException(
-                'File {} is missing. Memory usage unavailable.'.format(e.filename))
+                'File {} is missing. Metric unavailable.'.format(e.filename))
 
         return measurements
 
@@ -125,18 +154,24 @@ class Cgroup:
 
         raise NotImplementedError(cgroup_control_type)
 
-    def _read(self, cgroup_control_file: str, cgroup_control_type: CgroupType) -> int:
+    def _read_raw(self, cgroup_control_file: str, cgroup_control_type: CgroupType) -> str:
         """Read helper to store any and convert value from cgroup control file."""
         path = self._get_proper_path(cgroup_control_file, cgroup_control_type)
         try:
             with open(path) as file:
-                raw_value = int(file.read())
+                raw_value = file.read()
                 log.log(logger.TRACE, 'cgroup: read %s=%r', file.name, raw_value)
         except FileNotFoundError as e:
             raise MissingAllocationException(
                 'File {} is missing. Allocation unavailable.'.format(e.filename))
 
         return raw_value
+
+    def _read(self, cgroup_control_file: str, cgroup_control_type: CgroupType) -> int:
+        """Read helper to store any and convert value to int from cgroup control file."""
+        raw_value = self._read_raw(cgroup_control_file, cgroup_control_type)
+        value = int(raw_value)
+        return value
 
     def _write(
             self, cgroup_control_file: str, value: Union[int, str],
@@ -165,7 +200,7 @@ class Cgroup:
         if current_quota == QUOTA_NOT_SET:
             return QUOTA_NORMALIZED_MAX
         # Period 0 is invalid argument for cgroup cpu subsystem. so division is safe.
-        return current_quota / current_period / self.platform_cpus
+        return current_quota / current_period / self.platform.cpus
 
     def get_allocations(self) -> TaskAllocations:
         assert self.allocation_configuration is not None, \
@@ -173,6 +208,9 @@ class Cgroup:
         return {
             AllocationType.QUOTA: self._get_normalized_quota(),
             AllocationType.SHARES: self._get_normalized_shares(),
+            AllocationType.CPUSET_CPUS: self._get_cpuset_cpus(),
+            AllocationType.CPUSET_MEMS: self._get_cpuset_mems(),
+            AllocationType.CPUSET_MEM_MIGRATE: self._get_memory_migrate(),
         }
 
     def get_pids(self, include_threads=True) -> List[str]:
@@ -220,7 +258,7 @@ class Cgroup:
         else:
             # synchronize period if necessary
             quota = int(normalized_quota * self.allocation_configuration.cpu_quota_period *
-                        self.platform_cpus)
+                        self.platform.cpus)
             # Minimum quota detected
             if quota < QUOTA_MINIMUM_VALUE:
                 log.warning('Quota is smaller than allowed minimum. '
@@ -230,20 +268,46 @@ class Cgroup:
 
         self._write(CgroupResource.CPU_QUOTA, quota, CgroupType.CPU)
 
-    def set_cpuset(self, normalized_cpus: str, normalized_mems: str):
-        """Set cpuset.cpus and cpuset.mems."""
-        assert normalized_cpus is not None
-        assert normalized_mems is not None
+    def _write_listformat(self, intset: Set[int], resource: CgroupResource,
+                          cgroup_type: CgroupType):
+        encoded_value = encode_listformat(intset)
+        try:
+            self._write(resource, encoded_value, cgroup_type)
+        except PermissionError:
+            log.warning(
+                'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
+                    CgroupResource.CPUSET_CPUS, encoded_value, self.cgroup_cpuset_fullpath))
 
-        try:
-            self._write(CgroupResource.CPUSET_CPUS, normalized_cpus, CgroupType.CPUSET)
-        except PermissionError:
-            log.warning(
-                'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
-                    CgroupResource.CPUSET_CPUS, normalized_cpus, self.cgroup_cpuset_fullpath))
-        try:
-            self._write(CgroupResource.CPUSET_MEMS, normalized_mems, CgroupType.CPUSET)
-        except PermissionError:
-            log.warning(
-                'Cannot write {}: "{}" to "{}"! Permission denied.'.format(
-                    CgroupResource.CPUSET_MEMS, normalized_mems, self.cgroup_cpuset_fullpath))
+    def _read_listformat(self, resource: CgroupResource, cgroup_type: CgroupType):
+        listformat = decode_listformat(self._read_raw(resource, cgroup_type).strip())
+        return encode_listformat(listformat)
+
+    def set_cpuset_cpus(self, cpus: Set[int]):
+        """Set cpuset.cpus."""
+        self._write_listformat(cpus, CgroupResource.CPUSET_CPUS, CgroupType.CPUSET)
+
+    def set_cpuset_mems(self, mems: Set[int] = None):
+        """Set cpuset.mems."""
+        self._write_listformat(mems, CgroupResource.CPUSET_MEMS, CgroupType.CPUSET)
+
+    def _get_cpuset_cpus(self) -> str:
+                """Get current cpuset.cpus (encoded as comma separated sorted normalized list of cpus)."""
+                    return self._read_listformat(CgroupResource.CPUSET_CPUS, CgroupType.CPUSET)
+
+    def _get_cpuset_mems(self) -> str:
+        """Get current cpuset.mems (encoded as comma separated sorted normalized list of cpus)."""
+        return self._read_listformat(CgroupResource.CPUSET_MEMS, CgroupType.CPUSET)
+
+    def _set_memory_migrate(self, value: int):
+        self._write(CgroupResource.CPUSET_MEMORY_MIGRATE, value, CgroupType.CPUSET)
+
+    def _get_memory_migrate(self) -> int:
+        return self._read(CgroupResource.CPUSET_MEMORY_MIGRATE, CgroupType.CPUSET)
+
+
+def build_cpu_to_socket_mapping(node_cpus: Dict[int, Set[int]]) -> Dict[int, int]:
+    mapping = {}
+    for node, cpus in node_cpus.items():
+        for cpu in cpus:
+            mapping[cpu] = node
+    return mapping

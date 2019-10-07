@@ -66,6 +66,8 @@ To enable RDT please add kernel boot time parameters ``rdt=cmt,mbmtotal,mbmlocal
 Python 3.6 Centos installation (recommended)
 --------------------------------------------
 
+:Note: For Centos 7.6 Python 3.6 is already available, so you **do not** need to install epel-release.
+
 The recommended way of installing Python 3.6.x is to use `Software Collections <https://www.softwarecollections.org/en/>`_.
 SCL repository is maintained by a CentOS SIG.
 

@@ -120,8 +120,7 @@ class ContainerSet(ContainerInterface):
         # Create Cgroup object representing itself.
         self._cgroup = cgroups.Cgroup(
             cgroup_path=self._cgroup_path,
-            platform_cpus=platform.cpus,
-            platform_sockets=platform.sockets,
+            platform=platform,
             allocation_configuration=allocation_configuration)
 
         # Create Cgroup objects for children.
@@ -232,8 +231,7 @@ class Container(ContainerInterface):
 
         self._cgroup = cgroups.Cgroup(
             cgroup_path=self._cgroup_path,
-            platform_cpus=platform.cpus,
-            platform_sockets=platform.sockets,
+            platform=platform,
             allocation_configuration=allocation_configuration)
 
         if wss_reset_interval > 0:

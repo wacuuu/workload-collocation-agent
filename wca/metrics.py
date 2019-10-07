@@ -13,10 +13,11 @@
 # limitations under the License.
 import logging
 import time
-from enum import Enum
 from typing import Dict, Union, List, Tuple, Callable, Optional
 
 from dataclasses import dataclass, field
+
+from enum import Enum
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +40,11 @@ class MetricName(str, Enum):
 
     # Cgroup based.
     CPU_USAGE_PER_TASK = 'cpu_usage_per_task'
+    MEM_USAGE_PER_TASK = 'memory_usage_per_task_bytes'
+    MEM_MAX_USAGE_PER_TASK = 'memory_max_usage_per_task_bytes'
+    MEM_LIMIT_PER_TASK = 'memory_limit_per_task_bytes'
+    MEM_SOFT_LIMIT_PER_TASK = 'memory_soft_limit_per_task_bytes'
+    MEM_NUMA_STAT = 'memory_numa_stat'
 
     # Generic per task.
     LAST_SEEN = 'last_seen'
@@ -47,7 +53,6 @@ class MetricName(str, Enum):
 
     # Resctrl based.
     MEM_BW = 'memory_bandwidth'
-    MEM_USAGE_PER_TASK = 'memory_usage_per_task_bytes'
     LLC_OCCUPANCY = 'llc_occupancy'
     MEMORY_BANDWIDTH_LOCAL = 'memory_bandwidth_local'
     MEMORY_BANDWIDTH_REMOTE = 'memory_bandwidth_remote'
@@ -120,6 +125,18 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         MetricMetadata(
             MetricType.GAUGE,
             '[bytes] Memory usage_in_bytes per tasks returned from cgroup memory subsystem.'),
+    MetricName.MEM_MAX_USAGE_PER_TASK:
+        MetricMetadata(
+            MetricType.GAUGE,
+            '[bytes] Memory max_usage_in_bytes per tasks returned from cgroup memory subsystem.'),
+    MetricName.MEM_LIMIT_PER_TASK:
+        MetricMetadata(
+            MetricType.GAUGE,
+            '[bytes] Memory limit_in_bytes per tasks returned from cgroup memory subsystem.'),
+    MetricName.MEM_SOFT_LIMIT_PER_TASK:
+        MetricMetadata(
+            MetricType.GAUGE,
+            '[bytes] Memory soft_limit_in_bytes per tasks returned from cgroup memory subsystem.'),
     MetricName.LLC_OCCUPANCY:
         MetricMetadata(
             MetricType.GAUGE,
@@ -149,6 +166,11 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         MetricMetadata(
             MetricType.GAUGE,
             'Perf metric scaling factor, average from all CPUs'
+        ),
+    MetricName.MEM_NUMA_STAT:
+        MetricMetadata(
+            MetricType.GAUGE,
+            'NUMA Stat TODO!',  # TODO: fix me!
         ),
     MetricName.MEMORY_BANDWIDTH_LOCAL:
         MetricMetadata(

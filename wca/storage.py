@@ -185,6 +185,9 @@ def is_convertable_to_prometheus_exposition_format(metrics: List[Metric]) -> (bo
             return (False, "Wrong metric type (used type {})."
                     .format(metric.type))
 
+        if not isinstance(metric.value, (float, int)):
+            return (False, "Wrong metric type of value (used type {})." .format(type(metric.value)))
+
     return (True, "")
 
 
@@ -268,6 +271,7 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
             if type(metric.value) == float:
                 value_str = repr(float(metric.value))  # here we use repr instead of str
             else:
+                assert isinstance(metric.value, int)
                 value_str = str(metric.value)
 
             if timestamp is not None:

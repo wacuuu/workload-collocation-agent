@@ -14,28 +14,34 @@
 
 from unittest.mock import patch, call, Mock
 
-from wca.allocators import AllocationConfiguration
-from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
-                                    CPUSetAllocationValue
-from wca.containers import Container
-from wca.platforms import Platform, RDTInformation
 from tests.testing import allocation_metric
+from wca.allocators import AllocationConfiguration, AllocationType
+from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
+    CPUSetCPUSAllocationValue, CPUSetMEMSAllocationValue
+from wca.containers import Container
+from wca.metrics import Metric, MetricType
+from wca.platforms import Platform, RDTInformation
 
 
 @patch('wca.perf.PerfCounters')
 @patch('wca.cgroups.Cgroup')
 def test_cgroup_allocations(Cgroup_mock, PerfCounters_mock):
     rdt_information = RDTInformation(True, True, True, True, '0', '0', 0, 0, 0)
+
     platform_mock = Mock(
         spec=Platform,
+        cpus=10,
         sockets=1,
-        cpus=1,
-        rdt_information=rdt_information)
+        rdt_information=rdt_information,
+        node_cpus={0: [0, 1], 1: [2, 3]},
+    )
+
+    foo_container = Container(
+        '/somepath', platform=platform_mock)
 
     foo_container = Container('/somepath', platform=platform_mock)
     foo_container._cgroup.allocation_configuration = AllocationConfiguration()
-    foo_container._cgroup.platform_cpus = 10
-    foo_container._cgroup.platform_sockets = 1
+    foo_container._cgroup.platform = platform_mock
 
     quota_allocation_value = QuotaAllocationValue(0.2, foo_container, dict(foo='bar'))
     quota_allocation_value.perform_allocations()
@@ -50,15 +56,28 @@ def test_cgroup_allocations(Cgroup_mock, PerfCounters_mock):
         allocation_metric('cpu_shares', 0.5, foo='bar')
     ]
 
-    cpuset_allocation_value = CPUSetAllocationValue('0-2,4,6-8', foo_container, dict(foo='bar'))
-    cpuset_allocation_value.perform_allocations()
+    cpuset_cpus_allocation_value = CPUSetCPUSAllocationValue('0-2,4,6-8', foo_container,
+                                                             dict(foo='bar'))
+    cpuset_cpus_allocation_value.perform_allocations()
 
-    assert cpuset_allocation_value.generate_metrics() == [
-        allocation_metric('cpuset', [0, 1, 2, 4, 6, 7, 8], foo='bar')
+    cpuset_mems_allocation_value = CPUSetMEMSAllocationValue('0-1', foo_container, dict(foo='bar'))
+    cpuset_mems_allocation_value.perform_allocations()
+
+    assert cpuset_cpus_allocation_value.generate_metrics() == [
+        Metric(name='allocation_cpuset_cpus_number_of_cpus', value=7,
+               labels={'allocation_type': AllocationType.CPUSET_CPUS, 'foo': 'bar'},
+               type=MetricType.GAUGE)
+    ]
+
+    assert cpuset_mems_allocation_value.generate_metrics() == [
+        Metric(name='allocation_cpuset_mems_number_of_mems', value=2,
+               labels={'allocation_type': AllocationType.CPUSET_MEMS, 'foo': 'bar'},
+               type=MetricType.GAUGE)
     ]
 
     Cgroup_mock.assert_has_calls([
         call().set_quota(0.2),
         call().set_shares(0.5),
-        call().set_cpuset('0,1,2,4,6,7,8', '0')
+        call().set_cpuset_cpus({0, 1, 2, 4, 6, 7, 8}),
+        call().set_cpuset_mems({0, 1})
     ], True)

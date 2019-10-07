@@ -22,7 +22,11 @@ import time
 from enum import Enum
 from json.decoder import JSONDecodeError
 from typing import List, Dict, Set, Tuple, Optional
+from collections import defaultdict
+from itertools import groupby
+from typing import List, Dict, Optional, Set
 
+import os
 from dataclasses import dataclass
 
 from wca.metrics import Metric, MetricName, Measurements
@@ -48,7 +52,7 @@ class CPUCodeName(Enum):
     ICE_LAKE = 'Ice Lake'
 
 
-def _parse_cpuinfo() -> Dict[str, str]:
+def _parse_cpuinfo() -> List[Dict[str, str]]:
     """Make dictionary from '/proc/cpuinfo' file."""
     with open('/proc/cpuinfo') as f:
         cpuinfo_string = f.read()
@@ -86,6 +90,7 @@ def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
 
 # 0-based logical processor number (matches the value of "processor" in /proc/cpuinfo)
 CpuId = int
+NodeId = int
 
 
 def get_wca_version():
@@ -141,6 +146,10 @@ class Platform:
     cpu_model: str  # /proc/cpuinfo -> model_name
     cpu_model_number: int  # /proc/cpuinfo -> model
     cpu_codename: CPUCodeName
+    # mapping from socket, core id to CPU based on /proc/cpuinfo
+    topology: Dict[int, Dict[int, List[int]]]
+
+    cpu_model: str
 
     # Utilization (usage):
     # counter like, sum of all modes based on /proc/stat
@@ -150,6 +159,12 @@ class Platform:
     # [bytes] based on /proc/meminfo (gauge like)
     # difference between MemTotal and MemAvail (or MemFree)
     total_memory_used: int
+
+    # NUMA info
+    node_memory_free: Dict[NodeId, int]
+    node_memory_used: Dict[NodeId, int]
+    # mapping from numa node id to CPU (to support SNC), based on /sys/devices/system/numa
+    node_cpus: Dict[int, Set[int]]
 
     # [unix timestamp] Recorded timestamp of finishing data gathering (as returned from time.time)
     timestamp: float
@@ -337,6 +352,44 @@ def read_proc_meminfo() -> str:
     return out
 
 
+BASE_SYSFS_NODES_PATH = '/sys/devices/system/node'
+
+
+def parse_node_meminfo() -> (Dict[NodeId, int], Dict[NodeId, int]):
+    """Parses /sys/devices/system/node/node*/meminfo and returns free/used"""
+    node_free = {}
+    node_used = {}
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            meminfo_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'meminfo')
+            with open(meminfo_filename) as f:
+                for line in f.readlines():
+                    s = line.split()
+                    if len(s) != 5:
+                        continue
+                    if s[2] == "MemFree:":
+                        node_free[int(s[1])] = int(s[3]) << 10
+                    if s[2] == "MemUsed:":
+                        node_used[int(s[1])] = int(s[3]) << 10
+    return node_free, node_used
+
+
+def parse_node_cpus() -> Dict[NodeId, Set[int]]:
+    """
+    Parses /sys/devices/system/node/node*/cpulist"
+    Read CPU to NUMA node mapping based on /sys/devices/system/node
+    :return: mapping from numa_node -> list of cpus (as List of int)
+    """
+    node_cpus = {}
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            node_id = int(nodedir[4:])
+            cpu_list_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'cpulist')
+            with open(cpu_list_filename) as cpu_list_file:
+                node_cpus[node_id] = decode_listformat(cpu_list_file.read())
+    return node_cpus
+
+
 def parse_proc_stat(proc_stat_output) -> Dict[CpuId, int]:
     """Parses output of /proc/stat and calculates cpu usage for each cpu"""
     cpus_usage = {}
@@ -378,52 +431,40 @@ def read_proc_stat() -> str:
     return out
 
 
-def collect_topology_information() -> (int, int, int):
+def collect_topology_information(parsed_cpuinfo: List[Dict[str, str]]) -> (int, int, int,
+                                                                           Dict[int, Dict[
+                                                                               int, List[int]]],
+                                                                           Dict[int, List[int]]
+                                                                           ):
     """
     Reads files from /sys/devices/system/cpu to collect topology information
-    :return: tuple (nr_of_online_cpus, nr_of_cores, nr_of_sockets)
+    :return: tuple (nr_of_online_cpus, nr_of_cores, nr_of_sockets,
+                    mapping from [socket][core] -> list of cpus)
     """
 
-    def read_cpu_info_file(cpu, rel_file_path) -> int:
-        with open(os.path.join(sys_devices_system_cpu_path,
-                               cpu, rel_file_path)) as f:
-            return int(f.read())
+    def by_physical_id(processor):
+        return int(processor['physical id'])
 
-    sys_devices_system_cpu_path = "/sys/devices/system/cpu"
-    cpus = os.listdir(sys_devices_system_cpu_path)
-    # Filter out all unneeded folders
-    cpu_regex = re.compile(r'cpu[0-9]+')
-    cpus = [cpu for cpu in cpus if cpu_regex.match(cpu)]
-    cores_sockets_pairs: Set[Tuple[int, int]] = set()
-    sockets = set()
-    nr_of_online_cpus = 0
+    def by_core_id(processor):
+        return int(processor['core id'])
 
-    for cpu in cpus:
-        # Check whether current cpu is online
-        # There is no online status file for cpu0 so we omit checking it
-        # and assume it is online
-        if cpu != "cpu0":
-            cpu_online_status = read_cpu_info_file(cpu, "online")
-            if 1 == cpu_online_status:
-                nr_of_online_cpus += 1
-            else:
-                # If the cpu is not online, files topology/{physical_package_id, core_id}
-                # do not exist, so we continue
-                continue
-        else:
-            nr_of_online_cpus += 1
+    topology = defaultdict(dict)
 
-        socket_id = read_cpu_info_file(cpu, "topology/physical_package_id")
-        core_id = read_cpu_info_file(cpu, "topology/core_id")
-        cores_sockets_pairs.add((socket_id, core_id))
-        sockets.add(socket_id)
+    for physical_id, socket_processors in groupby(
+            sorted(parsed_cpuinfo, key=by_physical_id), key=by_physical_id):
+        for core_id, core_processors in groupby(
+                sorted(list(socket_processors), key=by_core_id), key=by_core_id):
+            topology[int(physical_id)][
+                int(core_id)] = [int(p['processor']) for p in core_processors]
 
-    # Get nr of cores by counting unique (socket_id, core_id) tuples
-    nr_of_cores = len(cores_sockets_pairs)
-    # Get nr of sockets by counting unique socket_ids
-    nr_of_sockets = len(sockets)
+    # get rid of defaultdict
+    topology = dict(topology)
 
-    return nr_of_online_cpus, nr_of_cores, nr_of_sockets
+    nr_of_online_cpus = len(parsed_cpuinfo)
+    nr_of_cores = sum(len(core_ids) for core_ids in topology.values())
+    nr_of_sockets = len(topology)
+
+    return nr_of_online_cpus, nr_of_cores, nr_of_sockets, topology
 
 
 BASE_RESCTRL_PATH = '/sys/fs/resctrl'
@@ -495,8 +536,9 @@ def collect_platform_information(rdt_enabled: bool = True,
     Note: returned metrics should be consistent with information covered by platform
 
     """
+    cpu_info = _parse_cpuinfo()
     # Static information
-    nr_of_cpus, nr_of_cores, no_of_sockets = collect_topology_information()
+    nr_of_cpus, nr_of_cores, no_of_sockets, topology = collect_topology_information(cpu_info)
     if rdt_enabled:
         rdt_information = _collect_rdt_information()
     else:
@@ -505,7 +547,7 @@ def collect_platform_information(rdt_enabled: bool = True,
     # Dynamic information
     cpus_usage = parse_proc_stat(read_proc_stat())
     total_memory_used = parse_proc_meminfo(read_proc_meminfo())
-    cpu_info = _parse_cpuinfo()
+    node_free, node_used = parse_node_meminfo()
 
     # All information are based on first CPU.
     cpu_model = cpu_info[0]['model name']
@@ -516,6 +558,7 @@ def collect_platform_information(rdt_enabled: bool = True,
         sockets=no_of_sockets,
         cores=nr_of_cores,
         cpus=nr_of_cpus,
+        topology=topology,
         cpu_model=cpu_model,
         cpu_model_number=cpu_model_number,
         cpu_codename=cpu_codename,
@@ -523,8 +566,48 @@ def collect_platform_information(rdt_enabled: bool = True,
         total_memory_used=total_memory_used,
         timestamp=time.time(),
         rdt_information=rdt_information,
+        node_memory_free=node_free,
+        node_memory_used=node_used,
+        node_cpus=parse_node_cpus(),
         measurements=extra_platform_measurements or {},
     )
     assert len(platform.cpus_usage) == platform.cpus, \
         "Inconsistency in cpu data returned by kernel"
     return platform, create_metrics(platform), create_labels(platform)
+
+
+def decode_listformat(value: str) -> Set[int]:
+    """Parse "List Format" as describe by man cpuset(7)
+
+    can raise ValueError in case in inproper input.
+    """
+    cores = set()
+
+    if not value:
+        return set()
+
+    ranges = value.split(',')
+
+    for r in ranges:
+        boundaries = r.split('-')
+
+        if len(boundaries) == 1:
+            cores.add(int(boundaries[0].strip()))
+        elif len(boundaries) == 2:
+            start = int(boundaries[0].strip())
+            end = int(boundaries[1].strip())
+
+            for i in range(start, end + 1):
+                cores.add(i)
+
+    return set(cores)
+
+
+def encode_listformat(ints: Set[int]) -> str:
+    """ Encode as "List Format" man cpuset(7) list of ints as comma separated list of cpus.
+    Works for numa nodes as well.
+    Assumptions:
+    - returned list is sorted and always comma separated.
+    """
+    assert all(isinstance(i, int) for i in ints), 'simple type check'
+    return ','.join(map(str, sorted(ints)))

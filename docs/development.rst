@@ -13,6 +13,8 @@ Preparing developer environment
 
 1. Install `epel-release` repository and basic developer tools:
 
+:Note: For Centos 7.6 Python 3.6 is already available, so you **do not** need to install epel-release.
+
 .. code-block:: shell
 
     yum install epel-release make git which
@@ -99,6 +101,7 @@ Running locally (for development purposes)
 ------------------------------------------
 
 You can run without building a distribution like this: 
+
 
 .. code-block:: shell
     

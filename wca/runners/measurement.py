@@ -20,6 +20,11 @@ from typing import Dict, List, Tuple, Optional
 import resource
 from dataclasses import dataclass
 
+import re
+import resource
+from abc import abstractmethod
+from dataclasses import dataclass
+
 from wca import nodes, storage, platforms, profiling, perf_const as pc
 from wca import resctrl
 from wca import security
@@ -209,10 +214,6 @@ class MeasurementRunner(Runner):
                 return 1
 
         log.debug('rdt_enabled: %s', self._rdt_enabled)
-
-        # Postpone the container manager initialization after rdt checks were performed.
-        platform_cpus, _, platform_sockets = platforms.collect_topology_information()
-
         platform, _, _ = platforms.collect_platform_information(self._rdt_enabled)
         rdt_information = platform.rdt_information
 

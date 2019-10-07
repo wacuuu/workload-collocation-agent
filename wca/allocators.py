@@ -31,7 +31,9 @@ class AllocationType(str, Enum):
     QUOTA = 'cpu_quota'
     SHARES = 'cpu_shares'
     RDT = 'rdt'
-    CPUSET = 'cpu_set'
+    CPUSET_CPUS = 'cpuset_cpus'
+    CPUSET_MEMS = 'cpuset_mems'
+    CPUSET_MEM_MIGRATE = 'cpu_set_memory_migrate'
 
     def __repr__(self):
         return repr(self.value)
@@ -42,8 +44,10 @@ class RDTAllocation:
     # defaults to TaskId from TasksAllocations
     name: Optional[str] = None
     # CAT: optional - when no provided doesn't change the existing allocation
+    # e.g. 0:01100,1:001
     l3: Str = None
     # MBM: optional - when no provided doesn't change the existing allocation
+    # eg. '0:20,1:80'
     mb: Str = None
 
 

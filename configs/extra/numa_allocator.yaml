@@ -1,0 +1,30 @@
+runner: !AllocationRunner
+  action_delay: 5
+  node: !StaticNode
+    # mkdir -p /sys/fs/cgroup/{cpu,cpuset,perf_event,cpuset,memory}/specjbb2015/Group{1,2,3,4,5}
+    require_pids: true  # This will ignore cgroups without tasks - no more empty measurements.
+    tasks:
+      #- task1
+      #- task2
+      # - task3
+            - specjbb2015/Group1
+            - specjbb2015/Group2
+            - specjbb2015/Group3
+            - specjbb2015/Group4
+            - specjbb2015/controller
+    default_resources:
+      cpus: 3.
+
+  allocator: !NUMAAllocator
+  event_names: []  # if uncommented disables metrics from perf event subsystem
+  #rdt_enabled: false  # force RDT disabled, by default is auto detected
+
+  # Metrics to files
+  metrics_storage: !LogStorage
+    output_filename: 'metrics.prom'
+    overwrite: true
+  allocations_storage: !LogStorage
+    output_filename: 'allocations.prom'
+    overwrite: true
+  anomalies_storage: !LogStorage
+    output_filename: /dev/null
