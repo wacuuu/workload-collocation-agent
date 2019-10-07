@@ -95,7 +95,7 @@ class KubernetesNode(Node):
     kubelet_endpoint: Url = 'https://127.0.0.1:10250'
 
     kubeapi_host: Str = None
-    kubeapi_port: Str = None # Because !Env is UserString and another type cast might be problematic
+    kubeapi_port: Str = None # Because !Env is String and another type cast might be problematic
     node_ip: Str = None
 
     # Timeout to access kubernetes agent.
