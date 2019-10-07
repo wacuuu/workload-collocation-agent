@@ -75,7 +75,7 @@ def test_get_tasks(get_mock):
                                             'a1d354cd9b26f353d66fbb08d'
                                             '785abd32f4f6ec52ac843a2e7'])]
 
-    node = KubernetesNode()
+    node = KubernetesNode(kubelet_enabled=True)
     tasks = node.get_tasks()
 
     assert len(tasks) == 2
@@ -95,7 +95,7 @@ def test_get_tasks_kubeapi(get_mock, pathlib_open_mock):
         'requests.get',
         return_value=create_json_fixture_mock('kubernetes_get_state_not_ready', __file__))
 def test_get_tasks_not_all_ready(get_mock):
-    node = KubernetesNode()
+    node = KubernetesNode(kubelet_enabled=True)
     tasks = node.get_tasks()
     assert len(tasks) == 0
 
@@ -104,7 +104,7 @@ def test_get_tasks_not_all_ready(get_mock):
         'requests.get',
         return_value=create_json_fixture_mock('kubelet_invalid_pods_response', __file__))
 def test_invalid_kubelet_response(get_mock):
-    node = KubernetesNode()
+    node = KubernetesNode(kubelet_enabled=True)
     with pytest.raises(ValidationError):
         node.get_tasks()
 
@@ -177,8 +177,8 @@ def test_are_all_tasks_of_single_qos(tasks, expected_result):
     assert are_all_tasks_of_single_qos(tasks) == expected_result
 
 
-@patch('requests.post', side_effect=requests.exceptions.ConnectionError())
+@patch('requests.get', side_effect=requests.exceptions.ConnectionError())
 def test_get_tasks_synchronization_error(request):
-    node = KubernetesNode()
+    node = KubernetesNode(kubelet_enabled=True)
     with pytest.raises(TaskSynchronizationException):
         node.get_tasks()

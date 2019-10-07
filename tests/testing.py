@@ -164,7 +164,8 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 timestamp=time.time(),
                 rdt_information=RDTInformation(
                     True, True, rdt_mb_control_enabled,
-                    rdt_cache_control_enabled, '0', '0', 0, 0, 0)
+                    rdt_cache_control_enabled, '0', '0', 0, 0, 0),
+                measurements={},
             )
             return ContainerSet(
                 cgroup_path=cgroup_path,
@@ -185,7 +186,8 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 total_memory_used=10,
                 timestamp=time.time(),
                 rdt_information=RDTInformation(
-                    True, True, True, True, '0', '0', 0, 0, 0)
+                    True, True, True, True, '0', '0', 0, 0, 0),
+                measurements = {},
             )
             return Container(
                 cgroup_path=cgroup_path,
@@ -302,6 +304,7 @@ def prepare_runner_patches(func):
              patch('wca.resctrl.check_resctrl', return_value=True), \
              patch('wca.resctrl.cleanup_resctrl'), \
              patch('wca.perf.PerfCounters'), \
+             patch('time.time', return_value=12345.6), \
              patch('wca.platforms.collect_platform_information',
                    return_value=(platform_mock, [metric('platform-cpu-usage')], {})), \
              patch('wca.platforms.collect_topology_information', return_value=(1, 1, 1)), \

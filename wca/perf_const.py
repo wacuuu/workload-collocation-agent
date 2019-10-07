@@ -14,6 +14,7 @@
 
 
 import ctypes
+
 from wca.metrics import MetricName
 from wca.platforms import CPUCodeName
 
@@ -97,21 +98,20 @@ HardwareEventNameMap = {
     MetricName.CACHE_REFERENCES: EventTypeConfig.PERF_COUNT_HW_CACHE_REFERENCES,
 }
 
-
 # According SDM-vol-3b 19-48
 PREDEFINED_RAW_EVENTS = {
     # CPUCodeName: tuple(event_id, event_mask, counter_mask)
     MetricName.MEMSTALL: {
         CPUCodeName.SKYLAKE: (0xA3, 0x14, 20),
         CPUCodeName.BROADWELL: (0xA3, 0x06, 6)
-        },
+    },
     MetricName.OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD: {
         CPUCodeName.SKYLAKE: (0x60, 0x10, 0),
-        },
+    },
     MetricName.OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD: {
         CPUCodeName.SKYLAKE: (0xB0, 0x10, 0),
-        }
     }
+}
 
 
 class PerfType:

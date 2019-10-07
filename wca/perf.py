@@ -15,8 +15,6 @@
 
 import ctypes
 import logging
-from collections import defaultdict
-
 import os
 import statistics
 import struct

@@ -164,9 +164,9 @@ class KubernetesNode(Node):
                 if self.node_ip is None:
                     raise ValueError("node_ip is not set in config")
         except requests.exceptions.ConnectionError as e:
-            raise TaskSynchornizationException('connection error: %s' % e) from e
+            raise TaskSynchronizationException('connection error: %s' % e) from e
         except requests.exceptions.ReadTimeout as e:
-            raise TaskSynchornizationException('timeout: %s' % e) from e
+            raise TaskSynchronizationException('timeout: %s' % e) from e
 
         tasks = []
         for pod in podlist_json_response.get('items'):

@@ -277,15 +277,15 @@ class AllocationRunner(MeasurementRunner):
 
             if root_rdt_mb is not None:
                 normalized_root_rdt_mb = normalize_mb_string(
-                        root_rdt_mb,
-                        platform.sockets,
-                        platform.rdt_information.mb_min_bandwidth,
-                        platform.rdt_information.mb_bandwidth_gran)
+                    root_rdt_mb,
+                    platform.sockets,
+                    platform.rdt_information.mb_min_bandwidth,
+                    platform.rdt_information.mb_bandwidth_gran)
                 resctrl.cleanup_resctrl(
-                        root_rdt_l3, normalized_root_rdt_mb, self._remove_all_resctrl_groups)
+                    root_rdt_l3, normalized_root_rdt_mb, self._remove_all_resctrl_groups)
             else:
                 resctrl.cleanup_resctrl(
-                        root_rdt_l3, root_rdt_mb, self._remove_all_resctrl_groups)
+                    root_rdt_l3, root_rdt_mb, self._remove_all_resctrl_groups)
         except InvalidAllocations as e:
             log.error('Cannot initialize RDT subsystem: %s', e)
             return False

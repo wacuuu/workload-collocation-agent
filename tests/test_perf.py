@@ -23,12 +23,10 @@ import pytest
 from wca import metrics
 from wca import perf
 from wca import perf_const as pc
-from wca.perf import _parse_raw_event_name
-from tests.testing import create_open_mock
-from wca.metrics import MetricName, DerivedMetricName, DefaultDerivedMetricsGenerator, DerivedMetricsGenerator
+from wca.metrics import MetricName, DerivedMetricName, DefaultDerivedMetricsGenerator
 from wca.perf import _parse_raw_event_name, _get_event_config
-from wca.runners.measurement import _filter_out_event_names_for_cpu
 from wca.platforms import CPUCodeName, Platform
+from wca.runners.measurement import _filter_out_event_names_for_cpu
 
 
 @pytest.mark.parametrize("raw_value,time_enabled,time_running,expected_value,expected_factor", [
@@ -269,7 +267,6 @@ def test_open_for_cpu(_open_mock, _get_cgroup_fd_mock,
 def test_open_for_cpu_with_existing_event_group_leader(_open_mock,
                                                        _get_cgroup_fd_mock,
                                                        _perf_event_open_mock, fdopen_mock):
-
     platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
     prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES], platform_mock)
     # Create event group leader
@@ -336,8 +333,8 @@ def test_parse_raw_event_name_invalid(event_name, expected_match):
     (CPUCodeName.BROADWELL, MetricName.MEMSTALL, 0x60006A3),
     (CPUCodeName.SKYLAKE, MetricName.OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD, 0x00001060),
     (CPUCodeName.SKYLAKE,
-        MetricName.OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD, 0x000010B0),
-    ])
+     MetricName.OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD, 0x000010B0),
+])
 def test_get_event_config(cpu, event_name, expected_config):
     assert expected_config == _get_event_config(cpu, event_name)
 
@@ -392,22 +389,22 @@ def test_derived_metrics():
 
 @pytest.mark.parametrize('event_names, cpu_codename, expected', [
     (['cycles', 'instructions', 'cache_misses', 'cache_references'],
-        CPUCodeName.SKYLAKE,
-        ['cache_misses', 'cache_references', 'cycles', 'instructions']),
+     CPUCodeName.SKYLAKE,
+     ['cache_misses', 'cache_references', 'cycles', 'instructions']),
     (['__r1234', 'instructions', 'cycles', 'cache_references'],
-        CPUCodeName.SKYLAKE,
-        ['instructions', 'cache_references', 'cycles', '__r1234']),
+     CPUCodeName.SKYLAKE,
+     ['instructions', 'cache_references', 'cycles', '__r1234']),
     (['offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions',
-        'cache_misses', 'cache_references'],
-        CPUCodeName.SKYLAKE,
-        ['cache_misses', 'cache_references',
-            'offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions']),
+      'cache_misses', 'cache_references'],
+     CPUCodeName.SKYLAKE,
+     ['cache_misses', 'cache_references',
+      'offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions']),
     (['offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions',
-        'cache_misses', 'offcore_requests_l3_miss_demand_data_rd'],
-        CPUCodeName.SKYLAKE,
-        ['cache_misses', 'offcore_requests_l3_miss_demand_data_rd',
-            'offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions']),
-    ])
+      'cache_misses', 'offcore_requests_l3_miss_demand_data_rd'],
+     CPUCodeName.SKYLAKE,
+     ['cache_misses', 'offcore_requests_l3_miss_demand_data_rd',
+      'offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions']),
+])
 def test_parse_event_names(event_names, cpu_codename, expected):
     parsed_event_names = _filter_out_event_names_for_cpu(event_names, cpu_codename)
     assert set(parsed_event_names) == set(expected)
@@ -417,9 +414,9 @@ def test_parse_event_names(event_names, cpu_codename, expected):
     (['cycles', 'instructions', 'cache_misses', 'false_metric'], CPUCodeName.SKYLAKE),
     (['__r1234', 'instructions', 'false_metric', 'cache_references'], CPUCodeName.SKYLAKE),
     (['offcore_requests_outstanding_l3_miss_demand_data_rd', 'instructions',
-        'false_metric', 'cache_references'], CPUCodeName.SKYLAKE),
+      'false_metric', 'cache_references'], CPUCodeName.SKYLAKE),
     (['offcore_requests_outstanding_l3_miss_demand_data_rd', 'false_metric',
-        'cache_misses', 'offcore_requests_l3_miss_demand_data_rd'], CPUCodeName.SKYLAKE)])
+      'cache_misses', 'offcore_requests_l3_miss_demand_data_rd'], CPUCodeName.SKYLAKE)])
 def test_exception_parse_event_names(event_names, cpu_codename):
     with pytest.raises(Exception):
         _filter_out_event_names_for_cpu(event_names, cpu_codename)

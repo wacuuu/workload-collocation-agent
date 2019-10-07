@@ -17,12 +17,11 @@ from abc import ABC, abstractmethod
 from typing import List, Dict, Union
 
 from dataclasses import dataclass
+
 from wca.config import assure_type
 
 TaskId = str
 
-class TaskSynchornizationException(Exception):
-    pass
 
 class TaskSynchronizationException(Exception):
     pass

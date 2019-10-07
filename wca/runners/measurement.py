@@ -13,11 +13,11 @@
 # limitations under the License.
 import logging
 import re
-import resource
 import time
 from abc import abstractmethod
 from typing import Dict, List, Tuple, Optional
 
+import resource
 from dataclasses import dataclass
 
 from wca import nodes, storage, platforms, profiling, perf_const as pc
@@ -29,12 +29,10 @@ from wca.containers import ContainerManager, Container
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, TaskResource
 from wca.logger import trace, get_logging_metrics
 from wca.mesos import create_metrics
-from wca.metrics import Metric, MetricType, MetricName, \
-    MissingMeasurementException
-from wca.nodes import Task, TaskSynchronizationException
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
     BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory
-from wca.nodes import Task, TaskSynchornizationException
+from wca.nodes import Task
+from wca.nodes import TaskSynchronizationException
 from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
     PMUNotAvailable, DefaultPlatformDerivedMetricsGeneratorsFactory
 from wca.platforms import CPUCodeName
@@ -134,12 +132,14 @@ class MeasurementRunner(Runner):
         # Disabled by default, to overridden by subclasses.
         self._rdt_cache_control_required = False
         # QUICK FIX for Str from ENV TODO: fix me
-        self._extra_labels = {k:str(v) for k,v in extra_labels.items()} if extra_labels else dict()
+        self._extra_labels = {k: str(v) for k, v in
+                              extra_labels.items()} if extra_labels else dict()
         self._finish = False  # Guard to stop iterations.
         self._last_iteration = time.time()  # Used internally by wait function.
         self._allocation_configuration = _allocation_configuration
         self._event_names = event_names
-        log.info('Enabling %i perf events: %s', len(self._event_names), ', '.join(self._event_names))
+        log.info('Enabling %i perf events: %s', len(self._event_names),
+                 ', '.join(self._event_names))
         self._enable_derived_metrics = enable_derived_metrics
 
         # Default value for task_labels_generator.
@@ -217,7 +217,7 @@ class MeasurementRunner(Runner):
         rdt_information = platform.rdt_information
 
         self._event_names = _filter_out_event_names_for_cpu(
-                self._event_names, platform.cpu_codename)
+            self._event_names, platform.cpu_codename)
 
         # We currently do not support RDT without monitoring.
         if self._rdt_enabled and not rdt_information.is_monitoring_enabled():
@@ -388,8 +388,6 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
             task_measurements[MetricName.MEM.value] = task.resources[TaskResource.MEM.value]
 
         task_labels = task.labels.copy()
-
-
 
         # Aggregate over all tasks.
         tasks_labels[task.task_id] = task_labels

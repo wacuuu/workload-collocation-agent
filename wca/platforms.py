@@ -11,21 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 import logging
 import os
-import json
-from json.decoder import JSONDecodeError
 import re
 import shlex
 import socket
 import subprocess
 import time
+from enum import Enum
+from json.decoder import JSONDecodeError
 from typing import List, Dict, Set, Tuple, Optional
 
-import os
-import re
 from dataclasses import dataclass
-from enum import Enum
 
 from wca.metrics import Metric, MetricName, Measurements
 from wca.profiling import profiler
@@ -68,9 +66,9 @@ def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
 
     # https://elixir.bootlin.com/linux/v5.3/source/arch/x86/include/asm/intel-family.h#L64
     if model in [
-            0x4E, 0x5E,  # Client
-            0x55  # Server
-            ]:
+        0x4E, 0x5E,  # Client
+        0x55  # Server
+    ]:
         # Intel quirk to recognize Cascade Lake:
         # https://github.com/torvalds/linux/blob/54ecb8f7028c5eb3d740bb82b0f1d90f2df63c5c/arch/x86/kernel/cpu/resctrl/core.c#L887
         if stepping > 4:
@@ -78,9 +76,9 @@ def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
         else:
             return CPUCodeName.SKYLAKE
     elif model in [
-            0x3D, 0x47,  # Client
-            0x4F, 0x56  # Server
-            ]:
+        0x3D, 0x47,  # Client
+        0x4F, 0x56  # Server
+    ]:
         return CPUCodeName.BROADWELL
     else:
         return CPUCodeName.UNKNOWN
@@ -160,17 +158,19 @@ class Platform:
 
     measurements: Measurements
 
+
 # cached data about platform static information
 _platform_static_information = {}
 
-def get_platform_static_information():
 
+def get_platform_static_information():
     # RETURN MEMORY DIMM DETAILS based on lshw
     global _platform_static_information
     if not 'initialized' in _platform_static_information:
         # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
         try:
-            ipmctl_output = subprocess.check_output(shlex.split('ipmctl show -u B -memoryresources')).decode("utf-8")
+            ipmctl_output = subprocess.check_output(
+                shlex.split('ipmctl show -u B -memoryresources')).decode("utf-8")
             memorymode_size = 0
             for line in ipmctl_output.splitlines():
                 if 'MemoryCapacity' in line:
@@ -180,7 +180,8 @@ def get_platform_static_information():
             log.warning('ipmctl unavailable, cannot read memory mode size')
 
         try:
-            lshw_raw = subprocess.check_output(shlex.split('lshw -class memory -json -quiet -sanitize -notime'))
+            lshw_raw = subprocess.check_output(
+                shlex.split('lshw -class memory -json -quiet -sanitize -notime'))
             lshw_str = lshw_raw.decode("utf-8")
             lshw_str = lshw_str.rstrip()
             lshw_str = '[' + lshw_str[0:(len(lshw_str) - 1)] + ']'
@@ -210,16 +211,17 @@ def get_platform_static_information():
         except FileNotFoundError:
             log.warning('lshw unavailable, cannot read memory topology size!')
         except JSONDecodeError:
-            log.warning('lshw unavailable (incorrect version or missing data), ' 
+            log.warning('lshw unavailable (incorrect version or missing data), '
                         'cannot parse output, cannot read memory topology size!')
 
     _platform_static_information['initialized'] = True
 
     return _platform_static_information
 
+
 def create_metrics(platform: Platform) -> List[Metric]:
     """Creates a list of Metric objects from data in Platform object"""
-    PLATFORM_PREFIX='platform__'
+    PLATFORM_PREFIX = 'platform__'
     platform_metrics = list()
     platform_metrics.append(
         Metric.create_metric_with_metadata(
@@ -242,7 +244,6 @@ def create_metrics(platform: Platform) -> List[Metric]:
                 value=metric_value,
             )
         )
-
 
     platform_metrics.extend([
         Metric(name=PLATFORM_PREFIX + 'topology_cores', value=platform.cores),

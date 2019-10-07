@@ -102,7 +102,7 @@ class DetectionRunner(MeasurementRunner):
                          wss_reset_interval=wss_reset_interval,
                          task_derived_metrics_generators_factory=task_derived_metrics_generators_factory,
                          platform_derived_metrics_generators_factory=platform_derived_metrics_generators_factory
-        )
+                         )
         self._detector = detector
 
         # Anomaly.

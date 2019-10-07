@@ -222,7 +222,7 @@ def _smart_get_pids():
     #   to pass mutable object (Integers are immutable in Python).
     calls_count = [1]
 
-    def fun() -> List[str]:
+    def fun(include_threads=True) -> List[str]:
         """Returns list of two consecutive integers. On first call
            return [1,2], on second [3,4], and so forth."""
         calls_count[0] += 2

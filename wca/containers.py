@@ -15,9 +15,8 @@
 
 import logging
 import pprint
-from typing import List, Optional, Dict
-
 from abc import ABC, abstractmethod
+from typing import List, Optional, Dict
 
 from wca import cgroups, wss
 from wca import logger

@@ -11,13 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 import time
 from enum import Enum
 from typing import Dict, Union, List, Tuple, Callable, Optional
 
 from dataclasses import dataclass, field
-
-import logging
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +29,7 @@ class MetricName(str, Enum):
     CACHE_MISSES = 'cache_misses'
     CACHE_REFERENCES = 'cache_references'
     MEMSTALL = 'stalls_mem_load'
-    OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD =\
+    OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD = \
         'offcore_requests_outstanding_l3_miss_demand_data_rd'
     OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD = 'offcore_requests_l3_miss_demand_data_rd'
 
@@ -43,6 +42,8 @@ class MetricName(str, Enum):
 
     # Generic per task.
     LAST_SEEN = 'last_seen'
+    CPUS = 'cpus'  # From Kubernetes or Mesos
+    MEM = 'mem'  # From Kubernetes or Mesos
 
     # Resctrl based.
     MEM_BW = 'memory_bandwidth'
@@ -54,13 +55,8 @@ class MetricName(str, Enum):
     # /proc based (platform scope).
     CPU_USAGE_PER_CPU = 'cpu_usage_per_cpu'
     MEM_USAGE = 'memory_usage'
-    MEMSTALL = 'stalls_mem_load'
-    SCALING_FACTOR_AVG = 'scaling_factor_avg'
-    SCALING_FACTOR_MAX = 'scaling_factor_max'
 
-    # Generic for platform.
-    CPUS = 'cpus'
-    MEM = 'mem'
+    # Generic for WCA.
     UP = 'up'
 
 
@@ -174,6 +170,26 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         MetricMetadata(
             MetricType.COUNTER,
             'Demand data read requests that missed L3.'
+        ),
+    MetricName.CPUS:
+        MetricMetadata(
+            MetricType.GAUGE,
+            'Tasks resources cpus initial requests.',
+        ),
+    MetricName.MEM:
+        MetricMetadata(
+            MetricType.GAUGE,
+            'Tasks resources memory initial requests.'
+        ),
+    MetricName.LAST_SEEN:
+        MetricMetadata(
+            MetricType.COUNTER,
+            'Time the task was last seen.'
+        ),
+    MetricName.UP:
+        MetricMetadata(
+            MetricType.COUNTER,
+            'Time the was was last seen.'
         ),
     DerivedMetricName.IPC:
         MetricMetadata(
@@ -353,7 +369,6 @@ def _derive_unbound(extra_metrics, measurements, delta, available, time_delta):
             log.warning('symbol %r unknown, metric %r ignored!', e.args, extra_metric_name)
 
 
-
 class EvalBasedMetricsGenerator(BaseDerivedMetricsGenerator):
 
     def __init__(self, get_measurements, extra_metrics):
@@ -363,9 +378,9 @@ class EvalBasedMetricsGenerator(BaseDerivedMetricsGenerator):
     def _derive(self, measurements, delta, available, time_delta):
         return _derive_unbound(self.extra_metrics, measurements, delta, available, time_delta)
 
+
 @dataclass
 class DefaultTaskDerivedMetricsGeneratorFactory(BaseGeneratorFactory):
-
     extra_metrics: Optional[Dict[str, str]] = None
 
     def create(self, get_measurements):
