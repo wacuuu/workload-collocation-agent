@@ -13,8 +13,6 @@
 # limitations under the License.
 
 
-from_env: !Env
-  name: USER
+from_env: !Env USER
 
-unset_env: !Env
-  name: THIS_TEST_CASE_RELIES_ON_THIS_ENV_BEING_UNSET
+unset_env: !Env THIS_TEST_CASE_RELIES_ON_THIS_ENV_BEING_UNSET

@@ -45,11 +45,22 @@ from wca import logger
 
 _yaml = yaml.YAML(typ='safe')
 
+
 log = logging.getLogger(__name__)
 
 ROOT_PATH = ''
 
 _registered_tags = set()
+
+
+def _read_env(loader: yaml.loader.Loader, node: yaml.nodes.Node):
+    value = loader.construct_scalar(node)
+    seq = os.environ.get(value, "")
+    return seq
+
+
+_yaml.constructor.add_constructor('!Env', functools.partial(_read_env))
+_registered_tags.add('!Env')
 
 
 class ConfigLoadError(Exception):
