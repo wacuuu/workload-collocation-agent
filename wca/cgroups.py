@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import os
+from enum import Enum
 from typing import Optional, List, Union, Dict, Set
 
-import os
 from dataclasses import dataclass
-from enum import Enum
 
 from wca import logger
 from wca import platforms
@@ -291,18 +291,21 @@ class Cgroup:
         self._write_listformat(mems, CgroupResource.CPUSET_MEMS, CgroupType.CPUSET)
 
     def _get_cpuset_cpus(self) -> str:
-                """Get current cpuset.cpus (encoded as comma separated sorted normalized list of cpus)."""
-                    return self._read_listformat(CgroupResource.CPUSET_CPUS, CgroupType.CPUSET)
+        """Get current cpuset.cpus (encoded as comma separated sorted normalized list of cpus)."""
+        return self._read_listformat(CgroupResource.CPUSET_CPUS, CgroupType.CPUSET)
 
-    def _get_cpuset_mems(self) -> str:
-        """Get current cpuset.mems (encoded as comma separated sorted normalized list of cpus)."""
-        return self._read_listformat(CgroupResource.CPUSET_MEMS, CgroupType.CPUSET)
 
-    def _set_memory_migrate(self, value: int):
-        self._write(CgroupResource.CPUSET_MEMORY_MIGRATE, value, CgroupType.CPUSET)
+def _get_cpuset_mems(self) -> str:
+    """Get current cpuset.mems (encoded as comma separated sorted normalized list of cpus)."""
+    return self._read_listformat(CgroupResource.CPUSET_MEMS, CgroupType.CPUSET)
 
-    def _get_memory_migrate(self) -> int:
-        return self._read(CgroupResource.CPUSET_MEMORY_MIGRATE, CgroupType.CPUSET)
+
+def _set_memory_migrate(self, value: int):
+    self._write(CgroupResource.CPUSET_MEMORY_MIGRATE, value, CgroupType.CPUSET)
+
+
+def _get_memory_migrate(self) -> int:
+    return self._read(CgroupResource.CPUSET_MEMORY_MIGRATE, CgroupType.CPUSET)
 
 
 def build_cpu_to_socket_mapping(node_cpus: Dict[int, Set[int]]) -> Dict[int, int]:

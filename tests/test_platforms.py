@@ -17,12 +17,7 @@ from unittest.mock import patch
 
 import pytest
 
-from tests.testing import create_open_mock, relative_module_path, _is_dict_match
-from wca.metrics import Metric, MetricName
-from wca.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
-    collect_topology_information, collect_platform_information, RDTInformation, \
-    CPUCodeName, _parse_cpuinfo
-from tests.testing import create_open_mock, relative_module_path, _is_dict_match
+from tests.testing import create_open_mock, relative_module_path, _is_dict_match, assert_metric
 from wca.metrics import Metric, MetricName
 from wca.platforms import Platform, CPUCodeName, parse_proc_stat, parse_proc_meminfo, _parse_cpuinfo
 from wca.platforms import collect_topology_information, collect_platform_information, \
@@ -111,7 +106,6 @@ def test_parse_node_cpus(*mocks):
     assert node_cpus == {0: {1, 2, 6, 7, 8}, 1: {3, 4, 5, 6}}
 
 
-@pytest.mark.skip("TO BE FIXED AFTER MERGED WITH NUMA")
 @patch('builtins.open', new=create_open_mock({
     "/sys/fs/resctrl/info/L3/cbm_mask": "fffff",
     "/sys/fs/resctrl/info/L3/min_cbm_bits": "2",
@@ -159,23 +153,15 @@ def test_collect_platform_information(*mocks):
         node_memory_free={0: 1},
         node_memory_used={0: 2},
         node_cpus={},
-        rdt_information=RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20)
+        rdt_information=RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20),
+        measurements={},
     )
 
-    assert got_metrics == [
-        Metric.create_metric_with_metadata(
-            name=MetricName.MEM_USAGE, value=1337
-        ),
-        Metric.create_metric_with_metadata(
-            name=MetricName.CPU_USAGE_PER_CPU, value=100, labels={"cpu": "0"}
-        ),
-        Metric.create_metric_with_metadata(
-            name=MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}
-        ),
-    ]
+    assert_metric(got_metrics, 'platform__memory_usage', expected_metric_value=1337)
+    assert_metric(got_metrics, 'platform__cpu_usage_per_cpu', {'cpu': '0'}, expected_metric_value=100)
+    assert_metric(got_metrics, 'platform__topology_cores', expected_metric_value=1)
     assert got_labels == {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
                           "wca_version": "0.1", "cpu_model": "intel xeon"}
-
 
 @pytest.mark.parametrize(
     'raw_cpulist, expected_cpus', [
@@ -211,27 +197,3 @@ def test_parse_node_meminfo(*mocks):
     expected_node_free, expected_node_used = parse_node_meminfo()
     assert expected_node_free == {0: 454466117632}
     assert expected_node_used == {0: 77696421888}
-    got_information = collect_platform_information()
-    expected_information = (
-        Platform(1, 1, 2, 'intel xeon', 0x5E,
-                 CPUCodeName.SKYLAKE, {0: 100, 1: 200},
-                 1337, 1536071557.123456,
-                 RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20), {}),
-        [
-            Metric.create_metric_with_metadata(
-                name='platform__' + MetricName.MEM_USAGE, value=1337
-            ),
-            Metric.create_metric_with_metadata(
-                name='platform__' + MetricName.CPU_USAGE_PER_CPU, value=100, labels={"cpu": "0"}
-            ),
-            Metric.create_metric_with_metadata(
-                name='platform__' + MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}
-            ),
-            Metric(name='platform__topology_cores', value=1, labels={}),
-            Metric(name='platform__topology_cpus', value=2, labels={}),
-            Metric(name='platform__topology_sockets', value=1, labels={}),
-        ],
-        {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
-         "wca_version": "0.1", "cpu_model": "intel xeon"}
-    )
-    assert got_information == expected_information
