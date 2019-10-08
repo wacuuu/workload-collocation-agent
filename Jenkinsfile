@@ -14,18 +14,18 @@ pipeline {
 //                 '''
 //             }
 //         }
-        stage("Run unit tests suite") {
-            steps {
-                sh '''
-                  make venv junit
-                '''
-            }
-            post {
-                always {
-                    junit 'unit_results.xml'
-                }
-            }
-        }
+//         stage("Run unit tests suite") {
+//             steps {
+//                 sh '''
+//                   make venv junit
+//                 '''
+//             }
+//             post {
+//                 always {
+//                     junit 'unit_results.xml'
+//                 }
+//             }
+//         }
         stage("Build WCA pex") {
             steps {
                 sh '''
