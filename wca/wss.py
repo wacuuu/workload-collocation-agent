@@ -26,7 +26,7 @@ class WSS:
         for pid in pids:
             try:
                 with open('/proc/{}/smaps'.format(pid)) as f:
-                    for line in f:
+                    for line in f.readlines():
                         if 'Referenced' in line:
                             referenced += int(line.split('Referenced:')[1].split()[0])
             except (ProcessLookupError, FileNotFoundError):
