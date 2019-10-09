@@ -294,18 +294,15 @@ class Cgroup:
         """Get current cpuset.cpus (encoded as comma separated sorted normalized list of cpus)."""
         return self._read_listformat(CgroupResource.CPUSET_CPUS, CgroupType.CPUSET)
 
+    def _get_cpuset_mems(self) -> str:
+        """Get current cpuset.mems (encoded as comma separated sorted normalized list of cpus)."""
+        return self._read_listformat(CgroupResource.CPUSET_MEMS, CgroupType.CPUSET)
 
-def _get_cpuset_mems(self) -> str:
-    """Get current cpuset.mems (encoded as comma separated sorted normalized list of cpus)."""
-    return self._read_listformat(CgroupResource.CPUSET_MEMS, CgroupType.CPUSET)
+    def _set_memory_migrate(self, value: int):
+        self._write(CgroupResource.CPUSET_MEMORY_MIGRATE, value, CgroupType.CPUSET)
 
-
-def _set_memory_migrate(self, value: int):
-    self._write(CgroupResource.CPUSET_MEMORY_MIGRATE, value, CgroupType.CPUSET)
-
-
-def _get_memory_migrate(self) -> int:
-    return self._read(CgroupResource.CPUSET_MEMORY_MIGRATE, CgroupType.CPUSET)
+    def _get_memory_migrate(self) -> int:
+        return self._read(CgroupResource.CPUSET_MEMORY_MIGRATE, CgroupType.CPUSET)
 
 
 def build_cpu_to_socket_mapping(node_cpus: Dict[int, Set[int]]) -> Dict[int, int]:
