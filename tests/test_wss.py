@@ -31,7 +31,7 @@ def test_get_measurements(*mocks):
                     call().__exit__(None, None, None)]
             assert files[smap].mock_calls == expected_calls
 
-        # Check if write '1' to clear_refs
+        # Check if write '1' to clear_refs. It should happen on first run.
         for ref in clear_refs:
             expected_calls = [
                     call(ref, 'w'),

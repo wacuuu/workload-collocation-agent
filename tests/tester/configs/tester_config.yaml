@@ -40,10 +40,36 @@ tests:
         value: 0
       - !MetricCheck
         name: 'memory_bandwidth' 
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: 'memory_bandwidth' 
+        labels:
+          task_id: wcatask2
       - !MetricCheck
         name: 'memory_bandwidth_local' 
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: 'memory_bandwidth_local' 
+        labels:
+          task_id: wcatask2
       - !MetricCheck
         name: 'memory_bandwidth_remote' 
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: 'memory_bandwidth_remote' 
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: 'wss_referenced_mb' 
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: 'wss_referenced_mb' 
+        labels:
+          task_id: wcatask2
       - !FileCheck
         path: /sys/fs/resctrl/test/tasks
       - !FileCheck
@@ -178,7 +204,33 @@ tests:
           task_id: wcatask4
       - !MetricCheck
         name: 'memory_bandwidth' 
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: 'memory_bandwidth' 
+        labels:
+          task_id: wcatask4
       - !MetricCheck
         name: 'memory_bandwidth_local' 
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: 'memory_bandwidth_local' 
+        labels:
+          task_id: wcatask4
       - !MetricCheck
         name: 'memory_bandwidth_remote' 
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: 'memory_bandwidth_remote' 
+        labels:
+          task_id: wcatask4
+      - !MetricCheck
+        name: 'wss_referenced_mb' 
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: 'wss_referenced_mb' 
+        labels:
+          task_id: wcatask4
