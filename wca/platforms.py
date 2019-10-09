@@ -13,15 +13,12 @@
 # limitations under the License.
 import json
 import logging
-import os
-import re
 import shlex
 import socket
 import subprocess
 import time
 from enum import Enum
 from json.decoder import JSONDecodeError
-from typing import List, Dict, Set, Tuple, Optional
 from collections import defaultdict
 from itertools import groupby
 from typing import List, Dict, Optional, Set

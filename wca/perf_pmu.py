@@ -14,7 +14,7 @@ from wca.metrics import Measurements, BaseDerivedMetricsGenerator, BaseGenerator
     EvalBasedMetricsGenerator
 from wca.perf import _create_event_attributes, _perf_event_open, _create_file_from_fd, \
     _parse_event_groups, _aggregate_measurements, LIBC
-from wca.platforms import decode_listformat, encode_listformat
+from wca.platforms import decode_listformat
 
 log = logging.getLogger(__name__)
 
@@ -175,7 +175,8 @@ UNCORE_IMC_EVENTS = [
 ]
 
 
-class PMUNotAvailable(Exception): pass
+class PMUNotAvailable(Exception):
+    pass
 
 
 def _discover_pmu_uncore_imc_config(events):
@@ -203,7 +204,7 @@ class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
             measurements['pmm_read_mb_per_second'] = pmm_reads_delta * scale / time_delta
             measurements['pmm_write_mb_per_second'] = pmm_writes_delta * scale / time_delta
             measurements['pmm_total_mb_per_second'] = measurements['pmm_read_mb_per_second'] + \
-                                                      measurements['pmm_write_mb_per_second']
+                measurements['pmm_write_mb_per_second']
         else:
             log.warning('pmm metrics not available!')
 
@@ -212,7 +213,7 @@ class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
         measurements['dram_read_mb_per_second'] = cas_reads_delta * scale / time_delta
         measurements['dram_write_mb_per_second'] = cas_writes_delta * scale / time_delta
         measurements['dram_total_mb_per_second'] = measurements['dram_read_mb_per_second'] + \
-                                                   measurements['dram_write_mb_per_second']
+            measurements['dram_write_mb_per_second']
 
 
 @dataclass

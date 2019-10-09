@@ -11,14 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import logging
-import re
-import time
-from abc import abstractmethod
-from typing import Dict, List, Tuple, Optional
 
-import resource
-from dataclasses import dataclass
+import logging
+import time
+from typing import Dict, List, Tuple, Optional
 
 import re
 import resource
@@ -124,8 +120,10 @@ class MeasurementRunner(Runner):
             task_label_generators: Dict[str, TaskLabelGenerator] = None,
             _allocation_configuration: Optional[AllocationConfiguration] = None,
             wss_reset_interval: int = 0,
-            task_derived_metrics_generators_factory: BaseGeneratorFactory = DefaultTaskDerivedMetricsGeneratorFactory(),
-            platform_derived_metrics_generators_factory: BaseGeneratorFactory = DefaultPlatformDerivedMetricsGeneratorsFactory(),
+            task_derived_metrics_generators_factory: BaseGeneratorFactory =
+            DefaultTaskDerivedMetricsGeneratorFactory(),
+            platform_derived_metrics_generators_factory: BaseGeneratorFactory =
+            DefaultPlatformDerivedMetricsGeneratorsFactory(),
     ):
 
         self._node = node
@@ -168,7 +166,8 @@ class MeasurementRunner(Runner):
 
         self._wss_reset_interval = wss_reset_interval
         self._task_derived_metrics_generators_factory = task_derived_metrics_generators_factory
-        self._platform_derived_metrics_generators_factory = platform_derived_metrics_generators_factory
+        self._platform_derived_metrics_generators_factory = \
+            platform_derived_metrics_generators_factory
 
         self._uncore_pmu = None
 

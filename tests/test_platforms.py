@@ -18,7 +18,6 @@ from unittest.mock import patch
 import pytest
 
 from tests.testing import create_open_mock, relative_module_path, _is_dict_match, assert_metric
-from wca.metrics import Metric, MetricName
 from wca.platforms import Platform, CPUCodeName, parse_proc_stat, parse_proc_meminfo, _parse_cpuinfo
 from wca.platforms import collect_topology_information, collect_platform_information, \
     RDTInformation, decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat
@@ -158,10 +157,12 @@ def test_collect_platform_information(*mocks):
     )
 
     assert_metric(got_metrics, 'platform__memory_usage', expected_metric_value=1337)
-    assert_metric(got_metrics, 'platform__cpu_usage_per_cpu', {'cpu': '0'}, expected_metric_value=100)
+    assert_metric(got_metrics, 'platform__cpu_usage_per_cpu', {'cpu': '0'},
+                  expected_metric_value=100)
     assert_metric(got_metrics, 'platform__topology_cores', expected_metric_value=1)
     assert got_labels == {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
                           "wca_version": "0.1", "cpu_model": "intel xeon"}
+
 
 @pytest.mark.parametrize(
     'raw_cpulist, expected_cpus', [

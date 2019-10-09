@@ -35,7 +35,6 @@ from wca.config import Numeric, Path, Str, IpPort, ValidationError
 from wca.metrics import Metric, MetricType
 from wca.security import SSL, SECURE_CIPHERS
 
-
 log = logging.getLogger(__name__)
 try:
     import confluent_kafka
@@ -186,7 +185,7 @@ def is_convertable_to_prometheus_exposition_format(metrics: List[Metric]) -> (bo
                     .format(metric.type))
 
         if not isinstance(metric.value, (float, int)):
-            return (False, "Wrong metric type of value (used type {})." .format(type(metric.value)))
+            return (False, "Wrong metric type of value (used type {}).".format(type(metric.value)))
 
     return (True, "")
 
@@ -257,11 +256,14 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
         for metric in metrics:
 
             label_str = '{{{0}}}'.format(','.join(
-                ['{0}="{1}"'.format(
-                    k, v.replace('\\', r'\\').replace('\n', r'\n').replace('"', r'\"'))
+                [
+                    '{0}="{1}"'.format(
+                        k, v.replace('\\', r'\\').replace('\n', r'\n').replace('"', r'\"')
+                    )
                     for k, v in sorted(metric.labels.items())
                     if (filter_labels is None or k in filter_labels)
-                ]))
+                ]
+            ))
 
             # Do not send empty labels.
             if label_str == '{}':

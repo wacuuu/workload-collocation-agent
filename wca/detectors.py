@@ -39,9 +39,11 @@ TasksResources = Dict[TaskId, Dict[str, float]]
 TaskLabels = Dict[str, str]
 TasksLabels = Dict[TaskId, TaskLabels]
 
+
 class TaskResource(str, Enum):
     CPUS = 'cpus'
     MEM = 'mem'
+
 
 class ContendedResource(str, Enum):
     MEMORY_BW = 'memory bandwidth'

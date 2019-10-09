@@ -196,7 +196,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 node_memory_free={0: 1},
                 node_memory_used={0: 1},
                 node_cpus={0: {0, 1}},
-                measurements = {},
+                measurements={},
             )
             return Container(
                 cgroup_path=cgroup_path,

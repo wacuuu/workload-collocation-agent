@@ -95,7 +95,7 @@ class KubernetesNode(Node):
     kubelet_endpoint: Url = 'https://127.0.0.1:10250'
 
     kubeapi_host: Str = None
-    kubeapi_port: Str = None # Because !Env is String and another type cast might be problematic
+    kubeapi_port: Str = None  # Because !Env is String and another type cast might be problematic
     node_ip: Str = None
 
     # Timeout to access kubernetes agent.
@@ -136,11 +136,11 @@ class KubernetesNode(Node):
             s = requests.Session()
             s.mount(self.kubelet_endpoint, HTTPSAdapter())
             r = s.get(
-                    full_url,
-                    json=dict(type='GET_STATE'),
-                    timeout=self.timeout,
-                    verify=self.ssl.server_verify,
-                    cert=self.ssl.get_client_certs())
+                full_url,
+                json=dict(type='GET_STATE'),
+                timeout=self.timeout,
+                verify=self.ssl.server_verify,
+                cert=self.ssl.get_client_certs())
         else:
             r = requests.get(
                 full_url,
@@ -258,8 +258,8 @@ def _build_cgroup_path(cgroup_driver, qos, pod_id, container_id=''):
 
 
 # https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#meaning-of-memory
-_MEMORY_UNITS = {'Ki': 1024, 'Mi': 1024**2, 'Gi': 1024**3, 'Ti': 1024**4,
-                 'K': 1000, 'M': 1000**2, 'G': 1000**3, 'T': 1000**4}
+_MEMORY_UNITS = {'Ki': 1024, 'Mi': 1024 ** 2, 'Gi': 1024 ** 3, 'Ti': 1024 ** 4,
+                 'K': 1000, 'M': 1000 ** 2, 'G': 1000 ** 3, 'T': 1000 ** 4}
 _CPU_UNITS = {'m': 0.001}
 _RESOURCE_TYPES = ['requests', 'limits']
 _MAPPING = {'requests_memory': 'mem', 'ephemeral-storage': 'disk', 'requests_cpu': 'cpus'}

@@ -88,28 +88,36 @@ class NUMAAllocator(Allocator):
 
         # First, get current state of the system
         for task, memory, preferences in tasks_memory:
-            current_node = _get_current_node(decode_listformat(tasks_allocations[task][AllocationType.CPUSET_CPUS]), platform.node_cpus)
-            log.debug("Task: %s Memory: %d Preferences: %s, Current node: %d" % (task, memory, preferences, current_node))
+            current_node = _get_current_node(
+                decode_listformat(tasks_allocations[task][AllocationType.CPUSET_CPUS]),
+                platform.node_cpus)
+            log.debug("Task: %s Memory: %d Preferences: %s, Current node: %d" % (
+                task, memory, preferences, current_node))
             if current_node >= 0:
                 log.debug("task already placed, recording state")
                 balanced_memory[current_node].append((task, memory))
-
 
         log.debug("Current state of the system: %s" % balanced_memory)
 
         log.debug("Starting re-balancing")
         for task, memory, preferences in tasks_memory:
             log.debug("Task: %s Memory: %d Preferences: %s" % (task, memory, preferences))
-            current_node = _get_current_node(decode_listformat(tasks_allocations[task][AllocationType.CPUSET_CPUS]), platform.node_cpus)
-            #log.debug("Task current node: %d", current_node)
+            current_node = _get_current_node(
+                decode_listformat(tasks_allocations[task][AllocationType.CPUSET_CPUS]),
+                platform.node_cpus)
+            # log.debug("Task current node: %d", current_node)
             if current_node >= 0:
                 log.debug("task already placed on the node %d, taking next" % current_node)
-                #balanced_memory[current_node].append((task, memory))
+                # balanced_memory[current_node].append((task, memory))
                 continue
 
             if memory == 0:
-                # Handle missing data for "ghost" tasks e.g. cgroup without processes when using StaticNode
-                log.warning('skip allocation for %r task - not enough data - maybe there are no processes there!', task)
+                # Handle missing data for "ghost" tasks
+                # e.g. cgroup without processes when using StaticNode
+                log.warning(
+                    'skip allocation for %r task - not enough data - '
+                    'maybe there are no processes there!',
+                    task)
                 continue
 
             most_used_node = _get_most_used_node(preferences)
@@ -129,7 +137,7 @@ class NUMAAllocator(Allocator):
                 continue
 
             if most_used_node == best_memory_node or most_used_node == most_free_memory_node:
-            #if most_used_node == most_free_memory_node or most_used_node == best_memory_node:
+                # if most_used_node == most_free_memory_node or most_used_node == best_memory_node:
                 balance_task = task
                 balance_task_node = most_used_node
                 break
@@ -144,7 +152,7 @@ class NUMAAllocator(Allocator):
             #     # pref_nodes[node] = max(preferences[node],
             #     #     ( memory / (sum([k[1] for k in balanced_memory[node]])+memory))/2)
             #     pref_nodes[node] = preferences[node]
-            #     # pref_nodes[node] = ( memory / (sum([k[1] for k in balanced_memory[node]])+memory))
+            #     # pref_nodes[node] = ( memory/(sum([k[1] for k in balanced_memory[node]])+memory))
             # pprint(pref_nodes)
             # best_node = sorted(pref_nodes.items(), reverse=True, key=lambda x: x[1])[0][0]
             # # pprint(best_node)
@@ -156,13 +164,15 @@ class NUMAAllocator(Allocator):
         if balance_task is not None and balance_task_node is not None:
             allocations[balance_task] = {
                 AllocationType.CPUSET_MEM_MIGRATE: 1,
-                AllocationType.CPUSET_CPUS: encode_listformat(platform.node_cpus[balance_task_node]),
+                AllocationType.CPUSET_CPUS: encode_listformat(
+                    platform.node_cpus[balance_task_node]),
                 AllocationType.CPUSET_MEMS: encode_listformat({balance_task_node}),
             }
 
         # for node in balanced_memory:
         #     for task, _ in balanced_memory[node]:
-        #         if decode_listformat(tasks_allocations[task]['cpu_set']) == platform.node_cpus[node]:
+        #         if decode_listformat(tasks_allocations[task]['cpu_set']) ==
+        #         platform.node_cpus[node]:
         #             continue
         #         allocations[task] = {
         #             AllocationType.CPUSET_MEM_MIGRATE: 1,

@@ -95,13 +95,15 @@ class DetectionRunner(MeasurementRunner):
             task_derived_metrics_generators_factory: BaseGeneratorFactory = None,
             platform_derived_metrics_generators_factory: BaseGeneratorFactory = None,
     ):
+        tdmgf = task_derived_metrics_generators_factory
+        pdmgf = platform_derived_metrics_generators_factory
         super().__init__(node, metrics_storage,
                          action_delay, rdt_enabled,
                          extra_labels, event_names,
                          enable_derived_metrics, task_label_generators,
                          wss_reset_interval=wss_reset_interval,
-                         task_derived_metrics_generators_factory=task_derived_metrics_generators_factory,
-                         platform_derived_metrics_generators_factory=platform_derived_metrics_generators_factory
+                         task_derived_metrics_generators_factory=tdmgf,
+                         platform_derived_metrics_generators_factory=pdmgf
                          )
         self._detector = detector
 

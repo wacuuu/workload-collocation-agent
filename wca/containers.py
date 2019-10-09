@@ -363,6 +363,7 @@ class ContainerManager:
            is so use ContainerSet class, otherwise Container class.
            ContainerSet shares interface with Container."""
         if len(task.subcgroups_paths):
+            tdmgf = self._task_derived_metrics_generators_factory
             container = ContainerSet(
                 cgroup_path=task.cgroup_path,
                 cgroup_paths=task.subcgroups_paths,
@@ -371,10 +372,10 @@ class ContainerManager:
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
                 wss_reset_interval=self._wss_reset_interval,
-                task_derived_metrics_generators_factory=self._task_derived_metrics_generators_factory,
-
+                task_derived_metrics_generators_factory=tdmgf
             )
         else:
+            tdmgf = self._task_derived_metrics_generators_factory,
             container = Container(
                 cgroup_path=task.cgroup_path,
                 platform=self._platform,
@@ -382,7 +383,7 @@ class ContainerManager:
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
                 wss_reset_interval=self._wss_reset_interval,
-                task_derived_metrics_generators_factory=self._task_derived_metrics_generators_factory,
+                task_derived_metrics_generators_factory=tdmgf
             )
         return container
 
