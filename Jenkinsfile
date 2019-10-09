@@ -14,18 +14,18 @@ pipeline {
                 '''
             }
         }
-//         stage("Run unit tests suite") {
-//             steps {
-//                 sh '''
-//                   make venv junit
-//                 '''
-//             }
-//             post {
-//                 always {
-//                     junit 'unit_results.xml'
-//                 }
-//             }
-//         }
+        stage("Run unit tests suite") {
+            steps {
+                sh '''
+                  make venv junit
+                '''
+            }
+            post {
+                always {
+                    junit 'unit_results.xml'
+                }
+            }
+        }
         stage("Build WCA pex") {
             steps {
                 sh '''
@@ -41,14 +41,14 @@ pipeline {
                 archiveArtifacts(artifacts: "dist/**")
             }
         }
-//         stage("Check code with bandit") {
-//              steps {
-//              sh '''
-//                make bandit bandit_pex
-//              '''
-//              archiveArtifacts(artifacts: "wca-bandit.html, wca-pex-bandit.html")
-//            }
-//         }
+        stage("Check code with bandit") {
+             steps {
+             sh '''
+               make bandit bandit_pex
+             '''
+             archiveArtifacts(artifacts: "wca-bandit.html, wca-pex-bandit.html")
+           }
+        }
         stage("Build and push Workload Collocation Agent Docker image") {
             steps {
                 sh '''
