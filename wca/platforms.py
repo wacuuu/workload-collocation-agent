@@ -178,7 +178,7 @@ _platform_static_information = {}
 def get_platform_static_information():
     # RETURN MEMORY DIMM DETAILS based on lshw
     global _platform_static_information
-    if not 'initialized' in _platform_static_information:
+    if 'initialized' not in _platform_static_information:
         # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
         try:
             ipmctl_output = subprocess.check_output(
