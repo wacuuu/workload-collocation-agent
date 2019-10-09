@@ -7,13 +7,13 @@ pipeline {
         DOCKER_REPOSITORY_URL = credentials('DOCKER_REPOSITORY_URL')
     }
     stages{
-//         stage("Flake8 formatting scan") {
-//             steps {
-//                 sh '''
-//                   make venv flake8
-//                 '''
-//             }
-//         }
+        stage("Flake8 formatting scan") {
+            steps {
+                sh '''
+                  make venv flake8
+                '''
+            }
+        }
 //         stage("Run unit tests suite") {
 //             steps {
 //                 sh '''
