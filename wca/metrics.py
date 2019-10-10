@@ -384,7 +384,7 @@ def _derive_unbound(extra_metrics, measurements, delta, available, time_delta):
             available=available,
         ))
         try:
-            measurements[extra_metric_name] = eval(code, context, {})
+            measurements[extra_metric_name] = eval(code, context, {})  # nosec TODO: replace eval
         except ZeroDivisionError:
             pass
         except NameError as e:
