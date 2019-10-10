@@ -39,27 +39,27 @@ tests:
         name: anomaly_count
         value: 0
       - !MetricCheck
-        name: 'memory_bandwidth' 
+        name: 'task__memory_bandwidth' 
         labels:
           task_id: wcatask1
       - !MetricCheck
-        name: 'memory_bandwidth' 
+        name: 'task__memory_bandwidth' 
         labels:
           task_id: wcatask2
       - !MetricCheck
-        name: 'memory_bandwidth_local' 
+        name: 'task__memory_bandwidth_local' 
         labels:
           task_id: wcatask1
       - !MetricCheck
-        name: 'memory_bandwidth_local' 
+        name: 'task__memory_bandwidth_local' 
         labels:
           task_id: wcatask2
       - !MetricCheck
-        name: 'memory_bandwidth_remote' 
+        name: 'task__memory_bandwidth_remote' 
         labels:
           task_id: wcatask1
       - !MetricCheck
-        name: 'memory_bandwidth_remote' 
+        name: 'task__memory_bandwidth_remote' 
         labels:
           task_id: wcatask2
       - !MetricCheck
@@ -203,27 +203,27 @@ tests:
         labels:
           task_id: wcatask4
       - !MetricCheck
-        name: 'memory_bandwidth' 
+        name: 'task__memory_bandwidth' 
         labels:
           task_id: wcatask2
       - !MetricCheck
-        name: 'memory_bandwidth' 
+        name: 'task__memory_bandwidth' 
         labels:
           task_id: wcatask4
       - !MetricCheck
-        name: 'memory_bandwidth_local' 
+        name: 'task__memory_bandwidth_local' 
         labels:
           task_id: wcatask2
       - !MetricCheck
-        name: 'memory_bandwidth_local' 
+        name: 'task__memory_bandwidth_local' 
         labels:
           task_id: wcatask4
       - !MetricCheck
-        name: 'memory_bandwidth_remote' 
+        name: 'task__memory_bandwidth_remote' 
         labels:
           task_id: wcatask2
       - !MetricCheck
-        name: 'memory_bandwidth_remote' 
+        name: 'task__memory_bandwidth_remote' 
         labels:
           task_id: wcatask4
       - !MetricCheck
