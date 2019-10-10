@@ -65,7 +65,7 @@ pipeline {
                  stage("Using tester") {
                      steps {
                          sh '''
-                         make tester
+			echo skip
                      '''
                      }
                  }
