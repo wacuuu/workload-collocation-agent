@@ -15,7 +15,7 @@ import json
 import logging
 import shlex
 import socket
-import subprocess
+import subprocess  # nosec: B404, we deliberately use this module
 import time
 from enum import Enum
 from json.decoder import JSONDecodeError
@@ -181,10 +181,11 @@ _platform_static_information = {}
 def get_platform_static_information():
     # RETURN MEMORY DIMM DETAILS based on lshw
     global _platform_static_information
-    if not 'initialized' in _platform_static_information:
+    if 'initialized' not in _platform_static_information:
         # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
         try:
-            ipmctl_output = subprocess.check_output(
+            # nosec: B603. We deliberately use 'subprocess'. There is a permanent input.
+            ipmctl_output = subprocess.check_output(  # nosec
                 shlex.split('ipmctl show -u B -memoryresources')).decode("utf-8")
             memorymode_size = 0
             for line in ipmctl_output.splitlines():
@@ -195,7 +196,8 @@ def get_platform_static_information():
             log.warning('ipmctl unavailable, cannot read memory mode size')
 
         try:
-            lshw_raw = subprocess.check_output(
+            # nosec: B603. We deliberately use 'subprocess'. There is a permanent input.
+            lshw_raw = subprocess.check_output(  # nosec
                 shlex.split('lshw -class memory -json -quiet -sanitize -notime'))
             lshw_str = lshw_raw.decode("utf-8")
             lshw_str = lshw_str.rstrip()

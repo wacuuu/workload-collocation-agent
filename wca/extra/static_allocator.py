@@ -101,6 +101,7 @@ def _build_allocations_from_rules(all_tasks_ids: Set[TaskId],
 
         # Merge rules with previous rules.
         tasks_allocations = merge_rules(tasks_allocations, rule_tasks_allocations)
+
     return tasks_allocations
 
 

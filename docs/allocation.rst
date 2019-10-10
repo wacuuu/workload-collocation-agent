@@ -200,7 +200,7 @@ Following built-in allocations types are supported:
 - ``cpu_quota`` - CPU Bandwidth Control called quota (normalized),
 - ``cpu_shares`` - CPU shares for Linux CFS (normalized),
 - ``rdt`` - Intel RDT resources.
-- ``cpu_set`` - **experimental** support for cpu pinning(requires specific isolator for Mesos)
+- ``cpuset_cpus`` - **experimental** support for cpu pinning(requires specific isolator for Mesos)
 
 cpu_quota
 ^^^^^^^^^
@@ -301,11 +301,11 @@ Note that the configured values are passed as is to resctrl filesystem without v
 Refer to `Kernel x86/intel_rdt_ui.txt <https://www.kernel.org/doc/Documentation/x86/intel_rdt_ui.txt>`_ document for further reference.
 
 
-cpu_set
+cpuset_cpus
 ^^^^^^^
 **Experimental** support for cpu pinning:
 
-- requires specific isolator `cpuset` enabled for Mesos,
+- requires specific isolator `cpuset_cpus` enabled for Mesos,
 - may conflict with ``cpu manager`` feature in Kubernetes
 
 

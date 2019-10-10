@@ -186,6 +186,16 @@ def _create_cgroup(cgroup_path):
 
     try:
         os.makedirs(paths[CgroupType.CPUSET])
+        with open('/sys/fs/cgroup/cpuset/cpuset.cpus', 'r') as f:
+            available_cpus = f.read()
+        with open('{}/cpuset.cpus'.format(paths[CgroupType.CPUSET]), 'w') as f:
+            f.write(available_cpus)
+
+        with open('/sys/fs/cgroup/cpuset/cpuset.mems', 'r') as f:
+            available_mems = f.read()
+        with open('{}/cpuset.mems'.format(paths[CgroupType.CPUSET]), 'w') as f:
+            f.write(available_mems)
+
     except FileExistsError:
         log.warning('cpuset cgroup "{}" already exists'.format(cgroup_path))
 

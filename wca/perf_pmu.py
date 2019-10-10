@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from wca import perf_const as pc
 from wca.metrics import Measurements, BaseDerivedMetricsGenerator, BaseGeneratorFactory, \
     EvalBasedMetricsGenerator
-from wca.perf import _create_event_attributes, _perf_event_open, _create_file_from_fd, \
+from wca.perf import _perf_event_open, _create_file_from_fd, \
     _parse_event_groups, _aggregate_measurements, LIBC
 from wca.platforms import decode_listformat
 

@@ -10,7 +10,7 @@ tests:
           allocations:
             cpu_quota: 0.5
             cpu_shares: 10
-            cpu_set: '0-3'
+            cpuset_cpus: '0-3'
             rdt:
               name: 'test'
               l3: 'L3:0=3;1=2'
@@ -40,10 +40,36 @@ tests:
         value: 0
       - !MetricCheck
         name: 'memory_bandwidth' 
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: 'memory_bandwidth' 
+        labels:
+          task_id: wcatask2
       - !MetricCheck
         name: 'memory_bandwidth_local' 
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: 'memory_bandwidth_local' 
+        labels:
+          task_id: wcatask2
       - !MetricCheck
         name: 'memory_bandwidth_remote' 
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: 'memory_bandwidth_remote' 
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: 'wss_referenced_mb' 
+        labels:
+          task_id: wcatask1
+      - !MetricCheck
+        name: 'wss_referenced_mb' 
+        labels:
+          task_id: wcatask2
       - !FileCheck
         path: /sys/fs/resctrl/test/tasks
       - !FileCheck
@@ -130,7 +156,7 @@ tests:
           allocations:
             cpu_quota: 1.0
             cpu_shares: 20
-            cpu_set: '1,2,4-5'
+            cpuset_cpus: '1,2,4-5'
     checks:
       - !FileCheck
         path: /sys/fs/cgroup/cpu/wcatask2/cpu.shares
@@ -178,7 +204,33 @@ tests:
           task_id: wcatask4
       - !MetricCheck
         name: 'memory_bandwidth' 
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: 'memory_bandwidth' 
+        labels:
+          task_id: wcatask4
       - !MetricCheck
         name: 'memory_bandwidth_local' 
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: 'memory_bandwidth_local' 
+        labels:
+          task_id: wcatask4
       - !MetricCheck
         name: 'memory_bandwidth_remote' 
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: 'memory_bandwidth_remote' 
+        labels:
+          task_id: wcatask4
+      - !MetricCheck
+        name: 'wss_referenced_mb' 
+        labels:
+          task_id: wcatask2
+      - !MetricCheck
+        name: 'wss_referenced_mb' 
+        labels:
+          task_id: wcatask4
