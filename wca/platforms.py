@@ -17,14 +17,14 @@ import shlex
 import socket
 import subprocess  # nosec: B404, we deliberately use this module
 import time
-from enum import Enum
-from json.decoder import JSONDecodeError
 from collections import defaultdict
 from itertools import groupby
+from json.decoder import JSONDecodeError
 from typing import List, Dict, Optional, Set
 
 import os
 from dataclasses import dataclass
+from enum import Enum
 
 from wca.metrics import Metric, MetricName, Measurements
 from wca.profiling import profiler
@@ -90,6 +90,7 @@ CpuId = int
 NodeId = int
 
 _version = None
+
 
 def get_wca_version():
     """Returns information about wca version."""

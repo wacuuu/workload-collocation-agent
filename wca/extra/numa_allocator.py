@@ -1,5 +1,4 @@
 import logging
-from pprint import pprint
 from typing import List
 
 from dataclasses import dataclass
@@ -158,11 +157,11 @@ class NUMAAllocator(Allocator):
             # # pprint(best_node)
             # balanced_memory[best_node].append((task, memory))
 
-        #pprint(balanced_memory)
-        #print(balance_task, balance_task_node)
+        #  pprint(balanced_memory)
+        #  print(balance_task, balance_task_node)
 
         if balance_task is not None and balance_task_node is not None:
-            log.debug("Assign task %s node" % (balance_task, balance_task_node))
+            log.debug("Assign task %s to node %s." % (balance_task, balance_task_node))
             allocations[balance_task] = {
                 AllocationType.CPUSET_MEM_MIGRATE: 1,
                 AllocationType.CPUSET_CPUS: encode_listformat(
@@ -180,7 +179,7 @@ class NUMAAllocator(Allocator):
         #             AllocationType.CPUSET: platform.node_cpus[node],
         #         }
 
-        #pprint(allocations)
+        #  pprint(allocations)
 
         # for task in tasks_labels:
         #     allocations[task] = {

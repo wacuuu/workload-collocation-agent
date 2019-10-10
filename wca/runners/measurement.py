@@ -273,7 +273,9 @@ class MeasurementRunner(Runner):
 
         # Keep sync of found tasks and internally managed containers.
         containers = self._containers_manager.sync_containers_state(tasks)
-        log.log(TRACE, 'Tasks container mapping:\n%s', '\n'.join(['%s(%s)  =  %s' % (task.name, task.task_id, container._cgroup_path) for task, container in containers.items()]))
+        log.log(TRACE, 'Tasks container mapping:\n%s', '\n'.join(
+            ['%s(%s)  =  %s' % (task.name, task.task_id, container._cgroup_path) for task, container
+             in containers.items()]))
 
         extra_platform_measurements = self._uncore_get_measurements()
 
