@@ -185,7 +185,8 @@ def is_convertable_to_prometheus_exposition_format(metrics: List[Metric]) -> (bo
                     .format(metric.type))
 
         if not isinstance(metric.value, (float, int)):
-            return (False, "Wrong metric type of value (used type {}).".format(type(metric.value)))
+            return (False, "Wrong metric type of value (used type {}) "
+                           "in Metric: {}.".format(type(metric.value), metric.__str__()))
 
     return (True, "")
 

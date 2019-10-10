@@ -254,6 +254,7 @@ class Metric:
         if name in METRICS_METADATA:
             metric.type = METRICS_METADATA[name].type
             metric.help = METRICS_METADATA[name].help
+        # TODO: add else, cannot be None type and help
         return metric
 
 

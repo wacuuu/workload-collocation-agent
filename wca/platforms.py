@@ -26,7 +26,7 @@ import os
 from dataclasses import dataclass
 from enum import Enum
 
-from wca.metrics import Metric, MetricName, Measurements
+from wca.metrics import Metric, MetricName, Measurements, MetricType
 from wca.profiling import profiler
 
 try:
@@ -264,10 +264,14 @@ def create_metrics(platform: Platform) -> List[Metric]:
         )
 
     platform_metrics.extend([
-        Metric(name=PLATFORM_PREFIX + 'topology_cores', value=platform.cores),
-        Metric(name=PLATFORM_PREFIX + 'topology_cpus', value=platform.cpus),
-        Metric(name=PLATFORM_PREFIX + 'topology_sockets', value=platform.sockets),
-        Metric(name=PLATFORM_PREFIX + 'last_seen', value=time.time()),
+        Metric(name=PLATFORM_PREFIX + 'topology_cores', value=platform.cores,
+                   type=MetricType.GAUGE, help=""),
+        Metric(name=PLATFORM_PREFIX + 'topology_cpus', value=platform.cpus,
+                   type=MetricType.GAUGE, help=""),
+        Metric(name=PLATFORM_PREFIX + 'topology_sockets', value=platform.sockets,
+                   type=MetricType.GAUGE, help=""),
+        Metric(name=PLATFORM_PREFIX + 'last_seen', value=time.time(),
+                   type=MetricType.GAUGE, help=""),
     ])
 
     platform_static_information = get_platform_static_information()
@@ -278,24 +282,29 @@ def create_metrics(platform: Platform) -> List[Metric]:
             # RAM
             Metric(name=PLATFORM_PREFIX + 'dimm_count',
                    value=platform_static_information['ram_dimm_count'],
-                   labels={'type': 'ram'}),
+                   labels={'type': 'ram'},
+                   type=MetricType.GAUGE, help=""),
             Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
                    value=platform_static_information['ram_dimm_size'],
-                   labels={'type': 'ram'}),
+                   labels={'type': 'ram'},
+                   type=MetricType.GAUGE, help=""),
             # NVM
             Metric(name=PLATFORM_PREFIX + 'dimm_count',
                    value=platform_static_information['nvm_dimm_count'],
-                   labels={'type': 'nvm'}),
+                   labels={'type': 'nvm'},
+                   type=MetricType.GAUGE, help=""),
             Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
                    value=platform_static_information['nvm_dimm_size'],
-                   labels={'type': 'nvm'}),
+                   labels={'type': 'nvm'},
+                   type=MetricType.GAUGE, help=""),
         ])
 
     # PMEM HW configuration
     if 'memorymode_size' in platform_static_information:
         platform_metrics.extend([
             Metric(name=PLATFORM_PREFIX + 'memory_mode_size_bytes',
-                   value=platform_static_information['memorymode_size']),
+                   value=platform_static_information['memorymode_size'],
+                   type=MetricType.GAUGE, help=""),
         ])
 
     return platform_metrics
