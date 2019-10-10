@@ -85,7 +85,7 @@ def main():
         '-r', '--register', action='append', dest='components',
         help="Register additional components in config", default=[])
     parser.add_argument(
-        '-v', '--version', action='version', version=platforms.get_wca_version,
+        '-v', '--version', action='version', version=platforms.get_wca_version(),
         help="Show version")
     parser.add_argument(
         '-0', '--root', help="Allow WCA process to be run using root account",
