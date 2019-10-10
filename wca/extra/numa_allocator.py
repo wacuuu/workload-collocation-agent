@@ -23,19 +23,19 @@ class NUMAAllocator(Allocator):
             tasks_labels: TasksLabels,
             tasks_allocations: TasksAllocations,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
-        log.info('NUMA allocator random policy here....')
+        log.info('NUMA allocator random policy here...')
         log.debug('NUMA allocator input data:')
 
-        print('Measurements:')
-        pprint(tasks_measurements)
-        print('Resources:')
-        pprint(tasks_resources)
-        print('Labels:')
-        pprint(tasks_labels)
-        print('Allocations (current):')
-        pprint(tasks_allocations)
-        print("Platform")
-        pprint(platform)
+        # print('Measurements:')
+        # pprint(tasks_measurements)
+        # print('Resources:')
+        # pprint(tasks_resources)
+        # print('Labels:')
+        # pprint(tasks_labels)
+        # print('Allocations (current):')
+        # pprint(tasks_allocations)
+        # print("Platform")
+        # pprint(platform)
 
         # # Example stupid policy
         # cpu1 = random.randint(0, platform.cpus-1)
@@ -62,13 +62,13 @@ class NUMAAllocator(Allocator):
         # # You can put any metrics here for debugging purposes.
         # extra_metrics = [Metric('some_debug', value=1)]
 
-        print("Policy:")
+        # print("Policy:")
 
         allocations = {}
 
         # Total host memory
         total_memory = _platform_total_memory(platform)
-        print("Total memory: %d\n" % total_memory)
+        # print("Total memory: %d\n" % total_memory)
 
         # Collect tasks sizes and NUMA node usages
         tasks_memory = []
@@ -158,10 +158,11 @@ class NUMAAllocator(Allocator):
             # # pprint(best_node)
             # balanced_memory[best_node].append((task, memory))
 
-        pprint(balanced_memory)
-        print(balance_task, balance_task_node)
+        #pprint(balanced_memory)
+        #print(balance_task, balance_task_node)
 
         if balance_task is not None and balance_task_node is not None:
+            log.debug("Assign task %s node" % (balance_task, balance_task_node))
             allocations[balance_task] = {
                 AllocationType.CPUSET_MEM_MIGRATE: 1,
                 AllocationType.CPUSET_CPUS: encode_listformat(
@@ -179,7 +180,7 @@ class NUMAAllocator(Allocator):
         #             AllocationType.CPUSET: platform.node_cpus[node],
         #         }
 
-        pprint(allocations)
+        #pprint(allocations)
 
         # for task in tasks_labels:
         #     allocations[task] = {

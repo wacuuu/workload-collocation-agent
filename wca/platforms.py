@@ -89,19 +89,22 @@ def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
 CpuId = int
 NodeId = int
 
+_version = None
 
 def get_wca_version():
     """Returns information about wca version."""
-    try:
-        version = get_distribution('wca').version
-    except DistributionNotFound:
-        # log.warning("Version is not available. "
-        #             "Probably egg-info directory does not exist"
-        #             "(which is required for pkg_resources module "
-        #             "to find the version).")
-        return "unknown_version"
+    global _version
+    if _version is None:
+        try:
+            _version = get_distribution('wca').version
+        except DistributionNotFound:
+            log.warning("Version is not available. "
+                        "Probably egg-info directory does not exist"
+                        "(which is required for pkg_resources module "
+                        "to find the version).")
+            _version = "unknown_version"
 
-    return version
+    return _version
 
 
 @dataclass

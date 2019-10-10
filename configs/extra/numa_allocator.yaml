@@ -1,3 +1,6 @@
+loggers:
+  "wca.runners.measurement": "trace"
+  "wca.extra.numa_allocator": "info"
 runner: !AllocationRunner
   action_delay: 5
 #  node: !StaticNode

@@ -28,7 +28,7 @@ from wca.allocators import AllocationConfiguration
 from wca.config import Numeric, Str
 from wca.containers import ContainerManager, Container
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, TaskResource
-from wca.logger import trace, get_logging_metrics
+from wca.logger import trace, get_logging_metrics, TRACE
 from wca.mesos import create_metrics
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
     BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory
@@ -273,6 +273,7 @@ class MeasurementRunner(Runner):
 
         # Keep sync of found tasks and internally managed containers.
         containers = self._containers_manager.sync_containers_state(tasks)
+        log.log(TRACE, 'Tasks container mapping:\n%s', '\n'.join(['%s(%s)  =  %s' % (task.name, task.task_id, container._cgroup_path) for task, container in containers.items()]))
 
         extra_platform_measurements = self._uncore_get_measurements()
 
