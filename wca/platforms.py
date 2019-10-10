@@ -264,14 +264,14 @@ def create_metrics(platform: Platform) -> List[Metric]:
         )
 
     platform_metrics.extend([
-        Metric(name=PLATFORM_PREFIX + 'topology_cores', value=platform.cores,
-                   type=MetricType.GAUGE, help=""),
-        Metric(name=PLATFORM_PREFIX + 'topology_cpus', value=platform.cpus,
-                   type=MetricType.GAUGE, help=""),
-        Metric(name=PLATFORM_PREFIX + 'topology_sockets', value=platform.sockets,
-                   type=MetricType.GAUGE, help=""),
+        Metric(name=PLATFORM_PREFIX + 'topology_cores',
+               value=platform.cores, type=MetricType.GAUGE, help=""),
+        Metric(name=PLATFORM_PREFIX + 'topology_cpus',
+               value=platform.cpus, type=MetricType.GAUGE, help=""),
+        Metric(name=PLATFORM_PREFIX + 'topology_sockets',
+               value=platform.sockets, type=MetricType.GAUGE, help=""),
         Metric(name=PLATFORM_PREFIX + 'last_seen', value=time.time(),
-                   type=MetricType.GAUGE, help=""),
+               type=MetricType.GAUGE, help=""),
     ])
 
     platform_static_information = get_platform_static_information()
