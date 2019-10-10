@@ -29,6 +29,7 @@
 # ------------------------ devel ----------------------
 FROM centos:7 AS devel
 
+RUN echo 'ip_resolve=4' >> /etc/yum.conf
 RUN yum -y update && yum -y install python36 python-pip which make git
 RUN pip3.6 install pipenv
 
