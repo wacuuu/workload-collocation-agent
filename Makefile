@@ -57,7 +57,7 @@ wca_package_in_docker: WCA_TAG := $(shell git rev-parse HEAD)
 wca_package_in_docker:
 	@echo Building wca pex file inside docker and copying to ./dist/wca.pex
 	# target: standalone
-	sudo docker build --target standalone -f Dockerfile -t $(WCA_IMAGE):$(WCA_TAG) .
+	sudo docker build --network host --target standalone -f Dockerfile -t $(WCA_IMAGE):$(WCA_TAG) .
 	# Extract pex to dist folder
 	rm -rf .cidfile && sudo docker create --cidfile=.cidfile $(WCA_IMAGE):$(WCA_TAG)
 	CID=$$(cat .cidfile); \
@@ -73,7 +73,7 @@ wca_package_in_docker_with_kafka: WCA_TAG := $(shell git rev-parse HEAD)
 wca_package_in_docker_with_kafka:
 	@echo "Building wca pex (version with Kafka) file inside docker and copying to ./dist/wca.pex"
 	# target: standalone
-	sudo docker build -f Dockerfile.kafka -t $(WCA_IMAGE):$(WCA_TAG) .
+	sudo docker build --network host -f Dockerfile.kafka -t $(WCA_IMAGE):$(WCA_TAG) .
 	# Extract pex to dist folder
 	rm -rf .cidfile && sudo docker create --cidfile=.cidfile $(WCA_IMAGE):$(WCA_TAG)
 	CID=$$(cat .cidfile); \
@@ -89,7 +89,7 @@ wca_docker_devel: WCA_TAG ?= devel
 wca_docker_devel: REPO ?= 100.64.176.12:80/
 wca_docker_devel:
 	@echo "Preparing development WCA container (only source code without pex)"
-	sudo docker build --target devel -f Dockerfile -t $(REPO)$(WCA_IMAGE):$(WCA_TAG) .
+	sudo docker build --network host --target devel -f Dockerfile -t $(REPO)$(WCA_IMAGE):$(WCA_TAG) .
 	@echo WCA image name is: ${REPO}$(WCA_IMAGE):$(WCA_TAG)
 	@echo Push: sudo docker push ${REPO}$(WCA_IMAGE):$(WCA_TAG)
 	@echo Run: sudo docker run --privileged -ti --rm ${REPO}$(WCA_IMAGE):$(WCA_TAG) -0 -c /wca/configs/extra/static_measurements.yaml
