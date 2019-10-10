@@ -76,23 +76,15 @@ tests:
         path: /sys/fs/resctrl/test/schemata
         subvalue: 'L3:0=00003;1=00002'
       - !MetricCheck
-        name: allocation_cpuset
+        name: allocation_cpuset_cpus_number_of_cpus
         labels:
           task: wcatask1
-        value:
-          - 0
-          - 1
-          - 2
-          - 3
+        value: 4
       - !MetricCheck
-        name: allocation_cpuset
+        name: allocation_cpuset_cpus_number_of_cpus
         labels:
           task: wcatask2
-        value:
-          - 0
-          - 1
-          - 2
-          - 3
+        value: 4
       - !MetricCheck
         name: allocation_cpu_quota
         labels:
@@ -233,4 +225,14 @@ tests:
       - !MetricCheck
         name: task__wss_referenced_mb 
         labels:
-          task_id: wcatask4
+          task_id: wcatask4    
+      - !MetricCheck
+        name: allocation_cpuset_cpus_number_of_cpus
+        labels:
+          task: wcatask2
+        value: 4
+      - !MetricCheck
+        name: allocation_cpuset_cpus_number_of_cpus
+        labels:
+          task: wcatask4
+        value: 4
