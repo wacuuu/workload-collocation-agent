@@ -137,3 +137,8 @@ clean:
 	rm -rf wca.egg-info
 	rm -rf dist
 	pipenv --rm
+
+tester:
+	@echo Integration tests.
+	-sh -c 'sudo chmod 700 $$(pwd)/tests/tester/configs/tester_example.yaml'
+	-sh -c 'PEX_INHERIT_PATH=fallback PYTHONPATH="$$(pwd):$$(pwd)/tests/tester" dist/wca.pex -c $$(pwd)/tests/tester/configs/tester_example.yaml -r tester:Tester -r tester:MetricCheck -r tester:FileCheck --log=debug --root'

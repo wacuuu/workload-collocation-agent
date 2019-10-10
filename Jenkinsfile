@@ -62,18 +62,13 @@ pipeline {
         }
         stage("Building Docker images and do tests in parallel") {
             parallel {
-//                 stage("Using tester") {
-//                     steps {
-//                         sh '''
-// 			sudo chmod 700 $(pwd)/tests/tester/configs/tester_example.yaml
-//                         sudo bash -c "
-//                         PEX_INHERIT_PATH=fallback PYTHONPATH="$(pwd):$(pwd)/tests/tester" dist/wca.pex -c $(pwd)/tests/tester/configs/tester_example.yaml \
-//                         -r tester:Tester -r tester:MetricCheck -r tester:FileCheck \
-//                         --log=debug --root
-//                         "
-//                     '''
-//                     }
-//                 }
+                 stage("Using tester") {
+                     steps {
+                         sh '''
+                         make tester
+                     '''
+                     }
+                 }
                 stage("Build and push Redis Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
