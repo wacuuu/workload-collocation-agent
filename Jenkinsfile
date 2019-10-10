@@ -62,13 +62,13 @@ pipeline {
         }
         stage("Building Docker images and do tests in parallel") {
             parallel {
-                 stage("Using tester") {
-                     steps {
-                         sh '''
-                         make tester
-                     '''
-                     }
-                 }
+//                  stage("Using tester") {
+//                      steps {
+//                          sh '''
+//                          make tester
+//                      '''
+//                      }
+//                  }
                 stage("Build and push Redis Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
