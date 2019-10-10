@@ -195,7 +195,7 @@ def _create_cgroup(cgroup_path):
             available_mems = f.read()
         with open('{}/cpuset.mems'.format(paths[CgroupType.CPUSET]), 'w') as f:
             f.write(available_mems)
-        
+
     except FileExistsError:
         log.warning('cpuset cgroup "{}" already exists'.format(cgroup_path))
 
