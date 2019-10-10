@@ -192,7 +192,7 @@ def get_platform_static_information():
             for line in ipmctl_output.splitlines():
                 if 'MemoryCapacity' in line:
                     memorymode_size = line.split('=')[1].split(' ')[0]
-            _platform_static_information['memorymode_size'] = memorymode_size
+            _platform_static_information['memorymode_size'] = int(memorymode_size)
         except FileNotFoundError:
             log.warning('ipmctl unavailable, cannot read memory mode size')
 
@@ -222,10 +222,10 @@ def get_platform_static_information():
                             nvm_dimm_count += 1
                             nvm_dimm_size += bank['size']
 
-            _platform_static_information['ram_dimm_count'] = ram_dimm_count
-            _platform_static_information['nvm_dimm_count'] = nvm_dimm_count
-            _platform_static_information['ram_dimm_size'] = ram_dimm_size
-            _platform_static_information['nvm_dimm_size'] = nvm_dimm_size
+            _platform_static_information['ram_dimm_count'] = int(ram_dimm_count)
+            _platform_static_information['nvm_dimm_count'] = int(nvm_dimm_count)
+            _platform_static_information['ram_dimm_size'] = int(ram_dimm_size)
+            _platform_static_information['nvm_dimm_size'] = int(nvm_dimm_size)
         except FileNotFoundError:
             log.warning('lshw unavailable, cannot read memory topology size!')
         except JSONDecodeError:
