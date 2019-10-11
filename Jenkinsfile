@@ -232,7 +232,7 @@ pipeline {
                         CERT='false'
                     }
                     steps {
-                        mesos_wca_and_workloads_check()
+                        wca_and_workloads_check()
                     }
                     post {
                         always {
@@ -253,7 +253,7 @@ pipeline {
 def wca_and_workloads_check() {
     images_check()
     sh "make venv"
-    sh "make wca_package_in_docker"
+    sh "make wca_package_in_docker_with_kafka"
     print('Reconfiguring wca...')
     copy_files("${WORKSPACE}/tests/e2e/demo_scenarios/common/${CONFIG}", "${WORKSPACE}/tests/e2e/demo_scenarios/common/wca_config.yml.tmp")
     replace_in_config(CERT)
