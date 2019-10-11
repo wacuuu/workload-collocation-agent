@@ -52,11 +52,9 @@ def valid_config_file(config):
         exit(1)
 
     mode = stat.S_IMODE(os.stat(config).st_mode)
-    rwx_r = (stat.S_IEXEC | stat.S_IWRITE | stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
-    rwx = (stat.S_IEXEC | stat.S_IWRITE | stat.S_IREAD)
-    rw_r = (stat.S_IWRITE | stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
-    rw = (stat.S_IWRITE | stat.S_IREAD)
-    if False and mode != rwx_r and mode != rwx and mode != rw_r and mode != rw:
+    other_write_mode = mode & 0b10  # Check if other class write mode flag is set.
+
+    if other_write_mode:
         log.error(
             'Error: The config \'%s\' is not valid. It does not have correct ACLs. '
             'Only owner should be able to write.'

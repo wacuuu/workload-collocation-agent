@@ -66,7 +66,6 @@ def test_main_unknown_field(mock_valid_config_file, mock_exit, perf_counters, mo
                                            '\'runner\'')
 
 
-@mark.skip('fix the message for main!')
 @patch('wca.main.log.error')
 @patch('wca.main.exit')
 @patch('os.stat', return_value=Mock(st_size=35, st_uid=os.geteuid(), st_mode=384))
@@ -74,11 +73,11 @@ def test_main_valid_config_file_not_absolute_path(os_stat, mock_exit, mock_log_e
     main.valid_config_file('configs/see_yaml_config_variable_above.yaml')
 
     mock_log_error.assert_called_with(
-        'Error: The config path \'configs/see_yaml_config_variable_above.yaml\' is not valid. '
-        'The path must be absolute.')
+            "Error: The config path 'configs/see_yaml_config_variable_above.yaml' is not valid. "
+            "The path must be absolute.(Hint: try adding $PWD in front like this: "
+            "'$PWD/configs/see_yaml_config_variable_above.yaml')")
 
 
-@mark.skip('fix the message for main!')
 @patch('wca.main.log.error')
 @patch('wca.main.exit')
 @patch('os.stat', return_value=Mock(st_size=35, st_uid=123123, st_mode=384))
@@ -90,10 +89,9 @@ def test_main_valid_config_file_wrong_user(os_stat, mock_exit, mock_log_error):
         'User is not owner of the config or is not root.')
 
 
-@mark.skip('fix the message for main!')
 @patch('wca.main.log.error')
 @patch('wca.main.exit')
-@patch('os.stat', return_value=Mock(st_size=35, st_uid=os.geteuid(), st_mode=511))
+@patch('os.stat', return_value=Mock(st_size=35, st_uid=os.geteuid(), st_mode=466))
 def test_main_valid_config_file_wrong_acl(os_stat, mock_exit, mock_log_error):
     # st_mode=511 - All can read, write and exec
 
@@ -102,4 +100,6 @@ def test_main_valid_config_file_wrong_acl(os_stat, mock_exit, mock_log_error):
     mock_log_error.assert_called_with(
         'Error: The config \'/etc/configs/see_yaml_config_variable_above.yaml\' is not valid. '
         'It does not have correct ACLs. Only owner should be able to write.'
+        '(Hint: try \'chmod og-rw /etc/configs/see_yaml_config_variable_above.yaml\' '
+        'to fix the problem).'
     )
