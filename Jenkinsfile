@@ -232,7 +232,7 @@ pipeline {
                         CERT='false'
                     }
                     steps {
-                        mesos_wca_and_workloads_check()
+                        wca_and_workloads_check()
                     }
                     post {
                         always {
@@ -251,26 +251,6 @@ pipeline {
 /* Helper function */
 /*----------------------------------------------------------------------------------------------------------*/
 def wca_and_workloads_check() {
-    images_check()
-    sh "make venv"
-    sh "make wca_package_in_docker"
-    print('Reconfiguring wca...')
-    copy_files("${WORKSPACE}/tests/e2e/demo_scenarios/common/${CONFIG}", "${WORKSPACE}/tests/e2e/demo_scenarios/common/wca_config.yml.tmp")
-    replace_in_config(CERT)
-    copy_files("${WORKSPACE}/tests/e2e/demo_scenarios/common/wca_config.yml.tmp", "/etc/wca/wca_config.yml", true)
-    sh "sudo chown wca /etc/wca/wca_config.yml"
-    copy_files("${WORKSPACE}/dist/wca.pex", "/usr/bin/wca.pex", true)
-    copy_files("${WORKSPACE}/tests/e2e/demo_scenarios/common/wca.service", "/etc/systemd/system/wca.service", true)
-    sh "sudo systemctl daemon-reload"
-    start_wca()
-    copy_files("${WORKSPACE}/${HOST_INVENTORY}", "${WORKSPACE}/${INVENTORY}")
-    replace_commit()
-    run_workloads("${EXTRA_ANSIBLE_PARAMS}", "${LABELS}")
-    sleep RUN_WORKLOADS_SLEEP_TIME
-    test_wca_metrics()
-}
-
-def mesos_wca_and_workloads_check() {
     images_check()
     sh "make venv"
     sh "make wca_package_in_docker_with_kafka"

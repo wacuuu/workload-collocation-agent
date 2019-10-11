@@ -6,6 +6,7 @@ runner: !AllocationRunner
       client_key_path: "CRT_PATH/apiserver-kubelet-client.key"
       client_cert_path: "CRT_PATH/apiserver-kubelet-client.crt"
     kubelet_endpoint: "https://100.64.176.17:10250"
+    kubelet_enabled: True
     monitored_namespaces: ["default"]
   action_delay: 10.
   metrics_storage: !KafkaStorage
