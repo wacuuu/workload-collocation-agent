@@ -18,7 +18,6 @@ from unittest.mock import Mock, mock_open, patch
 
 from wca import main
 
-from pytest import mark
 
 yaml_config = '''
 runner: !DummyRunner
