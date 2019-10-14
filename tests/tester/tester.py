@@ -23,7 +23,7 @@ log = logging.getLogger('Tester')
 
 
 @dataclass
-class Tester(Node, Allocator, Storage):
+class IntegrationTester(Node, Allocator, Storage):
     config: str
     command: Optional[str] = None
 
