@@ -1,6 +1,6 @@
-===============================
+================================
 Allocation algorithm interface
-===============================
+================================
 
 **This software is pre-production and should not be deployed to production servers.**
 

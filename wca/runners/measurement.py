@@ -191,9 +191,9 @@ class MeasurementRunner(Runner):
             log.error("Insufficient privileges! "
                       "Impossible to use perf_event_open/resctrl subsystems. "
                       "For unprivileged user it is needed to: "
-                      "adjust /proc/sys/kernel/perf_event_paranoid (set to -1), "
+                      "adjust %s (set to -1), "
                       "has CAP_DAC_OVERRIDE and CAP_SETUID capabilities and"
-                      "SECBIT_NO_SETUID_FIXUP secure bit set.")
+                      "SECBIT_NO_SETUID_FIXUP secure bit set.", security.PARANOID_FILE)
             return 1
 
         # Initialization (auto discovery Intel RDT features).
