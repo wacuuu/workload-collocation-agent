@@ -375,7 +375,7 @@ class ContainerManager:
                 task_derived_metrics_generators_factory=tdmgf
             )
         else:
-            tdmgf = self._task_derived_metrics_generators_factory,
+            tdmgf = self._task_derived_metrics_generators_factory
             container = Container(
                 cgroup_path=task.cgroup_path,
                 platform=self._platform,
