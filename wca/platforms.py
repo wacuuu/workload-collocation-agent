@@ -198,29 +198,33 @@ def get_platform_static_information():
 
         try:
             # nosec: B603. We deliberately use 'subprocess'. There is a permanent input.
+            log.info('Collecting memory information from lshw...')
             lshw_raw = subprocess.check_output(  # nosec
-                shlex.split('lshw -class memory -json -quiet -sanitize -notime'))
+                shlex.split('lshw -json -quiet -sanitize -notime'))
             lshw_str = lshw_raw.decode("utf-8")
-            lshw_str = lshw_str.rstrip()
-            lshw_str = '[' + lshw_str[0:(len(lshw_str) - 1)] + ']'
             lshw_data = json.loads(lshw_str)
             nvm_dimm_count = 0
             ram_dimm_count = 0
             nvm_dimm_size = 0
             ram_dimm_size = 0
-            for system in lshw_data:
-                if system['id'] == 'memory' and 'children' in system:
-                    for bank in system['children']:
-                        if '[empty]' in bank['description']:
-                            continue
-                        elif 'DDR4' in bank['description']:
-                            assert bank['units'] == 'bytes'
-                            ram_dimm_count += 1
-                            ram_dimm_size += bank['size']
-                        elif 'Non-volatile' in bank['description']:
-                            assert bank['units'] == 'bytes'
-                            nvm_dimm_count += 1
-                            nvm_dimm_size += bank['size']
+            for child in lshw_data['children']:
+                if child['id'] == 'core':
+                    for system in child['children']:
+                        if system['id'] == 'memory' and 'children' in system:
+                            for bank in system['children']:
+                                if '[empty]' in bank['description']:
+                                    continue
+                                elif 'DDR4' in bank['description']:
+                                    assert bank['units'] == 'bytes'
+                                    ram_dimm_count += 1
+                                    ram_dimm_size += bank['size']
+                                elif 'Non-volatile' in bank['description']:
+                                    assert bank['units'] == 'bytes'
+                                    nvm_dimm_count += 1
+                                    nvm_dimm_size += bank['size']
+                    break
+            else:
+                log.warning('Cannot find "core" child in lshw output!')
 
             _platform_static_information['ram_dimm_count'] = int(ram_dimm_count)
             _platform_static_information['nvm_dimm_count'] = int(nvm_dimm_count)
@@ -228,10 +232,11 @@ def get_platform_static_information():
             _platform_static_information['nvm_dimm_size'] = int(nvm_dimm_size)
         except FileNotFoundError:
             log.warning('lshw unavailable, cannot read memory topology size!')
-        except JSONDecodeError:
+        except JSONDecodeError as e:
             log.warning('lshw unavailable (incorrect version or missing data), '
-                        'cannot parse output, cannot read memory topology size!')
+                        'cannot parse output, cannot read memory topology size!: %s', str(e))
 
+    log.debug('platform_static_information: %s', _platform_static_information)
     _platform_static_information['initialized'] = True
 
     return _platform_static_information
