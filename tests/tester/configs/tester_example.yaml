@@ -1,5 +1,5 @@
 runner: !AllocationRunner
-  node: &tester !Tester
+  node: &integrationtester !IntegrationTester
    config: 'tests/tester/configs/tester_config.yaml'
    command: 'sleep 300'
   action_delay: 5.
