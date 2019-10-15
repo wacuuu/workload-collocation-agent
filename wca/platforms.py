@@ -28,6 +28,7 @@ from enum import Enum
 
 from wca.metrics import Metric, MetricName, Measurements, MetricType
 from wca.profiling import profiler
+from wca import metrics
 
 try:
     from pkg_resources import get_distribution, DistributionNotFound
@@ -143,6 +144,7 @@ class Platform:
     sockets: int  # number of sockets
     cores: int  # number of physical cores in total (sum over all sockets)
     cpus: int  # logical processors equal to the output of "nproc" Linux command
+    numa_nodes: int # number of NUMA nodes
 
     cpu_model: str  # /proc/cpuinfo -> model_name
     cpu_model_number: int  # /proc/cpuinfo -> model
@@ -152,18 +154,7 @@ class Platform:
 
     cpu_model: str
 
-    # Utilization (usage):
-    # counter like, sum of all modes based on /proc/stat
-    # "cpu line" with 10ms resolution expressed in [ms]
-    cpus_usage: Dict[CpuId, int]
-
-    # [bytes] based on /proc/meminfo (gauge like)
-    # difference between MemTotal and MemAvail (or MemFree)
-    total_memory_used: int
-
     # NUMA info
-    node_memory_free: Dict[NodeId, int]
-    node_memory_used: Dict[NodeId, int]
     # mapping from numa node id to CPU (to support SNC), based on /sys/devices/system/numa
     node_cpus: Dict[int, Set[int]]
 
@@ -242,31 +233,45 @@ def get_platform_static_information():
     return _platform_static_information
 
 
+def export_metrics_from_measurements(platform_prefix: str, measurements: Measurements) -> List[Metric]:
+    all_metrics = []
+    for metric_name, metric_node in measurements.items():
+        if metric_name in metrics.METRICS_LEVELS:
+            levels = metrics.METRICS_LEVELS[metric_name]
+            max_depth = len(levels)
+
+            def is_leaf(depth):
+                return depth == max_depth
+            def create_metric(node, labels):
+                return [Metric.create_metric_with_metadata(
+                    name=platform_prefix + metric_name,
+                    value=node,
+                    labels=labels
+                )]
+            def recursive_create_metric(node, parent_labels=None, depth=0):
+                if is_leaf(depth):
+                    return create_metric(node, parent_labels)
+                else:
+                    metrics = []
+                    for parent_label_value, child in node.items():
+                        new_parent_labels = {} if parent_labels is None else dict(parent_labels)
+                        new_parent_labels[levels[depth]] = str(parent_label_value)
+                        metrics.extend(recursive_create_metric(child, new_parent_labels, depth+1))
+                    return metrics
+            all_metrics.extend(recursive_create_metric(metric_node, {}, 0))
+        else:
+            metric_value = metric_node
+            all_metrics.append(Metric.create_metric_with_metadata(
+                name=platform_prefix + metric_name,
+                value=metric_value,
+            ))
+    return all_metrics
+
+
 def create_metrics(platform: Platform) -> List[Metric]:
     """Creates a list of Metric objects from data in Platform object"""
     PLATFORM_PREFIX = 'platform__'
-    platform_metrics = list()
-    platform_metrics.append(
-        Metric.create_metric_with_metadata(
-            name=PLATFORM_PREFIX + MetricName.MEM_USAGE,
-            value=platform.total_memory_used)
-    )
-    for cpu_id, cpu_usage in platform.cpus_usage.items():
-        platform_metrics.append(
-            Metric.create_metric_with_metadata(
-                name=PLATFORM_PREFIX + MetricName.CPU_USAGE_PER_CPU,
-                value=cpu_usage,
-                labels={"cpu": str(cpu_id)}
-            )
-        )
-
-    for metric_name, metric_value in platform.measurements.items():
-        platform_metrics.append(
-            Metric.create_metric_with_metadata(
-                name=PLATFORM_PREFIX + metric_name,
-                value=metric_value,
-            )
-        )
+    platform_metrics = []
 
     platform_metrics.extend([
         Metric(name=PLATFORM_PREFIX + 'topology_cores',
@@ -281,7 +286,7 @@ def create_metrics(platform: Platform) -> List[Metric]:
 
     platform_static_information = get_platform_static_information()
 
-    # PMEM HW info
+    # PMEM HW info r
     if 'ram_dimm_count' in platform_static_information:
         platform_metrics.extend([
             # RAM
@@ -311,6 +316,9 @@ def create_metrics(platform: Platform) -> List[Metric]:
                    value=platform_static_information['memorymode_size'],
                    type=MetricType.GAUGE, help=""),
         ])
+
+    # Exporting measurements into metrics.
+    platform_metrics.extend(export_metrics_from_measurements(PLATFORM_PREFIX, platform.measurements))
 
     return platform_metrics
 
@@ -370,6 +378,15 @@ def read_proc_meminfo() -> str:
 
 
 BASE_SYSFS_NODES_PATH = '/sys/devices/system/node'
+
+
+def parse_node_meminfo_dir() -> int:
+    """returns how many numa nodes are available"""
+    node_count = 0
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            node_count += 1
+    return i
 
 
 def parse_node_meminfo() -> (Dict[NodeId, int], Dict[NodeId, int]):
@@ -561,34 +578,39 @@ def collect_platform_information(rdt_enabled: bool = True,
     else:
         rdt_information = None
 
-    # Dynamic information
-    cpus_usage = parse_proc_stat(read_proc_stat())
-    total_memory_used = parse_proc_meminfo(read_proc_meminfo())
-    node_free, node_used = parse_node_meminfo()
-
     # All information are based on first CPU.
     cpu_model = cpu_info[0]['model name']
     cpu_model_number = int(cpu_info[0]['model'])
     cpu_codename = get_cpu_codename(int(cpu_info[0]['model']), int(cpu_info[0]['stepping']))
 
+    # Dynamic information
+    platform_measurements = {}
+    platform_measurements[MetricName.CPU_USAGE_PER_CPU] = parse_proc_stat(read_proc_stat())
+    platform_measurements[MetricName.MEM_USAGE] = parse_proc_meminfo(read_proc_meminfo())
+    node_free, node_used = parse_node_meminfo()
+    platform_measurements[MetricName.MEM_NUMA_FREE] = node_free
+    platform_measurements[MetricName.MEM_NUMA_USED] = node_used
+
+    # Merge local platform measurements with passed extra_platform_measurements
+    platform_measurements.update(extra_platform_measurements
+                                 if extra_platform_measurements is not None
+                                 else {})
+
     platform = Platform(
         sockets=no_of_sockets,
         cores=nr_of_cores,
         cpus=nr_of_cpus,
+        numa_nodes=parse_node_meminfo_dir(),
         topology=topology,
         cpu_model=cpu_model,
         cpu_model_number=cpu_model_number,
         cpu_codename=cpu_codename,
-        cpus_usage=cpus_usage,
-        total_memory_used=total_memory_used,
         timestamp=time.time(),
         rdt_information=rdt_information,
-        node_memory_free=node_free,
-        node_memory_used=node_used,
         node_cpus=parse_node_cpus(),
-        measurements=extra_platform_measurements or {},
+        measurements=platform_measurements,
     )
-    assert len(platform.cpus_usage) == platform.cpus, \
+    assert len(platform_measurements[MetricName.CPU_USAGE_PER_CPU]) == platform.cpus, \
         "Inconsistency in cpu data returned by kernel"
     return platform, create_metrics(platform), create_labels(platform)
 

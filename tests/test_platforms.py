@@ -18,7 +18,9 @@ from unittest.mock import patch
 import pytest
 
 from tests.testing import create_open_mock, relative_module_path, _is_dict_match, assert_metric
-from wca.platforms import Platform, CPUCodeName, parse_proc_stat, parse_proc_meminfo, _parse_cpuinfo
+from wca.metrics import MetricName, Metric
+from wca.platforms import Platform, CPUCodeName, parse_proc_stat, parse_proc_meminfo, _parse_cpuinfo, \
+    export_metrics_from_measurements
 from wca.platforms import collect_topology_information, collect_platform_information, \
     RDTInformation, decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat
 
@@ -146,16 +148,16 @@ def test_collect_platform_information(*mocks):
         cpu_model='intel xeon',
         cpu_model_number=0x5E,
         cpu_codename=CPUCodeName.SKYLAKE,
-        cpus_usage={0: 100, 1: 200},
-        total_memory_used=1337,
         timestamp=1536071557.123456,  # timestamp,
-        node_memory_free={0: 1},
-        node_memory_used={0: 2},
         node_cpus={},
         rdt_information=RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20),
-        measurements={},
+        measurements={MetricName.CPU_USAGE_PER_CPU: {0: 100, 1: 200},
+                      MetricName.MEM_USAGE: 1337,
+                      MetricName.MEM_NUMA_FREE: {0: 1},
+                      MetricName.MEM_NUMA_USED: {0: 2}},
     )
 
+    print(got_metrics)
     assert_metric(got_metrics, 'platform__memory_usage', expected_metric_value=1337)
     assert_metric(got_metrics, 'platform__cpu_usage_per_cpu', {'cpu': '0'},
                   expected_metric_value=100)
@@ -198,3 +200,45 @@ def test_parse_node_meminfo(*mocks):
     expected_node_free, expected_node_used = parse_node_meminfo()
     assert expected_node_free == {0: 454466117632}
     assert expected_node_used == {0: 77696421888}
+
+@pytest.mark.parametrize(
+    'measurements, expected', [
+        ({MetricName.MEM_NUMA_STAT_PER_TASK: {'1': 10, '2': 20}, }, 2),
+        ({MetricName.CYCLES: 1123}, 1),
+        ({}, 0)
+    ])
+def test_export_metrics_from_measurements(measurements, expected):
+    result = export_metrics_from_measurements('PLATFORM__', measurements)
+    if expected == 1:
+        assert type(result) == Metric
+    elif expected > 1:
+        assert len(result) == expected
+    elif expected == 0:
+        assert result is None \
+
+
+class TestMetric(object):
+    """To create and delete a test metric from metrics module structures."""
+    def __enter__(self):
+        metrics.MetricName.TEST_METRIC = 'test_metric'
+        metrics.METRICS_METADATA['test_metric'] = metrics.MetricMetadata(
+            metrics.MetricType.COUNTER, 'Non existing metric for unit test.')
+        metrics.METRICS_LEVELS['test_metric'] = ['numa_node', 'container']  # two levels
+
+    def __exit__(self, type, value, traceback):
+        """if exception was raised the metrics structeres will be cleaned up."""
+        del metrics.METRICS_METADATA['test_metric']
+        del metrics.METRICS_LEVELS['test_metric']
+        del metrics.MetricName.TEST_METRIC
+
+
+def test_export_metrics_from_measurements_artifical_metric():
+    """We currently do not have a metric which len(METRICS_LEVELS[X]) > 1,
+        so the need to add such metric in metrics structures for the test."""
+    with TestMetric():
+        measurements = {'test_metric': {'id0': {'stress': 0, 'dbmango': 1}, 'id1': {'stress': 10, 'dbmango': 20}}}
+        result = export_metrics_from_measurements('PLATFORM__', measurements)
+        assert len(result) == 4
+        assert result[0].name == 'PLATFORM__test_metric'
+        assert 'numa_node' in result[0].labels and 'container' in result[0].labels
+        assert sorted([item.value for item in result]) == [0,1,10,20]  # values for metrics

@@ -42,6 +42,7 @@ def test_get_measurements_not_found_cgroup(mock_file, mock_log_warning):
 def test_get_measurements():
     cgroup = Cgroup('/some/foo1')
     measurements = cgroup.get_measurements()
+
     assert measurements == {MetricName.CPU_USAGE_PER_TASK: 100,
                             MetricName.MEM_USAGE_PER_TASK: 101,
                             MetricName.MEM_MAX_USAGE_PER_TASK: 999,

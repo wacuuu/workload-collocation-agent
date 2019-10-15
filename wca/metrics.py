@@ -44,7 +44,11 @@ class MetricName(str, Enum):
     MEM_MAX_USAGE_PER_TASK = 'memory_max_usage_per_task_bytes'
     MEM_LIMIT_PER_TASK = 'memory_limit_per_task_bytes'
     MEM_SOFT_LIMIT_PER_TASK = 'memory_soft_limit_per_task_bytes'
-    MEM_NUMA_STAT = 'memory_numa_stat'
+    MEM_NUMA_STAT_PER_TASK = 'memory_numa_stat'
+
+    # NUMA for whole platform
+    MEM_NUMA_FREE = 'memory_numa_free'
+    MEM_NUMA_USED = 'memory_numa_used'
 
     # Generic per task.
     LAST_SEEN = 'last_seen'
@@ -58,7 +62,13 @@ class MetricName(str, Enum):
     MEMORY_BANDWIDTH_REMOTE = 'memory_bandwidth_remote'
 
     # /proc based (platform scope).
+    #
+    # Utilization (usage):
+    # counter like, sum of all modes based on /proc/stat
+    # "cpu line" with 10ms resolution expressed in [ms]
     CPU_USAGE_PER_CPU = 'cpu_usage_per_cpu'
+    # [bytes] based on /proc/meminfo (gauge like)
+    # difference between MemTotal and MemAvail (or MemFree)
     MEM_USAGE = 'memory_usage'
 
     # Generic for WCA.
@@ -93,8 +103,13 @@ class MetricMetadata:
     type: MetricType
     help: str
 
+# Structure linking a metric with description of chierarchy how it is kept.
+METRICS_LEVELS = {
+    MetricName.MEM_NUMA_STAT_PER_TASK: ["numa_node"],
+    MetricName.CPU_USAGE_PER_CPU: ["cpu"],
+}
 
-# Mapping from metric name to metrics meta data.
+# Structure linking a metric with its type and help.
 METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
     MetricName.INSTRUCTIONS:
         MetricMetadata(
@@ -167,10 +182,20 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricType.GAUGE,
             'Perf metric scaling factor, average from all CPUs'
         ),
-    MetricName.MEM_NUMA_STAT:
+    MetricName.MEM_NUMA_STAT_PER_TASK:
         MetricMetadata(
             MetricType.GAUGE,
             'NUMA Stat TODO!',  # TODO: fix me!
+        ),
+    MetricName.MEM_NUMA_FREE:
+        MetricMetadata(
+            MetricType.GAUGE,
+            'NUMA memory free per numa node TODO!',  # TODO: fix me!
+        ),
+    MetricName.MEM_NUMA_USED:
+        MetricMetadata(
+            MetricType.GAUGE,
+            'NUMA memory used per numa node TODO!',  # TODO: fix me!
         ),
     MetricName.MEMORY_BANDWIDTH_LOCAL:
         MetricMetadata(
