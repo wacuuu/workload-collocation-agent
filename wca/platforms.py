@@ -381,7 +381,7 @@ def parse_node_meminfo_dir() -> int:
     for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
         if nodedir.startswith('node'):
             node_count += 1
-    return i
+    return node_count
 
 
 def parse_node_meminfo() -> (Dict[NodeId, int], Dict[NodeId, int]):

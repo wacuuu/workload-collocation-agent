@@ -26,7 +26,7 @@ from wca.platforms import Platform
 @patch('wca.cgroups.log.warning')
 @patch('builtins.open', side_effect=FileNotFoundError())
 def test_get_measurements_not_found_cgroup(mock_file, mock_log_warning):
-    cgroup = Cgroup('/some/foo1')
+    cgroup = Cgroup('/some/foo1', platform=platform_mock)
     with pytest.raises(MissingMeasurementException):
         cgroup.get_measurements()
 
@@ -40,7 +40,7 @@ def test_get_measurements_not_found_cgroup(mock_file, mock_log_warning):
     '/sys/fs/cgroup/memory/some/foo1/memory.numa_stat': 'hierarchical_total=1 N0=123 N1=234',
 }))
 def test_get_measurements():
-    cgroup = Cgroup('/some/foo1')
+    cgroup = Cgroup('/some/foo1', platform=platform_mock)
     measurements = cgroup.get_measurements()
 
     assert measurements == {MetricName.CPU_USAGE_PER_TASK: 100,
@@ -48,9 +48,7 @@ def test_get_measurements():
                             MetricName.MEM_MAX_USAGE_PER_TASK: 999,
                             MetricName.MEM_LIMIT_PER_TASK: 2000,
                             MetricName.MEM_SOFT_LIMIT_PER_TASK: 1500,
-                            'memory_numa_stat_0': 123,
-                            'memory_numa_stat_1': 234,
-                            }
+                            MetricName.MEM_NUMA_STAT_PER_TASK: {'0': 123, '1': 234}}
 
 
 @patch('builtins.open', mock_open(read_data='100'))
