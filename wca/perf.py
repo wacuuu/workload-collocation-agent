@@ -249,6 +249,12 @@ def _create_file_from_fd(pfd):
     if pfd == -1:
         errno = ctypes.get_errno()
         raise UnableToOpenPerfEvents('Invalid perf event file descriptor: {}, {}.'
+                                     'HINT: If code error is 22 and '
+                                     'in traceback show problem in perf_pmu, '
+                                     'it would be problem with PERF_FORMAT_GROUP in'
+                                     'perf_event_attr structure for perf_event_open syscall. '
+                                     'Older kernel cannot handle with extended format group.'
+                                     'Kernel cannot be 3.10.0-862.el7.x86_64 or lower.'
                                      .format(errno, os.strerror(errno)))
     return os.fdopen(pfd, 'rb')
 
