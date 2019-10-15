@@ -140,8 +140,8 @@ class Cgroup:
                 'File {} is missing. Metric unavailable.'.format(e.filename))
         # Check whether consecutive keys.
         assert MetricName.MEM_NUMA_STAT_PER_TASK not in measurements or \
-               list(measurements[MetricName.MEM_NUMA_STAT_PER_TASK].keys()) == \
-               [str(el) for el in range(0, self.platform.numa_nodes)]
+            list(measurements[MetricName.MEM_NUMA_STAT_PER_TASK].keys()) == \
+            [str(el) for el in range(0, self.platform.numa_nodes)]
 
         return measurements
 

@@ -103,6 +103,7 @@ class MetricMetadata:
     type: MetricType
     help: str
 
+
 # Structure linking a metric with description of chierarchy how it is kept.
 METRICS_LEVELS = {
     MetricName.MEM_NUMA_STAT_PER_TASK: ["numa_node"],

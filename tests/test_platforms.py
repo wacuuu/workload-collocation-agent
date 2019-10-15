@@ -19,8 +19,8 @@ import pytest
 
 from tests.testing import create_open_mock, relative_module_path, _is_dict_match, assert_metric
 from wca.metrics import MetricName, MetricMetadata, MetricType, METRICS_METADATA, METRICS_LEVELS
-from wca.platforms import Platform, CPUCodeName, parse_proc_stat, parse_proc_meminfo, _parse_cpuinfo, \
-    export_metrics_from_measurements
+from wca.platforms import Platform, CPUCodeName, parse_proc_stat, \
+    parse_proc_meminfo, _parse_cpuinfo, export_metrics_from_measurements
 from wca.platforms import collect_topology_information, collect_platform_information, \
     RDTInformation, decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat
 
@@ -202,6 +202,7 @@ def test_parse_node_meminfo(*mocks):
     assert expected_node_free == {0: 454466117632}
     assert expected_node_used == {0: 77696421888}
 
+
 @pytest.mark.parametrize(
     'measurements, expected', [
         ({MetricName.MEM_NUMA_STAT_PER_TASK: {'1': 10, '2': 20}, }, 2),
@@ -232,9 +233,10 @@ def test_export_metrics_from_measurements_artifical_metric():
     """We currently do not have a metric which len(METRICS_LEVELS[X]) > 1,
         so the need to add such metric in metrics structures for the test."""
     with TestMetric():
-        measurements = {'test_metric': {'id0': {'stress': 0, 'dbmango': 1}, 'id1': {'stress': 10, 'dbmango': 20}}}
+        measurements = {'test_metric': {'id0': {'stress': 0, 'dbmango': 1},
+                                        'id1': {'stress': 10, 'dbmango': 20}}}
         result = export_metrics_from_measurements('PLATFORM__', measurements)
         assert len(result) == 4
         assert result[0].name == 'PLATFORM__test_metric'
         assert 'numa_node' in result[0].labels and 'container' in result[0].labels
-        assert sorted([item.value for item in result]) == [0,1,10,20]  # values for metrics
+        assert sorted([item.value for item in result]) == [0, 1, 10, 20]  # values for metrics

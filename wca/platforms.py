@@ -144,7 +144,7 @@ class Platform:
     sockets: int  # number of sockets
     cores: int  # number of physical cores in total (sum over all sockets)
     cpus: int  # logical processors equal to the output of "nproc" Linux command
-    numa_nodes: int # number of NUMA nodes
+    numa_nodes: int  # number of NUMA nodes
 
     cpu_model: str  # /proc/cpuinfo -> model_name
     cpu_model_number: int  # /proc/cpuinfo -> model
@@ -228,7 +228,8 @@ def get_platform_static_information():
     return _platform_static_information
 
 
-def export_metrics_from_measurements(platform_prefix: str, measurements: Measurements) -> List[Metric]:
+def export_metrics_from_measurements(platform_prefix: str,
+                                     measurements: Measurements) -> List[Metric]:
     all_metrics = []
     for metric_name, metric_node in measurements.items():
         if metric_name in metrics.METRICS_LEVELS:
@@ -237,12 +238,14 @@ def export_metrics_from_measurements(platform_prefix: str, measurements: Measure
 
             def is_leaf(depth):
                 return depth == max_depth
+
             def create_metric(node, labels):
                 return [Metric.create_metric_with_metadata(
                     name=platform_prefix + metric_name,
                     value=node,
                     labels=labels
                 )]
+
             def recursive_create_metric(node, parent_labels=None, depth=0):
                 if is_leaf(depth):
                     return create_metric(node, parent_labels)
@@ -313,7 +316,8 @@ def create_metrics(platform: Platform) -> List[Metric]:
         ])
 
     # Exporting measurements into metrics.
-    platform_metrics.extend(export_metrics_from_measurements(PLATFORM_PREFIX, platform.measurements))
+    platform_metrics.extend(export_metrics_from_measurements(PLATFORM_PREFIX,
+                                                             platform.measurements))
 
     return platform_metrics
 

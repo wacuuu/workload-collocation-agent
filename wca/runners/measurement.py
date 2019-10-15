@@ -289,7 +289,6 @@ class MeasurementRunner(Runner):
         # Tasks data
         tasks_measurements, tasks_resources, tasks_labels = _prepare_tasks_data(containers)
 
-
         self._iterate_body(containers, platform, tasks_measurements, tasks_resources,
                            tasks_labels, common_labels)
 

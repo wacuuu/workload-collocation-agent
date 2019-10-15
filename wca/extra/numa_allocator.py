@@ -1,7 +1,5 @@
 import logging
-from pprint import pprint
 from typing import List, Dict
-from typing import List
 
 from dataclasses import dataclass
 
