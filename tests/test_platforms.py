@@ -18,7 +18,7 @@ from unittest.mock import patch
 import pytest
 
 from tests.testing import create_open_mock, relative_module_path, _is_dict_match, assert_metric
-from wca.metrics import MetricName, Metric
+from wca.metrics import MetricName, MetricMetadata, MetricType, METRICS_METADATA, METRICS_LEVELS
 from wca.platforms import Platform, CPUCodeName, parse_proc_stat, parse_proc_meminfo, _parse_cpuinfo, \
     export_metrics_from_measurements
 from wca.platforms import collect_topology_information, collect_platform_information, \
@@ -144,6 +144,7 @@ def test_collect_platform_information(*mocks):
         sockets=1,
         cores=1,
         cpus=2,
+        numa_nodes=1,
         topology={},
         cpu_model='intel xeon',
         cpu_model_number=0x5E,
@@ -209,27 +210,22 @@ def test_parse_node_meminfo(*mocks):
     ])
 def test_export_metrics_from_measurements(measurements, expected):
     result = export_metrics_from_measurements('PLATFORM__', measurements)
-    if expected == 1:
-        assert type(result) == Metric
-    elif expected > 1:
-        assert len(result) == expected
-    elif expected == 0:
-        assert result is None \
+    assert len(result) == expected
 
 
 class TestMetric(object):
     """To create and delete a test metric from metrics module structures."""
     def __enter__(self):
-        metrics.MetricName.TEST_METRIC = 'test_metric'
-        metrics.METRICS_METADATA['test_metric'] = metrics.MetricMetadata(
-            metrics.MetricType.COUNTER, 'Non existing metric for unit test.')
-        metrics.METRICS_LEVELS['test_metric'] = ['numa_node', 'container']  # two levels
+        MetricName.TEST_METRIC = 'test_metric'
+        METRICS_METADATA['test_metric'] = MetricMetadata(
+            MetricType.COUNTER, 'Non existing metric for unit test.')
+        METRICS_LEVELS['test_metric'] = ['numa_node', 'container']  # two levels
 
     def __exit__(self, type, value, traceback):
         """if exception was raised the metrics structeres will be cleaned up."""
-        del metrics.METRICS_METADATA['test_metric']
-        del metrics.METRICS_LEVELS['test_metric']
-        del metrics.MetricName.TEST_METRIC
+        del METRICS_METADATA['test_metric']
+        del METRICS_LEVELS['test_metric']
+        del MetricName.TEST_METRIC
 
 
 def test_export_metrics_from_measurements_artifical_metric():

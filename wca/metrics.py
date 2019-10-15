@@ -106,6 +106,8 @@ class MetricMetadata:
 # Structure linking a metric with description of chierarchy how it is kept.
 METRICS_LEVELS = {
     MetricName.MEM_NUMA_STAT_PER_TASK: ["numa_node"],
+    MetricName.MEM_NUMA_FREE: ["numa_node"],
+    MetricName.MEM_NUMA_USED: ["numa_node"],
     MetricName.CPU_USAGE_PER_CPU: ["cpu"],
 }
 
