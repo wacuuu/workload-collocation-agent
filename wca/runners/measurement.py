@@ -249,7 +249,6 @@ class MeasurementRunner(Runner):
         self._uncore_pmu = UncorePerfCounters(
             cpus=cpus,
             pmu_events=pmu_events
-
         )
         if enable_derived_metrics:
             self._uncore_derived_metrics = self._platform_derived_metrics_generators_factory.create(
@@ -277,6 +276,7 @@ class MeasurementRunner(Runner):
             ['%s(%s)  =  %s' % (task.name, task.task_id, container._cgroup_path) for task, container
              in containers.items()]))
 
+        # @TODO why not in platform module?
         extra_platform_measurements = self._uncore_get_measurements()
 
         # Platform information
@@ -288,7 +288,7 @@ class MeasurementRunner(Runner):
 
         # Tasks data
         tasks_measurements, tasks_resources, tasks_labels = _prepare_tasks_data(containers)
-        tasks_metrics = _build_tasks_metrics(tasks_labels, tasks_measurements)
+
 
         self._iterate_body(containers, platform, tasks_measurements, tasks_resources,
                            tasks_labels, common_labels)
@@ -302,7 +302,7 @@ class MeasurementRunner(Runner):
         metrics_package = MetricPackage(self._metrics_storage)
         metrics_package.add_metrics(_get_internal_metrics(tasks))
         metrics_package.add_metrics(platform_metrics)
-        metrics_package.add_metrics(tasks_metrics)
+        metrics_package.add_metrics(_build_tasks_metrics(tasks_labels, tasks_measurements))
         metrics_package.add_metrics(profiling.profiler.get_metrics())
         metrics_package.add_metrics(get_logging_metrics())
         metrics_package.send(common_labels)
