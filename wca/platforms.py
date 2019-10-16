@@ -125,7 +125,7 @@ class RDTInformation:
     # is supported by platform,otherwise set to None.
     cbm_mask: Optional[str]  # based on /sys/fs/resctrl/info/L3/cbm_mask
     min_cbm_bits: Optional[str]  # based on /sys/fs/resctrl/info/L3/min_cbm_bits
-    num_closids: Optional[int]  # based on /sys/fs/resctrl/info/L3/num_closids
+    num_closids: Optional[int]  # based on /sys/fs/resctrl/info/L3/num_closids or MB/closids
 
     # MB control read-only parameters.
     mb_bandwidth_gran: Optional[int]  # based on /sys/fs/resctrl/info/MB/bandwidth_gran
@@ -489,9 +489,9 @@ def _collect_rdt_information() -> RDTInformation:
     if rdt_cache_control_enabled:
         cbm_mask = _read_value('info/L3/cbm_mask')
         min_cbm_bits = _read_value('info/L3/min_cbm_bits')
-        num_closids = int(_read_value('info/L3/num_closids'))
+        cache_num_closids = int(_read_value('info/L3/num_closids'))
     else:
-        cbm_mask, min_cbm_bits, num_closids = None, None, None
+        cbm_mask, min_cbm_bits, cache_num_closids = None, None, None
 
     rdt_mb_control_enabled = 'MB:' in schemata_body
     if rdt_mb_control_enabled:
@@ -501,8 +501,11 @@ def _collect_rdt_information() -> RDTInformation:
     else:
         mb_bandwidth_gran, mb_min_bandwidth, mb_num_closids = None, None, None
 
-    if rdt_cache_control_enabled and rdt_mb_control_enabled:
-        num_closids = min(num_closids, mb_num_closids)
+    if rdt_cache_control_enabled or rdt_mb_control_enabled:
+        # Minimum of available closids readt from MB or L3
+        num_closids = min(filter(None, [cache_num_closids, mb_num_closids]))
+    else:
+        num_closids = None
 
     return RDTInformation(rdt_cache_monitoring_enabled,
                           rdt_mb_monitoring_enabled,

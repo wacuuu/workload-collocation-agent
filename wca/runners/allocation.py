@@ -101,6 +101,7 @@ class TasksAllocationsValues(AllocationsDict):
         }
 
         if rdt_enabled:
+            assert platform.rdt_information.num_closids is not None, 'invalid platform rdt init'
             rdt_groups = RDTGroups(closids_limit=platform.rdt_information.num_closids)
 
             def rdt_allocation_value_constructor(rdt_allocation: RDTAllocation,
