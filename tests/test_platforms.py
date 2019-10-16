@@ -18,9 +18,10 @@ from unittest.mock import patch
 import pytest
 
 from tests.testing import create_open_mock, relative_module_path, _is_dict_match, assert_metric
-from wca.metrics import MetricName, MetricMetadata, MetricType, METRICS_METADATA, METRICS_LEVELS
+from wca.metrics import MetricName, MetricMetadata, MetricType, METRICS_METADATA, METRICS_LEVELS, \
+    export_metrics_from_measurements
 from wca.platforms import Platform, CPUCodeName, parse_proc_stat, \
-    parse_proc_meminfo, _parse_cpuinfo, export_metrics_from_measurements
+    parse_proc_meminfo, _parse_cpuinfo
 from wca.platforms import collect_topology_information, collect_platform_information, \
     RDTInformation, decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat
 
@@ -204,40 +205,3 @@ def test_parse_node_meminfo(*mocks):
     assert expected_node_used == {0: 77696421888}
 
 
-@pytest.mark.parametrize(
-    'measurements, expected', [
-        ({MetricName.MEM_NUMA_STAT_PER_TASK: {'1': 10, '2': 20}, }, 2),
-        ({MetricName.CYCLES: 1123}, 1),
-        ({}, 0)
-    ])
-def test_export_metrics_from_measurements(measurements, expected):
-    result = export_metrics_from_measurements('PLATFORM__', measurements)
-    assert len(result) == expected
-
-
-class TestMetric(object):
-    """To create and delete a test metric from metrics module structures."""
-    def __enter__(self):
-        MetricName.TEST_METRIC = 'test_metric'
-        METRICS_METADATA['test_metric'] = MetricMetadata(
-            MetricType.COUNTER, 'Non existing metric for unit test.')
-        METRICS_LEVELS['test_metric'] = ['numa_node', 'container']  # two levels
-
-    def __exit__(self, type, value, traceback):
-        """if exception was raised the metrics structeres will be cleaned up."""
-        del METRICS_METADATA['test_metric']
-        del METRICS_LEVELS['test_metric']
-        del MetricName.TEST_METRIC
-
-
-def test_export_metrics_from_measurements_artifical_metric():
-    """We currently do not have a metric which len(METRICS_LEVELS[X]) > 1,
-        so the need to add such metric in metrics structures for the test."""
-    with TestMetric():
-        measurements = {'test_metric': {'id0': {'stress': 0, 'dbmango': 1},
-                                        'id1': {'stress': 10, 'dbmango': 20}}}
-        result = export_metrics_from_measurements('PLATFORM__', measurements)
-        assert len(result) == 4
-        assert result[0].name == 'PLATFORM__test_metric'
-        assert 'numa_node' in result[0].labels and 'container' in result[0].labels
-        assert sorted([item.value for item in result]) == [0, 1, 10, 20]  # values for metrics

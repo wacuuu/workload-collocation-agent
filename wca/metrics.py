@@ -444,3 +444,41 @@ class DefaultTaskDerivedMetricsGeneratorFactory(BaseGeneratorFactory):
 class MissingMeasurementException(Exception):
     """when metric has not been collected with success"""
     pass
+
+
+def export_metrics_from_measurements(name_prefix: str,
+                                     measurements: Measurements) -> List[Metric]:
+    all_metrics = []
+    for metric_name, metric_node in measurements.items():
+        if metric_name in METRICS_LEVELS:
+            levels = METRICS_LEVELS[metric_name]
+            max_depth = len(levels)
+
+            def is_leaf(depth):
+                return depth == max_depth
+
+            def create_metric(node, labels):
+                return [Metric.create_metric_with_metadata(
+                    name=name_prefix + metric_name,
+                    value=node,
+                    labels=labels
+                )]
+
+            def recursive_create_metric(node, parent_labels=None, depth=0):
+                if is_leaf(depth):
+                    return create_metric(node, parent_labels)
+                else:
+                    metrics = []
+                    for parent_label_value, child in node.items():
+                        new_parent_labels = {} if parent_labels is None else dict(parent_labels)
+                        new_parent_labels[levels[depth]] = str(parent_label_value)
+                        metrics.extend(recursive_create_metric(child, new_parent_labels, depth+1))
+                    return metrics
+            all_metrics.extend(recursive_create_metric(metric_node, {}, 0))
+        else:
+            metric_value = metric_node
+            all_metrics.append(Metric.create_metric_with_metadata(
+                name=name_prefix + metric_name,
+                value=metric_value,
+            ))
+    return all_metrics

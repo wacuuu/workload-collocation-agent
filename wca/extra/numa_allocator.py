@@ -80,7 +80,7 @@ class NUMAAllocator(Allocator):
         # pprint(tasks_memory)
 
         # Current state of the system
-        balanced_memory = {x: [] for x in platform.node_memory_used}
+        balanced_memory = {x: [] for x in platform.measurements[MetricName.MEM_NUMA_USED] }
 
         balance_task = None
         balance_task_node = None
@@ -124,7 +124,8 @@ class NUMAAllocator(Allocator):
             # memory based score:
             best_memory_node = _get_best_memory_node(memory, balanced_memory)
             # print("Best memory node: %d" % best_memory_node)
-            most_free_memory_node = _get_most_free_memory_node(memory, platform.node_memory_free)
+            most_free_memory_node = _get_most_free_memory_node(memory,
+                                                               platform.measurements[MetricName.MEM_NUMA_FREE])
             # print("Best free memory node: %d" % most_free_memory_node)
 
             log.debug("Task %s: Most used node: %d, Best free node: %d, Best memory node: %d" %

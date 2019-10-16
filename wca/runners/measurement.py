@@ -31,7 +31,7 @@ from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, TaskRe
 from wca.logger import trace, get_logging_metrics, TRACE
 from wca.mesos import create_metrics
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
-    BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory
+    BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory, export_metrics_from_measurements
 from wca.nodes import Task
 from wca.nodes import TaskSynchronizationException
 from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
@@ -407,10 +407,10 @@ def _build_tasks_metrics(tasks_labels: TasksLabels,
     TASK_METRICS_PREFIX = 'task__'
 
     for task_id, task_measurements in tasks_measurements.items():
-        task_metrics = create_metrics(task_measurements)
+        task_metrics = export_metrics_from_measurements(TASK_METRICS_PREFIX, task_measurements)
+
         # Decorate metrics with task specific labels.
         for task_metric in task_metrics:
-            task_metric.name = TASK_METRICS_PREFIX + task_metric.name
             task_metric.labels.update(tasks_labels[task_id])
         tasks_metrics += task_metrics
     return tasks_metrics
