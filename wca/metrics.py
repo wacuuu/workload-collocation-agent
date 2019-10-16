@@ -16,7 +16,6 @@ import time
 from typing import Dict, Union, List, Tuple, Callable, Optional
 
 from dataclasses import dataclass, field
-
 from enum import Enum
 
 log = logging.getLogger(__name__)
@@ -44,7 +43,11 @@ class MetricName(str, Enum):
     MEM_MAX_USAGE_PER_TASK = 'memory_max_usage_per_task_bytes'
     MEM_LIMIT_PER_TASK = 'memory_limit_per_task_bytes'
     MEM_SOFT_LIMIT_PER_TASK = 'memory_soft_limit_per_task_bytes'
-    MEM_NUMA_STAT = 'memory_numa_stat'
+    MEM_NUMA_STAT_PER_TASK = 'memory_numa_stat'
+
+    # NUMA for whole platform
+    MEM_NUMA_FREE = 'memory_numa_free'
+    MEM_NUMA_USED = 'memory_numa_used'
 
     # Generic per task.
     LAST_SEEN = 'last_seen'
@@ -58,7 +61,13 @@ class MetricName(str, Enum):
     MEMORY_BANDWIDTH_REMOTE = 'memory_bandwidth_remote'
 
     # /proc based (platform scope).
+    #
+    # Utilization (usage):
+    # counter like, sum of all modes based on /proc/stat
+    # "cpu line" with 10ms resolution expressed in [ms]
     CPU_USAGE_PER_CPU = 'cpu_usage_per_cpu'
+    # [bytes] based on /proc/meminfo (gauge like)
+    # difference between MemTotal and MemAvail (or MemFree)
     MEM_USAGE = 'memory_usage'
 
     # Generic for WCA.
@@ -94,7 +103,15 @@ class MetricMetadata:
     help: str
 
 
-# Mapping from metric name to metrics meta data.
+# Structure linking a metric with description of chierarchy how it is kept.
+METRICS_LEVELS = {
+    MetricName.MEM_NUMA_STAT_PER_TASK: ["numa_node"],
+    MetricName.MEM_NUMA_FREE: ["numa_node"],
+    MetricName.MEM_NUMA_USED: ["numa_node"],
+    MetricName.CPU_USAGE_PER_CPU: ["cpu"],
+}
+
+# Structure linking a metric with its type and help.
 METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
     MetricName.INSTRUCTIONS:
         MetricMetadata(
@@ -167,10 +184,20 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricType.GAUGE,
             'Perf metric scaling factor, average from all CPUs'
         ),
-    MetricName.MEM_NUMA_STAT:
+    MetricName.MEM_NUMA_STAT_PER_TASK:
         MetricMetadata(
             MetricType.GAUGE,
             'NUMA Stat TODO!',  # TODO: fix me!
+        ),
+    MetricName.MEM_NUMA_FREE:
+        MetricMetadata(
+            MetricType.GAUGE,
+            'NUMA memory free per numa node TODO!',  # TODO: fix me!
+        ),
+    MetricName.MEM_NUMA_USED:
+        MetricMetadata(
+            MetricType.GAUGE,
+            'NUMA memory used per numa node TODO!',  # TODO: fix me!
         ),
     MetricName.MEMORY_BANDWIDTH_LOCAL:
         MetricMetadata(
@@ -417,3 +444,41 @@ class DefaultTaskDerivedMetricsGeneratorFactory(BaseGeneratorFactory):
 class MissingMeasurementException(Exception):
     """when metric has not been collected with success"""
     pass
+
+
+def export_metrics_from_measurements(name_prefix: str,
+                                     measurements: Measurements) -> List[Metric]:
+    all_metrics = []
+    for metric_name, metric_node in measurements.items():
+        if metric_name in METRICS_LEVELS:
+            levels = METRICS_LEVELS[metric_name]
+            max_depth = len(levels)
+
+            def is_leaf(depth):
+                return depth == max_depth
+
+            def create_metric(node, labels):
+                return [Metric.create_metric_with_metadata(
+                    name=name_prefix + metric_name,
+                    value=node,
+                    labels=labels
+                )]
+
+            def recursive_create_metric(node, parent_labels=None, depth=0):
+                if is_leaf(depth):
+                    return create_metric(node, parent_labels)
+                else:
+                    metrics = []
+                    for parent_label_value, child in node.items():
+                        new_parent_labels = {} if parent_labels is None else dict(parent_labels)
+                        new_parent_labels[levels[depth]] = str(parent_label_value)
+                        metrics.extend(recursive_create_metric(child, new_parent_labels, depth+1))
+                    return metrics
+            all_metrics.extend(recursive_create_metric(metric_node, {}, 0))
+        else:
+            metric_value = metric_node
+            all_metrics.append(Metric.create_metric_with_metadata(
+                name=name_prefix + metric_name,
+                value=metric_value,
+            ))
+    return all_metrics

@@ -29,9 +29,9 @@ from wca.config import Numeric, Str
 from wca.containers import ContainerManager, Container
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, TaskResource
 from wca.logger import trace, get_logging_metrics, TRACE
-from wca.mesos import create_metrics
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
-    BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory
+    BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory, \
+    export_metrics_from_measurements
 from wca.nodes import Task
 from wca.nodes import TaskSynchronizationException
 from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
@@ -247,7 +247,6 @@ class MeasurementRunner(Runner):
         self._uncore_pmu = UncorePerfCounters(
             cpus=cpus,
             pmu_events=pmu_events
-
         )
         if enable_derived_metrics:
             self._uncore_derived_metrics = self._platform_derived_metrics_generators_factory.create(
@@ -275,6 +274,7 @@ class MeasurementRunner(Runner):
             ['%s(%s)  =  %s' % (task.name, task.task_id, container._cgroup_path) for task, container
              in containers.items()]))
 
+        # @TODO why not in platform module?
         extra_platform_measurements = self._uncore_get_measurements()
 
         # Platform information
@@ -286,7 +286,6 @@ class MeasurementRunner(Runner):
 
         # Tasks data
         tasks_measurements, tasks_resources, tasks_labels = _prepare_tasks_data(containers)
-        tasks_metrics = _build_tasks_metrics(tasks_labels, tasks_measurements)
 
         self._iterate_body(containers, platform, tasks_measurements, tasks_resources,
                            tasks_labels, common_labels)
@@ -300,7 +299,7 @@ class MeasurementRunner(Runner):
         metrics_package = MetricPackage(self._metrics_storage)
         metrics_package.add_metrics(_get_internal_metrics(tasks))
         metrics_package.add_metrics(platform_metrics)
-        metrics_package.add_metrics(tasks_metrics)
+        metrics_package.add_metrics(_build_tasks_metrics(tasks_labels, tasks_measurements))
         metrics_package.add_metrics(profiling.profiler.get_metrics())
         metrics_package.add_metrics(get_logging_metrics())
         metrics_package.send(common_labels)
@@ -406,10 +405,10 @@ def _build_tasks_metrics(tasks_labels: TasksLabels,
     TASK_METRICS_PREFIX = 'task__'
 
     for task_id, task_measurements in tasks_measurements.items():
-        task_metrics = create_metrics(task_measurements)
+        task_metrics = export_metrics_from_measurements(TASK_METRICS_PREFIX, task_measurements)
+
         # Decorate metrics with task specific labels.
         for task_metric in task_metrics:
-            task_metric.name = TASK_METRICS_PREFIX + task_metric.name
             task_metric.labels.update(tasks_labels[task_id])
         tasks_metrics += task_metrics
     return tasks_metrics

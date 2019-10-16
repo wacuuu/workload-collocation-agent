@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Dict
 
 from dataclasses import dataclass
 
@@ -80,7 +80,7 @@ class NUMAAllocator(Allocator):
         # pprint(tasks_memory)
 
         # Current state of the system
-        balanced_memory = {x: [] for x in platform.node_memory_used}
+        balanced_memory = {x: [] for x in platform.measurements[MetricName.MEM_NUMA_USED]}
 
         balance_task = None
         balance_task_node = None
@@ -124,7 +124,9 @@ class NUMAAllocator(Allocator):
             # memory based score:
             best_memory_node = _get_best_memory_node(memory, balanced_memory)
             # print("Best memory node: %d" % best_memory_node)
-            most_free_memory_node = _get_most_free_memory_node(memory, platform.node_memory_free)
+            most_free_memory_node = \
+                _get_most_free_memory_node(memory,
+                                           platform.measurements[MetricName.MEM_NUMA_FREE])
             # print("Best free memory node: %d" % most_free_memory_node)
 
             log.debug("Task %s: Most used node: %d, Best free node: %d, Best memory node: %d" %
@@ -191,7 +193,8 @@ class NUMAAllocator(Allocator):
 
 
 def _platform_total_memory(platform):
-    return sum(platform.node_memory_free.values()) + sum(platform.node_memory_used.values())
+    return sum(platform.measurements[MetricName.MEM_NUMA_FREE].values()) + \
+           sum(platform.measurements[MetricName.MEM_NUMA_USED].values())
 
 
 def _get_task_memory_limit(task, total):
@@ -210,18 +213,14 @@ def _get_task_memory_limit(task, total):
     return 0
 
 
-def _get_numa_node_preferences(task, platform):
-    prefix = "memory_numa_stat"
-    used = {}
-    for node in platform.node_memory_free:
-        metric = "%s_%d" % (prefix, node)
-        if metric in task:
-            used[node] = task[metric]
-        else:
-            used[node] = 0
-    ret = {}
-    for node in used:
-        ret[node] = used[node] / max(1, sum(used.values()))
+def _get_numa_node_preferences(task_measurements, platform: Platform) -> Dict[int, float]:
+    ret = {node_id: 0 for node_id in range(0, platform.numa_nodes)}
+    if MetricName.MEM_NUMA_STAT_PER_TASK not in task_measurements:
+        metrics_val_sum = sum(task_measurements[MetricName.MEM_NUMA_STAT_PER_TASK].values())
+        for node_id, metric_val in task_measurements[MetricName.MEM_NUMA_STAT_PER_TASK].items():
+            ret[node_id] = metric_val / max(1, metrics_val_sum)
+    else:
+        log.warning('{} metric not available'.format(MetricName.MEM_NUMA_STAT_PER_TASK))
     return ret
 
 

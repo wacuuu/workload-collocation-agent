@@ -112,7 +112,6 @@ class Cgroup:
             [CgroupResource.MEMORY_LIMIT, MetricName.MEM_LIMIT_PER_TASK],
             [CgroupResource.MEMORY_SOFT_LIMIT, MetricName.MEM_SOFT_LIMIT_PER_TASK],
         ]:
-
             try:
                 with open(os.path.join(self.cgroup_memory_fullpath,
                                        cgroup_resource)) as resource_file:
@@ -122,7 +121,6 @@ class Cgroup:
                 raise MissingMeasurementException(
                     'File {} is missing. Metric unavailable.'.format(e.filename))
 
-        # NUMA stats
         try:
             with open(os.path.join(
                     self.cgroup_memory_fullpath, CgroupResource.NUMA_STAT)) as resource_file:
@@ -131,12 +129,19 @@ class Cgroup:
                     if line.startswith("hierarchical_total="):
                         for stat in line.split()[1:]:
                             k, v = stat.split("=")
-                            name = "memory_numa_stat"
-                            measurements[name + "_" + k[1:]] = int(v)
+                            k, v = k[1:], int(v)
+                            if MetricName.MEM_NUMA_STAT_PER_TASK not in measurements:
+                                measurements[MetricName.MEM_NUMA_STAT_PER_TASK] = {k: v}
+                            else:
+                                measurements[MetricName.MEM_NUMA_STAT_PER_TASK][k] = v
                         break
         except FileNotFoundError as e:
             raise MissingMeasurementException(
                 'File {} is missing. Metric unavailable.'.format(e.filename))
+        # Check whether consecutive keys.
+        assert MetricName.MEM_NUMA_STAT_PER_TASK not in measurements or \
+            list(measurements[MetricName.MEM_NUMA_STAT_PER_TASK].keys()) == \
+            [str(el) for el in range(0, self.platform.numa_nodes)]
 
         return measurements
 

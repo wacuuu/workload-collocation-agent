@@ -18,7 +18,9 @@ from unittest.mock import patch
 import pytest
 
 from tests.testing import create_open_mock, relative_module_path, _is_dict_match, assert_metric
-from wca.platforms import Platform, CPUCodeName, parse_proc_stat, parse_proc_meminfo, _parse_cpuinfo
+from wca.metrics import MetricName
+from wca.platforms import Platform, CPUCodeName, parse_proc_stat, \
+    parse_proc_meminfo, _parse_cpuinfo
 from wca.platforms import collect_topology_information, collect_platform_information, \
     RDTInformation, decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat
 
@@ -128,6 +130,7 @@ def test_parse_node_cpus(*mocks):
 @patch('wca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
 @patch('wca.platforms.parse_node_cpus', return_value={})
 @patch('wca.platforms.parse_node_meminfo', return_value=[{0: 1}, {0: 2}])
+@patch('wca.platforms.get_numa_nodes_count', return_value=1)
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1, {}))
 @patch('wca.platforms.read_proc_stat', return_value='noop, because above parse is mocked')
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1))
@@ -142,20 +145,21 @@ def test_collect_platform_information(*mocks):
         sockets=1,
         cores=1,
         cpus=2,
+        numa_nodes=1,
         topology={},
         cpu_model='intel xeon',
         cpu_model_number=0x5E,
         cpu_codename=CPUCodeName.SKYLAKE,
-        cpus_usage={0: 100, 1: 200},
-        total_memory_used=1337,
         timestamp=1536071557.123456,  # timestamp,
-        node_memory_free={0: 1},
-        node_memory_used={0: 2},
         node_cpus={},
         rdt_information=RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20),
-        measurements={},
+        measurements={MetricName.CPU_USAGE_PER_CPU: {0: 100, 1: 200},
+                      MetricName.MEM_USAGE: 1337,
+                      MetricName.MEM_NUMA_FREE: {0: 1},
+                      MetricName.MEM_NUMA_USED: {0: 2}},
     )
 
+    print(got_metrics)
     assert_metric(got_metrics, 'platform__memory_usage', expected_metric_value=1337)
     assert_metric(got_metrics, 'platform__cpu_usage_per_cpu', {'cpu': '0'},
                   expected_metric_value=100)

@@ -26,8 +26,10 @@ import os
 from dataclasses import dataclass
 from enum import Enum
 
-from wca.metrics import Metric, MetricName, Measurements, MetricType
+from wca.metrics import Metric, MetricName, Measurements, MetricType, \
+    export_metrics_from_measurements
 from wca.profiling import profiler
+
 
 try:
     from pkg_resources import get_distribution, DistributionNotFound
@@ -124,7 +126,7 @@ class RDTInformation:
     # is supported by platform,otherwise set to None.
     cbm_mask: Optional[str]  # based on /sys/fs/resctrl/info/L3/cbm_mask
     min_cbm_bits: Optional[str]  # based on /sys/fs/resctrl/info/L3/min_cbm_bits
-    num_closids: Optional[int]  # based on /sys/fs/resctrl/info/L3/num_closids
+    num_closids: Optional[int]  # based on /sys/fs/resctrl/info/L3/num_closids or MB/closids
 
     # MB control read-only parameters.
     mb_bandwidth_gran: Optional[int]  # based on /sys/fs/resctrl/info/MB/bandwidth_gran
@@ -143,6 +145,7 @@ class Platform:
     sockets: int  # number of sockets
     cores: int  # number of physical cores in total (sum over all sockets)
     cpus: int  # logical processors equal to the output of "nproc" Linux command
+    numa_nodes: int  # number of NUMA nodes
 
     cpu_model: str  # /proc/cpuinfo -> model_name
     cpu_model_number: int  # /proc/cpuinfo -> model
@@ -152,18 +155,7 @@ class Platform:
 
     cpu_model: str
 
-    # Utilization (usage):
-    # counter like, sum of all modes based on /proc/stat
-    # "cpu line" with 10ms resolution expressed in [ms]
-    cpus_usage: Dict[CpuId, int]
-
-    # [bytes] based on /proc/meminfo (gauge like)
-    # difference between MemTotal and MemAvail (or MemFree)
-    total_memory_used: int
-
     # NUMA info
-    node_memory_free: Dict[NodeId, int]
-    node_memory_used: Dict[NodeId, int]
     # mapping from numa node id to CPU (to support SNC), based on /sys/devices/system/numa
     node_cpus: Dict[int, Set[int]]
 
@@ -198,33 +190,29 @@ def get_platform_static_information():
 
         try:
             # nosec: B603. We deliberately use 'subprocess'. There is a permanent input.
-            log.info('Collecting memory information from lshw...')
             lshw_raw = subprocess.check_output(  # nosec
-                shlex.split('lshw -json -quiet -sanitize -notime'))
+                shlex.split('lshw -class memory -json -quiet -sanitize -notime'))
             lshw_str = lshw_raw.decode("utf-8")
+            lshw_str = lshw_str.rstrip()
+            lshw_str = '[' + lshw_str[0:(len(lshw_str) - 1)] + ']'
             lshw_data = json.loads(lshw_str)
             nvm_dimm_count = 0
             ram_dimm_count = 0
             nvm_dimm_size = 0
             ram_dimm_size = 0
-            for child in lshw_data['children']:
-                if child['id'] == 'core':
-                    for system in child['children']:
-                        if system['id'] == 'memory' and 'children' in system:
-                            for bank in system['children']:
-                                if '[empty]' in bank['description']:
-                                    continue
-                                elif 'DDR4' in bank['description']:
-                                    assert bank['units'] == 'bytes'
-                                    ram_dimm_count += 1
-                                    ram_dimm_size += bank['size']
-                                elif 'Non-volatile' in bank['description']:
-                                    assert bank['units'] == 'bytes'
-                                    nvm_dimm_count += 1
-                                    nvm_dimm_size += bank['size']
-                    break
-            else:
-                log.warning('Cannot find "core" child in lshw output!')
+            for system in lshw_data:
+                if system['id'] == 'memory' and 'children' in system:
+                    for bank in system['children']:
+                        if '[empty]' in bank['description']:
+                            continue
+                        elif 'DDR4' in bank['description']:
+                            assert bank['units'] == 'bytes'
+                            ram_dimm_count += 1
+                            ram_dimm_size += bank['size']
+                        elif 'Non-volatile' in bank['description']:
+                            assert bank['units'] == 'bytes'
+                            nvm_dimm_count += 1
+                            nvm_dimm_size += bank['size']
 
             _platform_static_information['ram_dimm_count'] = int(ram_dimm_count)
             _platform_static_information['nvm_dimm_count'] = int(nvm_dimm_count)
@@ -232,11 +220,10 @@ def get_platform_static_information():
             _platform_static_information['nvm_dimm_size'] = int(nvm_dimm_size)
         except FileNotFoundError:
             log.warning('lshw unavailable, cannot read memory topology size!')
-        except JSONDecodeError as e:
+        except JSONDecodeError:
             log.warning('lshw unavailable (incorrect version or missing data), '
-                        'cannot parse output, cannot read memory topology size!: %s', str(e))
+                        'cannot parse output, cannot read memory topology size!')
 
-    log.debug('platform_static_information: %s', _platform_static_information)
     _platform_static_information['initialized'] = True
 
     return _platform_static_information
@@ -245,28 +232,7 @@ def get_platform_static_information():
 def create_metrics(platform: Platform) -> List[Metric]:
     """Creates a list of Metric objects from data in Platform object"""
     PLATFORM_PREFIX = 'platform__'
-    platform_metrics = list()
-    platform_metrics.append(
-        Metric.create_metric_with_metadata(
-            name=PLATFORM_PREFIX + MetricName.MEM_USAGE,
-            value=platform.total_memory_used)
-    )
-    for cpu_id, cpu_usage in platform.cpus_usage.items():
-        platform_metrics.append(
-            Metric.create_metric_with_metadata(
-                name=PLATFORM_PREFIX + MetricName.CPU_USAGE_PER_CPU,
-                value=cpu_usage,
-                labels={"cpu": str(cpu_id)}
-            )
-        )
-
-    for metric_name, metric_value in platform.measurements.items():
-        platform_metrics.append(
-            Metric.create_metric_with_metadata(
-                name=PLATFORM_PREFIX + metric_name,
-                value=metric_value,
-            )
-        )
+    platform_metrics = []
 
     platform_metrics.extend([
         Metric(name=PLATFORM_PREFIX + 'topology_cores',
@@ -281,7 +247,7 @@ def create_metrics(platform: Platform) -> List[Metric]:
 
     platform_static_information = get_platform_static_information()
 
-    # PMEM HW info
+    # PMEM HW info r
     if 'ram_dimm_count' in platform_static_information:
         platform_metrics.extend([
             # RAM
@@ -311,6 +277,10 @@ def create_metrics(platform: Platform) -> List[Metric]:
                    value=platform_static_information['memorymode_size'],
                    type=MetricType.GAUGE, help=""),
         ])
+
+    # Exporting measurements into metrics.
+    platform_metrics.extend(export_metrics_from_measurements(PLATFORM_PREFIX,
+                                                             platform.measurements))
 
     return platform_metrics
 
@@ -370,6 +340,15 @@ def read_proc_meminfo() -> str:
 
 
 BASE_SYSFS_NODES_PATH = '/sys/devices/system/node'
+
+
+def get_numa_nodes_count() -> int:
+    """returns how many numa nodes are available"""
+    node_count = 0
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            node_count += 1
+    return node_count
 
 
 def parse_node_meminfo() -> (Dict[NodeId, int], Dict[NodeId, int]):
@@ -511,9 +490,9 @@ def _collect_rdt_information() -> RDTInformation:
     if rdt_cache_control_enabled:
         cbm_mask = _read_value('info/L3/cbm_mask')
         min_cbm_bits = _read_value('info/L3/min_cbm_bits')
-        num_closids = int(_read_value('info/L3/num_closids'))
+        cache_num_closids = int(_read_value('info/L3/num_closids'))
     else:
-        cbm_mask, min_cbm_bits, num_closids = None, None, None
+        cbm_mask, min_cbm_bits, cache_num_closids = None, None, None
 
     rdt_mb_control_enabled = 'MB:' in schemata_body
     if rdt_mb_control_enabled:
@@ -523,8 +502,11 @@ def _collect_rdt_information() -> RDTInformation:
     else:
         mb_bandwidth_gran, mb_min_bandwidth, mb_num_closids = None, None, None
 
-    if rdt_cache_control_enabled and rdt_mb_control_enabled:
-        num_closids = min(num_closids, mb_num_closids)
+    if rdt_cache_control_enabled or rdt_mb_control_enabled:
+        # Minimum of available closids readt from MB or L3
+        num_closids = min(filter(None, [cache_num_closids, mb_num_closids]))
+    else:
+        num_closids = None
 
     return RDTInformation(rdt_cache_monitoring_enabled,
                           rdt_mb_monitoring_enabled,
@@ -561,34 +543,39 @@ def collect_platform_information(rdt_enabled: bool = True,
     else:
         rdt_information = None
 
-    # Dynamic information
-    cpus_usage = parse_proc_stat(read_proc_stat())
-    total_memory_used = parse_proc_meminfo(read_proc_meminfo())
-    node_free, node_used = parse_node_meminfo()
-
     # All information are based on first CPU.
     cpu_model = cpu_info[0]['model name']
     cpu_model_number = int(cpu_info[0]['model'])
     cpu_codename = get_cpu_codename(int(cpu_info[0]['model']), int(cpu_info[0]['stepping']))
 
+    # Dynamic information
+    platform_measurements = {}
+    platform_measurements[MetricName.CPU_USAGE_PER_CPU] = parse_proc_stat(read_proc_stat())
+    platform_measurements[MetricName.MEM_USAGE] = parse_proc_meminfo(read_proc_meminfo())
+    node_free, node_used = parse_node_meminfo()
+    platform_measurements[MetricName.MEM_NUMA_FREE] = node_free
+    platform_measurements[MetricName.MEM_NUMA_USED] = node_used
+
+    # Merge local platform measurements with passed extra_platform_measurements
+    platform_measurements.update(extra_platform_measurements
+                                 if extra_platform_measurements is not None
+                                 else {})
+
     platform = Platform(
         sockets=no_of_sockets,
         cores=nr_of_cores,
         cpus=nr_of_cpus,
+        numa_nodes=get_numa_nodes_count(),
         topology=topology,
         cpu_model=cpu_model,
         cpu_model_number=cpu_model_number,
         cpu_codename=cpu_codename,
-        cpus_usage=cpus_usage,
-        total_memory_used=total_memory_used,
         timestamp=time.time(),
         rdt_information=rdt_information,
-        node_memory_free=node_free,
-        node_memory_used=node_used,
         node_cpus=parse_node_cpus(),
-        measurements=extra_platform_measurements or {},
+        measurements=platform_measurements,
     )
-    assert len(platform.cpus_usage) == platform.cpus, \
+    assert len(platform_measurements[MetricName.CPU_USAGE_PER_CPU]) == platform.cpus, \
         "Inconsistency in cpu data returned by kernel"
     return platform, create_metrics(platform), create_labels(platform)
 
