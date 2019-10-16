@@ -16,7 +16,6 @@ import time
 from typing import Dict, Union, List, Tuple, Callable, Optional
 
 from dataclasses import dataclass, field
-
 from enum import Enum
 
 log = logging.getLogger(__name__)

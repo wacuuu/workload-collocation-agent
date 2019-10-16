@@ -130,6 +130,7 @@ def test_parse_node_cpus(*mocks):
 @patch('wca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
 @patch('wca.platforms.parse_node_cpus', return_value={})
 @patch('wca.platforms.parse_node_meminfo', return_value=[{0: 1}, {0: 2}])
+@patch('wca.platforms.get_numa_nodes_count', return_value=1)
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1, {}))
 @patch('wca.platforms.read_proc_stat', return_value='noop, because above parse is mocked')
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1))

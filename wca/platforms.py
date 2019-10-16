@@ -379,7 +379,7 @@ def read_proc_meminfo() -> str:
 BASE_SYSFS_NODES_PATH = '/sys/devices/system/node'
 
 
-def parse_node_meminfo_dir() -> int:
+def get_numa_nodes_count() -> int:
     """returns how many numa nodes are available"""
     node_count = 0
     for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
@@ -599,7 +599,7 @@ def collect_platform_information(rdt_enabled: bool = True,
         sockets=no_of_sockets,
         cores=nr_of_cores,
         cpus=nr_of_cpus,
-        numa_nodes=parse_node_meminfo_dir(),
+        numa_nodes=get_numa_nodes_count(),
         topology=topology,
         cpu_model=cpu_model,
         cpu_model_number=cpu_model_number,
