@@ -77,10 +77,14 @@ def test_main_valid_config_file_not_absolute_path(os_stat, mock_exit, mock_log_e
             "'$PWD/configs/see_yaml_config_variable_above.yaml')")
 
 
+TEST_USER_UID = 1005
+
+
 @patch('wca.main.log.error')
 @patch('wca.main.exit')
 @patch('os.stat', return_value=Mock(st_size=35, st_uid=123123, st_mode=384))
-def test_main_valid_config_file_wrong_user(os_stat, mock_exit, mock_log_error):
+@patch('os.getuid', return_value=TEST_USER_UID)
+def test_main_valid_config_file_wrong_user(os_getuid, os_stat, mock_exit, mock_log_error):
     main.valid_config_file('/etc/configs/see_yaml_config_variable_above.yaml')
 
     mock_log_error.assert_called_with(
@@ -90,8 +94,9 @@ def test_main_valid_config_file_wrong_user(os_stat, mock_exit, mock_log_error):
 
 @patch('wca.main.log.error')
 @patch('wca.main.exit')
-@patch('os.stat', return_value=Mock(st_size=35, st_uid=os.geteuid(), st_mode=466))
-def test_main_valid_config_file_wrong_acl(os_stat, mock_exit, mock_log_error):
+@patch('os.stat', return_value=Mock(st_size=35, st_uid=TEST_USER_UID, st_mode=466))
+@patch('os.getuid', return_value=TEST_USER_UID)
+def test_main_valid_config_file_wrong_acl(os_getuid, os_stat, mock_exit, mock_log_error):
     # st_mode=511 - All can read, write and exec
 
     main.valid_config_file('/etc/configs/see_yaml_config_variable_above.yaml')

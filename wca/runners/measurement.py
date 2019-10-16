@@ -29,9 +29,9 @@ from wca.config import Numeric, Str
 from wca.containers import ContainerManager, Container
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, TaskResource
 from wca.logger import trace, get_logging_metrics, TRACE
-from wca.mesos import create_metrics
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
-    BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory, export_metrics_from_measurements
+    BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory, \
+    export_metrics_from_measurements
 from wca.nodes import Task
 from wca.nodes import TaskSynchronizationException
 from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \

@@ -26,9 +26,10 @@ import os
 from dataclasses import dataclass
 from enum import Enum
 
-from wca.metrics import Metric, MetricName, Measurements, MetricType, export_metrics_from_measurements
+from wca.metrics import Metric, MetricName, Measurements, MetricType, \
+    export_metrics_from_measurements
 from wca.profiling import profiler
-from wca import metrics
+
 
 try:
     from pkg_resources import get_distribution, DistributionNotFound

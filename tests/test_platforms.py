@@ -18,8 +18,7 @@ from unittest.mock import patch
 import pytest
 
 from tests.testing import create_open_mock, relative_module_path, _is_dict_match, assert_metric
-from wca.metrics import MetricName, MetricMetadata, MetricType, METRICS_METADATA, METRICS_LEVELS, \
-    export_metrics_from_measurements
+from wca.metrics import MetricName
 from wca.platforms import Platform, CPUCodeName, parse_proc_stat, \
     parse_proc_meminfo, _parse_cpuinfo
 from wca.platforms import collect_topology_information, collect_platform_information, \
@@ -203,5 +202,3 @@ def test_parse_node_meminfo(*mocks):
     expected_node_free, expected_node_used = parse_node_meminfo()
     assert expected_node_free == {0: 454466117632}
     assert expected_node_used == {0: 77696421888}
-
-

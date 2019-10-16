@@ -17,8 +17,10 @@ import pytest
 from itertools import chain
 
 from wca.mesos import create_metrics, sanitize_label
-from wca.metrics import Metric, merge_measurements, MetricName, DerivedMetricName, METRICS_METADATA, \
-    export_metrics_from_measurements, MetricMetadata, MetricType, METRICS_LEVELS
+from wca.metrics import Metric, merge_measurements, MetricName, \
+    DerivedMetricName, METRICS_METADATA, \
+    export_metrics_from_measurements, MetricMetadata, \
+    MetricType, METRICS_LEVELS
 
 
 @pytest.mark.parametrize('label_key,expected_label_key', (
