@@ -202,7 +202,7 @@ pipeline {
                 INVENTORY="tests/e2e/demo_scenarios/common/inventory.yaml"
                 TAGS = "redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,specjbb,stress_ng"
             }
-            //failFast true
+            failFast true
             parallel {
                 stage('WCA E2E for Kubernetes') {
                     agent { label 'kubernetes' }

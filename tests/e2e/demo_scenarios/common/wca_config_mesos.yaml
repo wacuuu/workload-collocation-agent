@@ -1,7 +1,7 @@
 runner: !AllocationRunner
   rdt_enabled: True
   node: !MesosNode
-    mesos_agent_endpoint: "http://127.0.0.1:5051"
+    mesos_agent_endpoint: "http://100.64.176.14:5051"
   action_delay: 10.
   metrics_storage: !KafkaStorage
     brokers_ips: ['100.64.176.12:9092']

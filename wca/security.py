@@ -103,7 +103,7 @@ def are_privileges_sufficient(
     if use_cgroup:
         has_cap_dac_override = capabilities.effective & CAP_DAC_OVERRIDE == CAP_DAC_OVERRIDE
         if not has_cap_dac_override:
-            error_log_message += "\nCAP_DAC_OVERRIDE set."
+            error_log_message += " CAP_DAC_OVERRIDE set."
             are_sufficient_privileges = False
 
     if use_resctrl:
@@ -111,13 +111,13 @@ def are_privileges_sufficient(
         has_cap_setuid = capabilities.effective & CAP_SETUID == CAP_SETUID
         has_secbit_no_setuid_fixup = secure_bits & SECBIT_NO_SETUID_FIXUP
         if not has_cap_setuid or not has_secbit_no_setuid_fixup:
-            error_log_message += "\nCAP_SETUID and SECBIT_NO_SETUID_FIXUP set."
+            error_log_message += " CAP_SETUID and SECBIT_NO_SETUID_FIXUP set."
             are_sufficient_privileges = False
 
     if use_perf:
         paranoid = _read_paranoid()
         if not (paranoid <= ALLOW_CPU_EVENTS):
-            error_log_message += '\n"/proc/sys/kernel/perf_event_paranoid" set to (-1).'
+            error_log_message += ' "/proc/sys/kernel/perf_event_paranoid" set to (0 or -1).'
             are_sufficient_privileges = False
 
     if are_sufficient_privileges is not True:

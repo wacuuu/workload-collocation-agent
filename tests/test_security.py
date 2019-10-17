@@ -36,19 +36,19 @@ def test_privileges_failed_capget(mock_geteuid, mock_capget):
         'use_cgroup, use_resctrl, use_perf, expected_log', [
             (True, True, True,
              'Insufficient privileges! For unprivileged user '
-             'it is needed to have:\nCAP_DAC_OVERRIDE set.\nCAP_SETUID and SECBIT_NO_SETUID_FIXUP '
-             'set.\n"/proc/sys/kernel/perf_event_paranoid" set to (-1).'),
+             'it is needed to have: CAP_DAC_OVERRIDE set. CAP_SETUID and SECBIT_NO_SETUID_FIXUP '
+             'set. "/proc/sys/kernel/perf_event_paranoid" set to (0 or -1).'),
             (False, True, True,
              'Insufficient privileges! For unprivileged user '
-             'it is needed to have:\nCAP_SETUID and SECBIT_NO_SETUID_FIXUP set.'
-             '\n"/proc/sys/kernel/perf_event_paranoid" set to (-1).'),
+             'it is needed to have: CAP_SETUID and SECBIT_NO_SETUID_FIXUP set.'
+             ' "/proc/sys/kernel/perf_event_paranoid" set to (0 or -1).'),
             (True, False, True,
              'Insufficient privileges! For unprivileged user '
-             'it is needed to have:\nCAP_DAC_OVERRIDE set.'
-             '\n"/proc/sys/kernel/perf_event_paranoid" set to (-1).'),
+             'it is needed to have: CAP_DAC_OVERRIDE set.'
+             ' "/proc/sys/kernel/perf_event_paranoid" set to (0 or -1).'),
             (True, True, False,
              'Insufficient privileges! For unprivileged user '
-             'it is needed to have:\nCAP_DAC_OVERRIDE set.\nCAP_SETUID and SECBIT_NO_SETUID_FIXUP '
+             'it is needed to have: CAP_DAC_OVERRIDE set. CAP_SETUID and SECBIT_NO_SETUID_FIXUP '
              'set.'),
             ])
 def test_privileges_failed(mock_read_paranoid, mock_get_securebits, mock_get_capabilities,
@@ -88,7 +88,7 @@ def test_privileges_failed_no_cap_dac_override(mock_read_paranoid, mock_get_secu
 
     mock_log.assert_called_with(
              'Insufficient privileges! For unprivileged user '
-             'it is needed to have:\nCAP_DAC_OVERRIDE set.')
+             'it is needed to have: CAP_DAC_OVERRIDE set.')
 
 
 @patch('wca.security.log.error')
@@ -102,7 +102,7 @@ def test_privileges_failed_no_cap_setuid_fixup_bit(mock_read_paranoid, mock_get_
 
     mock_log.assert_called_with(
              'Insufficient privileges! For unprivileged user '
-             'it is needed to have:\nCAP_SETUID and SECBIT_NO_SETUID_FIXUP set.')
+             'it is needed to have: CAP_SETUID and SECBIT_NO_SETUID_FIXUP set.')
 
 
 @patch('wca.security.log.error')
@@ -116,7 +116,7 @@ def test_privileges_failed_cap_setuid_no_fixup_bit(mock_read_paranoid, mock_get_
 
     mock_log.assert_called_with(
              'Insufficient privileges! For unprivileged user '
-             'it is needed to have:\nCAP_SETUID and SECBIT_NO_SETUID_FIXUP set.')
+             'it is needed to have: CAP_SETUID and SECBIT_NO_SETUID_FIXUP set.')
 
 
 @patch('wca.security.log.error')
@@ -130,7 +130,7 @@ def test_privileges_failed_perf_event_paranoid_set(mock_read_paranoid, mock_get_
 
     mock_log.assert_called_with(
              'Insufficient privileges! For unprivileged user '
-             'it is needed to have:\n"/proc/sys/kernel/perf_event_paranoid" set to (-1).')
+             'it is needed to have: "/proc/sys/kernel/perf_event_paranoid" set to (0 or -1).')
 
 
 def test_privileges_raise_value_error_if_no_argument_is_true():
