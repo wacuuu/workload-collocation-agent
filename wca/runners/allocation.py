@@ -238,6 +238,9 @@ class AllocationRunner(MeasurementRunner):
 
         self._remove_all_resctrl_groups = remove_all_resctrl_groups
 
+        # Allocator need permission for writing to cgroups.
+        self._write_to_cgroup = True
+
     def _initialize_rdt(self) -> bool:
         platform, _, _ = platforms.collect_platform_information()
 
