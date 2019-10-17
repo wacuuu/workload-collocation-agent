@@ -105,7 +105,7 @@ def test_wca_metrics(workload_name):
         'queried prometheus for SLI metrics produced by workload ' \
         '{} and did not received any'.format(workload_name)
 
-    cycles_query = _build_prometheus_url(prometheus, 'cycles',
+    cycles_query = _build_prometheus_url(prometheus, 'task__cycles',
                                          tags, 1800, time())
     cycles_metrics = _fetch_metrics(cycles_query)
     assert len(cycles_metrics['data']['result']) > 0, \

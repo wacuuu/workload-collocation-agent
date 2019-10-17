@@ -184,26 +184,24 @@ class MeasurementRunner(Runner):
         self._last_iteration = time.time()
 
     def _initialize(self) -> Optional[int]:
-        """Check privileges, RDT availability and prepare internal state.
+        """Check RDT availability, privileges and prepare internal state.
         Can return error code that should stop Runner.
         """
-        if not security.are_privileges_sufficient():
-            log.error("Insufficient privileges! "
-                      "Impossible to use perf_event_open/resctrl subsystems. "
-                      "For unprivileged user it is needed to: "
-                      "adjust %s (set to -1), "
-                      "has CAP_DAC_OVERRIDE and CAP_SETUID capabilities and"
-                      "SECBIT_NO_SETUID_FIXUP secure bit set.", security.PARANOID_FILE)
-            return 1
 
         # Initialization (auto discovery Intel RDT features).
-
         rdt_available = resctrl.check_resctrl()
         if self._rdt_enabled is None:
             self._rdt_enabled = rdt_available
             log.info('RDT enabled (auto configuration): %s', self._rdt_enabled)
         elif self._rdt_enabled is True and not rdt_available:
             log.error('RDT explicitly enabled but not available - exiting!')
+            return 1
+
+        use_cgroup = True  # WCA gather cgroup metrics by default.
+        use_resctrl = self._rdt_enabled
+        use_perf = len(self._event_names) > 0
+
+        if not security.are_privileges_sufficient(use_cgroup, use_resctrl, use_perf):
             return 1
 
         if self._rdt_enabled:
