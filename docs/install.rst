@@ -99,11 +99,11 @@ Running WCA as non-root user
 
 WCA processes should not be run with root privileges. Following privileges are needed to run WCA as non-root user:
 
-- `CAP_DAC_OVERRIDE` - to allow non-root use cgroups filesystem.
+- `CAP_DAC_OVERRIDE`_ - to allow non-root use cgroups filesystem.
 
-- `CAP_SETUID` capability and `SECBIT_NO_SETUID_FIXUP` secure bit set - to allow non-root use resctrl filesystem.  
+- `CAP_SETUID`_ capability and `SECBIT_NO_SETUID_FIXUP`_ secure bit set - to allow non-root use resctrl filesystem.  
 
-- ``/proc/sys/kernel/perf_event_paranoid`` - `content of the file` must be set to ``0`` or ``-1`` to allow non-root
+- ``/proc/sys/kernel/perf_event_paranoid`` - `content of the file`_ must be set to ``0`` or ``-1`` to allow non-root
   user to collect all the necessary perf event information.
 
 If it is impossible or undesired to run WCA with privileges outlined above, then you must add ``-0`` (or its
