@@ -23,7 +23,7 @@ import requests
 from dataclasses import dataclass, field
 
 from wca import logger
-from wca.config import assure_type, Numeric, Url, Str
+from wca.config import assure_type, Numeric, Url, Str, Path
 from wca.metrics import MetricName
 from wca.nodes import Node, Task, TaskId, TaskSynchronizationException
 from wca.security import SSL, HTTPSAdapter
@@ -32,10 +32,8 @@ DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.CACHE_M
 
 log = logging.getLogger(__name__)
 
-SERVICE_HOST_ENV_NAME = "KUBERNETES_SERVICE_HOST"
-SERVICE_PORT_ENV_NAME = "KUBERNETES_SERVICE_PORT"
 SERVICE_TOKEN_FILENAME = "/var/run/secrets/kubernetes.io/serviceaccount/token"  # nosec
-SERVICE_CERT_FILENAME = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+SERVICE_CERT_FILENAME = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"  # nosec
 
 
 @dataclass
@@ -90,6 +88,10 @@ class KubernetesNode(Node):
 
     ssl: Optional[SSL] = None
 
+    # Default path is using by pods. You can override it to use wca outside pod.
+    client_token_path: Optional[Path(absolute=True, mode=os.R_OK)] = SERVICE_TOKEN_FILENAME
+    server_cert_ca_path: Optional[Path(absolute=True, mode=os.R_OK)] = SERVICE_CERT_FILENAME
+
     # By default use localhost, however kubelet may not listen on it.
     kubelet_enabled: bool = False
     kubelet_endpoint: Url = 'https://127.0.0.1:10250'
@@ -106,27 +108,33 @@ class KubernetesNode(Node):
 
     def _request_kubeapi(self):
         kubeapi_endpoint = "https://{}:{}".format(self.kubeapi_host, self.kubeapi_port)
-        full_url = urljoin(kubeapi_endpoint, "/api/v1/namespaces/default/pods")
-
         log.debug("Created kubeapi endpoint %s", kubeapi_endpoint)
 
-        with pathlib.Path(SERVICE_TOKEN_FILENAME).open() as f:
+        with pathlib.Path(self.client_token_path).open() as f:
             service_token = f.read()
 
-        r = requests.get(
-            full_url,
-            headers={
-                "Authorization": "Bearer {}".format(service_token)
-            },
-            timeout=self.timeout,
-            verify=SERVICE_CERT_FILENAME
-        )
+        pod_list_from_all_namespaces = []
+        for namespace in self.monitored_namespaces:
+            full_url = urljoin(kubeapi_endpoint, "/api/v1/namespaces/{}/pods".format(namespace))
 
-        if not r.ok:
-            log.error('%i %s - %s', r.status_code, r.reason, r.raw)
-        r.raise_for_status()
+            r = requests.get(
+                full_url,
+                headers={
+                    "Authorization": "Bearer {}".format(service_token)
+                },
+                timeout=self.timeout,
+                verify=self.server_cert_ca_path
+            )
 
-        return r.json()
+            if not r.ok:
+                log.error('An unexpected error occurred for namespace "%s": %i %s - %s',
+                          namespace, r.status_code, r.reason, r.raw)
+            r.raise_for_status()
+
+            pod_list_from_namespace = r.json().get('items')
+            pod_list_from_all_namespaces.extend(pod_list_from_namespace)
+
+        return pod_list_from_all_namespaces
 
     def _request_kubelet(self):
         PODS_PATH = '/pods'
@@ -151,7 +159,7 @@ class KubernetesNode(Node):
             log.error('%i %s - %s', r.status_code, r.reason, r.raw)
         r.raise_for_status()
 
-        return r.json()
+        return r.json().get('items')
 
     def get_tasks(self) -> List[Task]:
         """Returns only running tasks."""
@@ -169,7 +177,7 @@ class KubernetesNode(Node):
             raise TaskSynchronizationException('timeout: %s' % e) from e
 
         tasks = []
-        for pod in podlist_json_response.get('items'):
+        for pod in podlist_json_response:
             container_statuses = pod.get('status').get('containerStatuses')
 
             # Kubeapi returns all pods in cluster
