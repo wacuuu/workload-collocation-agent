@@ -86,7 +86,7 @@ def test_get_tasks(get_mock):
 def test_get_tasks_kubeapi(get_mock, pathlib_open_mock):
     node = KubernetesNode(node_ip="100.64.176.37")
     tasks = node.get_tasks()
-    assert len(tasks) == 12
+    assert len(tasks) == 11
 
 
 @patch(
