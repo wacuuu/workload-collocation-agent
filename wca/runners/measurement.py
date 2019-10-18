@@ -34,7 +34,7 @@ from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementExcept
 from wca.nodes import Task
 from wca.nodes import TaskSynchronizationException
 from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
-    PMUNotAvailable
+    PMUNotAvailable, UncoreDerivedMetricsGenerator
 from wca.platforms import CPUCodeName
 from wca.profiling import profiler
 from wca.runners import Runner
@@ -231,6 +231,8 @@ class MeasurementRunner(Runner):
         return None
 
     def _init_uncore_pmu(self, enable_derived_metrics, enable_perf_pmu):
+        self._uncore_pmu = None
+        self._uncore_get_measurements = lambda: {}
         if enable_perf_pmu:
             try:
                 cpus, pmu_events = _discover_pmu_uncore_imc_config(
@@ -242,18 +244,20 @@ class MeasurementRunner(Runner):
                             'Not collecting perf pmu metrics! '
                             'error={}'.format(e))
                 return
+
+            # Prepare uncore object
             self._uncore_pmu = UncorePerfCounters(
                 cpus=cpus,
                 pmu_events=pmu_events
             )
-        else:
-            self._uncore_pmu = None
-            self._uncore_get_measurements = lambda: {}
 
-        if enable_derived_metrics:
-            self._uncore_get_measurements = self._uncore_derived_metrics.get_measurements
-        elif enable_perf_pmu:
-            self._uncore_get_measurements = self._uncore_pmu.get_measurements
+            # Wrap with derived..
+            if enable_derived_metrics:
+                self._uncore_derived_metrics = UncoreDerivedMetricsGenerator(
+                    self._uncore_pmu.get_measurements)
+                self._uncore_get_measurements = self._uncore_derived_metrics.get_measurements
+            else:
+                self._uncore_get_measurements = self._uncore_pmu.get_measurements
 
     def _iterate(self):
         iteration_start = time.time()
