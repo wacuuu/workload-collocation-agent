@@ -19,7 +19,7 @@ from wca import nodes, storage, detectors
 from wca.config import Numeric, Str, assure_type
 from wca.detectors import convert_anomalies_to_metrics, \
     update_anomalies_metrics_with_task_information, Anomaly
-from wca.metrics import Metric, MetricType, BaseGeneratorFactory
+from wca.metrics import Metric, MetricType
 from wca.profiling import profiler
 from wca.runners.measurement import MeasurementRunner, TaskLabelGenerator, DEFAULT_EVENTS
 from wca.storage import MetricPackage, DEFAULT_STORAGE
@@ -90,20 +90,16 @@ class DetectionRunner(MeasurementRunner):
             extra_labels: Dict[Str, Str] = None,
             event_names: Optional[List[str]] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
+            enable_perf_pmu: bool = True,
             task_label_generators: Dict[str, TaskLabelGenerator] = None,
             wss_reset_interval: int = 0,
-            task_derived_metrics_generators_factory: BaseGeneratorFactory = None,
-            platform_derived_metrics_generators_factory: BaseGeneratorFactory = None,
     ):
-        tdmgf = task_derived_metrics_generators_factory
-        pdmgf = platform_derived_metrics_generators_factory
         super().__init__(node, metrics_storage,
                          action_delay, rdt_enabled,
                          extra_labels, event_names,
-                         enable_derived_metrics, task_label_generators,
-                         wss_reset_interval=wss_reset_interval,
-                         task_derived_metrics_generators_factory=tdmgf,
-                         platform_derived_metrics_generators_factory=pdmgf
+                         enable_derived_metrics, enable_perf_pmu,
+                         task_label_generators,
+                         wss_reset_interval=wss_reset_interval
                          )
         self._detector = detector
 

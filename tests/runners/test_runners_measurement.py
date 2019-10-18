@@ -112,7 +112,7 @@ def test_build_tasks_metrics(tasks_labels, tasks_measurements, expected_metrics)
 @patch('wca.cgroups.Cgroup')
 @patch('wca.perf.PerfCounters')
 @patch('time.time', return_value=12345.6)
-@patch('wca.containers.Container.get_measurements', Mock(return_value={'cpu_usage': 13}))
+@patch('wca.containers.Container.get_measurements', Mock(return_value={'task__cpu_usage': 13}))
 def test_prepare_tasks_data(*mocks):
     containers = {
         task('/t1', labels={'label_key': 'label_value'}, resources={'cpu': 3}):
@@ -121,13 +121,17 @@ def test_prepare_tasks_data(*mocks):
 
     tasks_measurements, tasks_resources, tasks_labels = _prepare_tasks_data(containers)
 
-    assert tasks_measurements == {'t1_task_id': {'cpu_usage': 13, 'last_seen': 12345.6, 'up': 1}}
+    assert tasks_measurements == {'t1_task_id':
+                                  {'last_seen': 12345.6,
+                                   'task__cpu_usage': 13,
+                                   'up': 1}}
     assert tasks_resources == {'t1_task_id': {'cpu': 3}}
     assert tasks_labels == {'t1_task_id': {'label_key': 'label_value'}}
 
 
 @patch('wca.cgroups.Cgroup')
-@patch('wca.resctrl.ResGroup.get_measurements', side_effect=MissingMeasurementException())
+@patch('wca.resctrl.ResGroup.get_measurements',
+       side_effect=MissingMeasurementException())
 @patch('wca.perf.PerfCounters')
 def test_prepare_task_data_resgroup_not_found(*mocks):
     containers = {
@@ -180,7 +184,7 @@ def test_append_additional_labels_to_tasks__generate_returns_None(log_mock):
 
 @patch('wca.runners.measurement.log')
 def test_append_additional_labels_to_tasks__overwriting_label(log_mock):
-    """Should not ovewrite existing previously label."""
+    """Should not overwrite existing previously label."""
     task1 = task('/t1', labels={'source_key': '__val__'})
     append_additional_labels_to_tasks(
         {'source_key': TaskLabelRegexGenerator('__(.*)__', '\\1', 'non_existing_key')},

@@ -24,7 +24,8 @@ from wca import perf
 from wca import resctrl
 from wca.allocators import AllocationConfiguration, TaskAllocations
 from wca.logger import TRACE
-from wca.metrics import Measurements, merge_measurements, DefaultDerivedMetricsGenerator
+from wca.metrics import Measurements, merge_measurements, \
+    DefaultDerivedMetricsGenerator, MetricName
 from wca.nodes import Task
 from wca.platforms import Platform
 from wca.profiling import profiler
@@ -103,12 +104,12 @@ class ContainerSet(ContainerInterface):
     def __init__(self,
                  cgroup_path: str, cgroup_paths: List[str],
                  platform: Platform,
-                 allocation_configuration: Optional[AllocationConfiguration] = None,
+                 allocation_configuration: Optional[
+                     AllocationConfiguration] = None,
                  resgroup: ResGroup = None,
                  event_names: List[str] = None,
                  enable_derived_metrics: bool = False,
-                 wss_reset_interval: int = 0,
-                 task_derived_metrics_generators_factory=None,
+                 wss_reset_interval: int = 0
                  ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
@@ -132,12 +133,12 @@ class ContainerSet(ContainerInterface):
                 allocation_configuration=allocation_configuration,
                 event_names=event_names,
                 enable_derived_metrics=enable_derived_metrics,
-                wss_reset_interval=wss_reset_interval,
-                task_derived_metrics_generators_factory=task_derived_metrics_generators_factory,
+                wss_reset_interval=wss_reset_interval
             )
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
-        return [container.get_cgroup() for container in self._subcontainers.values()]
+        return [container.get_cgroup() for container in
+                self._subcontainers.values()]
 
     def set_resgroup(self, resgroup: ResGroup):
         self._resgroup = resgroup
@@ -163,7 +164,8 @@ class ContainerSet(ContainerInterface):
     def sync(self):
         """Called every run iteration to keep pids of cgroup and resctrl in sync."""
         if self._platform.rdt_information:
-            self._resgroup.add_pids(pids=self.get_pids(), mongroup_name=self._name)
+            self._resgroup.add_pids(pids=self.get_pids(),
+                                    mongroup_name=self._name)
 
     def get_measurements(self) -> Measurements:
         measurements = dict()
@@ -171,7 +173,8 @@ class ContainerSet(ContainerInterface):
         # Merge cgroup and perf_counters measurements. As we set rdt_enabled to False
         #   for subcontainers, it will ignore rdt measurements.
         measurements_list: List[Measurements] = [container.get_measurements()
-                                                 for container in self._subcontainers.values()]
+                                                 for container in
+                                                 self._subcontainers.values()]
 
         merged_measurements = merge_measurements(measurements_list)
         measurements.update(merged_measurements)
@@ -183,7 +186,8 @@ class ContainerSet(ContainerInterface):
                 'resgroup should be set, when rdt_information and monitoring is enabled!'
             measurements.update(
                 self._resgroup.get_measurements(
-                    self._name, self._platform.rdt_information.rdt_mb_monitoring_enabled,
+                    self._name,
+                    self._platform.rdt_information.rdt_mb_monitoring_enabled,
                     self._platform.rdt_information.rdt_cache_monitoring_enabled))
 
         return measurements
@@ -216,10 +220,9 @@ class Container(ContainerInterface):
                  resgroup: ResGroup = None,
                  allocation_configuration:
                  Optional[AllocationConfiguration] = None,
-                 event_names: List[str] = None,
+                 event_names: List[MetricName] = None,
                  enable_derived_metrics: bool = False,
-                 wss_reset_interval: int = 0,
-                 task_derived_metrics_generators_factory=None,
+                 wss_reset_interval: int = 0
                  ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
@@ -244,21 +247,18 @@ class Container(ContainerInterface):
                 self._cgroup_path,
                 event_names=event_names,
                 platform=platform)
+            if enable_derived_metrics:
+                self._derived_metrics_generator = \
+                    DefaultDerivedMetricsGenerator(self.get_measurements)
         else:
             self._perf_counters = None
+            self._derived_metrics_generator = None
 
-        self._derived_metrics_generator = None
-        if enable_derived_metrics:
-            task_derived_metrics_generators_factory = task_derived_metrics_generators_factory \
-                                                      or DefaultDerivedMetricsGenerator
-            self._derived_metrics_generator = task_derived_metrics_generators_factory.create(
-                self._get_measurements)
-
-    def get_measurements(self) -> Measurements:
-        if self._derived_metrics_generator is not None:
-            return self._derived_metrics_generator.get_measurements()
-        else:
-            return self._get_measurements()
+        def get_measurements(self) -> Measurements:
+            if self._derived_metrics_generator is not None:
+                return self._derived_metrics_generator.get_measurements()
+            else:
+                return self.get_measurements()
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
         """Returns empty list as Container class cannot have subcontainers -
@@ -286,9 +286,10 @@ class Container(ContainerInterface):
     def sync(self):
         """Called every run iteration to keep pids of cgroup and resctrl in sync."""
         if self._platform.rdt_information:
-            self._resgroup.add_pids(self._cgroup.get_pids(), mongroup_name=self._name)
+            self._resgroup.add_pids(self._cgroup.get_pids(),
+                                    mongroup_name=self._name)
 
-    def _get_measurements(self) -> Measurements:
+    def get_measurements(self) -> Measurements:
         # Cgroup measurements
         cgroup_measurements = self._cgroup.get_measurements()
         # Perf events measurements
@@ -304,7 +305,8 @@ class Container(ContainerInterface):
 
             rdt_measurements = \
                 self._resgroup.get_measurements(
-                    self._name, self._platform.rdt_information.rdt_mb_monitoring_enabled,
+                    self._name,
+                    self._platform.rdt_information.rdt_mb_monitoring_enabled,
                     self._platform.rdt_information.rdt_cache_monitoring_enabled)
         else:
             rdt_measurements = {}
@@ -347,8 +349,7 @@ class ContainerManager:
     def __init__(self, platform: Platform,
                  allocation_configuration: Optional[AllocationConfiguration],
                  event_names: List[str], enable_derived_metrics: bool = False,
-                 wss_reset_interval: int = 0,
-                 task_derived_metrics_generators_factory=None,
+                 wss_reset_interval: int = 0
                  ):
         self.containers: Dict[Task, ContainerInterface] = {}
         self._platform = platform
@@ -356,14 +357,12 @@ class ContainerManager:
         self._event_names = event_names
         self._enable_derived_metrics = enable_derived_metrics
         self._wss_reset_interval = wss_reset_interval
-        self._task_derived_metrics_generators_factory = task_derived_metrics_generators_factory
 
     def _create_container(self, task: Task) -> ContainerInterface:
         """Check whether the task groups multiple containers,
            is so use ContainerSet class, otherwise Container class.
            ContainerSet shares interface with Container."""
         if len(task.subcgroups_paths):
-            tdmgf = self._task_derived_metrics_generators_factory
             container = ContainerSet(
                 cgroup_path=task.cgroup_path,
                 cgroup_paths=task.subcgroups_paths,
@@ -372,10 +371,9 @@ class ContainerManager:
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
                 wss_reset_interval=self._wss_reset_interval,
-                task_derived_metrics_generators_factory=tdmgf
+
             )
         else:
-            tdmgf = self._task_derived_metrics_generators_factory
             container = Container(
                 cgroup_path=task.cgroup_path,
                 platform=self._platform,
@@ -383,12 +381,12 @@ class ContainerManager:
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
                 wss_reset_interval=self._wss_reset_interval,
-                task_derived_metrics_generators_factory=tdmgf
             )
         return container
 
     @profiler.profile_duration('sync_containers_state')
-    def sync_containers_state(self, tasks: List[Task]) -> Dict[Task, ContainerInterface]:
+    def sync_containers_state(self, tasks: List[Task]) -> Dict[
+            Task, ContainerInterface]:
         """Syncs state of ContainerManager with a system by removing orphaned containers,
         and creating containers for newly arrived tasks, and synchronizing containers' state.
 
@@ -407,7 +405,8 @@ class ContainerManager:
         if containers_to_cleanup:
             log.debug('sync_containers_state: cleaning up %d containers',
                       len(containers_to_cleanup))
-            log.log(logger.TRACE, 'sync_containers_state: containers_to_cleanup=%r',
+            log.log(logger.TRACE,
+                    'sync_containers_state: containers_to_cleanup=%r',
                     containers_to_cleanup)
 
             # Clean up and remove orphaned containers.
@@ -426,7 +425,8 @@ class ContainerManager:
 
         if new_tasks:
             log.debug('Found %d new tasks', len(new_tasks))
-            log.log(logger.TRACE, 'sync_containers_state: new_tasks=%r', new_tasks)
+            log.log(logger.TRACE, 'sync_containers_state: new_tasks=%r',
+                    new_tasks)
 
         # Prepare state of currently assigned resgroups
         # and remove some orphaned resgroups.
@@ -460,14 +460,16 @@ class ContainerManager:
         for container in self.containers.values():
             if self._platform.rdt_information:
                 if container.get_name() in container_name_to_ctrl_group:
-                    resgroup_name = container_name_to_ctrl_group[container.get_name()]
+                    resgroup_name = container_name_to_ctrl_group[
+                        container.get_name()]
                     container.set_resgroup(ResGroup(name=resgroup_name))
                 else:
                     # Every newly detected container is first assigned to the root group.
                     container.set_resgroup(ResGroup(name=''))
             container.sync()
 
-        log.log(logger.TRACE, 'sync_containers_state: containers=%r', self.containers)
+        log.log(logger.TRACE, 'sync_containers_state: containers=%r',
+                self.containers)
 
         return self.containers
 
@@ -491,13 +493,16 @@ def _find_new_and_dead_tasks(
     - list of tasks to start watching
     - orphaned containers to clean up
     """
-    discovered_task_cgroup_paths = {task.cgroup_path for task in discovered_tasks}
-    containers_cgroup_paths = {container.get_cgroup_path() for container in known_containers}
+    discovered_task_cgroup_paths = {task.cgroup_path for task in
+                                    discovered_tasks}
+    containers_cgroup_paths = {container.get_cgroup_path() for container in
+                               known_containers}
 
     # Filter out containers which are still running according to Mesos agent.
     # In other words pick orphaned containers.
     containers_to_delete = [container for container in known_containers
-                            if container.get_cgroup_path() not in discovered_task_cgroup_paths]
+                            if
+                            container.get_cgroup_path() not in discovered_task_cgroup_paths]
 
     # Filter out tasks which are monitored using "Container abstraction".
     # In other words pick new, not yet monitored tasks.

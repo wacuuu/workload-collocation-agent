@@ -35,8 +35,8 @@ from wca import storage_http
 from wca.extra import static_node
 from wca.extra import numa_allocator
 from wca import security
-from wca.metrics import DefaultTaskDerivedMetricsGeneratorFactory
-from wca.perf_pmu import DefaultPlatformDerivedMetricsGeneratorsFactory
+from wca.metrics import DefaultDerivedMetricsGenerator
+from wca.perf_pmu import UncoreDerivedMetricsGenerator
 
 
 def register_components(extra_components: List[str]):
@@ -59,8 +59,8 @@ def register_components(extra_components: List[str]):
     config.register(security.SSL)
     config.register(TaskLabelRegexGenerator)
     config.register(aep_detector.AEPDetector)
-    config.register(DefaultTaskDerivedMetricsGeneratorFactory)
-    config.register(DefaultPlatformDerivedMetricsGeneratorsFactory)
+    config.register(DefaultDerivedMetricsGenerator)
+    config.register(UncoreDerivedMetricsGenerator)
 
     for component in extra_components:
         # Load external class ignored its requirements.
