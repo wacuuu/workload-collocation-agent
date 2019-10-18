@@ -215,10 +215,10 @@ def _get_task_memory_limit(task, total):
 
 def _get_numa_node_preferences(task_measurements, platform: Platform) -> Dict[int, float]:
     ret = {node_id: 0 for node_id in range(0, platform.numa_nodes)}
-    if MetricName.MEM_NUMA_STAT_PER_TASK not in task_measurements:
+    if MetricName.MEM_NUMA_STAT_PER_TASK in task_measurements:
         metrics_val_sum = sum(task_measurements[MetricName.MEM_NUMA_STAT_PER_TASK].values())
         for node_id, metric_val in task_measurements[MetricName.MEM_NUMA_STAT_PER_TASK].items():
-            ret[node_id] = metric_val / max(1, metrics_val_sum)
+            ret[int(node_id)] = metric_val / max(1, metrics_val_sum)
     else:
         log.warning('{} metric not available'.format(MetricName.MEM_NUMA_STAT_PER_TASK))
     return ret
