@@ -4,22 +4,19 @@ loggers:
   #"wca.platforms": "debug"
 runner: !AllocationRunner
   action_delay: 5
-#  node: !StaticNode
-#    require_pids: true  # This will ignore cgroups without tasks - no more empty measurements.
-#    tasks:
-#    - specjbb2015/Group1
-#    - specjbb2015/Group2
-#    - specjbb2015/Group3
-#    - specjbb2015/Group4
-#    - specjbb2015/Group5
-#    - specjbb2015/Group6
-#    - specjbb2015/Group7
-#    - specjbb2015/Group8
-#    - specjbb2015/Group9
-#    - specjbb2015/controller
-  node: !MesosNode
-    mesos_agent_endpoint: 'http://127.0.0.1:5051'
-    timeout: 5
+  node: !StaticNode
+    require_pids: true  # This will ignore cgroups without tasks - no more empty measurements.
+    tasks:
+    - specjbb2015/Group1
+    - specjbb2015/Group2
+    - specjbb2015/Group3
+    - specjbb2015/Group4
+    - specjbb2015/Group5
+    - specjbb2015/Group6
+    - specjbb2015/Group7
+    - specjbb2015/Group8
+    - specjbb2015/Group9
+    - specjbb2015/controller
 
 #  allocator: !NUMAAllocator
   allocator: !NOPAllocator

@@ -1,0 +1,42 @@
+loggers:
+#  "wca.runners.measurement": "trace"
+  "wca.extra.numa_allocator": "info"
+  #"wca.platforms": "debug"
+runner: !AllocationRunner
+  action_delay: 5
+  node: !MesosNode
+    mesos_agent_endpoint: 'http://127.0.0.1:5051'
+    timeout: 5
+
+#  allocator: !NUMAAllocator
+  allocator: !NOPAllocator
+#  event_names: []  # if uncommented disables metrics from perf event subsystem
+  event_names:  # if uncommented disables metrics from perf event subsystem
+  - instructions
+  - cycles
+  - cache_misses
+#  - cache_references
+  - stalls_mem_load
+  - mem_inst_retired_all_loads__rd081
+  - mem_inst_retired_all_stores__rd082
+  enable_derived_metrics: true
+  #rdt_enabled: false  # force RDT disabled, by default is auto detected
+
+  task_label_generators:
+    aurora_instance: !TaskLabelRegexGenerator
+      pattern: '.*-(\d+)-.{36}'
+      repl: '\1'  # first match group
+      source: 'task_id' #default
+
+  # Metrics to files
+  metrics_storage: !LogStorage
+    output_filename: 'metrics.prom'
+    overwrite: true
+  allocations_storage: !LogStorage
+    output_filename: 'allocations.prom'
+    overwrite: true
+  anomalies_storage: !LogStorage
+    output_filename: /dev/null
+
+  extra_labels:
+    node: !Env HOSTNAME
