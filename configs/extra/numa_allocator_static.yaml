@@ -16,9 +16,6 @@ runner: !AllocationRunner
     - specjbb2015/Group7
     - specjbb2015/Group8
     - specjbb2015/Group9
-    - specjbb2015/controller
-
-#  allocator: !NUMAAllocator
   allocator: !NOPAllocator
 #  event_names: []  # if uncommented disables metrics from perf event subsystem
   event_names:  # if uncommented disables metrics from perf event subsystem

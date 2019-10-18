@@ -7,8 +7,6 @@ runner: !AllocationRunner
   node: !MesosNode
     mesos_agent_endpoint: 'http://127.0.0.1:5051'
     timeout: 5
-
-#  allocator: !NUMAAllocator
   allocator: !NOPAllocator
 #  event_names: []  # if uncommented disables metrics from perf event subsystem
   event_names:  # if uncommented disables metrics from perf event subsystem
