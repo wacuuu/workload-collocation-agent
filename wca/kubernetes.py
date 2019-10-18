@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 
 from wca import logger
 from wca.config import assure_type, Numeric, Url, Str, Path
+from wca.cgroups import CgroupSubsystem
 from wca.metrics import MetricName
 from wca.nodes import Node, Task, TaskId, TaskSynchronizationException
 from wca.security import SSL, HTTPSAdapter
@@ -245,7 +246,11 @@ class KubernetesNode(Node):
         return tasks
 
 
-def _build_cgroup_path(cgroup_driver, qos, pod_id, container_id=''):
+class MissingCgroupException(Exception):
+    pass
+
+
+def _build_cgroup_path(cgroup_driver, qos: str, pod_id: str, container_id=''):
     """If cgroup for pod needed set container_id to empty string."""
     result: str = ""
     if cgroup_driver == CgroupDriverType.SYSTEMD:
@@ -255,10 +260,30 @@ def _build_cgroup_path(cgroup_driver, qos, pod_id, container_id=''):
                               container_id, "")
 
     elif cgroup_driver == CgroupDriverType.CGROUPFS:
-        result = os.path.join('/kubepods',
-                              '' if qos == 'guaranteed' else qos,
-                              'pod{}'.format(pod_id),
-                              container_id, "")
+        # Pod cgroup is same as pod_id.
+        # StaticPod cgroup is hash (metadata.annotations.kubernetes.io/config.hash)
+        # same as pod_id but without `-` characters.
+
+        pod_path = os.path.join('/kubepods',
+                                '' if qos == 'guaranteed' else qos,
+                                'pod{}'.format(pod_id))
+
+        cutted_pod_path = os.path.join('/kubepods',
+                                       '' if qos == 'guaranteed' else qos,
+                                       'pod{}'.format(pod_id.replace('-', '')))
+
+        if os.path.exists(CgroupSubsystem.CPU + pod_path):
+
+            result = os.path.join(pod_path, container_id, "")
+
+        elif os.path.exists(CgroupSubsystem.CPU + cutted_pod_path):
+
+            result = os.path.join(cutted_pod_path, container_id, "")
+
+        else:
+            raise MissingCgroupException(
+                    'There is no pod cgroup matching pod_id: {} !'.format(pod_id))
+
     # Remove last slash from path.
     if len(result) > 1 and result[-1] == '/':
         result = result[:-1]
