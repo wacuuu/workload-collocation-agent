@@ -30,12 +30,11 @@ from wca.containers import ContainerManager, Container
 from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, TaskResource
 from wca.logger import trace, get_logging_metrics, TRACE
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
-    BaseGeneratorFactory, DefaultTaskDerivedMetricsGeneratorFactory, \
     export_metrics_from_measurements
 from wca.nodes import Task
 from wca.nodes import TaskSynchronizationException
 from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
-    PMUNotAvailable, DefaultPlatformDerivedMetricsGeneratorsFactory
+    PMUNotAvailable
 from wca.platforms import CPUCodeName
 from wca.profiling import profiler
 from wca.runners import Runner
@@ -117,13 +116,10 @@ class MeasurementRunner(Runner):
             extra_labels: Dict[Str, Str] = None,
             event_names: List[str] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
+            enable_perf_pmu: bool = True,
             task_label_generators: Dict[str, TaskLabelGenerator] = None,
             _allocation_configuration: Optional[AllocationConfiguration] = None,
             wss_reset_interval: int = 0,
-            task_derived_metrics_generators_factory: BaseGeneratorFactory =
-            DefaultTaskDerivedMetricsGeneratorFactory(),
-            platform_derived_metrics_generators_factory: BaseGeneratorFactory =
-            DefaultPlatformDerivedMetricsGeneratorsFactory(),
     ):
 
         self._node = node
@@ -144,6 +140,7 @@ class MeasurementRunner(Runner):
         log.info('Enabling %i perf events: %s', len(self._event_names),
                  ', '.join(self._event_names))
         self._enable_derived_metrics = enable_derived_metrics
+        self._enable_perf_pmu = enable_perf_pmu
 
         # Default value for task_labels_generator.
         if task_label_generators is None:
@@ -165,9 +162,6 @@ class MeasurementRunner(Runner):
             TaskLabelResourceGenerator('cpus')
 
         self._wss_reset_interval = wss_reset_interval
-        self._task_derived_metrics_generators_factory = task_derived_metrics_generators_factory
-        self._platform_derived_metrics_generators_factory = \
-            platform_derived_metrics_generators_factory
 
         self._uncore_pmu = None
         self._write_to_cgroup = False
@@ -230,30 +224,35 @@ class MeasurementRunner(Runner):
             event_names=self._event_names,
             enable_derived_metrics=self._enable_derived_metrics,
             wss_reset_interval=self._wss_reset_interval,
-            task_derived_metrics_generators_factory=self._task_derived_metrics_generators_factory
         )
 
-        self._init_uncore_pmu(self._enable_derived_metrics)
+        self._init_uncore_pmu(self._enable_derived_metrics, self._enable_perf_pmu)
 
         return None
 
-    def _init_uncore_pmu(self, enable_derived_metrics):
-        try:
-            cpus, pmu_events = _discover_pmu_uncore_imc_config(UNCORE_IMC_EVENTS)
-        except PMUNotAvailable:
+    def _init_uncore_pmu(self, enable_derived_metrics, enable_perf_pmu):
+        if enable_perf_pmu:
+            try:
+                cpus, pmu_events = _discover_pmu_uncore_imc_config(
+                    UNCORE_IMC_EVENTS)
+            except PMUNotAvailable as e:
+                self._uncore_pmu = None
+                self._uncore_get_measurements = lambda: {}
+                log.warning('Perf pmu metrics requested, but not available. '
+                            'Not collecting perf pmu metrics! '
+                            'error={}'.format(e))
+                return
+            self._uncore_pmu = UncorePerfCounters(
+                cpus=cpus,
+                pmu_events=pmu_events
+            )
+        else:
             self._uncore_pmu = None
             self._uncore_get_measurements = lambda: {}
-            return
 
-        self._uncore_pmu = UncorePerfCounters(
-            cpus=cpus,
-            pmu_events=pmu_events
-        )
         if enable_derived_metrics:
-            self._uncore_derived_metrics = self._platform_derived_metrics_generators_factory.create(
-                self._uncore_pmu.get_measurements)
             self._uncore_get_measurements = self._uncore_derived_metrics.get_measurements
-        else:
+        elif enable_perf_pmu:
             self._uncore_get_measurements = self._uncore_pmu.get_measurements
 
     def _iterate(self):

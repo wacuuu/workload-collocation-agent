@@ -5,13 +5,12 @@ import os
 import time
 from collections import defaultdict
 from enum import Enum
-from typing import List, Dict, BinaryIO, Optional
+from typing import List, Dict, BinaryIO
 
 from dataclasses import dataclass
 
 from wca import perf_const as pc
-from wca.metrics import Measurements, BaseDerivedMetricsGenerator, BaseGeneratorFactory, \
-    EvalBasedMetricsGenerator
+from wca.metrics import Measurements, BaseDerivedMetricsGenerator
 from wca.perf import _perf_event_open, _create_file_from_fd, \
     _parse_event_groups, _aggregate_measurements, LIBC
 from wca.platforms import decode_listformat
@@ -50,10 +49,7 @@ def _create_event_attributes(pmu_type, disabled, event: Event):
                         pc.PERF_FORMAT_TOTAL_TIME_ENABLED |
                         pc.PERF_FORMAT_TOTAL_TIME_RUNNING |
                         pc.PERF_FORMAT_ID)
-    # attr.read_format = ( pc.PERF_FORMAT_TOTAL_TIME_ENABLED |
-    #                     pc.PERF_FORMAT_TOTAL_TIME_RUNNING )
 
-    # attr.flags = pc.AttrFlags.exclude_guest
     attr.flags = pc.AttrFlags.inherit
 
     if disabled:
@@ -99,7 +95,7 @@ class UncorePerfCounters:
     def cleanup(self):
         """Closes all opened file descriptors"""
         for pmu, _group_event_leader_files in self._group_event_leader_files_per_pmu.values():
-            for file in _group_event_leader_files:
+            for file in _group_event_leader_files.values():
                 file.close()
         for file in self._event_files:
             file.close()
@@ -216,18 +212,6 @@ class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
             measurements['dram_write_mb_per_second']
 
 
-@dataclass
-class DefaultPlatformDerivedMetricsGeneratorsFactory(BaseGeneratorFactory):
-    extra_metrics: Optional[Dict[str, str]] = None
-
-    def create(self, get_measurements):
-        uncore_generator = UncoreDerivedMetricsGenerator(get_measurements)
-        if self.extra_metrics:
-            return EvalBasedMetricsGenerator(uncore_generator.get_measurements, self.extra_metrics)
-        else:
-            return uncore_generator
-
-
 if __name__ == '__main__':
     cpus, pmu_events = _discover_pmu_uncore_imc_config(UNCORE_IMC_EVENTS)
 
@@ -236,11 +220,7 @@ if __name__ == '__main__':
         pmu_events=pmu_events
     )
 
-    g = DefaultPlatformDerivedMetricsGeneratorsFactory(
-        extra_metrics=dict(
-            rw_ratio='cas_count_read/cas_count_write'
-        )
-    ).create(upc.get_measurements)
+    g = UncoreDerivedMetricsGenerator(upc.get_measurements)
 
     while True:
         print(json.dumps(g.get_measurements(), indent=4))

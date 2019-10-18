@@ -210,6 +210,7 @@ class AllocationRunner(MeasurementRunner):
             remove_all_resctrl_groups: bool = False,
             event_names: Optional[List[str]] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
+            enable_perf_pmu: bool = True,
             task_label_generators: Dict[str, TaskLabelGenerator] = None,
             wss_reset_interval: int = 0,
     ):
@@ -219,6 +220,7 @@ class AllocationRunner(MeasurementRunner):
         super().__init__(node, metrics_storage, action_delay, rdt_enabled,
                          extra_labels, _allocation_configuration=self._allocation_configuration,
                          event_names=event_names, enable_derived_metrics=enable_derived_metrics,
+                         enable_perf_pmu=enable_perf_pmu,
                          task_label_generators=task_label_generators,
                          wss_reset_interval=wss_reset_interval)
 

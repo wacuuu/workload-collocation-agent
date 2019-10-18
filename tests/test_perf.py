@@ -66,7 +66,9 @@ def test_create_file_from_invalid_fd():
 ])
 def test_create_event_attributes_disabled_flag(disabled_flag, expected):
     assert perf._create_event_attributes(
-        metrics.MetricName.CYCLES, disabled_flag, CPUCodeName.SKYLAKE).flags == expected
+        metrics.MetricName.CYCLES,
+        disabled_flag,
+        cpu_code_name=CPUCodeName.UNKNOWN).flags == expected
 
 
 @pytest.mark.parametrize("raw_string,expected", [
@@ -348,7 +350,8 @@ def test_derived_metrics():
             MetricName.CACHE_REFERENCES: 50000,
         }
 
-    derived_metrics_generator = DefaultDerivedMetricsGenerator(get_measurements_func=gm_func)
+    derived_metrics_generator = DefaultDerivedMetricsGenerator(
+        get_measurements_func=gm_func)
 
     # First run, does not have enough information to generate those metrics.
 
