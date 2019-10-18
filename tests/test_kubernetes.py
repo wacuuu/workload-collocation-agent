@@ -19,7 +19,8 @@ from unittest.mock import patch
 
 from wca.config import ValidationError
 from wca.kubernetes import KubernetesNode, KubernetesTask, _calculate_pod_resources, \
-    _build_cgroup_path, are_all_tasks_of_single_qos, QOS_LABELNAME
+    _build_cgroup_path, are_all_tasks_of_single_qos, QOS_LABELNAME, \
+    MissingCgroupException
 from wca.nodes import TaskSynchronizationException
 from tests.testing import create_json_fixture_mock
 
@@ -41,7 +42,8 @@ def ktask(name, qos):
 
 
 @patch('requests.get', return_value=create_json_fixture_mock('kubernetes_get_state', __file__))
-def test_get_tasks(get_mock):
+@patch('os.path.exists', return_value=True)
+def test_get_tasks(mock_path_exists, get_mock):
     expected_tasks = [KubernetesTask(
         name='default/test',
         task_id='4d6a81df-3448-11e9-8e1d-246e96663c22',
@@ -83,7 +85,8 @@ def test_get_tasks(get_mock):
 
 @patch('requests.get', return_value=create_json_fixture_mock('kubeapi_res', __file__))
 @patch('pathlib.Path.open')
-def test_get_tasks_kubeapi(get_mock, pathlib_open_mock):
+@patch('os.path.exists', return_value=True)
+def test_get_tasks_kubeapi(mock_path_exists, get_mock, pathlib_open_mock):
     node = KubernetesNode(node_ip="100.64.176.37")
     tasks = node.get_tasks()
     assert len(tasks) == 11
@@ -101,7 +104,8 @@ def test_get_tasks_not_all_ready(get_mock):
 @patch(
     'requests.get',
     return_value=create_json_fixture_mock('kubelet_invalid_pods_response', __file__))
-def test_invalid_kubelet_response(get_mock):
+@patch('wca.kubernetes._build_cgroup_path', return_value="/mock_path")
+def test_invalid_kubelet_response(mock_path_exists, get_mock):
     node = KubernetesNode(kubelet_enabled=True)
     with pytest.raises(ValidationError):
         node.get_tasks()
@@ -139,7 +143,14 @@ def test_calculate_resources_multiple_containers():
 
 
 _POD_ID = '12345-67890'
+_STATIC_POD_ID = '09876-54321'
+_CUTTED_STATIC_POD_ID = '0987654321'
 
+
+def pod_cgroup_exists(pod_path):
+    if _POD_ID in pod_path or _CUTTED_STATIC_POD_ID in pod_path:
+        return True
+    return False
 
 @pytest.mark.parametrize('qos, expected_cgroup_path', (
         ('burstable', '/kubepods.slice/kubepods-burstable.slice/'
@@ -162,9 +173,29 @@ def test_find_cgroup_path_for_pod_systemd(qos, expected_cgroup_path):
         ('besteffort', '/kubepods/besteffort/pod12345-67890'),
 )
                          )
-def test_find_cgroup_path_pod_cgroupfs(qos, expected_cgroup_path):
+@patch('os.path.exists', side_effect=pod_cgroup_exists)
+def test_build_cgroup_path_pod_cgroupfs(mock_path_exists, qos, expected_cgroup_path):
     assert expected_cgroup_path == _build_cgroup_path(cgroup_driver='cgroupfs',
                                                       qos=qos, pod_id=_POD_ID)
+
+@pytest.mark.parametrize('qos, expected_cgroup_path', (
+        ('burstable', '/kubepods/burstable/pod0987654321'),
+        # Here we have exception, guaranteed pods are kept directly in kubepods cgroup.
+        ('guaranteed', '/kubepods/pod0987654321'),
+        ('besteffort', '/kubepods/besteffort/pod0987654321'),
+)
+                         )
+@patch('os.path.exists', side_effect=pod_cgroup_exists)
+def test_build_cgroup_path_static_pod_cgroupfs(mock_path_exists, qos, expected_cgroup_path):
+    assert expected_cgroup_path == _build_cgroup_path(cgroup_driver='cgroupfs',
+                                                      qos=qos, pod_id=_STATIC_POD_ID)
+
+
+@patch('os.path.exists', return_value=False)
+def test_raise_missing_cgroup_exception_build_cgroup_path_pod_cgroupfs(mock_path_exists):
+    with pytest.raises(MissingCgroupException):
+        _build_cgroup_path(cgroup_driver='cgroupfs',
+                           qos='burstable', pod_id=_STATIC_POD_ID)
 
 
 @pytest.mark.parametrize('tasks, expected_result', (
