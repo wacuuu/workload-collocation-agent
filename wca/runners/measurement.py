@@ -170,6 +170,7 @@ class MeasurementRunner(Runner):
             platform_derived_metrics_generators_factory
 
         self._uncore_pmu = None
+        self._write_to_cgroup = False
 
     @profiler.profile_duration(name='sleep')
     def _wait(self):
@@ -197,7 +198,7 @@ class MeasurementRunner(Runner):
             log.error('RDT explicitly enabled but not available - exiting!')
             return 1
 
-        use_cgroup = True  # WCA gather cgroup metrics by default.
+        use_cgroup = self._write_to_cgroup
         use_resctrl = self._rdt_enabled
         use_perf = len(self._event_names) > 0
 
