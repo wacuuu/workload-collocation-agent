@@ -166,16 +166,19 @@ class Platform:
 
     measurements: Measurements
 
+    static_information: Optional[Dict]
 
-# cached data about platform static information
+
 _platform_static_information = {}
 
 
 def get_platform_static_information():
     # RETURN MEMORY DIMM DETAILS based on lshw
     global _platform_static_information
-    if 'initialized' not in _platform_static_information:
-        # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
+    # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
+    if 'initialized' in _platform_static_information and \
+       _platform_static_information['initialized']:
+
         try:
             # nosec: B603. We deliberately use 'subprocess'. There is a permanent input.
             ipmctl_output = subprocess.check_output(  # nosec
@@ -224,7 +227,7 @@ def get_platform_static_information():
             log.warning('lshw unavailable (incorrect version or missing data), '
                         'cannot parse output, cannot read memory topology size!')
 
-    _platform_static_information['initialized'] = True
+        _platform_static_information['initialized'] = True
 
     return _platform_static_information
 
@@ -245,36 +248,34 @@ def create_metrics(platform: Platform) -> List[Metric]:
                type=MetricType.GAUGE, help=""),
     ])
 
-    platform_static_information = get_platform_static_information()
-
     # PMEM HW info r
-    if 'ram_dimm_count' in platform_static_information:
+    if 'ram_dimm_count' in platform.static_information:
         platform_metrics.extend([
             # RAM
             Metric(name=PLATFORM_PREFIX + 'dimm_count',
-                   value=platform_static_information['ram_dimm_count'],
+                   value=platform.static_information['ram_dimm_count'],
                    labels={'type': 'ram'},
                    type=MetricType.GAUGE, help=""),
             Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
-                   value=platform_static_information['ram_dimm_size'],
+                   value=platform.static_information['ram_dimm_size'],
                    labels={'type': 'ram'},
                    type=MetricType.GAUGE, help=""),
             # NVM
             Metric(name=PLATFORM_PREFIX + 'dimm_count',
-                   value=platform_static_information['nvm_dimm_count'],
+                   value=platform.static_information['nvm_dimm_count'],
                    labels={'type': 'nvm'},
                    type=MetricType.GAUGE, help=""),
             Metric(name=PLATFORM_PREFIX + 'dimm_total_size_bytes',
-                   value=platform_static_information['nvm_dimm_size'],
+                   value=platform.static_information['nvm_dimm_size'],
                    labels={'type': 'nvm'},
                    type=MetricType.GAUGE, help=""),
         ])
 
     # PMEM HW configuration
-    if 'memorymode_size' in platform_static_information:
+    if 'memorymode_size' in platform.static_information:
         platform_metrics.extend([
             Metric(name=PLATFORM_PREFIX + 'memory_mode_size_bytes',
-                   value=platform_static_information['memorymode_size'],
+                   value=platform.static_information['memorymode_size'],
                    type=MetricType.GAUGE, help=""),
         ])
 
@@ -521,6 +522,7 @@ def _collect_rdt_information() -> RDTInformation:
 
 @profiler.profile_duration(name='collect_platform_information')
 def collect_platform_information(rdt_enabled: bool = True,
+                                 gather_hw_mm_topology: bool = False,
                                  extra_platform_measurements: Optional[Measurements] = None) -> (
         Platform, List[Metric], Dict[str, str]):
     """Returns Platform information, metrics and common labels.
@@ -561,6 +563,11 @@ def collect_platform_information(rdt_enabled: bool = True,
                                  if extra_platform_measurements is not None
                                  else {})
 
+    if gather_hw_mm_topology:
+        platform_static_information = get_platform_static_information()
+    else:
+        platform_static_information = {}
+
     platform = Platform(
         sockets=no_of_sockets,
         cores=nr_of_cores,
@@ -574,6 +581,7 @@ def collect_platform_information(rdt_enabled: bool = True,
         rdt_information=rdt_information,
         node_cpus=parse_node_cpus(),
         measurements=platform_measurements,
+        static_information=platform_static_information,
     )
     assert len(platform_measurements[MetricName.CPU_USAGE_PER_CPU]) == platform.cpus, \
         "Inconsistency in cpu data returned by kernel"

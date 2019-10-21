@@ -87,6 +87,7 @@ class DetectionRunner(MeasurementRunner):
             anomalies_storage: storage.Storage = DEFAULT_STORAGE,
             action_delay: Numeric(0, 60) = 1.,
             rdt_enabled: Optional[bool] = None,
+            gather_hw_mm_topology: Optional[bool] = None,
             extra_labels: Dict[Str, Str] = None,
             event_names: Optional[List[str]] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
@@ -95,7 +96,7 @@ class DetectionRunner(MeasurementRunner):
             wss_reset_interval: int = 0,
     ):
         super().__init__(node, metrics_storage,
-                         action_delay, rdt_enabled,
+                         action_delay, rdt_enabled, gather_hw_mm_topology,
                          extra_labels, event_names,
                          enable_derived_metrics, enable_perf_pmu,
                          task_label_generators,

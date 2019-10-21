@@ -98,6 +98,8 @@ class MeasurementRunner(Runner):
             (defaults to 1 second)
         rdt_enabled: enables or disabled support for RDT monitoring
             (defaults to None(auto) based on platform capabilities)
+        gather_hw_mm_topology: gather hardware/memory topology based on lshw and ipmctl
+            (defaults to None)
         extra_labels: additional labels attached to every metrics
             (defaults to empty dict)
         event_names: perf counters to monitor
@@ -113,6 +115,7 @@ class MeasurementRunner(Runner):
             metrics_storage: storage.Storage = DEFAULT_STORAGE,
             action_delay: Numeric(0, 60) = 1.,  # [s]
             rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
+            gather_hw_mm_topology: Optional[bool] = None,
             extra_labels: Dict[Str, Str] = None,
             event_names: List[str] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
@@ -126,6 +129,7 @@ class MeasurementRunner(Runner):
         self._metrics_storage = metrics_storage
         self._action_delay = action_delay
         self._rdt_enabled = rdt_enabled
+        self._gather_hw_mm_topology = gather_hw_mm_topology
         # Disabled by default, to be overridden by subclasses.
         self._rdt_mb_control_required = False
         # Disabled by default, to overridden by subclasses.
@@ -283,7 +287,8 @@ class MeasurementRunner(Runner):
 
         # Platform information
         platform, platform_metrics, platform_labels = platforms.collect_platform_information(
-            self._rdt_enabled, extra_platform_measurements=extra_platform_measurements)
+            self._rdt_enabled, self._gather_hw_mm_topology,
+            extra_platform_measurements=extra_platform_measurements)
 
         # Common labels
         common_labels = dict(platform_labels, **self._extra_labels)

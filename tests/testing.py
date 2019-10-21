@@ -168,6 +168,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                     rdt_cache_control_enabled, '0', '0', 0, 0, 0),
                 node_cpus={0: {0, 1}},
                 measurements={},
+                static_information={}
             )
             return ContainerSet(
                 cgroup_path=cgroup_path,
@@ -191,6 +192,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                     True, True, True, True, '0', '0', 0, 0, 0),
                 node_cpus={0: {0, 1}},
                 measurements={},
+                static_information={}
             )
             return Container(
                 cgroup_path=cgroup_path,

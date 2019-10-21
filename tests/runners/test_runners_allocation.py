@@ -52,6 +52,7 @@ def test_allocation_runner(
         anomalies_storage=Mock(spec=storage.Storage, store=Mock()),
         allocations_storage=Mock(spec=storage.Storage, store=Mock()),
         rdt_enabled=True,
+        gather_hw_mm_topology=False,
         rdt_mb_control_required=True,
         rdt_cache_control_required=True,
         allocator=Mock(spec=Allocator, allocate=Mock(return_value=({}, [], []))),

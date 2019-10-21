@@ -39,6 +39,7 @@ def test_measurements_runner(subcgroups):
                   get_tasks=Mock(return_value=[t1, t2])),
         metrics_storage=Mock(spec=storage.Storage, store=Mock()),
         rdt_enabled=False,
+        gather_hw_mm_topology=False,
         extra_labels=dict(extra_label='extra_value')  # extra label with some extra value
     )
     runner._wait = Mock()

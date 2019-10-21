@@ -203,6 +203,7 @@ class AllocationRunner(MeasurementRunner):
             allocations_storage: storage.Storage = DEFAULT_STORAGE,
             action_delay: Numeric(0, 60) = 1.,  # [s]
             rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
+            gather_hw_mm_topology: Optional[bool] = None,
             rdt_mb_control_required: bool = False,
             rdt_cache_control_required: bool = False,
             extra_labels: Dict[Str, Str] = None,
@@ -217,7 +218,7 @@ class AllocationRunner(MeasurementRunner):
 
         self._allocation_configuration = allocation_configuration or AllocationConfiguration()
 
-        super().__init__(node, metrics_storage, action_delay, rdt_enabled,
+        super().__init__(node, metrics_storage, action_delay, rdt_enabled, gather_hw_mm_topology,
                          extra_labels, _allocation_configuration=self._allocation_configuration,
                          event_names=event_names, enable_derived_metrics=enable_derived_metrics,
                          enable_perf_pmu=enable_perf_pmu,
