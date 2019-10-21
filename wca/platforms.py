@@ -158,6 +158,8 @@ class Platform:
     # NUMA info
     # mapping from numa node id to CPU (to support SNC), based on /sys/devices/system/numa
     node_cpus: Dict[int, Set[int]]
+    # Distance based on /sys/devices/system/node/node*/distance
+    node_distances: Dict[int, List[int]]
 
     # [unix timestamp] Recorded timestamp of finishing data gathering (as returned from time.time)
     timestamp: float
@@ -375,7 +377,7 @@ def parse_node_cpus() -> Dict[NodeId, Set[int]]:
     """
     Parses /sys/devices/system/node/node*/cpulist"
     Read CPU to NUMA node mapping based on /sys/devices/system/node
-    :return: mapping from numa_node -> list of cpus (as List of int)
+    :return: mapping from numa_node -> list of cpus (as List[Set] of int)
     """
     node_cpus = {}
     for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
@@ -385,6 +387,25 @@ def parse_node_cpus() -> Dict[NodeId, Set[int]]:
             with open(cpu_list_filename) as cpu_list_file:
                 node_cpus[node_id] = decode_listformat(cpu_list_file.read())
     return node_cpus
+
+
+def parse_node_distances() -> Dict[int, List[int]]:
+    """
+    Parses "/sys/devices/system/node/node*/distance"
+    Read distance to NUMA node mapping based on /sys/devices/system/node
+    :return: mapping from numa_node -> list of distances (as List of int)
+    """
+    node_distances = {}
+
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            node_id = int(nodedir[4:])
+            distance_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'distance')
+            with open(distance_filename) as distance_file:
+                distances = distance_file.readline()
+                node_distances[node_id] = [int(val) for val in distances.split()]
+
+    return node_distances
 
 
 def parse_proc_stat(proc_stat_output) -> Dict[CpuId, int]:
@@ -580,6 +601,7 @@ def collect_platform_information(rdt_enabled: bool = True,
         timestamp=time.time(),
         rdt_information=rdt_information,
         node_cpus=parse_node_cpus(),
+        node_distances=parse_node_distances(),
         measurements=platform_measurements,
         static_information=platform_static_information,
     )
