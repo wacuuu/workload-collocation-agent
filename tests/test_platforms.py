@@ -114,8 +114,8 @@ def test_parse_node_cpus(*mocks):
 }))
 @patch('os.listdir', return_value=['node0', 'node1', 'ble', 'cpu'])
 def test_parse_node_distances(*mocks):
-    node_cpus = parse_node_distances()
-    assert node_cpus == {0: [10, 21], 1: [21, 10]}
+    node_distances = parse_node_distances()
+    assert node_distances == {0: [10, 21], 1: [21, 10]}
 
 
 @patch('builtins.open', new=create_open_mock({
