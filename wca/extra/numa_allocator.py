@@ -1,5 +1,6 @@
 import logging
 from typing import List, Dict
+from pprint import pprint
 
 from dataclasses import dataclass
 
@@ -25,16 +26,16 @@ class NUMAAllocator(Allocator):
         log.info('NUMA allocator random policy here...')
         log.debug('NUMA allocator input data:')
 
-        # print('Measurements:')
-        # pprint(tasks_measurements)
-        # print('Resources:')
-        # pprint(tasks_resources)
-        # print('Labels:')
-        # pprint(tasks_labels)
-        # print('Allocations (current):')
-        # pprint(tasks_allocations)
-        # print("Platform")
-        # pprint(platform)
+        print('Measurements:')
+        pprint(tasks_measurements)
+        print('Resources:')
+        pprint(tasks_resources)
+        print('Labels:')
+        pprint(tasks_labels)
+        print('Allocations (current):')
+        pprint(tasks_allocations)
+        print("Platform")
+        pprint(platform)
 
         # # Example stupid policy
         # cpu1 = random.randint(0, platform.cpus-1)
@@ -61,13 +62,13 @@ class NUMAAllocator(Allocator):
         # # You can put any metrics here for debugging purposes.
         # extra_metrics = [Metric('some_debug', value=1)]
 
-        # print("Policy:")
+        print("Policy:")
 
         allocations = {}
 
         # Total host memory
         total_memory = _platform_total_memory(platform)
-        # print("Total memory: %d\n" % total_memory)
+        print("Total memory: %d\n" % total_memory)
 
         # Collect tasks sizes and NUMA node usages
         tasks_memory = []
@@ -77,7 +78,7 @@ class NUMAAllocator(Allocator):
                  _get_task_memory_limit(tasks_measurements[task], total_memory),
                  _get_numa_node_preferences(tasks_measurements[task], platform)))
         tasks_memory = sorted(tasks_memory, reverse=True, key=lambda x: x[1])
-        # pprint(tasks_memory)
+        pprint(tasks_memory)
 
         # Current state of the system
         balanced_memory = {x: [] for x in platform.measurements[MetricName.MEM_NUMA_USED]}
@@ -120,14 +121,14 @@ class NUMAAllocator(Allocator):
                 continue
 
             most_used_node = _get_most_used_node(preferences)
-            # print("Most used node: %d" % most_used_node)
+            print("Most used node: %d" % most_used_node)
             # memory based score:
             best_memory_node = _get_best_memory_node(memory, balanced_memory)
-            # print("Best memory node: %d" % best_memory_node)
+            print("Best memory node: %d" % best_memory_node)
             most_free_memory_node = \
                 _get_most_free_memory_node(memory,
                                            platform.measurements[MetricName.MEM_NUMA_FREE])
-            # print("Best free memory node: %d" % most_free_memory_node)
+            print("Best free memory node: %d" % most_free_memory_node)
 
             log.debug("Task %s: Most used node: %d, Best free node: %d, Best memory node: %d" %
                       (task, most_used_node, most_free_memory_node, best_memory_node))
@@ -159,13 +160,15 @@ class NUMAAllocator(Allocator):
             # # pprint(best_node)
             # balanced_memory[best_node].append((task, memory))
 
-        #  pprint(balanced_memory)
-        #  print(balance_task, balance_task_node)
+        pprint(balanced_memory)
+        print(balance_task, balance_task_node)
 
         if balance_task is not None and balance_task_node is not None:
             log.debug("Assign task %s to node %s." % (balance_task, balance_task_node))
             allocations[balance_task] = {
-                AllocationType.CPUSET_MEM_MIGRATE: 1,
+                # Disable the "instant" mem migrat
+                # and relay on non-instrusive autonuma!
+                # AllocationType.CPUSET_MEM_MIGRATE: 1,
                 AllocationType.CPUSET_CPUS: encode_listformat(
                     platform.node_cpus[balance_task_node]),
                 AllocationType.CPUSET_MEMS: encode_listformat({balance_task_node}),
@@ -181,7 +184,7 @@ class NUMAAllocator(Allocator):
         #             AllocationType.CPUSET: platform.node_cpus[node],
         #         }
 
-        #  pprint(allocations)
+        pprint(allocations)
 
         # for task in tasks_labels:
         #     allocations[task] = {

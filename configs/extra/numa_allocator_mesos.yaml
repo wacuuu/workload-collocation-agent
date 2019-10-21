@@ -1,6 +1,7 @@
 loggers:
 #  "wca.runners.measurement": "trace"
-  "wca.extra.numa_allocator": "info"
+  # "wca.extra.numa_allocator": "info"
+  "wca.extra.numa_allocator": "debug"
   #"wca.platforms": "debug"
 runner: !AllocationRunner
   action_delay: 5
@@ -14,7 +15,7 @@ runner: !AllocationRunner
   - cycles
   - cache_misses
 #  - cache_references
-  - stalls_mem_load
+  # - stalls_mem_load
   - mem_inst_retired_all_loads__rd081
   - mem_inst_retired_all_stores__rd082
   enable_derived_metrics: true
