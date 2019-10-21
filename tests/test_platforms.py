@@ -22,7 +22,8 @@ from wca.metrics import MetricName
 from wca.platforms import Platform, CPUCodeName, parse_proc_stat, \
     parse_proc_meminfo, _parse_cpuinfo
 from wca.platforms import collect_topology_information, collect_platform_information, \
-    RDTInformation, decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat
+    RDTInformation, decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat, \
+    parse_node_distances
 
 
 @pytest.mark.parametrize("raw_meminfo_output,expected", [
@@ -108,6 +109,16 @@ def test_parse_node_cpus(*mocks):
 
 
 @patch('builtins.open', new=create_open_mock({
+    "/sys/devices/system/node/node0/distance": "10 21",
+    "/sys/devices/system/node/node1/distance": "21 10",
+}))
+@patch('os.listdir', return_value=['node0', 'node1', 'ble', 'cpu'])
+def test_parse_node_distances(*mocks):
+    node_distances = parse_node_distances()
+    assert node_distances == {0: [10, 21], 1: [21, 10]}
+
+
+@patch('builtins.open', new=create_open_mock({
     "/sys/fs/resctrl/info/L3/cbm_mask": "fffff",
     "/sys/fs/resctrl/info/L3/min_cbm_bits": "2",
     "/sys/fs/resctrl/info/L3/num_closids": "16",
@@ -129,6 +140,7 @@ def test_parse_node_cpus(*mocks):
 @patch('wca.platforms.read_proc_meminfo', return_value='does not matter, because parse is mocked')
 @patch('wca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
 @patch('wca.platforms.parse_node_cpus', return_value={})
+@patch('wca.platforms.parse_node_distances', return_value={})
 @patch('wca.platforms.parse_node_meminfo', return_value=[{0: 1}, {0: 2}])
 @patch('wca.platforms.get_numa_nodes_count', return_value=1)
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1, {}))
@@ -152,6 +164,7 @@ def test_collect_platform_information(*mocks):
         cpu_codename=CPUCodeName.SKYLAKE,
         timestamp=1536071557.123456,  # timestamp,
         node_cpus={},
+        node_distances={},
         rdt_information=RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20),
         measurements={MetricName.CPU_USAGE_PER_CPU: {0: 100, 1: 200},
                       MetricName.MEM_USAGE: 1337,

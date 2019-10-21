@@ -167,6 +167,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                     True, True, rdt_mb_control_enabled,
                     rdt_cache_control_enabled, '0', '0', 0, 0, 0),
                 node_cpus={0: {0, 1}},
+                node_distances={0: [10]},
                 measurements={},
                 static_information={}
             )
@@ -191,6 +192,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 rdt_information=RDTInformation(
                     True, True, True, True, '0', '0', 0, 0, 0),
                 node_cpus={0: {0, 1}},
+                node_distances={0: [10]},
                 measurements={},
                 static_information={}
             )
