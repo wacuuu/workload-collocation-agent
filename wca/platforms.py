@@ -393,7 +393,7 @@ def parse_node_distances() -> Dict[int, Dict[int, int]]:
     """
     Parses "/sys/devices/system/node/node*/distance"
     Read distance to NUMA node mapping based on /sys/devices/system/node
-    :return: mapping from numa_node -> dict of distances (as List of int key and value)
+    :return: mapping from numa_node -> dict of distances (as dict with int key and value)
     """
     node_distances = {}
 
