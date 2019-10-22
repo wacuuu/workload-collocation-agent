@@ -177,6 +177,8 @@ class AllocationRunner(MeasurementRunner):
             (defaults to 1 second)
         rdt_enabled: enables or disabled support for RDT monitoring and allocation
             (defaults to None(auto) based on platform capabilities)
+        gather_hw_mm_topology: gather hardware/memory topology based on lshw and ipmctl
+            (defaults to False)
         rdt_mb_control_required: indicates that MB control is required,
             if the platform does not support this feature the WCA will exit
         rdt_cache_control_required: indicates tha L3 control is required,
@@ -203,7 +205,7 @@ class AllocationRunner(MeasurementRunner):
             allocations_storage: storage.Storage = DEFAULT_STORAGE,
             action_delay: Numeric(0, 60) = 1.,  # [s]
             rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
-            gather_hw_mm_topology: Optional[bool] = None,
+            gather_hw_mm_topology: Optional[bool] = False,
             rdt_mb_control_required: bool = False,
             rdt_cache_control_required: bool = False,
             extra_labels: Dict[Str, Str] = None,
