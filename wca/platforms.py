@@ -389,11 +389,11 @@ def parse_node_cpus() -> Dict[NodeId, Set[int]]:
     return node_cpus
 
 
-def parse_node_distances() -> Dict[int, List[int]]:
+def parse_node_distances() -> Dict[int, Dict[int, int]]:
     """
     Parses "/sys/devices/system/node/node*/distance"
     Read distance to NUMA node mapping based on /sys/devices/system/node
-    :return: mapping from numa_node -> list of distances (as List of int)
+    :return: mapping from numa_node -> dict of distances (as List of int key and value)
     """
     node_distances = {}
 
@@ -403,7 +403,7 @@ def parse_node_distances() -> Dict[int, List[int]]:
             distance_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'distance')
             with open(distance_filename) as distance_file:
                 distances = distance_file.readline()
-                node_distances[node_id] = [int(val) for val in distances.split()]
+                node_distances[node_id] = {i: int(val) for i, val in enumerate(distances.split())}
 
     return node_distances
 
