@@ -36,7 +36,7 @@ from wca.extra import static_node
 from wca.extra import numa_allocator
 from wca import security
 from wca.metrics import DefaultDerivedMetricsGenerator
-from wca.perf_pmu import UncoreDerivedMetricsGenerator
+from wca.perf_uncore import UncoreDerivedMetricsGenerator
 
 
 def register_components(extra_components: List[str]):

@@ -33,8 +33,8 @@ from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementExcept
     export_metrics_from_measurements
 from wca.nodes import Task
 from wca.nodes import TaskSynchronizationException
-from wca.perf_pmu import UncorePerfCounters, _discover_pmu_uncore_imc_config, UNCORE_IMC_EVENTS, \
-    PMUNotAvailable, UncoreDerivedMetricsGenerator
+from wca.perf_uncore import UncorePerfCounters, _discover_pmu_uncore_imc_config, \
+    UNCORE_IMC_EVENTS, PMUNotAvailable, UncoreDerivedMetricsGenerator
 from wca.platforms import CPUCodeName
 from wca.profiling import profiler
 from wca.runners import Runner
@@ -119,7 +119,7 @@ class MeasurementRunner(Runner):
             extra_labels: Dict[Str, Str] = None,
             event_names: List[str] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
-            enable_perf_pmu: bool = True,
+            enable_perf_uncore: bool = True,
             task_label_generators: Dict[str, TaskLabelGenerator] = None,
             _allocation_configuration: Optional[AllocationConfiguration] = None,
             wss_reset_interval: int = 0,
@@ -144,7 +144,7 @@ class MeasurementRunner(Runner):
         log.info('Enabling %i perf events: %s', len(self._event_names),
                  ', '.join(self._event_names))
         self._enable_derived_metrics = enable_derived_metrics
-        self._enable_perf_pmu = enable_perf_pmu
+        self._enable_perf_uncore = enable_perf_uncore
 
         # Default value for task_labels_generator.
         if task_label_generators is None:
@@ -230,14 +230,14 @@ class MeasurementRunner(Runner):
             wss_reset_interval=self._wss_reset_interval,
         )
 
-        self._init_uncore_pmu(self._enable_derived_metrics, self._enable_perf_pmu)
+        self._init_uncore_pmu(self._enable_derived_metrics, self._enable_perf_uncore)
 
         return None
 
-    def _init_uncore_pmu(self, enable_derived_metrics, enable_perf_pmu):
+    def _init_uncore_pmu(self, enable_derived_metrics, enable_perf_uncore):
         self._uncore_pmu = None
         self._uncore_get_measurements = lambda: {}
-        if enable_perf_pmu:
+        if enable_perf_uncore:
             try:
                 cpus, pmu_events = _discover_pmu_uncore_imc_config(
                     UNCORE_IMC_EVENTS)

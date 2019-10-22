@@ -15,10 +15,10 @@
 from unittest.mock import patch, MagicMock
 
 from wca.metrics import MetricName
-from wca.perf_pmu import Event, UncorePerfCounters, UncoreMetricName
+from wca.perf_uncore import Event, UncorePerfCounters, UncoreMetricName
 
 
-@patch('wca.perf_pmu.UncorePerfCounters._open_for_cpu')
+@patch('wca.perf_uncore.UncorePerfCounters._open_for_cpu')
 @patch('wca.perf._create_file_from_fd')
 def test_get_measurements(*args):
     upc = UncorePerfCounters(
@@ -32,8 +32,8 @@ def test_get_measurements(*args):
         MetricName.SCALING_FACTOR_MAX: 0}
 
 
-@patch('wca.perf_pmu.UncorePerfCounters._open')
-@patch('wca.perf_pmu._perf_event_open', return_value=5)
+@patch('wca.perf_uncore.UncorePerfCounters._open')
+@patch('wca.perf_uncore._perf_event_open', return_value=5)
 @patch('os.fdopen')
 def test_open_for_cpu(*args):
     event = Event(event=227,
@@ -50,8 +50,8 @@ def test_open_for_cpu(*args):
     assert len(upc._group_event_leader_files_per_pmu) == 1
 
 
-@patch('wca.perf_pmu.UncorePerfCounters._open')
-@patch('wca.perf_pmu._perf_event_open', return_value=5)
+@patch('wca.perf_uncore.UncorePerfCounters._open')
+@patch('wca.perf_uncore._perf_event_open', return_value=5)
 def test_cleanup(*args):
     reader = MagicMock()
     event_files = []

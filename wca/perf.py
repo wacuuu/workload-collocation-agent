@@ -250,7 +250,7 @@ def _create_file_from_fd(pfd):
         errno = ctypes.get_errno()
         raise UnableToOpenPerfEvents('Invalid perf event file descriptor: {}, {}.'
                                      'HINT: If code error is 22 and '
-                                     'in traceback show problem in perf_pmu, '
+                                     'in traceback show problem in perf_uncore, '
                                      'it would be problem with PERF_FORMAT_GROUP in'
                                      'perf_event_attr structure for perf_event_open syscall. '
                                      'Older kernel cannot handle with extended format group.'
