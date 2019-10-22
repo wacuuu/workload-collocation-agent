@@ -171,10 +171,15 @@ class Platform:
     static_information: Optional[Dict]
 
 
+class MissingPlatformStaticInformation(Exception):
+    pass
+
+
 _platform_static_information = {}
 
 
-def get_platform_static_information():
+def get_platform_static_information(strict_mode: bool):
+    """"""
     # RETURN MEMORY DIMM DETAILS based on lshw
     global _platform_static_information
     # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
@@ -192,6 +197,8 @@ def get_platform_static_information():
             _platform_static_information['memorymode_size'] = int(memorymode_size)
         except FileNotFoundError:
             log.warning('ipmctl unavailable, cannot read memory mode size')
+            if strict_mode:
+                raise MissingPlatformStaticInformation
 
         try:
             # nosec: B603. We deliberately use 'subprocess'. There is a permanent input.
@@ -225,9 +232,14 @@ def get_platform_static_information():
             _platform_static_information['nvm_dimm_size'] = int(nvm_dimm_size)
         except FileNotFoundError:
             log.warning('lshw unavailable, cannot read memory topology size!')
+            if strict_mode:
+                raise MissingPlatformStaticInformation
+
         except JSONDecodeError:
             log.warning('lshw unavailable (incorrect version or missing data), '
                         'cannot parse output, cannot read memory topology size!')
+            if strict_mode:
+                raise MissingPlatformStaticInformation
 
         _platform_static_information['initialized'] = True
 
@@ -584,8 +596,10 @@ def collect_platform_information(rdt_enabled: bool = True,
                                  if extra_platform_measurements is not None
                                  else {})
 
-    if gather_hw_mm_topology:
-        platform_static_information = get_platform_static_information()
+    if gather_hw_mm_topology is None:
+        platform_static_information = get_platform_static_information(strict_mode=False)
+    elif gather_hw_mm_topology:
+        platform_static_information = get_platform_static_information(strict_mode=True)
     else:
         platform_static_information = {}
 
