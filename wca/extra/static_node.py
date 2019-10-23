@@ -46,7 +46,6 @@ class StaticNode(Node):
 
     _BASE_CGROUP_PATH = '/sys/fs/cgroup'
     _REQUIRED_CONTROLLERS = ('cpu', 'cpuacct')
-                             #, 'perf_event')
 
     def get_tasks(self) -> List[Task]:
         tasks = []
