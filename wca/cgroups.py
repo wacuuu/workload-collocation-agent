@@ -72,6 +72,7 @@ class CgroupResource(str, Enum):
     MEMORY_LIMIT = 'memory.limit_in_bytes'
     MEMORY_SOFT_LIMIT = 'memory.soft_limit_in_bytes'
     NUMA_STAT = 'memory.numa_stat'
+    MEMORY_STAT = 'memory.stat'
 
     def __repr__(self):
         return repr(self.value)
@@ -120,6 +121,19 @@ class Cgroup:
             except FileNotFoundError as e:
                 raise MissingMeasurementException(
                     'File {} is missing. Metric unavailable.'.format(e.filename))
+
+        # Memory stat - e.g. page faults
+        try:
+            with open(os.path.join(self.cgroup_memory_fullpath,
+                                   CgroupResource.MEMORY_STAT)) as resource_file:
+                for line in resource_file.readlines():
+                    if line.startswith('pgfault'):
+                        _, value = line.split()
+                        measurements[MetricName.MEM_PAGE_FAULTS] = int(value)
+                        break
+        except FileNotFoundError as e:
+            raise MissingMeasurementException(
+                'File {} is missing. Metric unavailable.'.format(e.filename))
 
         try:
             with open(os.path.join(

@@ -401,6 +401,21 @@ def parse_node_cpus() -> Dict[NodeId, Set[int]]:
     return node_cpus
 
 
+VMSTAT_METRICS = ["numa_pages_migrated", "pgmigrate_success", "pgmigrate_fail"]
+
+
+def parse_proc_vmstat() -> Measurements:
+    """
+    """
+    d = {}
+    with open('/proc/vmstat') as f:
+        for line in f:
+            for metric in VMSTAT_METRICS:
+                if line.startswith(metric):
+                    d['vmstat_'+metric] = int(line.split()[1])
+    return d
+
+
 def parse_node_distances() -> Dict[int, Dict[int, int]]:
     """
     Parses "/sys/devices/system/node/node*/distance"
@@ -602,6 +617,8 @@ def collect_platform_information(rdt_enabled: bool = True,
         platform_static_information = get_platform_static_information(strict_mode=True)
     else:
         platform_static_information = {}
+
+    platform_measurements.update(parse_proc_vmstat())
 
     platform = Platform(
         sockets=no_of_sockets,

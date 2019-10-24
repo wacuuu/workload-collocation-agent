@@ -38,6 +38,7 @@ def test_get_measurements_not_found_cgroup(mock_file, mock_log_warning):
     '/sys/fs/cgroup/memory/some/foo1/memory.limit_in_bytes': '2000',
     '/sys/fs/cgroup/memory/some/foo1/memory.soft_limit_in_bytes': '1500',
     '/sys/fs/cgroup/memory/some/foo1/memory.numa_stat': 'hierarchical_total=1 N0=123 N1=234',
+    '/sys/fs/cgroup/memory/some/foo1/memory.stat': 'pgfault 2730362811\nfoo=1 N0=123 N1=234',
 }))
 def test_get_measurements():
     cgroup = Cgroup('/some/foo1', platform=platform_mock)
@@ -48,6 +49,7 @@ def test_get_measurements():
                             MetricName.MEM_MAX_USAGE_PER_TASK: 999,
                             MetricName.MEM_LIMIT_PER_TASK: 2000,
                             MetricName.MEM_SOFT_LIMIT_PER_TASK: 1500,
+                            MetricName.MEM_PAGE_FAULTS: 2730362811,
                             MetricName.MEM_NUMA_STAT_PER_TASK: {'0': 123, '1': 234}}
 
 
