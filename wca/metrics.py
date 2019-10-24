@@ -119,8 +119,7 @@ class MetricUnit(str, Enum):
 class MetricMetadata:
     help: str
     type: MetricType
-    unit: Union[MetricUnit, str]
-    levels: List[str] = []
+    unit: MetricUnit
 
 
 # Structure linking a metric with description of hierarchy how it is kept.
@@ -153,7 +152,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Logical CPU usage in 1/USER_HZ (usually 10ms).'
             'Calculated using values based on /proc/stat',
             MetricType.COUNTER,
-            MetricUnit.TEN_MILLISECOND),
+            MetricUnit.MILLISECOND),
     MetricName.CPU_USAGE_PER_TASK:
         MetricMetadata(
             '[ns] cpuacct.usage (total kernel and user space)',
@@ -198,31 +197,38 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
     MetricName.MEMSTALL:
         MetricMetadata(
             'Mem stalled loads',
-            MetricType.COUNTER),
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC),
     MetricName.CACHE_REFERENCES:
         MetricMetadata(
             'Cache references',
-            MetricType.COUNTER),
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC),
     MetricName.SCALING_FACTOR_MAX:
         MetricMetadata(
             'Perf metric scaling factor, MAX value',
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
     MetricName.SCALING_FACTOR_AVG:
         MetricMetadata(
             'Perf metric scaling factor, average from all CPUs',
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
     MetricName.MEM_NUMA_STAT_PER_TASK:
         MetricMetadata(
             'NUMA Stat TODO!',  # TODO: fix me!
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
     MetricName.MEM_NUMA_FREE:
         MetricMetadata(
             'NUMA memory free per numa node TODO!',  # TODO: fix me!
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
     MetricName.MEM_NUMA_USED:
         MetricMetadata(
             'NUMA memory used per numa node TODO!',  # TODO: fix me!
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
     MetricName.MEMORY_BANDWIDTH_LOCAL:
         MetricMetadata(
             'Total local memory bandwidth using Memory Bandwidth Monitoring.',
@@ -230,50 +236,60 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.BYTES),
     MetricName.MEMORY_BANDWIDTH_REMOTE:
         MetricMetadata(
-            '[bytes] Total remote memory bandwidth using Memory Bandwidth Monitoring.',
+            'Total remote memory bandwidth using Memory Bandwidth Monitoring.',
             MetricType.COUNTER,
             MetricUnit.BYTES),
     MetricName.OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD:
         MetricMetadata(
             'Increment each cycle of the number of offcore outstanding demand data read '
             'requests from SQ that missed L3.',
-            MetricType.COUNTER),
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC),
     MetricName.OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD:
         MetricMetadata(
             'Demand data read requests that missed L3.',
-            MetricType.COUNTER),
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC),
     MetricName.CPUS:
         MetricMetadata(
             'Tasks resources cpus initial requests.',
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
     MetricName.MEM:
         MetricMetadata(
             'Tasks resources memory initial requests.',
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
     MetricName.LAST_SEEN:
         MetricMetadata(
             'Time the task was last seen.',
-            MetricType.COUNTER),
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC),
     MetricName.UP:
         MetricMetadata(
             'Time the was was last seen.',
-            MetricType.COUNTER),
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC),
     DerivedMetricName.IPC:
         MetricMetadata(
             'Instructions per cycle',
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
     DerivedMetricName.IPS:
         MetricMetadata(
             'Instructions per second',
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
     DerivedMetricName.CACHE_HIT_RATIO:
         MetricMetadata(
             'Cache hit ratio, based on cache-misses and cache-references',
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
     DerivedMetricName.CACHE_MISSES_PER_KILO_INSTRUCTIONS:
         MetricMetadata(
             'Cache misses per kilo instructions',
-            MetricType.GAUGE),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC),
 }
 
 
@@ -281,22 +297,24 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
 class Metric:
     name: Union[str, MetricName]
     value: MetricValue
-    unit: Union[MetricUnit]
     labels: Dict[str, str] = field(default_factory=dict)
+    unit: Union[MetricUnit] = None
     type: MetricType = None
     help: str = None
     granularity: MetricGranurality = None
 
     @staticmethod
-    def create_metric_with_metadata(name, value, labels=None):
+    def create_metric_with_metadata(name, value, labels=None, granularity=None):
         metric = Metric(
             name=name,
             value=value,
-            labels=labels or dict()
+            labels=labels or dict(),
+            granularity=granularity
         )
         if name in METRICS_METADATA:
             metric.type = METRICS_METADATA[name].type
             metric.help = METRICS_METADATA[name].help
+            metric.unit = METRICS_METADATA[name].unit
         # TODO: add else, cannot be None type and help
         return metric
 

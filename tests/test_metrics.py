@@ -20,7 +20,7 @@ from wca.mesos import create_metrics, sanitize_label
 from wca.metrics import Metric, merge_measurements, MetricName, \
     DerivedMetricName, METRICS_METADATA, \
     export_metrics_from_measurements, MetricMetadata, \
-    MetricType, METRICS_LEVELS
+    MetricType, METRICS_LEVELS, MetricUnit
 
 
 @pytest.mark.parametrize('label_key,expected_label_key', (
@@ -82,8 +82,8 @@ class TestMetric(object):
     """To create and delete a test metric from metrics module structures."""
     def __enter__(self):
         MetricName.TEST_METRIC = 'test_metric'
-        METRICS_METADATA['test_metric'] = MetricMetadata(
-            MetricType.COUNTER, 'Non existing metric for unit test.')
+        METRICS_METADATA['test_metric'] = MetricMetadata('Non existing metric for unit test.',
+                                                         MetricType.COUNTER, MetricUnit.NUMERIC)
         METRICS_LEVELS['test_metric'] = ['numa_node', 'container']  # two levels
 
     def __exit__(self, type, value, traceback):
