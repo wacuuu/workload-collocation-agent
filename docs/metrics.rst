@@ -9,7 +9,7 @@ Available metrics
 
 .. csv-table::
 	:header: "Name", "Help", "Unit", "Type", "Source"
-	:widths: 10, 20, 10, 10
+	:widths: 10, 20, 10, 10, 10
 
 	"instructions", "Linux Perf counter for instructions per container.", "numeric", "counter", "perf event"
 	"cycles", "Linux Perf counter for cycles per container.", "numeric", "counter", "perf event"
