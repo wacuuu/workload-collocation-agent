@@ -8,7 +8,7 @@ runner: !AllocationRunner
   node: !MesosNode
     mesos_agent_endpoint: 'http://127.0.0.1:5051'
     timeout: 5
-  allocator: !NOPAllocator
+  allocator: !NUMAAllocator
 
   # Disable all measurements based on perf system and resctrl
   enable_perf_uncore: false

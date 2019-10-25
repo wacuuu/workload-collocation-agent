@@ -16,7 +16,7 @@ runner: !AllocationRunner
     - specjbb2015/Group7
     - specjbb2015/Group8
     - specjbb2015/Group9
-  allocator: !NOPAllocator
+  allocator: !NUMAAllocator
 
   # Disable all measurements based on perf system and resctrl
   enable_perf_uncore: true
