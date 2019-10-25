@@ -45,7 +45,7 @@ class StaticNode(Node):
     tasks_labels: Optional[Dict[str, Dict[str, str]]] = None
 
     _BASE_CGROUP_PATH = '/sys/fs/cgroup'
-    _REQUIRED_CONTROLLERS = ('cpu', 'cpuacct', 'perf_event')
+    _REQUIRED_CONTROLLERS = ('cpu', 'cpuacct')
 
     def get_tasks(self) -> List[Task]:
         tasks = []

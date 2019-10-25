@@ -44,6 +44,7 @@ class MetricName(str, Enum):
     MEM_LIMIT_PER_TASK = 'memory_limit_per_task_bytes'
     MEM_SOFT_LIMIT_PER_TASK = 'memory_soft_limit_per_task_bytes'
     MEM_NUMA_STAT_PER_TASK = 'memory_numa_stat'
+    MEM_PAGE_FAULTS = 'memory_stat_page_faults'
 
     # NUMA for whole platform
     MEM_NUMA_FREE = 'memory_numa_free'
@@ -247,6 +248,12 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         MetricMetadata(
             'NUMA Stat TODO!',  # TODO: fix me!
             MetricType.GAUGE,
+            MetricUnit.NUMERIC,
+            MetricSource.CGROUP),
+    MetricName.MEM_PAGE_FAULTS:
+        MetricMetadata(
+            'Page faults',  # TODO: fix me!
+            MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.CGROUP),
     MetricName.MEM_NUMA_FREE:
