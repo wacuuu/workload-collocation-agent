@@ -26,6 +26,13 @@ pipeline {
                 }
             }
         }
+        stage("Generate documentation") {
+            steps {
+                sh '''
+                  make generate_docs
+                '''
+            }
+        }
         stage("Build WCA pex") {
             steps {
                 sh '''

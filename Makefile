@@ -19,7 +19,7 @@ endif
 # Do not really on artifacts created by make for all targets.
 .PHONY: all venv flake8 bandit unit wca_package bandit_pex wrapper_package clean tests check dist
 
-all: venv check dist
+all: venv check dist, generate_docs
 
 venv:
 	@echo Preparing virtual enviornment using pipenv.
@@ -142,3 +142,7 @@ tester:
 	@echo Integration tests.
 	sh -c 'sudo chmod 700 $$(pwd)/tests/tester/configs/tester_example.yaml'
 	sh -c 'PEX_INHERIT_PATH=fallback PYTHONPATH="$$(pwd):$$(pwd)/tests/tester" dist/wca.pex -c $$(pwd)/tests/tester/configs/tester_example.yaml -r tester:IntegrationTester -r tester:MetricCheck -r tester:FileCheck --log=debug --root'
+
+generate_docs:
+	@echo Generate documentation.
+	pipenv run env PYTHONPATH=. python util/docs.py

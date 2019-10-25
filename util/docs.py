@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from wca.metrics import MetricSource, METRICS_METADATA
+from wca.metrics import METRICS_METADATA
 
 
 METRICS_DOC_PATH = 'docs/metrics.rst'
@@ -29,18 +29,24 @@ Available metrics
 """
 
 
-def generate_docs(source: MetricSource = None):
-    metric_table = ""
-    metric_table += '==== ==== ==== =====\n'
-    metric_table += 'Name Type Unit Help\n'
-    metric_table += '==== ==== ==== =====\n'
+def prepare_csv_table(data):
+    table = '.. csv-table::\n'
+    table += '\t:header: "Name", "Help", "Unit", "Type", "Source"\n'
+    table += '\t:widths: 10, 20, 10, 10, 10\n\n\t'
 
-    for metric in METRICS_METADATA:
-        metadata = METRICS_METADATA[metric]
-        metric_table += '| {} | {} | {} | {} |\n'.format(
-                metric, metadata.type, metadata.unit, metadata.help)
+    table += '\n\t'.join(['"{}", "{}", "{}", "{}", "{}"'.format(*row) for row in data])
 
-    metric_table += '==== ==== ==== ====='
+    return table
+
+
+def generate_docs():
+    data = [(metric,
+             METRICS_METADATA[metric].help,
+             METRICS_METADATA[metric].unit,
+             METRICS_METADATA[metric].type,
+             METRICS_METADATA[metric].source) for metric in METRICS_METADATA]
+
+    metric_table = prepare_csv_table(data)
 
     return metric_table
 
