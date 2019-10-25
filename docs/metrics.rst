@@ -9,7 +9,7 @@ Available metrics
 
 .. csv-table:: Metrics
    :header: "Name", "Help", "Unit", "Type"
-   :widths: 15, 30, 10, 10
+   :widths: 15, 10, 10, 10
 
    instructions, Linux Perf counter for instructions per container., numeric, counter
    cycles, Linux Perf counter for cycles per container., numeric, counter
