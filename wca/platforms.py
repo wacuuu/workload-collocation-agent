@@ -401,7 +401,8 @@ def parse_node_cpus() -> Dict[NodeId, Set[int]]:
     return node_cpus
 
 
-VMSTAT_METRICS = ["numa_pages_migrated", "pgmigrate_success", "pgmigrate_fail"]
+VMSTAT_METRICS = ["numa_pages_migrated", "pgmigrate_success", "pgmigrate_fail",
+                  "numa_hint_faults", "numa_hint_faults_local", "pgfault"]
 
 
 def parse_proc_vmstat() -> Measurements:
