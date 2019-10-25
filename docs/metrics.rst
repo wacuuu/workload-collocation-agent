@@ -7,7 +7,7 @@ Available metrics
 
 .. contents:: Table of Contents
 
-.. csv-table:: Metrics
+.. csv-table::
 	:header: "Name", "Help", "Unit", "Type"
 	:widths: 10, 20, 10, 10
 
