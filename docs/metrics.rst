@@ -9,7 +9,8 @@ Available metrics
 
 =================================================== =========================================================================================================================================== ======= =======
 Name                                                Help                                                                                                                                        Unit    Type   
-=================================================== =========================================================================================================================================== ======= =======instructions                                        Linux Perf counter for instructions per container.                                                                                          numeric counter
+=================================================== =========================================================================================================================================== ======= =======
+instructions                                        Linux Perf counter for instructions per container.                                                                                          numeric counter
 cycles                                              Linux Perf counter for cycles per container.                                                                                                numeric counter
 cache_misses                                        Linux Perf counter for cache-misses per container.                                                                                          numeric counter
 cpu_usage_per_cpu                                   Logical CPU usage in 1/USER_HZ (usually 10ms).Calculated using values based on /proc/stat                                                   ms      counter
