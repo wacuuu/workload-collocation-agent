@@ -15,7 +15,6 @@ runner: !AllocationRunner
     - specjbb2015/Group6
     - specjbb2015/Group7
     - specjbb2015/Group8
-    - specjbb2015/Group9
   allocator: !NUMAAllocator
 
   # Disable all measurements based on perf system and resctrl
@@ -47,9 +46,11 @@ runner: !AllocationRunner
     output_filename: metrics.prom
     overwrite: true
   allocations_storage: !LogStorage
-    output_filename: /dev/null
+    output_filename: allocations.prom
+    overwrite: true
   anomalies_storage: !LogStorage
-    output_filename: /dev/null
+    output_filename: anomalies.prom
+    overwrite: true
 
   extra_labels:
     node: !Env HOSTNAME
