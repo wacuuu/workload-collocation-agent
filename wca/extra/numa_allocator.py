@@ -15,6 +15,15 @@ log = logging.getLogger(__name__)
 @dataclass
 class NUMAAllocator(Allocator):
 
+    #### intrusive set of options
+    # parse15
+    preferences_threshold: float = 0.0  # always migrate 
+    memory_migrate: bool = False
+
+    ### Defaults
+    # preferences_threshold: float = 0.66
+    # memory_migrate: bool = False
+
     def allocate(
             self,
             platform: Platform,
@@ -134,7 +143,7 @@ class NUMAAllocator(Allocator):
                       (task, most_used_node, most_free_memory_node, best_memory_node))
 
             # Give a chance for AutoNUMA to re-balance memory
-            if preferences[most_used_node] < 0.66:
+            if preferences[most_used_node] < self.preferences_threshold:
                 log.debug("not most of the memory balanced, continue")
                 continue
 
@@ -166,13 +175,14 @@ class NUMAAllocator(Allocator):
         if balance_task is not None and balance_task_node is not None:
             log.debug("Assign task %s to node %s." % (balance_task, balance_task_node))
             allocations[balance_task] = {
-                # Disable the "instant" mem migrat
-                # and relay on non-instrusive autonuma!
-                # AllocationType.CPUSET_MEM_MIGRATE: 1,
                 AllocationType.CPUSET_CPUS: encode_listformat(
                     platform.node_cpus[balance_task_node]),
                 AllocationType.CPUSET_MEMS: encode_listformat({balance_task_node}),
             }
+            # Instant memory migrate.
+            if self.memory_migrate:
+                allocations[balance_task][AllocationType.CPUSET_MEM_MIGRATE] = 1
+
 
         # for node in balanced_memory:
         #     for task, _ in balanced_memory[node]:
