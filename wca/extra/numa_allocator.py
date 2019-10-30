@@ -87,9 +87,9 @@ class NUMAAllocator(Allocator):
                  _get_task_memory_limit(tasks_measurements[task], total_memory),
                  _get_numa_node_preferences(tasks_measurements[task], platform)))
         # tasks_memory = sorted(tasks_memory, reverse=True, key=lambda x: x[1])
-        # FOR DEBUGGING PURPOSES just sort by name (it should work the same assuming 
+        # FOR DEBUGGING PURPOSES just sort by name (it should work the same assuming
         # memory is equal for all tasks)
-        tasks_memory = sorted(tasks_memory, reverse=False, key=lambda x: x[0]) # by name
+        tasks_memory = sorted(tasks_memory, reverse=False, key=lambda x: x[0])  # by name
         # pprint(tasks_memory)
 
         # Current state of the system
@@ -124,7 +124,6 @@ class NUMAAllocator(Allocator):
         # if len(balanced_memory[0])  + len(balanced_memory[1]) > 0:
         #     log.debug('szymon hack!')
         #     return {}, [], extra_metrics
-
 
         log.debug("Starting re-balancing")
 
@@ -188,14 +187,15 @@ class NUMAAllocator(Allocator):
                     balance_task_node = most_used_node
                     # break # commented to give a chance to generate other metrics
 
-                elif self.candidate and balance_task_candidate is None and balance_task_node_candidate is None:
+                elif self.candidate and balance_task_candidate is None \
+                        and balance_task_node_candidate is None:
                     log.debug("   CANDIT: not perfect match, but remember as candidate, continue")
                     balance_task_candidate = task
                     balance_task_node_candidate = best_memory_node
-                    #balance_task_node_candidate = most_free_memory_node
+                    # balance_task_node_candidate = most_free_memory_node
 
                 else:
-                    log.debug("   IGNORE: not perfect match and candidate already set or disabled, continue")
+                    log.debug("   IGNORE: not perfect match and candidate set(disabled), continue")
                 # break # commented to give a chance to generate other metrics
 
             # if most_used_node != most_free_memory_node:
@@ -221,7 +221,6 @@ class NUMAAllocator(Allocator):
                 log.warn("Cannot find by most_used, use candidate from 'best node' rule!")
                 balance_task = balance_task_candidate
                 balance_task_node = balance_task_node_candidate
-
 
         if balance_task is not None and balance_task_node is not None:
             log.debug("   Assign task %s to node %s." % (balance_task, balance_task_node))
