@@ -69,6 +69,8 @@ spec:
 #        command:
 #          - sleep
 #          - inf
+        command:
+          - /usr/bin/wca.pex
         args:
         - "--config=/etc/wca/wca-config.yaml"
         - "--log=info"

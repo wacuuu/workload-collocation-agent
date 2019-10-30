@@ -12,3 +12,4 @@ resources:
   - operator/service_account.yaml
   - operator/service.yaml
   - storage_class.yaml
+  - persistent_volume.yaml

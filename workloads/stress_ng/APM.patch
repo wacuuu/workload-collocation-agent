@@ -1,56 +1,50 @@
 diff --git a/stress-ng.c b/stress-ng.c
-index fdbe1a2..559aaaa 100644
+index 80a6153f..5dde4f28 100644
 --- a/stress-ng.c
 +++ b/stress-ng.c
-@@ -26,6 +26,8 @@
-
- #include <getopt.h>
- #include <syslog.h>
-+#include <pthread.h>
-+#include <time.h>
-
- #if defined(__linux__)
- #include <sys/utsname.h>
-@@ -2119,6 +2121,23 @@ static uint32_t get_total_num_procs(proc_info_t *procs_list)
+@@ -1568,6 +1568,24 @@ static void stress_child_atexit(void)
+ 	_exit(EXIT_BY_SYS_EXIT);
  }
-
- /*
+ 
++/*
 + * monitor_counter()
 + * Outputs stressor APMs during run
 + */
 +void* monitor_counter(void* counter) {
 +    uint64_t* real_counter = (uint64_t*)counter;
-+    uint64_t last = 0;
++    uint64_t last = 0, diff = 0;
 +	while (true) {
-+        shim_usleep(1000000);
-+        time_t now;
-+        time(&now);
-+		pr_inf("Time %ld, counter=%" PRIu64 "\n", now, *real_counter);
-+        last = *real_counter;
++       shim_usleep(1000000);
++       time_t now;
++       time(&now);
++		diff = *real_counter - last;
++		pr_inf("Time %ld, counter %d, diff %" PRIu64 "\n", now, *real_counter, diff);
++       last = *real_counter;
 +		fflush(stdout);
 +	}
 +}
 +
-+/*
+ /*
   *  stress_run ()
   *	kick off and run stressors
-  */
-@@ -2217,8 +2236,18 @@ again:
+@@ -1669,9 +1687,20 @@ again:
  							.page_size = stress_get_pagesize(),
  						};
-
+ 
 +						pthread_t monitor;
 +						int prc;
 +						prc = pthread_create(&monitor, NULL, monitor_counter, (void*)args.counter);
 +						if (prc) {
-+							pr_fail("Failed to create monitoring thread.");
-+							rc = EXIT_FAILURE;
-+							goto child_exit;
++							    pr_fail("Failed to create monitoring thread.");
++							    rc = EXIT_FAILURE;
++							    goto child_exit;
 +						}
- 						rc = proc_current->stressor->stress_func(&args);
++
+ 						rc = g_proc_current->stressor->info->stressor(&args);
+ 						pr_fail_check(&rc);
  						stats->run_ok = (rc == EXIT_SUCCESS);
 +						pthread_cancel(monitor);
 +						pthread_join(monitor, NULL);
  					}
- #if defined(STRESS_PERF_STATS)
-if (g_opt_flags & OPT_FLAGS_PERF_STATS) {
+ #if defined(STRESS_PERF_STATS) && defined(HAVE_LINUX_PERF_EVENT_H)
+ 					if (g_opt_flags & OPT_FLAGS_PERF_STATS) {

@@ -20,7 +20,8 @@ spec:
       containers:
         - name: stress
 #         image: polinux/stress-ng
-          image: 100.64.176.12:80/stress-ng-apm:latest
+#          image: 100.64.176.12:80/stress-ng-apm:latest
+          image: stress_ng
           command:
             - sh
             - -c
