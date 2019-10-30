@@ -1,5 +1,6 @@
 import logging
 from typing import List, Dict
+import subprocess
 # from pprint import pprint
 
 from dataclasses import dataclass
@@ -11,6 +12,15 @@ from wca.platforms import Platform, encode_listformat, decode_listformat
 
 log = logging.getLogger(__name__)
 
+def migrate_pages(task, tasks_pids, to_node):
+    # if not all pages yet on place force them to move
+    from_node = str(0 if to_node else 1)
+    to_node = str(to_node)
+    for pid in tasks_pids[task]:
+        pid = str(pid)
+        cmd = ['migratepages', pid, from_node, to_node]
+        log.debug('migrate pages cmd: %s', ' '.join(cmd))
+        subprocess.check_output(cmd)
 
 @dataclass
 class NUMAAllocator(Allocator):
@@ -31,9 +41,11 @@ class NUMAAllocator(Allocator):
             tasks_resources: TasksResources,
             tasks_labels: TasksLabels,
             tasks_allocations: TasksAllocations,
+            tasks_pids,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
         log.info('NUMA allocator random policy here...')
         log.debug('NUMA allocator input data:')
+        log.debug('got pids %r', tasks_pids)
         #
         # print('Measurements:')
         # pprint(tasks_measurements)
@@ -110,6 +122,12 @@ class NUMAAllocator(Allocator):
             if current_node >= 0:
                 # log.debug("task already placed, recording state")
                 balanced_memory[current_node].append((task, memory))
+
+                task_balance = max(preferences.values())
+                if task_balance < 0.95:
+                    log.warn('move missing pages again task balance = %r', task_balance)
+                    migrate_pages(task, tasks_pids, current_node)
+
 
         log.debug("Current state of the system: %s" % balanced_memory)
 
@@ -234,6 +252,8 @@ class NUMAAllocator(Allocator):
                 log.debug("Assign task %s to node %s with memory migrate" %
                           (balance_task, balance_task_node))
                 allocations[balance_task][AllocationType.CPUSET_MEM_MIGRATE] = 1
+                migrate_pages(balance_task, tasks_pids, balance_task_node)
+
 
         # for node in balanced_memory:
         #     for task, _ in balanced_memory[node]:
@@ -272,7 +292,7 @@ def _get_task_memory_limit(task, total):
             continue
         if task[limit] > total:
             continue
-        log.debug('task limit %s %s %s %s %s %s', task, 'by', limit, 'is', task[limit], 'bytes')
+        log.debug('task limit %s %s %s %s', limit, 'is', task[limit], 'bytes')
         return task[limit]
     return 0
 
