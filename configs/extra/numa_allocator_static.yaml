@@ -23,11 +23,11 @@ runner: !AllocationRunner
   rdt_enabled: true  
   enable_derived_metrics: false
   wss_reset_interval: 0
-  #event_names: []  # if uncommented disables metrics from perf event subsystem
-  event_names:  # if uncommented disables metrics from perf event subsystem
-  - instructions
-  - mem_load_retired_local_dram__rd301
-  - mem_load_retired_remote_dram__rd302
+  event_names: []  # if uncommented disables metrics from perf event subsystem
+  # event_names:  # if uncommented disables metrics from perf event subsystem
+  # - instructions
+  # - mem_load_retired_local_dram__rd301
+  # - mem_load_retired_remote_dram__rd302
   #- cycles
   #- cache_misses
 # # - cache_references
