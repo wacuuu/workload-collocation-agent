@@ -97,14 +97,46 @@ class MetricType(str, Enum):
 MetricValue = Union[float, int]
 
 
+class MetricGranurality(str, Enum):
+    PLATFORM = 'platform'
+    TASK = 'task'
+    INTERNAL = 'internal'
+
+    def __repr__(self):
+        return repr(self.value)
+
+
+class MetricUnit(str, Enum):
+    BYTES = 'bytes'
+    NUMERIC = 'numeric'
+    TEN_MILLISECOND = '10ms'
+
+    def __repr__(self):
+        return repr(self.value)
+
+
+class MetricSource(str, Enum):
+    PERF_EVENT = 'perf event'
+    RESCTRL = 'resctrl'
+    CGROUP = 'cgroup'
+    GENERIC = 'generic'
+    PROC = '/proc'
+    INTERNAL = 'internal'
+
+    def __repr__(self):
+        return repr(self.value)
+
+
 # Order is enabled to allow sorting metrics according their metadata.
 @dataclass(order=True)
 class MetricMetadata:
-    type: MetricType
     help: str
+    type: MetricType
+    unit: MetricUnit
+    source: MetricSource
 
 
-# Structure linking a metric with description of chierarchy how it is kept.
+# Structure linking a metric with description of hierarchy how it is kept.
 METRICS_LEVELS = {
     MetricName.MEM_NUMA_STAT_PER_TASK: ["numa_node"],
     MetricName.MEM_NUMA_FREE: ["numa_node"],
@@ -116,156 +148,199 @@ METRICS_LEVELS = {
 METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
     MetricName.INSTRUCTIONS:
         MetricMetadata(
+            'Linux Perf counter for instructions per container.',
             MetricType.COUNTER,
-            'Linux Perf counter for instructions per container.'),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     MetricName.CYCLES:
         MetricMetadata(
+            'Linux Perf counter for cycles per container.',
             MetricType.COUNTER,
-            'Linux Perf counter for cycles per container.'),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     MetricName.CACHE_MISSES:
         MetricMetadata(
+            'Linux Perf counter for cache-misses per container.',
             MetricType.COUNTER,
-            'Linux Perf counter for cache-misses per container.'),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     MetricName.CPU_USAGE_PER_CPU:
         MetricMetadata(
+            'Logical CPU usage in 1/USER_HZ (usually 10ms).'
+            'Calculated using values based on /proc/stat.',
             MetricType.COUNTER,
-            '[1/USER_HZ] Logical CPU usage in 1/USER_HZ (usually 10ms).'
-            'Calculated using values based on /proc/stat'),
+            MetricUnit.TEN_MILLISECOND,
+            MetricSource.PROC),
     MetricName.CPU_USAGE_PER_TASK:
         MetricMetadata(
+            'cpuacct.usage (total kernel and user space).',
             MetricType.COUNTER,
-            '[ns] cpuacct.usage (total kernel and user space)'),
+            MetricUnit.NUMERIC,
+            MetricSource.CGROUP),
     MetricName.MEM_BW:
         MetricMetadata(
+            'Total memory bandwidth using Memory Bandwidth Monitoring.',
             MetricType.COUNTER,
-            '[bytes] Total memory bandwidth using Memory Bandwidth Monitoring.'),
+            MetricUnit.BYTES,
+            MetricSource.RESCTRL),
     MetricName.MEM_USAGE_PER_TASK:
         MetricMetadata(
+            'Memory usage_in_bytes per tasks returned from cgroup memory subsystem.',
             MetricType.GAUGE,
-            '[bytes] Memory usage_in_bytes per tasks returned from cgroup memory subsystem.'),
+            MetricUnit.BYTES,
+            MetricSource.CGROUP),
     MetricName.MEM_MAX_USAGE_PER_TASK:
         MetricMetadata(
+            'Memory max_usage_in_bytes per tasks returned from cgroup memory subsystem.',
             MetricType.GAUGE,
-            '[bytes] Memory max_usage_in_bytes per tasks returned from cgroup memory subsystem.'),
+            MetricUnit.BYTES,
+            MetricSource.CGROUP),
     MetricName.MEM_LIMIT_PER_TASK:
         MetricMetadata(
+            'Memory limit_in_bytes per tasks returned from cgroup memory subsystem.',
             MetricType.GAUGE,
-            '[bytes] Memory limit_in_bytes per tasks returned from cgroup memory subsystem.'),
+            MetricUnit.BYTES,
+            MetricSource.CGROUP),
     MetricName.MEM_SOFT_LIMIT_PER_TASK:
         MetricMetadata(
+            'Memory soft_limit_in_bytes per tasks returned from cgroup memory subsystem.',
             MetricType.GAUGE,
-            '[bytes] Memory soft_limit_in_bytes per tasks returned from cgroup memory subsystem.'),
+            MetricUnit.BYTES,
+            MetricSource.CGROUP),
     MetricName.LLC_OCCUPANCY:
         MetricMetadata(
+            'LLC occupancy.',
             MetricType.GAUGE,
-            '[bytes] LLC occupancy'),
+            MetricUnit.BYTES,
+            MetricSource.RESCTRL),
     MetricName.MEM_USAGE:
         MetricMetadata(
+            'Total memory used by platform in bytes based on /proc/meminfo '
+            'and uses heuristic based on linux free tool (total - free - buffers - cache).',
             MetricType.GAUGE,
-            '[bytes] Total memory used by platform in bytes based on /proc/meminfo '
-            'and uses heuristic based on linux free tool (total - free - buffers - cache).'
-        ),
+            MetricUnit.BYTES,
+            MetricSource.PROC),
     MetricName.MEMSTALL:
         MetricMetadata(
+            'Mem stalled loads.',
             MetricType.COUNTER,
-            'Mem stalled loads'
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     MetricName.CACHE_REFERENCES:
         MetricMetadata(
+            'Cache references.',
             MetricType.COUNTER,
-            'Cache references'
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     MetricName.SCALING_FACTOR_MAX:
         MetricMetadata(
+            'Perf metric scaling factor, MAX value.',
             MetricType.GAUGE,
-            'Perf metric scaling factor, MAX value'
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     MetricName.SCALING_FACTOR_AVG:
         MetricMetadata(
+            'Perf metric scaling factor, average from all CPUs.',
             MetricType.GAUGE,
-            'Perf metric scaling factor, average from all CPUs'
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     MetricName.MEM_NUMA_STAT_PER_TASK:
         MetricMetadata(
-            MetricType.GAUGE,
             'NUMA Stat TODO!',  # TODO: fix me!
-        ),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC,
+            MetricSource.CGROUP),
     MetricName.MEM_PAGE_FAULTS:
         MetricMetadata(
-            MetricType.COUNTER,
             'Page faults',  # TODO: fix me!
-        ),
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC,
+            MetricSource.CGROUP),
     MetricName.MEM_NUMA_FREE:
         MetricMetadata(
-            MetricType.GAUGE,
             'NUMA memory free per numa node TODO!',  # TODO: fix me!
-        ),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC,
+            MetricSource.PROC),
     MetricName.MEM_NUMA_USED:
         MetricMetadata(
-            MetricType.GAUGE,
             'NUMA memory used per numa node TODO!',  # TODO: fix me!
-        ),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC,
+            MetricSource.PROC),
     MetricName.MEMORY_BANDWIDTH_LOCAL:
         MetricMetadata(
+            'Total local memory bandwidth using Memory Bandwidth Monitoring.',
             MetricType.COUNTER,
-            '[bytes] Total local memory bandwidth using Memory Bandwidth Monitoring.'
-        ),
+            MetricUnit.BYTES,
+            MetricSource.RESCTRL),
     MetricName.MEMORY_BANDWIDTH_REMOTE:
         MetricMetadata(
+            'Total remote memory bandwidth using Memory Bandwidth Monitoring.',
             MetricType.COUNTER,
-            '[bytes] Total remote memory bandwidth using Memory Bandwidth Monitoring.'
-        ),
+            MetricUnit.BYTES,
+            MetricSource.RESCTRL),
     MetricName.OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD:
         MetricMetadata(
-            MetricType.COUNTER,
             'Increment each cycle of the number of offcore outstanding demand data read '
-            'requests from SQ that missed L3.'
-        ),
+            'requests from SQ that missed L3.',
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     MetricName.OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD:
         MetricMetadata(
+            'Demand data read requests that missed L3.',
             MetricType.COUNTER,
-            'Demand data read requests that missed L3.'
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     MetricName.CPUS:
         MetricMetadata(
-            MetricType.GAUGE,
             'Tasks resources cpus initial requests.',
-        ),
+            MetricType.GAUGE,
+            MetricUnit.NUMERIC,
+            MetricSource.GENERIC),
     MetricName.MEM:
         MetricMetadata(
+            'Tasks resources memory initial requests.',
             MetricType.GAUGE,
-            'Tasks resources memory initial requests.'
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.GENERIC),
     MetricName.LAST_SEEN:
         MetricMetadata(
+            'Time the task was last seen.',
             MetricType.COUNTER,
-            'Time the task was last seen.'
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.GENERIC),
     MetricName.UP:
         MetricMetadata(
+            'Time the WCA was last seen.',
             MetricType.COUNTER,
-            'Time the was was last seen.'
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.INTERNAL),
     DerivedMetricName.IPC:
         MetricMetadata(
+            'Instructions per cycle.',
             MetricType.GAUGE,
-            'Instructions per cycle'
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     DerivedMetricName.IPS:
         MetricMetadata(
+            'Instructions per second.',
             MetricType.GAUGE,
-            'Instructions per second'
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     DerivedMetricName.CACHE_HIT_RATIO:
         MetricMetadata(
+            'Cache hit ratio, based on cache-misses and cache-references.',
             MetricType.GAUGE,
-            'Cache hit ratio, based on cache-misses and cache-references',
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
     DerivedMetricName.CACHE_MISSES_PER_KILO_INSTRUCTIONS:
         MetricMetadata(
+            'Cache misses per kilo instructions.',
             MetricType.GAUGE,
-            'Cache misses per kilo instructions',
-        ),
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_EVENT),
 }
 
 
@@ -274,19 +349,23 @@ class Metric:
     name: Union[str, MetricName]
     value: MetricValue
     labels: Dict[str, str] = field(default_factory=dict)
+    unit: Union[MetricUnit] = None
     type: MetricType = None
     help: str = None
+    granularity: MetricGranurality = None
 
     @staticmethod
-    def create_metric_with_metadata(name, value, labels=None):
+    def create_metric_with_metadata(name, value, labels=None, granularity=None):
         metric = Metric(
             name=name,
             value=value,
-            labels=labels or dict()
+            labels=labels or dict(),
+            granularity=granularity
         )
         if name in METRICS_METADATA:
             metric.type = METRICS_METADATA[name].type
             metric.help = METRICS_METADATA[name].help
+            metric.unit = METRICS_METADATA[name].unit
         # TODO: add else, cannot be None type and help
         return metric
 
