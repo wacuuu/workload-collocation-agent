@@ -71,8 +71,8 @@ pipeline {
             parallel {
                  stage("Using tester") {
                      steps {
-                         sh '''
-			   sudo make tester
+                     sh '''
+			         sudo make tester
                      '''
                      }
                  }
@@ -211,6 +211,48 @@ pipeline {
             }
             failFast true
             parallel {
+                stage('WCA Daemonset E2E for Kubernetes') {
+                    agent { label 'Daemonset' }
+                    environment {
+                        PROMETHEUS = 'http://100.64.176.18:30900'
+                        KUBERNETES_HOST='100.64.176.32'
+                        KUBECONFIG="${HOME}/.kube/admin.conf"
+                        KUSTOMIZATION_MONITORING='example/k8s_monitoring/'
+                        KUSTOMIZATION_WORKLOAD='example/k8s_workloads/'
+                    }
+                    steps {
+                        replace_commit_kustomization()
+                        add_labels_kustomization("memcached-mutilate")
+                        add_labels_kustomization("redis-memtier")
+                        add_labels_kustomization("stress")
+                        add_labels_kustomization("sysbench-memory")
+                        set_docker_image("redis-memtier", "memtier_benchmark")
+                        set_docker_image("stress", "stress_ng")
+
+                        print('Starting wca...')
+                        sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_MONITORING}"
+                        print('Starting workloads...')
+                        sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_WORKLOAD}"
+                        sh "kubectl scale --replicas=1 statefulset/stress-stream-small"
+                        sh "kubectl scale --replicas=1 statefulset/memcached-small"
+                        sh "kubectl scale --replicas=1 statefulset/mutilate-small"
+                        sh "kubectl scale --replicas=1 statefulset/redis-small"
+                        sh "kubectl scale --replicas=1 statefulset/memtier-small"
+                        sh "kubectl scale --replicas=1 statefulset/sysbench-memory-small"
+
+                        print('Sleep while workloads are running...')
+                        sleep RUN_WORKLOADS_SLEEP_TIME
+                        print('Starting workloads...')
+                        test_wca_metrics_kustomization()
+                    }
+                    post {
+                        always {
+                            print('Cleaning workloads and wca...')
+                            sh "kubectl delete -k ${WORKSPACE}/${KUSTOMIZATION_WORKLOAD} --wait=false"
+                            sh "kubectl delete -k ${WORKSPACE}/${KUSTOMIZATION_MONITORING} --wait=false"
+                        }
+                    }
+                }
                 stage('WCA E2E for Kubernetes') {
                     agent { label 'kubernetes' }
                     environment {
@@ -275,6 +317,48 @@ def wca_and_workloads_check() {
     run_workloads("${EXTRA_ANSIBLE_PARAMS}", "${LABELS}")
     sleep RUN_WORKLOADS_SLEEP_TIME
     test_wca_metrics()
+}
+
+def set_docker_image(workload, workload_image) {
+    file = "${WORKSPACE}/example/k8s_workloads/${workload}/kustomization.yaml"
+    testing_image = "images:\n" +
+    "  - name: ${workload_image}\n" +
+    "    newName: ${DOCKER_REPOSITORY_URL}/wca/${workload_image}\n" +
+    "    newTag: ${GIT_COMMIT}\n"
+    sh "echo '${testing_image}' >> ${file}"
+}
+
+def replace_commit_kustomization() {
+    contentReplace(
+        configs: [
+            fileContentReplaceConfig(
+                configs: [
+                    fileContentReplaceItemConfig( search: 'devel', replace: "${GIT_COMMIT}", matchCount: 0),
+                ],
+                fileEncoding: 'UTF-8',
+                filePath: "${WORKSPACE}/example/k8s_monitoring/wca/kustomization.yaml")])
+}
+
+def add_labels_kustomization(workload) {
+    contentReplace(
+        configs: [
+            fileContentReplaceConfig(
+                configs: [
+                    fileContentReplaceItemConfig( search: 'commonLabels:', replace:
+                    "commonLabels:\n" +
+                        "  build_commit: '${GIT_COMMIT}'\n" +
+                        "  build_number: '${BUILD_NUMBER}'\n" +
+                        "  node_name: '${NODE_NAME}'\n" +
+                        "  workload_name: '${workload}'\n" +
+                        "  env_uniq_id: '32'\n",
+                    matchCount: 0),
+                ],
+                fileEncoding: 'UTF-8',
+                filePath: "${WORKSPACE}/example/k8s_workloads/${workload}/kustomization.yaml")])
+}
+
+def test_wca_metrics_kustomization() {
+    sh "PYTHONPATH=. pipenv run pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomization --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v"
 }
 
 def images_check() {
@@ -365,7 +449,7 @@ def run_workloads(extra_params, labels) {
 def stop_workloads(extra_params) {
     print('Stopping all workloads...')
     sh "ansible-playbook  ${extra_params}  -i ${WORKSPACE}/${INVENTORY} --tags=clean_jobs ${WORKSPACE}/${PLAYBOOK}"
-    sleep 5 
+    sleep 5
 }
 
 def remove_file(path) {

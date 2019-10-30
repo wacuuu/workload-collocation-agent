@@ -75,6 +75,18 @@ def _fetch_metrics(url):
     'redis_rpc_perf',
 ])
 def test_wca_metrics(workload_name):
+    test_wca(workload_name)
+
+
+@pytest.mark.parametrize('workload_name', [
+    'memcached-mutilate',
+    'sysbench-memory'
+])
+def test_wca_metrics_kustomization(workload_name):
+    test_wca(workload_name)
+
+
+def test_wca(workload_name):
     assert 'PROMETHEUS' in os.environ, 'prometheus host to connect'
     assert 'BUILD_NUMBER' in os.environ
     assert 'BUILD_COMMIT' in os.environ
@@ -98,7 +110,7 @@ def test_wca_metrics(workload_name):
                  build_number, build_commit, env_uniq_id)
 
     # Check SLI metrics for workloads
-    sli_query = _build_prometheus_url(prometheus, 'sli',
+    sli_query = _build_prometheus_url(prometheus, 'task__up',
                                       tags, 1800, time())
     sli_metrics = _fetch_metrics(sli_query)
     assert len(sli_metrics['data']['result']) > 0, \

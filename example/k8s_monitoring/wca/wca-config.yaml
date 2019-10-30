@@ -7,7 +7,7 @@
 
 runner: !MeasurementRunner
   action_delay: 5.0
-  rdt_enabled: true
+  rdt_enabled: False
   enable_derived_metrics: True
   node: !KubernetesNode
     cgroup_driver: cgroupfs

@@ -17,9 +17,9 @@
 FROM centos:7 AS stress-ng
 
 RUN yum install -y gcc git make wget patch
-RUN wget https://github.com/ColinIanKing/stress-ng/archive/V0.09.28.tar.gz
-RUN tar -xzf V0.09.28.tar.gz
-WORKDIR /stress-ng-0.09.28
+RUN wget https://github.com/ColinIanKing/stress-ng/archive/V0.10.08.tar.gz
+RUN tar -xzf V0.10.08.tar.gz
+WORKDIR /stress-ng-0.10.08
 ADD APM.patch APM.patch
 RUN cat APM.patch | patch -p 1
 RUN make
@@ -32,4 +32,4 @@ RUN yum makecache
 RUN yum install -y python36
 RUN useradd -M stress-ng
 COPY /dist/stress_ng_wrapper.pex /usr/bin/stress_ng_wrapper.pex
-COPY --from=stress-ng /stress-ng-0.09.28/stress-ng /usr/bin/stress-ng
+COPY --from=stress-ng /stress-ng-0.10.08/stress-ng /usr/bin/stress-ng

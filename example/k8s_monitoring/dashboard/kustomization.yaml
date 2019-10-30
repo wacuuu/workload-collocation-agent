@@ -3,6 +3,8 @@ kind: Kustomization
 namespace: kubernetes-dashboard
 
 resources:
-  - service_account.yaml
-  - dashboard.yaml
-
+  - configmap_secrets.yaml
+  - dashboard_metrics_scraper.yaml
+  - kubernetes-dashboard.yaml
+  - service_account_user.yaml
+  - service_account_dashboard.yaml

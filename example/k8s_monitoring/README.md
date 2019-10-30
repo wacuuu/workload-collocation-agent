@@ -46,11 +46,19 @@ when CRDs are created by kustomize and prometheus-operator.
 
 You can check progress of deployment using `kubectl get -k .`.
 
-4. After deploy, token for access to Kubernetes Dashboard is available:
+## Dashboard
+
+After deploy, token for access to Kubernetes Dashboard is available:
 
 ```
 kubectl -n kubernetes-dashboard describe secret $(kubectl -n kubernetes-dashboard get secret | grep admin-user | awk '{print $1}')
 ```
+
+Using version of Kubernetes Dashbord is v2.0.0-beta4.
+https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-beta4/aio/deploy/recommended.yaml
+
+To get token, used this instruction:
+https://github.com/kubernetes/dashboard/blob/master/docs/user/access-control/creating-sample-user.md
 
 # Access
 
