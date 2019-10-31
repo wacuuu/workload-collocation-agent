@@ -29,7 +29,8 @@ class NUMAAllocator(Allocator):
     # parse15
     # preferences_threshold: float = 0.66
     preferences_threshold: float = 0.0  # always migrate
-    memory_migrate: bool = True
+    memory_migrate: bool = False
+    memory_migrate_min_task_balance: float = 0.95
 
     # use candidate
     candidate = True
@@ -124,7 +125,7 @@ class NUMAAllocator(Allocator):
                 balanced_memory[current_node].append((task, memory))
 
                 task_balance = max(preferences.values())
-                if task_balance < 0.95:
+                if task_balance < self.memory_migrate_min_task_balance:
                     log.warn('move missing pages again task balance = %r', task_balance)
                     migrate_pages(task, tasks_pids, current_node)
 
