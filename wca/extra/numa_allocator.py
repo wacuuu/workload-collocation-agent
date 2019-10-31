@@ -44,9 +44,9 @@ class NUMAAllocator(Allocator):
             tasks_allocations: TasksAllocations,
             tasks_pids,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
-        log.info('NUMA allocator random policy here...')
+        log.info('NUMA allocator Pv2 policy here...')
         log.debug('NUMA allocator input data:')
-        log.debug('got pids %r', tasks_pids)
+        # log.debug('got pids %r', tasks_pids)
         #
         # print('Measurements:')
         # pprint(tasks_measurements)
@@ -99,10 +99,12 @@ class NUMAAllocator(Allocator):
                 (task,
                  _get_task_memory_limit(tasks_measurements[task], total_memory),
                  _get_numa_node_preferences(tasks_measurements[task], platform)))
-        # tasks_memory = sorted(tasks_memory, reverse=True, key=lambda x: x[1])
+        tasks_memory = sorted(tasks_memory, reverse=True, key=lambda x: x[1])
+
         # FOR DEBUGGING PURPOSES just sort by name (it should work the same assuming
         # memory is equal for all tasks)
-        tasks_memory = sorted(tasks_memory, reverse=False, key=lambda x: x[0])  # by name
+        # tasks_memory = sorted(tasks_memory, reverse=False, key=lambda x: x[0])  # by name
+
         # pprint(tasks_memory)
 
         # Current state of the system
