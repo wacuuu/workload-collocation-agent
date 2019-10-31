@@ -311,7 +311,7 @@ class AllocationRunner(MeasurementRunner):
 
         current_allocations = _get_tasks_allocations(containers)
 
-        tasks_pids = {task.name: container.get_pids(include_threads=False) 
+        tasks_pids = {task.task_id: container.get_pids(include_threads=False) 
                       for task, container in containers.items()}
 
         # Allocator callback
