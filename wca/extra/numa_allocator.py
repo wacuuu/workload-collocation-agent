@@ -44,7 +44,7 @@ class NUMAAllocator(Allocator):
             tasks_allocations: TasksAllocations,
             tasks_pids,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
-        log.info('NUMA allocator Pv2 policy here...')
+        log.info('NUMA allocator Pv3 policy here...')
         log.debug('NUMA allocator input data:')
         # log.debug('got pids %r', tasks_pids)
         #
@@ -115,6 +115,7 @@ class NUMAAllocator(Allocator):
         balance_task_candidate = None
         balance_task_node_candidate = None
 
+        did_some_balancing = False
         # First, get current state of the system
         for task, memory, preferences in tasks_memory:
             current_node = _get_current_node(
@@ -128,8 +129,14 @@ class NUMAAllocator(Allocator):
 
                 task_balance = max(preferences.values())
                 if task_balance < self.memory_migrate_min_task_balance:
+                    did_some_balancing = True
                     log.warn('move missing pages again task balance = %r', task_balance)
-                    migrate_pages(task, tasks_pids, current_node)
+                    try:
+                        migrate_pages(task, tasks_pids, current_node)
+                    except subprocess.CalledProcessError as e:
+                        log.error('cannot migrate pages pid=%s (task=%s) in this loop: ignored for next loop', task_pids, task)
+                        log.exception('called process error')
+
 
 
         log.debug("Current state of the system: %s" % balanced_memory)
@@ -142,9 +149,12 @@ class NUMAAllocator(Allocator):
                        labels=dict(numa_node=str(node)))
             ])
 
-        # if len(balanced_memory[0])  + len(balanced_memory[1]) > 0:
-        #     log.debug('szymon hack!')
-        #     return {}, [], extra_metrics
+
+        if did_some_balancing:
+            # because current state of system is outdate do nothing and wait for another call
+            return {}, [], extra_metrics
+
+
 
         log.debug("Starting re-balancing")
 
@@ -251,11 +261,13 @@ class NUMAAllocator(Allocator):
                 AllocationType.CPUSET_MEMS: encode_listformat({balance_task_node}),
             }
             # Instant memory migrate.
-            if self.memory_migrate:
-                log.debug("Assign task %s to node %s with memory migrate" %
-                          (balance_task, balance_task_node))
-                allocations[balance_task][AllocationType.CPUSET_MEM_MIGRATE] = 1
-                migrate_pages(balance_task, tasks_pids, balance_task_node)
+            # Do not move page immediatly until - cpuset cpus/mems are set in next loop
+            # TODO: to be fixed when move pages is moved to WCA internals
+            # if self.memory_migrate:
+            #     log.debug("Assign task %s to node %s with memory migrate" %
+            #               (balance_task, balance_task_node))
+            #     allocations[balance_task][AllocationType.CPUSET_MEM_MIGRATE] = 1
+            #     migrate_pages(balance_task, tasks_pids, balance_task_node)
 
 
         # for node in balanced_memory:
