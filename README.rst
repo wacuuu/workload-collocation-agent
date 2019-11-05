@@ -206,9 +206,10 @@ See `workloads directory <workloads>`_ for list of supported applications and lo
 Further reading
 ===============
 
-- `Installation guide <docs/install.rst>`_
+- `Installation guide <docs/install.rst>`_  
 - `Detection API <docs/detection.rst>`_
 - `Allocation API <docs/allocation.rst>`_
+- `Metrics list <docs/metrics.rst>`_
 - `Development guide <docs/development.rst>`_
 - `External detector example <docs/external_detector_example.rst>`_
 - `Wrappers guide <docs/wrappers.rst>`_
