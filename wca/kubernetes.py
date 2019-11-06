@@ -27,6 +27,7 @@ from wca.config import assure_type, Numeric, Url, Str, Path
 from wca.cgroups import CgroupSubsystem
 from wca.metrics import MetricName
 from wca.nodes import Node, Task, TaskId, TaskSynchronizationException
+from wca.resources import calculate_pod_resources
 from wca.security import SSL, HTTPSAdapter
 
 DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.CACHE_MISSES)
@@ -237,7 +238,7 @@ class KubernetesNode(Node):
             container_spec = pod.get('spec').get('containers')
             tasks.append(KubernetesTask(
                 name=task_name, task_id=pod_id, qos=qos, labels=labels,
-                resources=_calculate_pod_resources(container_spec),
+                resources=calculate_pod_resources(container_spec),
                 cgroup_path=_build_cgroup_path(self.cgroup_driver, qos, pod_id),
                 subcgroups_paths=containers_cgroups))
 
@@ -288,55 +289,6 @@ def _build_cgroup_path(cgroup_driver, qos: str, pod_id: str, container_id=''):
     if len(result) > 1 and result[-1] == '/':
         result = result[:-1]
     return result
-
-
-# https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#meaning-of-memory
-_MEMORY_UNITS = {'Ki': 1024, 'Mi': 1024 ** 2, 'Gi': 1024 ** 3, 'Ti': 1024 ** 4,
-                 'K': 1000, 'M': 1000 ** 2, 'G': 1000 ** 3, 'T': 1000 ** 4}
-_CPU_UNITS = {'m': 0.001}
-_RESOURCE_TYPES = ['requests', 'limits']
-_MAPPING = {'requests_memory': 'mem', 'ephemeral-storage': 'disk', 'requests_cpu': 'cpus'}
-
-
-def _calculate_pod_resources(containers_spec: List[Dict[str, str]]):
-    """Returns flat dictionary with keys created as resource_name + '_' + resource_type,
-       e.g. 'cpu_limits': '0.25' """
-    resources = dict()
-
-    units = {'memory': _MEMORY_UNITS, 'ephemeral-storage': _MEMORY_UNITS,
-             'cpu': _CPU_UNITS}
-
-    for container in containers_spec:
-        container_resources = container.get('resources')
-        if not container_resources:
-            continue
-
-        for resource_type in _RESOURCE_TYPES:
-            if resource_type not in container_resources:
-                continue
-
-            for resource_name, resource_value in \
-                    container_resources.get(resource_type).items():
-                value = resource_value
-                for unit, multiplier in units.get(resource_name).items():
-                    if resource_value.endswith(unit):
-                        value = float(resource_value.split(unit)[0]) * multiplier
-                        break
-
-                resource_key = resource_type + '_' + resource_name
-                if resource_key in resources:
-                    resources[resource_key] += float(value)
-                else:
-                    resources[resource_key] = float(value)
-
-    # Mapping resource names to make them consistent with mesos
-    mapped_resources = dict()
-    for original_resource, mapped_resource in _MAPPING.items():
-        if original_resource in resources:
-            mapped_resources[mapped_resource] = resources[original_resource]
-    resources.update(mapped_resources)
-
-    return resources
 
 
 def _sanitize_label(label_key):

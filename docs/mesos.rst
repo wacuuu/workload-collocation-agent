@@ -77,3 +77,14 @@ Task metrics (e.g. cycles, cache_misses_per_kilo_instructions) have labels which
 - task's label sanitized (replaced '.' with '_', removed prefixes like 'org.aurora'),
 - additional label **task_name** which value is equal to task name (for Aurora e.g. 'example/root/staging/stress_ng'),
 - additional label **task_id** which value is equal to task id.
+
+
+Task's resources for Mesos
+==========================
+List of available resources:
+
+- disk
+- cpus
+- mem
+
+Task resources "disk" and "mem" are scalar values expressed in bytes. Fractional "cpus" values correspond to partial shares of a CPU.

@@ -18,7 +18,7 @@ import requests
 from unittest.mock import patch
 
 from wca.config import ValidationError
-from wca.kubernetes import KubernetesNode, KubernetesTask, _calculate_pod_resources, \
+from wca.kubernetes import KubernetesNode, KubernetesTask, \
     _build_cgroup_path, are_all_tasks_of_single_qos, QOS_LABELNAME, \
     MissingCgroupException
 from wca.nodes import TaskSynchronizationException
@@ -109,37 +109,6 @@ def test_invalid_kubelet_response(mock_path_exists, get_mock):
     node = KubernetesNode(kubelet_enabled=True)
     with pytest.raises(ValidationError):
         node.get_tasks()
-
-
-def test_calculate_resources_empty():
-    container_spec = [{'resources': {}}]
-    assert {} == _calculate_pod_resources(container_spec)
-
-
-def test_calculate_resources_with_requests_and_limits():
-    container_spec = [
-        {'resources': {'limits': {'cpu': '250m', 'memory': '64Mi'},
-                       'requests': {'cpu': '250m', 'memory': '64Mi'}}}
-    ]
-    assert {'limits_cpu': 0.25,
-            'limits_memory': float(64 * 1024 ** 2),
-            'requests_cpu': 0.25,
-            'requests_memory': float(64 * 1024 ** 2),
-            'cpus': 0.25,
-            'mem': float(64 * 1024 ** 2)
-            } == _calculate_pod_resources(container_spec)
-
-
-def test_calculate_resources_multiple_containers():
-    container_spec = [
-        {'resources': {'requests': {'cpu': '250m', 'memory': '67108864'}}},
-        {'resources': {'requests': {'cpu': '100m', 'memory': '32Mi'}}}
-    ]
-    assert {'requests_cpu': 0.35, 'requests_memory':
-            float(67108864 + 32 * 1024 ** 2),
-            'cpus': 0.35,
-            'mem': float(67108864 + 32 * 1024 ** 2)
-            } == _calculate_pod_resources(container_spec)
 
 
 _POD_ID = '12345-67890'

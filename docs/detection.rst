@@ -207,7 +207,7 @@ by task definition as defined in used orechstrator.
 
     TaskId = str  # Mesos tasks id
     TasksMeasurements = Dict[TaskId, Measurements]
-    TasksResources = Dict[TaskId, Dict[str,float]]
+    TasksResources = Dict[str, Union[float int, str]]
 
     # Example:
     tasks_measurements = {
@@ -228,11 +228,9 @@ by task definition as defined in used orechstrator.
     }
 
     tasks_resources = {
-        'user-devel-cassandra-0-f096985b-1f1e-4f94-b0b7-4728f5b476b2': {
-            'cpus': 8.0,
-            'mem': 2000.0,
-            'disk': 8000.0,
-        },
+        'cpus': 8.0,
+        'mems': 2000.0,
+        'disk': 8000.0,
     }
     # and example call of detect function
     anomalies, detection_metrics = anomaly_detector.detect(platform, tasks_measurements, tasks_resources)
