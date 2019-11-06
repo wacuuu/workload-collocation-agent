@@ -1,5 +1,5 @@
 loggers:
-  "wca.extra.numa_allocator": "trace"
+  "wca.extra.numa_allocator": "debug"
   "wca": "info"
 runner: !AllocationRunner
   action_delay: 5

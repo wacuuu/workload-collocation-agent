@@ -111,16 +111,16 @@ class NUMAAllocator(Allocator):
         least_used_node = sorted(
             platform.measurements[MetricName.MEM_NUMA_FREE].items(), reverse=True, 
             key=lambda x: x[1])[0][0]
-        log.debug('Least used node: %s', least_used_node)
-        log.debug('Tasks to balance: %s', tasks_to_balance)
+        log.log(TRACE, 'Least used node: %s', least_used_node)
+        log.log(TRACE, 'Tasks to balance: %s', tasks_to_balance)
 
         for task in tasks_to_balance:
             if tasks_current_nodes[task] == least_used_node:
                 current_node = tasks_current_nodes[task]
                 memory_to_move = sum(v for n,v in tasks_measurements[task][MetricName.MEM_NUMA_STAT_PER_TASK].items() if n!=current_node)
                 did_some_migration = True
-                log.debug('Task: %s Move %s bytes pages to node %s task balance = %r', task, 
-                          memory_to_move * 4096, current_node, task_balance)
+                log.debug('Task: %s Moving %s MB to node %s task balance = %r', task, 
+                          (memory_to_move * 4096) / 2**10, current_node, task_balance)
                 try:
                     start = time.time()
                     migrate_pages(task, tasks_pids, current_node, platform.numa_nodes)
@@ -132,7 +132,7 @@ class NUMAAllocator(Allocator):
                               'in this loop: ignored for next loop', tasks_pids, task)
                     log.exception('called process error')
         else:
-            log.debug('no more tasks to move memory!')
+            log.log(TRACE, 'no more tasks to move memory!')
 
         log.log(TRACE, "Current state of the system: %s" % balanced_memory)
         log.log(TRACE, "Current state of the system per node: %s" % {
@@ -148,7 +148,7 @@ class NUMAAllocator(Allocator):
                        labels=dict(numa_node=str(node)))
             ])
 
-        log.log(TRACE, 'Starting re-balancing')
+        log.log(TRACE, 'Starting re-balancing analysis')
 
         for task, memory, preferences in tasks_memory:
             log.log(TRACE, "Task %r: Memory: %d Preferences: %s" % (task, memory, preferences))
