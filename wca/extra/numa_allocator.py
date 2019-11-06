@@ -12,6 +12,7 @@ from wca.platforms import Platform, encode_listformat, decode_listformat
 
 log = logging.getLogger(__name__)
 
+
 def migrate_pages(task, tasks_pids, to_node):
     # if not all pages yet on place force them to move
     from_node = str(0 if to_node else 1)
@@ -21,6 +22,7 @@ def migrate_pages(task, tasks_pids, to_node):
         cmd = ['migratepages', pid, from_node, to_node]
         log.debug('migrate pages cmd: %s', ' '.join(cmd))
         subprocess.check_output(cmd)
+
 
 @dataclass
 class NUMAAllocator(Allocator):
@@ -44,7 +46,7 @@ class NUMAAllocator(Allocator):
             tasks_allocations: TasksAllocations,
             tasks_pids,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
-        log.info('NUMA allocator Pv3 policy here...')
+        log.info('NUMA allocator Pv4 policy here...')
         log.debug('NUMA allocator input data:')
         # log.debug('got pids %r', tasks_pids)
         #
@@ -115,7 +117,7 @@ class NUMAAllocator(Allocator):
         balance_task_candidate = None
         balance_task_node_candidate = None
 
-        did_some_balancing = False
+        did_some_migration = False
         # First, get current state of the system
         for task, memory, preferences in tasks_memory:
             current_node = _get_current_node(
@@ -127,17 +129,16 @@ class NUMAAllocator(Allocator):
                 # log.debug("task already placed, recording state")
                 balanced_memory[current_node].append((task, memory))
 
-                task_balance = max(preferences.values())
+                task_balance = preferences[current_node]
                 if self.memory_migrate and task_balance < self.memory_migrate_min_task_balance:
-                    did_some_balancing = True
+                    did_some_migration = True
                     log.warn('move missing pages again task balance = %r', task_balance)
                     try:
                         migrate_pages(task, tasks_pids, current_node)
-                    except subprocess.CalledProcessError as e:
-                        log.error('cannot migrate pages pid=%s (task=%s) in this loop: ignored for next loop', task_pids, task)
+                    except subprocess.CalledProcessError:
+                        log.error('cannot migrate pages pid=%s (task=%s)'
+                                  'in this loop: ignored for next loop', tasks_pids, task)
                         log.exception('called process error')
-
-
 
         log.debug("Current state of the system: %s" % balanced_memory)
 
@@ -149,12 +150,10 @@ class NUMAAllocator(Allocator):
                        labels=dict(numa_node=str(node)))
             ])
 
-
-        if did_some_balancing:
+        if did_some_migration:
+            log.debug('Did some migration, wait for another call...')
             # because current state of system is outdate do nothing and wait for another call
             return {}, [], extra_metrics
-
-
 
         log.debug("Starting re-balancing")
 
@@ -268,7 +267,6 @@ class NUMAAllocator(Allocator):
             #               (balance_task, balance_task_node))
             #     allocations[balance_task][AllocationType.CPUSET_MEM_MIGRATE] = 1
             #     migrate_pages(balance_task, tasks_pids, balance_task_node)
-
 
         # for node in balanced_memory:
         #     for task, _ in balanced_memory[node]:
