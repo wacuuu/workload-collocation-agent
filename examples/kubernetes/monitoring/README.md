@@ -7,7 +7,7 @@ Files in this folder will deploy:
 - **grafana** for visualization
 - **prometheus** using (prometheus-opearator) with custom rules for metrics collection, storage and 
   evaluation
-- **wca** as daemonset (on nodes marked with label goal=service) - image build instructions [here](./wca/README.md)
+- **wca** as daemonset (on nodes marked with label goal=service) - image build instructions [here](wca/README.md)
 - **dashboard** for graphic cluster interface
 
 1. You need to create dedicated namespaces for those applications like this:
@@ -128,14 +128,10 @@ Both applications are running in **host** network namespace as daemonsets on por
  hostPath based data for Grafana and Prometheus.
 
 ```shell
-bash cleanup.sh
-
-kubectl delete namespace fluentd
-kubectl delete namespace grafana
-kubectl delete namespace prometheus
-kubectl delete namespace wca
-
 kubectl delete -f prometheus/persistent_volume.yaml
+kubectl delete persistentvolumeclaim/prometheus-prometheus-db-prometheus-prometheus-0 -n prometheus
+kubectl delete -k .
+kubectl delete -f namespaces.yaml
 ```
 
 ### Remove namespace if stuck in "Terminating" state

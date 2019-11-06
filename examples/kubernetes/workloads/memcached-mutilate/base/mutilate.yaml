@@ -21,7 +21,8 @@ spec:
       terminationGracePeriodSeconds: 0
       containers:
         - name: mutilate
-          image: bplotka/mutilate
+#          image: bplotka/mutilate
+          image: mutilate
           env:
             - name: threads
               valueFrom: {configMapKeyRef: { name: mutilate, key: threads }}

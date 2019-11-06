@@ -81,7 +81,7 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/redis:${GIT_COMMIT}
-                    IMAGE_DIR=${WORKSPACE}/workloads/redis
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/redis
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
                     '''
@@ -92,7 +92,7 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/memtier_benchmark:${GIT_COMMIT}
-                    IMAGE_DIR=${WORKSPACE}/workloads/memtier_benchmark
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/memtier_benchmark
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
@@ -104,7 +104,7 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/stress_ng:${GIT_COMMIT}
-                    IMAGE_DIR=${WORKSPACE}/workloads/stress_ng
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/stress_ng
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
@@ -116,7 +116,7 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/rpc_perf:${GIT_COMMIT}
-                    IMAGE_DIR=${WORKSPACE}/workloads/rpc_perf
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/rpc_perf
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
@@ -128,7 +128,7 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/twemcache:${GIT_COMMIT}
-                    IMAGE_DIR=${WORKSPACE}/workloads/twemcache
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/twemcache
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
@@ -140,7 +140,7 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/ycsb:${GIT_COMMIT}
-                    IMAGE_DIR=${WORKSPACE}/workloads/ycsb
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/ycsb
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
@@ -152,7 +152,31 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/cassandra_stress:${GIT_COMMIT}
-                    IMAGE_DIR=${WORKSPACE}/workloads/cassandra_stress
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/cassandra_stress
+                    cp -r dist ${IMAGE_DIR}
+                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
+                    docker push ${IMAGE_NAME}
+                    '''
+                    }
+                }
+                stage("Build and push Sysbench Docker image") {
+                    when {expression{return params.BUILD_IMAGES}}
+                    steps {
+                    sh '''
+                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/sysbench:${GIT_COMMIT}
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/sysbench
+                    cp -r dist ${IMAGE_DIR}
+                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
+                    docker push ${IMAGE_NAME}
+                    '''
+                    }
+                }
+                stage("Build and push mutilate Docker image") {
+                    when {expression{return params.BUILD_IMAGES}}
+                    steps {
+                    sh '''
+                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/mutilate:${GIT_COMMIT}
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/mutilate
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
@@ -165,7 +189,7 @@ pipeline {
                         withCredentials([file(credentialsId: 'specjbb', variable: 'SPECJBB_TAR')]) {
                             sh '''
                             IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/specjbb:${GIT_COMMIT}
-                            IMAGE_DIR=${WORKSPACE}/workloads/specjbb
+                            IMAGE_DIR=${WORKSPACE}/examples/workloads/specjbb
                             cp ${SPECJBB_TAR} ${IMAGE_DIR}
                             tar -xC ${IMAGE_DIR} -f ${IMAGE_DIR}/specjbb.tar.bz2
                             cp -r dist ${IMAGE_DIR}
@@ -177,7 +201,7 @@ pipeline {
                     post {
                         always {
                             sh '''
-                            rm -rf ${WORKSPACE}/workloads/specjbb/specjbb.tar.bz2 ${WORKSPACE}/workloads/specjbb/specjbb ${WORKSPACE}/workloads/specjbb/dist
+                            rm -rf ${WORKSPACE}/examples/workloads/specjbb/specjbb.tar.bz2 ${WORKSPACE}/examples/workloads/specjbb/specjbb ${WORKSPACE}/examples/workloads/specjbb/dist
                             '''
                         }
                     }
@@ -200,7 +224,7 @@ pipeline {
             }
             environment {
                 /* For E2E tests. */
-                PLAYBOOK = 'workloads/run_workloads.yaml'
+                PLAYBOOK = 'examples/workloads/run_workloads.yaml'
                 PROMETHEUS = 'http://100.64.176.12:9090'
                 BUILD_COMMIT="${GIT_COMMIT}"
                 EXTRA_ANSIBLE_PARAMS = " "
@@ -217,33 +241,11 @@ pipeline {
                         PROMETHEUS = 'http://100.64.176.18:30900'
                         KUBERNETES_HOST='100.64.176.32'
                         KUBECONFIG="${HOME}/.kube/admin.conf"
-                        KUSTOMIZATION_MONITORING='example/k8s_monitoring/'
-                        KUSTOMIZATION_WORKLOAD='example/k8s_workloads/'
+                        KUSTOMIZATION_MONITORING='examples/kubernetes/monitoring/'
+                        KUSTOMIZATION_WORKLOAD='examples/kubernetes/workloads/'
                     }
                     steps {
-                        replace_commit_kustomization()
-                        add_labels_kustomization("memcached-mutilate")
-                        add_labels_kustomization("redis-memtier")
-                        add_labels_kustomization("stress")
-                        add_labels_kustomization("sysbench-memory")
-                        set_docker_image("redis-memtier", "memtier_benchmark")
-                        set_docker_image("stress", "stress_ng")
-
-                        print('Starting wca...')
-                        sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_MONITORING}"
-                        print('Starting workloads...')
-                        sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_WORKLOAD}"
-                        sh "kubectl scale --replicas=1 statefulset/stress-stream-small"
-                        sh "kubectl scale --replicas=1 statefulset/memcached-small"
-                        sh "kubectl scale --replicas=1 statefulset/mutilate-small"
-                        sh "kubectl scale --replicas=1 statefulset/redis-small"
-                        sh "kubectl scale --replicas=1 statefulset/memtier-small"
-                        sh "kubectl scale --replicas=1 statefulset/sysbench-memory-small"
-
-                        print('Sleep while workloads are running...')
-                        sleep RUN_WORKLOADS_SLEEP_TIME
-                        print('Starting workloads...')
-                        test_wca_metrics_kustomization()
+                        kustomize_wca_and_workloads_check()
                     }
                     post {
                         always {
@@ -319,16 +321,45 @@ def wca_and_workloads_check() {
     test_wca_metrics()
 }
 
-def set_docker_image(workload, workload_image) {
-    file = "${WORKSPACE}/example/k8s_workloads/${workload}/kustomization.yaml"
-    testing_image = "images:\n" +
+def kustomize_wca_and_workloads_check() {
+    print('Configure wca and workloads...')
+    kustomize_replace_commit()
+    kustomize_add_labels("memcached-mutilate")
+    kustomize_add_labels("redis-memtier")
+    kustomize_add_labels("stress")
+    kustomize_add_labels("sysbench-memory")
+
+    kustomize_set_docker_image("memcached-mutilate", "mutilate")
+    kustomize_set_docker_image("redis-memtier", "memtier_benchmark")
+    kustomize_set_docker_image("stress", "stress_ng")
+    kustomize_set_docker_image("sysbench-memory", "sysbench")
+
+    print('Starting wca...')
+    sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_MONITORING}"
+
+    print('Starting workloads...')
+    sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_WORKLOAD}"
+
+    def list = ["stress-stream-small", "memcached-small","mutilate-small","redis-small","memtier-small","sysbench-memory-small"]
+    for(item in list){
+        sh "kubectl scale --replicas=1 statefulset $item"
+    }
+
+    print('Sleep while workloads are running...')
+    sleep RUN_WORKLOADS_SLEEP_TIME
+    test_wca_metrics_kustomize()
+}
+
+def kustomize_set_docker_image(workload, workload_image) {
+    file = "${WORKSPACE}/examples/kubernetes/workloads/${workload}/kustomization.yaml"
+    testing_image = "\nimages:\n" +
     "  - name: ${workload_image}\n" +
     "    newName: ${DOCKER_REPOSITORY_URL}/wca/${workload_image}\n" +
     "    newTag: ${GIT_COMMIT}\n"
     sh "echo '${testing_image}' >> ${file}"
 }
 
-def replace_commit_kustomization() {
+def kustomize_replace_commit() {
     contentReplace(
         configs: [
             fileContentReplaceConfig(
@@ -336,10 +367,10 @@ def replace_commit_kustomization() {
                     fileContentReplaceItemConfig( search: 'devel', replace: "${GIT_COMMIT}", matchCount: 0),
                 ],
                 fileEncoding: 'UTF-8',
-                filePath: "${WORKSPACE}/example/k8s_monitoring/wca/kustomization.yaml")])
+                filePath: "${WORKSPACE}/examples/kubernetes/monitoring/wca/kustomization.yaml")])
 }
 
-def add_labels_kustomization(workload) {
+def kustomize_add_labels(workload) {
     contentReplace(
         configs: [
             fileContentReplaceConfig(
@@ -354,11 +385,11 @@ def add_labels_kustomization(workload) {
                     matchCount: 0),
                 ],
                 fileEncoding: 'UTF-8',
-                filePath: "${WORKSPACE}/example/k8s_workloads/${workload}/kustomization.yaml")])
+                filePath: "${WORKSPACE}/examples/kubernetes/workloads/${workload}/kustomization.yaml")])
 }
 
-def test_wca_metrics_kustomization() {
-    sh "make venv; PYTHONPATH=. pipenv run pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomization --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v"
+def test_wca_metrics_kustomize() {
+    sh "make venv; PYTHONPATH=. pipenv run pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomize --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v"
 }
 
 def images_check() {

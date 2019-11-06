@@ -75,4 +75,3 @@ spec:
   # when using commonLabels
   # fixed in 2.1.0 https://github.com/kubernetes-sigs/kustomize/commit/c470982ce5b96da82a757f088a842bb05d3bcdb4
   volumeClaimTemplates: []
-

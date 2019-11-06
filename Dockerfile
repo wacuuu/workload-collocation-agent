@@ -54,7 +54,13 @@ ENV PYTHONPATH=/wca
 
 # note: Cache will be propably invalidated here.
 COPY configs ./configs
-COPY example ./example
+
+COPY examples/external_package.py ./examples
+COPY examples/hello_world_runner.py ./examples
+COPY examples/hello_world_runner_with_dateutil.py ./examples
+COPY examples/http_storage.py ./examples
+COPY examples/__init__.py ./examples
+
 COPY wca ./wca
 
 ENTRYPOINT ["pipenv", "run", "python3.6", "wca/main.py"]

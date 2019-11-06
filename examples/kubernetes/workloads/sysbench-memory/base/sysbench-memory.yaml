@@ -30,7 +30,8 @@ spec:
               valueFrom: {configMapKeyRef: { name: sysbench-memory, key: report_interval}}
             - name: extra
               valueFrom: {configMapKeyRef: { name: sysbench-memory, key: extra }}
-          image: severalnines/sysbench
+#          image: severalnines/sysbench
+          image: sysbench
           command:
             - sh
             - -c
