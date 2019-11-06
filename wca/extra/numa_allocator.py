@@ -46,9 +46,11 @@ class NUMAAllocator(Allocator):
             tasks_allocations: TasksAllocations,
             tasks_pids,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
-        log.info('NUMA allocator Pv4 policy here...')
-        log.debug('NUMA allocator input data:')
-        # log.debug('got pids %r', tasks_pids)
+        log.info('NUMA allocator Pv5 policy here for %s tasks...', len(tasks_pids))
+        # log.debug('NUMA allocator input data :')
+        # log.debug('NUMA allocator input data :')
+        log.debug('Tasks pids %r', tasks_pids)
+        log.debug('Tasks resources %r', tasks_resources)
         #
         # print('Measurements:')
         # pprint(tasks_measurements)
@@ -99,7 +101,7 @@ class NUMAAllocator(Allocator):
         for task in tasks_labels:
             tasks_memory.append(
                 (task,
-                 _get_task_memory_limit(tasks_measurements[task], total_memory),
+                 _get_task_memory_limit(tasks_measurements[task], total_memory, task),
                  _get_numa_node_preferences(tasks_measurements[task], platform)))
         tasks_memory = sorted(tasks_memory, reverse=True, key=lambda x: x[1])
 
@@ -132,7 +134,7 @@ class NUMAAllocator(Allocator):
                 task_balance = preferences[current_node]
                 if self.memory_migrate and task_balance < self.memory_migrate_min_task_balance:
                     did_some_migration = True
-                    log.warn('move missing pages again task balance = %r', task_balance)
+                    log.info('Task: %s Move pages task balance = %r', task, task_balance)
                     try:
                         migrate_pages(task, tasks_pids, current_node)
                     except subprocess.CalledProcessError:
@@ -141,6 +143,8 @@ class NUMAAllocator(Allocator):
                         log.exception('called process error')
 
         log.debug("Current state of the system: %s" % balanced_memory)
+        log.debug("Current state of the system per node: %s" % {
+            node: sum(t[1] for t in tasks)/2**10 for node, tasks in balanced_memory.items()})
 
         for node, tasks_with_memory in balanced_memory.items():
             extra_metrics.extend([
@@ -212,7 +216,7 @@ class NUMAAllocator(Allocator):
                     continue
 
                 if most_used_node == best_memory_node or most_used_node == most_free_memory_node:
-                    log.debug("   OK: found task for balancing")
+                    log.info("   OK: found task for balancing: %s", task)
                     balance_task = task
                     balance_task_node = most_used_node
                     # break # commented to give a chance to generate other metrics
@@ -248,12 +252,12 @@ class NUMAAllocator(Allocator):
         # print('balance_task to node: ', balance_task, balance_task_node)
         if balance_task is None and balance_task_node is None:
             if balance_task_candidate is not None and balance_task_node_candidate is not None:
-                log.warn("Cannot find by most_used, use candidate from 'best node' rule!")
+                log.info("   Candidate rule: Cannot find by most_used, 'best memory node' rule!")
                 balance_task = balance_task_candidate
                 balance_task_node = balance_task_node_candidate
 
         if balance_task is not None and balance_task_node is not None:
-            log.debug("   Assign task %s to node %s." % (balance_task, balance_task_node))
+            log.info("   Assign task %s to node %s." % (balance_task, balance_task_node))
             allocations[balance_task] = {
                 AllocationType.CPUSET_CPUS: encode_listformat(
                     platform.node_cpus[balance_task_node]),
@@ -293,7 +297,7 @@ def _platform_total_memory(platform):
            sum(platform.measurements[MetricName.MEM_NUMA_USED].values())
 
 
-def _get_task_memory_limit(task, total):
+def _get_task_memory_limit(task_measurements, total, task):
     "Returns detected maximum memory for the task"
     limits_order = [
         MetricName.MEM_LIMIT_PER_TASK,
@@ -301,12 +305,12 @@ def _get_task_memory_limit(task, total):
         MetricName.MEM_MAX_USAGE_PER_TASK,
         MetricName.MEM_USAGE_PER_TASK, ]
     for limit in limits_order:
-        if limit not in task:
+        if limit not in task_measurements:
             continue
-        if task[limit] > total:
+        if task_measurements[limit] > total:
             continue
-        log.debug('task limit %s %s %s %s', limit, 'is', task[limit], 'bytes')
-        return task[limit]
+        log.debug('Task: %s limit %s %s %s %s', task, limit, 'is', task_measurements[limit], 'b')
+        return task_measurements[limit]
     return 0
 
 
