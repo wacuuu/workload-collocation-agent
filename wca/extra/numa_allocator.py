@@ -114,10 +114,10 @@ class NUMAAllocator(Allocator):
             # because current state of system is outdate do nothing and wait for another call
             return {}, [], extra_metrics
 
-        log.debug("Starting re-balancing")
+        log.log(TRACE, 'Starting re-balancing')
 
         for task, memory, preferences in tasks_memory:
-            log.log(TRACE, "Task: %s Memory: %d Preferences: %s" % (task, memory, preferences))
+            log.log(TRACE, "Task %r: Memory: %d Preferences: %s" % (task, memory, preferences))
             current_node = _get_current_node(
                 decode_listformat(tasks_allocations[task][AllocationType.CPUSET_CPUS]),
                 platform.node_cpus)
@@ -141,7 +141,8 @@ class NUMAAllocator(Allocator):
 
             # log.debug("Task current node: %d", current_node)
             if current_node >= 0:
-                log.debug("   task already placed on the node %d, taking next" % current_node)
+                log.debug("Task %r: already placed on the node %d, taking next",
+                          task, current_node)
                 # balanced_memory[current_node].append((task, memory))
                 continue
 
@@ -154,7 +155,7 @@ class NUMAAllocator(Allocator):
                     task)
                 continue
 
-            log.log(TRACE, "Task %s: Most used node: %d,"
+            log.log(TRACE, "Task %r: Most used node: %d,"
                            " Best free node: %d, Best memory node: %d" %
                            (task, most_used_node, most_free_memory_node, best_memory_node))
 
@@ -205,13 +206,12 @@ class NUMAAllocator(Allocator):
         # print('balance_task to node: ', balance_task, balance_task_node)
         if balance_task is None and balance_task_node is None:
             if balance_task_candidate is not None and balance_task_node_candidate is not None:
-                log.debug('Candidate rule: Cannot find by most_used, "best memory node" rule!'
-                          'Task: %s', balance_task_candidate)
+                log.debug('Task %r: Using candidate rule', balance_task_candidate)
                 balance_task = balance_task_candidate
                 balance_task_node = balance_task_node_candidate
 
         if balance_task is not None and balance_task_node is not None:
-            log.debug("Assign task %s to node %s." % (balance_task, balance_task_node))
+            log.debug("Task %r: assiging to node %s." % (balance_task, balance_task_node))
             allocations[balance_task] = {
                 AllocationType.CPUSET_CPUS: encode_listformat(
                     platform.node_cpus[balance_task_node]),
