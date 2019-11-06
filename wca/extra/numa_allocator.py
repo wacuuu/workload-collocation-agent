@@ -29,13 +29,16 @@ def migrate_pages(task, tasks_pids, to_node, number_of_nodes):
 @dataclass
 class NUMAAllocator(Allocator):
 
-    # intrusive set of options
-    # parse15
     # preferences_threshold: float = 0.66
     preferences_threshold: float = 0.0  # always migrate
+
+    # syscall "migrate pages" per process memory migration
     memory_migrate: bool = True
     memory_migrate_min_task_balance: float = 0.95
+
+    # Cgroups based memory migration and pinning
     membind: bool = False
+    cgroups_memory_migrate: bool = False
 
     # use candidate
     candidate = True
@@ -120,7 +123,7 @@ class NUMAAllocator(Allocator):
                 memory_to_move = sum(v for n,v in tasks_measurements[task][MetricName.MEM_NUMA_STAT_PER_TASK].items() if n!=current_node)
                 did_some_migration = True
                 log.debug('Task: %s Moving %s MB to node %s task balance = %r', task, 
-                          (memory_to_move * 4096) / 2**10, current_node, task_balance)
+                          (memory_to_move * 4096) / 1024**2, current_node, task_balance)
                 try:
                     start = time.time()
                     migrate_pages(task, tasks_pids, current_node, platform.numa_nodes)
@@ -148,6 +151,7 @@ class NUMAAllocator(Allocator):
                        labels=dict(numa_node=str(node)))
             ])
 
+        ### 3. Re-balancing analysis
         log.log(TRACE, 'Starting re-balancing analysis')
 
         for task, memory, preferences in tasks_memory:
@@ -242,8 +246,7 @@ class NUMAAllocator(Allocator):
             # because current state of system is outdate do nothing and wait for another call
             return {}, [], extra_metrics
 
-        # pprint(balanced_memory)
-        # print('balance_task to node: ', balance_task, balance_task_node)
+        ### 3. Perform CPU pinning with optional memory bingind and forced migration.
         if balance_task is None and balance_task_node is None:
             if balance_task_candidate is not None and balance_task_node_candidate is not None:
                 log.debug('Task %r: Using candidate rule', balance_task_candidate)
@@ -264,31 +267,11 @@ class NUMAAllocator(Allocator):
                 allocations[balance_task][
                     AllocationType.CPUSET_MEMS] = encode_listformat({balance_task_node})
 
-            # Instant memory migrate.
-            # Do not move page immediatly until - cpuset cpus/mems are set in next loop
-            # TODO: to be fixed when move pages is moved to WCA internals
-            # if self.memory_migrate:
-            #     log.debug("Assign task %s to node %s with memory migrate" %
-            #               (balance_task, balance_task_node))
-            #     allocations[balance_task][AllocationType.CPUSET_MEM_MIGRATE] = 1
-            #     migrate_pages(balance_task, tasks_pids, balance_task_node)
-
-        # for node in balanced_memory:
-        #     for task, _ in balanced_memory[node]:
-        #         if decode_listformat(tasks_allocations[task]['cpu_set']) ==
-        #         platform.node_cpus[node]:
-        #             continue
-        #         allocations[task] = {
-        #             AllocationType.CPUSET_MEM_MIGRATE: 1,
-        #             AllocationType.CPUSET: platform.node_cpus[node],
-        #         }
-
-        # pprint(allocations)
-
-        # for task in tasks_labels:
-        #     allocations[task] = {
-        #         AllocationType.CPUSET_MEM_MIGRATE: memory_migrate,
-        #     }
+                # Instant memory migrate.
+                if self.cgroups_memory_migrate:
+                    log.debug("Assign task %s to node %s with memory migrate" %
+                              (balance_task, balance_task_node))
+                    allocations[balance_task][AllocationType.CPUSET_MEM_MIGRATE] = 1
 
         return allocations, [], extra_metrics
 
