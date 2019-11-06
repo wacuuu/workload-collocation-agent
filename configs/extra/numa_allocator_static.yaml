@@ -1,8 +1,8 @@
 loggers:
-  "wca.extra.numa_allocator": "debug"
+  "wca.extra.numa_allocator": "trace"
   "wca": "info"
 runner: !AllocationRunner
-  action_delay: 10
+  action_delay: 5
   node: !StaticNode
     require_pids: true  # This will ignore cgroups without tasks - no more empty measurements.
     tasks:

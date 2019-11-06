@@ -1,8 +1,8 @@
 loggers:
-  "wca.extra.numa_allocator": "debug"
+  "wca.extra.numa_allocator": "trace"
   "wca": "info"
 runner: !AllocationRunner
-  action_delay: 10
+  action_delay: 5
   node: !MesosNode
     mesos_agent_endpoint: 'http://127.0.0.1:5051'
     timeout: 5

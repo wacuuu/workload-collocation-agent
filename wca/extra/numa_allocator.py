@@ -1,6 +1,7 @@
 import logging
 from typing import List, Dict
 import subprocess
+import time
 # from pprint import pprint
 
 from dataclasses import dataclass
@@ -34,9 +35,14 @@ class NUMAAllocator(Allocator):
     preferences_threshold: float = 0.0  # always migrate
     memory_migrate: bool = True
     memory_migrate_min_task_balance: float = 0.95
+    membind: bool = False
 
     # use candidate
     candidate = True
+
+    def __post_init__(self):
+        self._candidates_moves = 0
+        self._match_moves = 0
 
     def allocate(
             self,
@@ -48,6 +54,7 @@ class NUMAAllocator(Allocator):
             tasks_pids,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
         log.debug('NUMA allocator Pv6 policy here for %s tasks...', len(tasks_pids))
+        log.log(TRACE, 'Moves match=%s candidates=%s', self._match_moves, self._candidates_moves)
         log.log(TRACE, 'Tasks pids %r', tasks_pids)
         log.log(TRACE, 'Tasks resources %r', tasks_resources)
         allocations = {}
@@ -56,6 +63,11 @@ class NUMAAllocator(Allocator):
         total_memory = _platform_total_memory(platform)
         # print("Total memory: %d\n" % total_memory)
         extra_metrics = []
+        extra_metrics.extend([
+            Metric('numa__task_candidate_moves', value=self._candidates_moves),
+            Metric('numa__task_match_moves', value=self._match_moves),
+            Metric('numa__task_tasks_count', value=len(tasks_pids)),
+        ])
 
         # Collect tasks sizes and NUMA node usages
         tasks_memory = []
@@ -73,7 +85,10 @@ class NUMAAllocator(Allocator):
         balance_task_node = None
         balance_task_candidate = None
         balance_task_node_candidate = None
+        tasks_to_balance = []
+        tasks_current_nodes = {}
 
+        ### 1. State of the system and find non-balanced but assiged tasks.
         did_some_migration = False
         # First, get current state of the system
         for task, memory, preferences in tasks_memory:
@@ -82,24 +97,48 @@ class NUMAAllocator(Allocator):
                 platform.node_cpus)
             log.log(TRACE, "Task: %s Memory: %d Preferences: %s, Current node: %d" % (
                 task, memory, preferences, current_node))
+            tasks_current_nodes[task] = current_node
             if current_node >= 0:
                 # log.debug("task already placed, recording state")
                 balanced_memory[current_node].append((task, memory))
 
                 task_balance = preferences[current_node]
                 if self.memory_migrate and task_balance < self.memory_migrate_min_task_balance:
-                    did_some_migration = True
-                    log.debug('Task: %s Move pages task balance = %r', task, task_balance)
-                    try:
-                        migrate_pages(task, tasks_pids, current_node, platform.numa_nodes)
-                    except subprocess.CalledProcessError:
-                        log.error('cannot migrate pages pid=%s (task=%s)'
-                                  'in this loop: ignored for next loop', tasks_pids, task)
-                        log.exception('called process error')
+                    tasks_to_balance.append(task)
+
+        ### 2. Memory migragtion
+        # If nessesary migrate pages to least used node.
+        least_used_node = sorted(
+            platform.measurements[MetricName.MEM_NUMA_FREE].items(), reverse=True, 
+            key=lambda x: x[1])[0][0]
+        log.debug('Least used node: %s', least_used_node)
+        log.debug('Tasks to balance: %s', tasks_to_balance)
+
+        for task in tasks_to_balance:
+            if tasks_current_nodes[task] == least_used_node:
+                current_node = tasks_current_nodes[task]
+                memory_to_move = sum(v for n,v in tasks_measurements[task][MetricName.MEM_NUMA_STAT_PER_TASK].items() if n!=current_node)
+                did_some_migration = True
+                log.debug('Task: %s Move %s bytes pages to node %s task balance = %r', task, 
+                          memory_to_move * 4096, current_node, task_balance)
+                try:
+                    start = time.time()
+                    migrate_pages(task, tasks_pids, current_node, platform.numa_nodes)
+                    duration = time.time() - start
+                    log.debug('Task: %s Moving duration %0.2fs', task, duration)
+                    break
+                except subprocess.CalledProcessError:
+                    log.error('cannot migrate pages pid=%s (task=%s)'
+                              'in this loop: ignored for next loop', tasks_pids, task)
+                    log.exception('called process error')
+        else:
+            log.debug('no more tasks to move memory!')
 
         log.log(TRACE, "Current state of the system: %s" % balanced_memory)
         log.log(TRACE, "Current state of the system per node: %s" % {
             node: sum(t[1] for t in tasks)/2**10 for node, tasks in balanced_memory.items()})
+        log.debug("Current task assigments: %s" % {
+            node: len(tasks) for node, tasks in balanced_memory.items()})
 
         for node, tasks_with_memory in balanced_memory.items():
             extra_metrics.extend([
@@ -108,11 +147,6 @@ class NUMAAllocator(Allocator):
                 Metric('numa__balanced_memory_size', value=sum([m for t, m in tasks_with_memory]),
                        labels=dict(numa_node=str(node)))
             ])
-
-        if did_some_migration:
-            log.debug('Did some migration, wait for another call...')
-            # because current state of system is outdate do nothing and wait for another call
-            return {}, [], extra_metrics
 
         log.log(TRACE, 'Starting re-balancing')
 
@@ -155,7 +189,7 @@ class NUMAAllocator(Allocator):
                     task)
                 continue
 
-            log.log(TRACE, "Task %r: Most used node: %d,"
+            log.log(TRACE, "Analysing task %r: Most used node: %d,"
                            " Best free node: %d, Best memory node: %d" %
                            (task, most_used_node, most_free_memory_node, best_memory_node))
 
@@ -202,6 +236,12 @@ class NUMAAllocator(Allocator):
             # # pprint(best_node)
             # balanced_memory[best_node].append((task, memory))
 
+        if did_some_migration:
+            log.warn('Ignoring placement decision: because some migration is in flight'
+                     ', wait for another call...')
+            # because current state of system is outdate do nothing and wait for another call
+            return {}, [], extra_metrics
+
         # pprint(balanced_memory)
         # print('balance_task to node: ', balance_task, balance_task_node)
         if balance_task is None and balance_task_node is None:
@@ -209,14 +249,21 @@ class NUMAAllocator(Allocator):
                 log.debug('Task %r: Using candidate rule', balance_task_candidate)
                 balance_task = balance_task_candidate
                 balance_task_node = balance_task_node_candidate
+                self._candidates_moves += 1
+        else:
+            self._match_moves += 1
 
         if balance_task is not None and balance_task_node is not None:
             log.debug("Task %r: assiging to node %s." % (balance_task, balance_task_node))
             allocations[balance_task] = {
                 AllocationType.CPUSET_CPUS: encode_listformat(
                     platform.node_cpus[balance_task_node]),
-                AllocationType.CPUSET_MEMS: encode_listformat({balance_task_node}),
             }
+
+            if self.membind:
+                allocations[balance_task][
+                    AllocationType.CPUSET_MEMS] = encode_listformat({balance_task_node})
+
             # Instant memory migrate.
             # Do not move page immediatly until - cpuset cpus/mems are set in next loop
             # TODO: to be fixed when move pages is moved to WCA internals
