@@ -392,7 +392,7 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
             log.warning('One or more measurements are missing '
                         'for container {} - ignoring! '
                         '(because {})'.format(container, e))
-            raise 
+            raise
         # Extra metrics
         task_measurements[MetricName.UP.value] = 1
         task_measurements[MetricName.LAST_SEEN.value] = time.time()

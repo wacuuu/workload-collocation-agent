@@ -47,7 +47,6 @@ class StaticNode(Node):
     _BASE_CGROUP_PATH = '/sys/fs/cgroup'
     _REQUIRED_CONTROLLERS = ('cpu', 'cpuacct')
 
-    
     def __post_init__(self):
         log.info('Static task discovery on cgroups: %r', self.tasks)
 

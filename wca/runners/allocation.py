@@ -22,7 +22,8 @@ from wca.allocations import AllocationsDict, InvalidAllocations, AllocationValue
 from wca.allocators import TasksAllocations, AllocationConfiguration, AllocationType, Allocator, \
     TaskAllocations, RDTAllocation
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
-    CPUSetCPUSAllocationValue, CPUSetMemoryMigrateAllocationValue, CPUSetMEMSAllocationValue
+    CPUSetCPUSAllocationValue, CPUSetMemoryMigrateAllocationValue, CPUSetMEMSAllocationValue, \
+    MigratePagesAllocationValue
 from wca.config import Numeric, Str, assure_type
 from wca.containers import ContainerInterface, Container
 from wca.detectors import convert_anomalies_to_metrics, \
@@ -98,6 +99,7 @@ class TasksAllocationsValues(AllocationsDict):
             AllocationType.CPUSET_CPUS: CPUSetCPUSAllocationValue,
             AllocationType.CPUSET_MEMS: CPUSetMEMSAllocationValue,
             AllocationType.CPUSET_MEM_MIGRATE: CPUSetMemoryMigrateAllocationValue,
+            AllocationType.MIGRATE_PAGES: MigratePagesAllocationValue,
         }
 
         if rdt_enabled:
@@ -311,14 +313,11 @@ class AllocationRunner(MeasurementRunner):
 
         current_allocations = _get_tasks_allocations(containers)
 
-        tasks_pids = {task.task_id: container.get_pids(include_threads=False) 
-                      for task, container in containers.items()}
-
         # Allocator callback
         allocate_start = time.time()
         new_allocations, anomalies, extra_metrics = self._allocator.allocate(
             platform, tasks_measurements, tasks_resources, tasks_labels,
-            current_allocations, tasks_pids)
+            current_allocations)
         allocate_duration = time.time() - allocate_start
 
         # Validate callback output
