@@ -244,7 +244,7 @@ class NUMAAllocator(Allocator):
                         if n != current_node)
                     log.debug('Task: %s Moving %s MB to node %s task balance = %r', task,
                               (memory_to_move * 4096) / 1024**2, current_node, task_balance)
-                    allocations[task][AllocationType.MIGRATE_PAGES] = tasks_current_nodes[task]
+                    allocations[task][AllocationType.MIGRATE_PAGES] = current_node
             else:
                 log.log(TRACE, 'no more tasks to move memory!')
 
