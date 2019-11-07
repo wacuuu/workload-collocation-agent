@@ -139,9 +139,9 @@ def test_prepare_task_data_resgroup_not_found(*mocks):
         task('/t1', labels={'label_key': 'label_value'}, resources={'cpu': 3}):
             Container('/t1', platform_mock, resgroup=ResGroup('/t1'))
     }
-    tasks_measurements, tasks_resources, tasks_labels = \
-        _prepare_tasks_data(containers)
-    assert tasks_measurements == {}
+    with pytest.raises(MissingMeasurementException):
+        tasks_measurements, tasks_resources, tasks_labels = \
+            _prepare_tasks_data(containers)
 
 
 @patch('wca.cgroups.Cgroup.get_measurements', side_effect=MissingMeasurementException())
@@ -151,9 +151,9 @@ def test_prepare_task_data_cgroup_not_found(*mocks):
         task('/t1', labels={'label_key': 'label_value'}, resources={'cpu': 3}):
             Container('/t1', platform_mock)
     }
-    tasks_measurements, tasks_resources, tasks_labels = \
-        _prepare_tasks_data(containers)
-    assert tasks_measurements == {}
+    with pytest.raises(MissingMeasurementException):
+        tasks_measurements, tasks_resources, tasks_labels = \
+            _prepare_tasks_data(containers)
 
 
 @pytest.mark.parametrize('source_val, pattern, repl, expected_val', (
