@@ -34,6 +34,7 @@ class AllocationType(str, Enum):
     CPUSET_CPUS = 'cpuset_cpus'
     CPUSET_MEMS = 'cpuset_mems'
     CPUSET_MEM_MIGRATE = 'cpu_set_memory_migrate'
+    MIGRATE_PAGES = 'migrate_pages'
 
     def __repr__(self):
         return repr(self.value)

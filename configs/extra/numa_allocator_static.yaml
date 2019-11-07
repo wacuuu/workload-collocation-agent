@@ -1,9 +1,9 @@
 loggers:
-#  "wca.runners.measurement": "trace"
   "wca.extra.numa_allocator": "debug"
+  "wca.cgroups_allocation": "trace"
   "wca": "info"
 runner: !AllocationRunner
-  action_delay: 10
+  action_delay: 5
   node: !StaticNode
     require_pids: true  # This will ignore cgroups without tasks - no more empty measurements.
     tasks:
@@ -18,9 +18,9 @@ runner: !AllocationRunner
   allocator: !NUMAAllocator
 
   # Disable all measurements based on perf system and resctrl
-  enable_perf_uncore: true
+  enable_perf_uncore: false
   gather_hw_mm_topology: false
-  rdt_enabled: true  
+  rdt_enabled: false  
   enable_derived_metrics: false
   wss_reset_interval: 0
   event_names: []  # if uncommented disables metrics from perf event subsystem

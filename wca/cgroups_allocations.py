@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import time
+import subprocess  # nosec
+import logging
 from typing import Dict, Tuple, Optional, List
 
 from wca.allocations import AllocationValue, BoxedNumeric, InvalidAllocations, LabelsUpdater
@@ -20,6 +23,9 @@ from wca.cgroups import QUOTA_NORMALIZED_MAX
 from wca.containers import ContainerInterface
 from wca.metrics import Metric, MetricType
 from wca.platforms import decode_listformat
+from wca.logger import TRACE
+
+log = logging.getLogger(__name__)
 
 
 class QuotaAllocationValue(BoxedNumeric):
@@ -168,3 +174,47 @@ class CPUSetMemoryMigrateAllocationValue(BoxedNumeric):
 
     def perform_allocations(self):
         self.cgroup._set_memory_migrate(self.value)
+
+
+class MigratePagesAllocationValue(BoxedNumeric):
+    """Values represents."""
+
+    def __init__(self, value: int, container: ContainerInterface, common_labels: Dict[str, str]):
+        self.value = value
+        self.container = container
+        self.platform = self.container.get_cgroup().platform
+        super().__init__(value=value, common_labels=common_labels,
+                         min_value=0, max_value=self.platform.numa_nodes-1)
+
+    def generate_metrics(self):
+        metrics = super().generate_metrics()
+        for metric in metrics:
+            metric.labels.update(allocation_type=AllocationType.MIGRATE_PAGES)
+            metric.name = 'allocation_%s' % AllocationType.MIGRATE_PAGES.value
+        return metrics
+
+    def perform_allocations(self):
+        _migrate_pages(
+            self.container.get_pids(include_threads=False),
+            self.value,
+            self.platform.numa_nodes,
+        )
+
+
+def _migrate_pages(task_pids, to_node, number_of_nodes):
+    # if not all pages yet on place force them to move
+    from_node = ','.join([str(i) for i in range(number_of_nodes) if i != to_node])
+    to_node = str(to_node)
+    for pid in task_pids:
+        pid = str(pid)
+        cmd = ['migratepages', pid, from_node, to_node]
+        log.log(TRACE, 'migrate pages cmd: %s', ' '.join(cmd))
+        try:
+            start = time.time()
+            subprocess.check_output(cmd)  # nosec - input is already validated
+            duration = time.time() - start
+            log.debug('Moving duration %0.2fs', duration)
+        except subprocess.CalledProcessError as e:
+            log.error('cannot migrate pages for pid=%s: %s', pid, e)
+            raise InvalidAllocations(
+                'cannot migrate pages, propably not enough memory on target node')

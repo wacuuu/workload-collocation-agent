@@ -22,7 +22,8 @@ from wca.allocations import AllocationsDict, InvalidAllocations, AllocationValue
 from wca.allocators import TasksAllocations, AllocationConfiguration, AllocationType, Allocator, \
     TaskAllocations, RDTAllocation
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
-    CPUSetCPUSAllocationValue, CPUSetMemoryMigrateAllocationValue, CPUSetMEMSAllocationValue
+    CPUSetCPUSAllocationValue, CPUSetMemoryMigrateAllocationValue, CPUSetMEMSAllocationValue, \
+    MigratePagesAllocationValue
 from wca.config import Numeric, Str, assure_type
 from wca.containers import ContainerInterface, Container
 from wca.detectors import convert_anomalies_to_metrics, \
@@ -98,6 +99,7 @@ class TasksAllocationsValues(AllocationsDict):
             AllocationType.CPUSET_CPUS: CPUSetCPUSAllocationValue,
             AllocationType.CPUSET_MEMS: CPUSetMEMSAllocationValue,
             AllocationType.CPUSET_MEM_MIGRATE: CPUSetMemoryMigrateAllocationValue,
+            AllocationType.MIGRATE_PAGES: MigratePagesAllocationValue,
         }
 
         if rdt_enabled:
