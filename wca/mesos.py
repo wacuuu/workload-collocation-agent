@@ -15,14 +15,15 @@
 
 import logging
 import urllib.parse
-from typing import List, Optional, Dict, Union
+from typing import List, Optional, Dict
 
 import requests
 from dataclasses import dataclass
 
 from wca.config import assure_type, Numeric, Url
 from wca.metrics import Measurements, Metric
-from wca.nodes import Node, Task, TaskId, TaskSynchronizationException
+from wca.nodes import Node, Task, TaskId, TaskSynchronizationException, TasksResources
+from wca.resources import calculate_scalar_resources
 from wca.security import SSL, HTTPSAdapter
 
 MESOS_TASK_STATE_RUNNING = 'TASK_RUNNING'
@@ -50,7 +51,7 @@ class MesosTask(Task):
         assure_type(self.cgroup_path, str)
         assure_type(self.subcgroups_paths, List[str])
         assure_type(self.labels, Dict[str, str])
-        assure_type(self.resources, Dict[str, Union[float, int, str]])
+        assure_type(self.resources, TasksResources)
         assure_type(self.executor_pid, int)
         assure_type(self.container_id, str)
         assure_type(self.executor_id, str)
@@ -163,10 +164,7 @@ class MesosNode(Node):
                       for label in launched_task['labels']['labels']}
 
             # Extract scalar resources.
-            resources = dict()
-            for resource in launched_task['resources']:
-                if resource['type'] == 'SCALAR':
-                    resources[resource['name']] = float(resource['scalar']['value'])
+            resources = calculate_scalar_resources(launched_task['resources'])
 
             tasks.append(
                 MesosTask(
