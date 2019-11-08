@@ -16,19 +16,22 @@ log = logging.getLogger(__name__)
 @dataclass
 class NUMAAllocator(Allocator):
 
-    # preferences_threshold: float = 0.66
-    preferences_threshold: float = 0.0  # always migrate
+    # minimal value of task_balance so the task is not skipped during rebalancing analysis
+    loop_min_task_balance: float = 0.0  # by default turn off, none of tasks are skipped due to this reason
 
     # syscall "migrate pages" per process memory migration
     migrate_pages: bool = True
     migrate_pages_min_task_balance: float = 0.95
 
     # Cgroups based memory migration and pinning
-    membind: bool = False
-    cgroups_memory_migrate: bool = False
+    cgroups_memory_binding: bool = False
+    cgroups_memory_migrate: bool = False  # can be used only when cgroups_memory_binding is set to True
 
     # use candidate
-    candidate = True
+    candidate: bool = True
+
+    # dry-run (for comparinson only)
+    dryrun: bool = False
 
     def __post_init__(self):
         self._candidates_moves = 0
@@ -42,7 +45,10 @@ class NUMAAllocator(Allocator):
             tasks_labels: TasksLabels,
             tasks_allocations: TasksAllocations,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
-        log.debug('NUMA allocator Pv6 policy here for %s tasks...', len(tasks_measurements))
+        log.debug('NUMAAllocator v7: dryrun=%s cgroups_memory_binding/migrate=%s/%s'
+                  ' migrate_pages=%s candidate=%s tasks=%s', self.dryrun,
+                  self.cgroups_memory_binding, self.cgroups_memory_migrate,
+                  self.migrate_pages, self.candidate, len(tasks_labels))
         log.log(TRACE, 'Moves match=%s candidates=%s', self._match_moves, self._candidates_moves)
         log.log(TRACE, 'Tasks resources %r', tasks_resources)
         allocations = {}
@@ -107,6 +113,9 @@ class NUMAAllocator(Allocator):
                        labels=dict(numa_node=str(node)))
             ])
 
+        if self.dryrun:
+            return allocations, [], extra_metrics
+
         # 3. Re-balancing analysis
         log.log(TRACE, 'Starting re-balancing analysis')
 
@@ -157,7 +166,7 @@ class NUMAAllocator(Allocator):
             if balance_task is None and balance_task_node is None:
 
                 # Give a chance for AutoNUMA to re-balance memory
-                if preferences[most_used_node] < self.preferences_threshold:
+                if preferences[most_used_node] < self.loop_min_task_balance:
                     log.log(TRACE, "   THRESHOLD: not most of the memory balanced, continue")
                     continue
 
@@ -213,7 +222,7 @@ class NUMAAllocator(Allocator):
                     platform.node_cpus[balance_task_node]),
             }
 
-            if self.membind:
+            if self.cgroups_memory_binding:
                 allocations[balance_task][
                     AllocationType.CPUSET_MEMS] = encode_listformat({balance_task_node})
 
