@@ -17,7 +17,8 @@ log = logging.getLogger(__name__)
 class NUMAAllocator(Allocator):
 
     # minimal value of task_balance so the task is not skipped during rebalancing analysis
-    loop_min_task_balance: float = 0.0  # by default turn off, none of tasks are skipped due to this reason
+    # by default turn off, none of tasks are skipped due to this reason
+    loop_min_task_balance: float = 0.0
 
     # syscall "migrate pages" per process memory migration
     migrate_pages: bool = True
@@ -25,9 +26,11 @@ class NUMAAllocator(Allocator):
 
     # Cgroups based memory migration and pinning
     cgroups_memory_binding: bool = False
-    cgroups_memory_migrate: bool = False  # can be used only when cgroups_memory_binding is set to True
+    # can be used only when cgroups_memory_binding is set to True
+    cgroups_memory_migrate: bool = False
 
-    # use candidate
+    # algos: use candidate
+    double_match: bool = False
     candidate: bool = True
 
     # dry-run (for comparinson only)
@@ -46,9 +49,9 @@ class NUMAAllocator(Allocator):
             tasks_allocations: TasksAllocations,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
         log.debug('NUMAAllocator v7: dryrun=%s cgroups_memory_binding/migrate=%s/%s'
-                  ' migrate_pages=%s candidate=%s tasks=%s', self.dryrun,
+                  ' migrate_pages=%s double_match/candidate=%s/%s tasks=%s', self.dryrun,
                   self.cgroups_memory_binding, self.cgroups_memory_migrate,
-                  self.migrate_pages, self.candidate, len(tasks_labels))
+                  self.migrate_pages, self.double_match, self.candidate, len(tasks_labels))
         log.log(TRACE, 'Moves match=%s candidates=%s', self._match_moves, self._candidates_moves)
         log.log(TRACE, 'Tasks resources %r', tasks_resources)
         allocations = {}
@@ -170,7 +173,9 @@ class NUMAAllocator(Allocator):
                     log.log(TRACE, "   THRESHOLD: not most of the memory balanced, continue")
                     continue
 
-                if most_used_node == best_memory_node or most_used_node == most_free_memory_node:
+                if self.double_match and \
+                    (most_used_node == best_memory_node
+                     or most_used_node == most_free_memory_node):
                     log.log(TRACE, "   OK: found task for balancing: %s", task)
                     balance_task = task
                     balance_task_node = most_used_node
