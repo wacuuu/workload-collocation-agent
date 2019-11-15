@@ -10,7 +10,6 @@ runner: !AllocationRunner
   allocator: !NUMAAllocator
     loop_min_task_balance: 0.0
     migrate_pages: true
-    double_match: false
     cgroups_memory_binding: false
     cgroups_memory_migrate: false
     double_match: false
