@@ -13,6 +13,7 @@ runner: !AllocationRunner
     double_match: false
     cgroups_memory_binding: false
     cgroups_memory_migrate: false
+    double_match: false
     candidate: true
     dryrun: false
 
