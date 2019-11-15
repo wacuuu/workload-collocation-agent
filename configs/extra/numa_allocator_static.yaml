@@ -19,6 +19,7 @@ runner: !AllocationRunner
     - specjbb2015/Group8
   allocator: !NUMAAllocator
     dryrun: false
+    double_match: false
     migrate_pages: true
     candidate: true
     loop_min_task_balance: 0.0
