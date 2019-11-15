@@ -11,6 +11,7 @@ runner: !AllocationRunner
     migrate_pages: true
     cgroups_memory_binding: false
     cgroups_memory_migrate: false
+    double_match: false
     candidate: true
     dryrun: false
 
