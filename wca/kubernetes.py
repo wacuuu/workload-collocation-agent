@@ -184,6 +184,9 @@ def _build_cgroup_path(cgroup_driver, qos, pod_id, container_id=''):
     """If cgroup for pod needed set container_id to empty string."""
     result: str = ""
     if cgroup_driver == CgroupDriverType.SYSTEMD:
+        pod_id = pod_id.replace("-", "_")
+        if container_id != "":
+            container_id = "docker-" + container_id + ".scope"
         result = os.path.join('/kubepods.slice',
                               'kubepods-{}.slice'.format(qos),
                               'kubepods-{}-pod{}.slice'.format(qos, pod_id),
