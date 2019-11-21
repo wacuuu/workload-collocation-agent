@@ -19,7 +19,7 @@ endif
 # Do not really on artifacts created by make for all targets.
 .PHONY: all venv flake8 bandit unit wca_package bandit_pex wrapper_package clean tests check dist
 
-all: venv check dist, generate_docs
+all: venv check dist generate_docs
 
 venv:
 	@echo Preparing virtual enviornment using pipenv.
