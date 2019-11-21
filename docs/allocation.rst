@@ -25,10 +25,11 @@ Example of minimal configuration that uses ``AllocationRunner``:
 
     # Basic configuration to dump metrics on stderr with NOPAnomaly detector
     runner: !AllocationRunner
-      node: !MesosNode
+      measurement_runner: !MeasurementRunner
+        node: !MesosNode
       allocator: !NOPAllocator
 
-``runner`` is responsible for discovering tasks running on ``node``, provides this information to
+``measurement_runner`` is responsible for discovering tasks running on ``node``, provides this information to
 ``allocator`` and then reconfigures resources like cpu shares/quota, cache or memory bandwidth.
 All information about existing allocations, detected anomalies or other metrics are stored in
 corresponding storage classes.
@@ -37,62 +38,39 @@ corresponding storage classes.
 
 .. code-block:: python
 
-    class AllocationRunner(MeasurementRunner):
-        """Runner is responsible for getting information about tasks from node,
-        calling allocate() callback on allocator, performing returning allocations
-        and storing all allocation related metrics in allocations_storage.
+        class AllocationRunner(Runner):
+            """Runner is responsible for getting information about tasks from node,
+            calling allocate() callback on allocator, performing returning allocations
+            and storing all allocation related metrics in allocations_storage.
 
-        Because Allocator interface is also detector, we store serialized detected anomalies
-        in anomalies_storage and all other measurements in metrics_storage.
+            Because Allocator interface is also detector, we store serialized detected anomalies
+            in anomalies_storage and all other measurements in metrics_storage.
 
-        Arguments:
-            node: component used for tasks discovery
-            allocator: component that provides allocation logic
-            metrics_storage: storage to store platform, internal, resource and task metrics
-                (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-            anomalies_storage: storage to store serialized anomalies and extra metrics
-                (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-            allocations_storage: storage to store serialized resource allocations
-                (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-            action_delay: iteration duration in seconds (None disables wait and iterations)
-                (defaults to 1 second)
-            rdt_enabled: enables or disabled support for RDT monitoring and allocation
-                (defaults to None(auto) based on platform capabilities)
-            rdt_mb_control_required: indicates that MB control is required,
-                if the platform does not support this feature the WCA will exit
-            rdt_cache_control_required: indicates tha L3 control is required,
-                if the platform does not support this feature the WCA will exit
-            extra_labels: additional labels attached to every metric
-                (defaults to empty dict)
-            allocation_configuration: allows fine grained control over allocations
-                (defaults to AllocationConfiguration() instance)
-            remove_all_resctrl_groups (bool): remove all RDT controls groups upon starting
-                (defaults to False)
-            event_names: perf counters to monitor
-                (defaults to instructions, cycles, cache-misses, memstalls)
-            enable_derived_metrics: enable derived metrics ips, ipc and cache_hit_ratio
-                (based on enabled_event names), default to False
-            task_label_generators: component to generate additional labels for tasks
-        """
+            Arguments:
+                measurement_runner: Measurement runner object.
+                allocator: Component that provides allocation logic.
+                anomalies_storage: Storage to store serialized anomalies and extra metrics.
+                    (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
+                allocations_storage: Storage to store serialized resource allocations.
+                    (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
+                rdt_mb_control_required: Indicates that MB control is required,
+                    if the platform does not support this feature the WCA will exit.
+                rdt_cache_control_required: Indicates tha L3 control is required,
+                    if the platform does not support this feature the WCA will exit.
+                remove_all_resctrl_groups (bool): Remove all RDT controls groups upon starting.
+                    (defaults to False)
+            """
 
-        def __init__(
-                self,
-                node: nodes.Node,
-                allocator: Allocator,
-                metrics_storage: storage.Storage = DEFAULT_STORAGE,
-                anomalies_storage: storage.Storage = DEFAULT_STORAGE,
-                allocations_storage: storage.Storage = DEFAULT_STORAGE,
-                action_delay: Numeric(0, 60) = 1.,  # [s]
-                rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
-                rdt_mb_control_required: bool = False,
-                rdt_cache_control_required: bool = False,
-                extra_labels: Dict[Str, Str] = None,
-                allocation_configuration: Optional[AllocationConfiguration] = None,
-                remove_all_resctrl_groups: bool = False,
-                event_names: Optional[List[str]] = None,
-                enable_derived_metrics: bool = False,
-                task_label_generators: Dict[str, TaskLabelGenerator] = None,
-        ):
+            def __init__(
+                    self,
+                    measurement_runner: MeasurementRunner,
+                    allocator: Allocator,
+                    allocations_storage: Storage = DEFAULT_STORAGE,
+                    anomalies_storage: Storage = DEFAULT_STORAGE,
+                    rdt_mb_control_required: bool = False,
+                    rdt_cache_control_required: bool = False,
+                    remove_all_resctrl_groups: bool = False
+            ):
         ...
 
 

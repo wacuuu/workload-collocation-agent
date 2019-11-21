@@ -1,17 +1,18 @@
 runner: !AllocationRunner
-  node: &tester !IntegrationTester
-   config: 'tests/tester/configs/tester_config.yaml'
-   command: 'sleep 300'
-  action_delay: 5.
-  metrics_storage: *tester
+  measurement_runner: !MeasurementRunner
+    node: &tester !IntegrationTester
+     config: 'tests/tester/configs/tester_config.yaml'
+     command: 'sleep 300'
+    action_delay: 5.
+    metrics_storage: *tester
+    rdt_enabled: True
+    event_names:
+      - 'cycles'
+      - 'instructions'
+      - 'cache_misses'
+      - 'cache_references'
+      - 'offcore_requests_l3_miss_demand_data_rd'
+    wss_reset_interval: 1
   anomalies_storage: *tester
   allocations_storage: *tester
   allocator: *tester
-  rdt_enabled: True
-  event_names:
-    - 'cycles'
-    - 'instructions'
-    - 'cache_misses'
-    - 'cache_references'
-    - 'offcore_requests_l3_miss_demand_data_rd'
-  wss_reset_interval: 1

@@ -12,16 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from abc import abstractmethod
 import logging
 import time
 from typing import Dict, List, Tuple, Optional
 
 import re
 import resource
-from abc import abstractmethod
 from dataclasses import dataclass
 
-from wca import nodes, storage, platforms, profiling, perf_const as pc
+from wca import platforms, profiling, perf_const as pc
 from wca import resctrl
 from wca import security
 from wca.allocators import AllocationConfiguration
@@ -31,21 +31,21 @@ from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, TaskRe
 from wca.logger import trace, get_logging_metrics, TRACE
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
     export_metrics_from_measurements
-from wca.nodes import Task
-from wca.nodes import TaskSynchronizationException
+from wca.nodes import Node, Task, TaskSynchronizationException
 from wca.perf_uncore import UncorePerfCounters, _discover_pmu_uncore_imc_config, \
     UNCORE_IMC_EVENTS, PMUNotAvailable, UncoreDerivedMetricsGenerator
 from wca.platforms import CPUCodeName
 from wca.profiling import profiler
 from wca.runners import Runner
-from wca.storage import MetricPackage, DEFAULT_STORAGE
+from wca.storage import DEFAULT_STORAGE, MetricPackage, Storage
 
 log = logging.getLogger(__name__)
 
 _INITIALIZE_FAILURE_ERROR_CODE = 1
 
-DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES,
-                  MetricName.CACHE_MISSES, MetricName.CACHE_REFERENCES, MetricName.MEMSTALL)
+
+DEFAULT_EVENTS = [MetricName.INSTRUCTIONS, MetricName.CYCLES,
+                  MetricName.CACHE_MISSES, MetricName.CACHE_REFERENCES, MetricName.MEMSTALL]
 
 
 class TaskLabelGenerator:
@@ -91,55 +91,59 @@ class MeasurementRunner(Runner):
     and store them in metrics_storage component.
 
     Arguments:
-        node: component used for tasks discovery
-        metrics_storage: storage to store platform, internal, resource and task metrics
+        node: Component used for tasks discovery.
+        metrics_storage: Storage to store platform, internal, resource and task metrics.
             (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-        action_delay: iteration duration in seconds (None disables wait and iterations)
+        action_delay: Iteration duration in seconds (None disables wait and iterations).
             (defaults to 1 second)
-        rdt_enabled: enables or disabled support for RDT monitoring
+        rdt_enabled: Enables or disabled support for RDT monitoring.
             (defaults to None(auto) based on platform capabilities)
-        gather_hw_mm_topology: gather hardware/memory topology based on lshw and ipmctl
+        gather_hw_mm_topology: Gather hardware/memory topology based on lshw and ipmctl.
             (defaults to False)
-        extra_labels: additional labels attached to every metrics
+        extra_labels: Additional labels attached to every metrics.
             (defaults to empty dict)
-        event_names: perf counters to monitor
+        event_names: Perf counters to monitor.
             (defaults to instructions, cycles, cache-misses, memstalls)
-        enable_derived_metrics: enable derived metrics ips, ipc and cache_hit_ratio
-            (based on enabled_event names), default to False
-        task_label_generators: component to generate additional labels for tasks
+        enable_derived_metrics: Enable derived metrics ips, ipc and cache_hit_ratio.
+            (based on enabled_event names, default to False)
+        enable_perf_uncore: Enable perf event uncore metrics.
+            (defaults to True)
+        task_label_generators: Component to generate additional labels for tasks.
+            (optional)
+        allocation_configuration: Allows fine grained control over allocations.
+            (defaults to AllocationConfiguration() instance)
+        wss_reset_interval: Interval of reseting wss.
+            (defaults to 0, every iteration)
     """
 
     def __init__(
             self,
-            node: nodes.Node,
-            metrics_storage: storage.Storage = DEFAULT_STORAGE,
-            action_delay: Numeric(0, 60) = 1.,  # [s]
-            rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
-            gather_hw_mm_topology: Optional[bool] = False,
-            extra_labels: Dict[Str, Str] = None,
+            node: Node,
+            metrics_storage: Storage = DEFAULT_STORAGE,
+            action_delay: Numeric(0, 60) = 1.,
+            rdt_enabled: Optional[bool] = None,
+            gather_hw_mm_topology: bool = False,
+            extra_labels: Optional[Dict[Str, Str]] = None,
             event_names: List[str] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
             enable_perf_uncore: bool = True,
-            task_label_generators: Dict[str, TaskLabelGenerator] = None,
-            _allocation_configuration: Optional[AllocationConfiguration] = None,
-            wss_reset_interval: int = 0,
-    ):
+            task_label_generators: Optional[Dict[str, TaskLabelGenerator]] = None,
+            allocation_configuration: Optional[AllocationConfiguration] = None,
+            wss_reset_interval: int = 0
+            ):
 
         self._node = node
         self._metrics_storage = metrics_storage
         self._action_delay = action_delay
         self._rdt_enabled = rdt_enabled
         self._gather_hw_mm_topology = gather_hw_mm_topology
-        # Disabled by default, to be overridden by subclasses.
-        self._rdt_mb_control_required = False
-        # Disabled by default, to overridden by subclasses.
-        self._rdt_cache_control_required = False
+
         # QUICK FIX for Str from ENV TODO: fix me
         self._extra_labels = {k: str(v) for k, v in
                               extra_labels.items()} if extra_labels else dict()
         self._finish = False  # Guard to stop iterations.
         self._last_iteration = time.time()  # Used internally by wait function.
-        self._allocation_configuration = _allocation_configuration
+        self._allocation_configuration = allocation_configuration
         self._event_names = event_names
         log.info('Enabling %i perf events: %s', len(self._event_names),
                  ', '.join(self._event_names))
@@ -169,6 +173,15 @@ class MeasurementRunner(Runner):
 
         self._uncore_pmu = None
         self._write_to_cgroup = False
+
+        self._initialize_rdt_callback = None
+        self._iterate_body_callback = None
+
+    def _set_initialize_rdt_callback(self, func):
+        self._initialize_rdt_callback = func
+
+    def _set_iterate_body_callback(self, func):
+        self._iterate_body_callback = func
 
     @profiler.profile_duration(name='sleep')
     def _wait(self):
@@ -205,9 +218,15 @@ class MeasurementRunner(Runner):
 
         if self._rdt_enabled:
             # Resctrl is enabled and available, call a placeholder to allow further initialization.
-            rdt_initialization_ok = self._initialize_rdt()
-            if not rdt_initialization_ok:
-                return 1
+            # For MeasurementRunner it's nothing to configure in RDT to measure resource usage.
+
+            # Check if it's needed to specific rdt initialization in case
+            # of using MeasurementRunner functionality in other runner.
+            if self._initialize_rdt_callback is not None:
+                rdt_initialization_ok = self._initialize_rdt_callback()
+
+                if not rdt_initialization_ok:
+                    return 1
 
         log.debug('rdt_enabled: %s', self._rdt_enabled)
         platform, _, _ = platforms.collect_platform_information(self._rdt_enabled)
@@ -302,8 +321,10 @@ class MeasurementRunner(Runner):
             self._wait()
             return
 
-        self._iterate_body(containers, platform, tasks_measurements, tasks_resources,
-                           tasks_labels, common_labels)
+        # Inject other runners code.
+        if self._iterate_body_callback is not None:
+            self._iterate_body_callback(containers, platform, tasks_measurements,
+                                        tasks_resources, tasks_labels, common_labels)
 
         self._wait()
 
@@ -336,16 +357,6 @@ class MeasurementRunner(Runner):
         # Cleanup phase.
         self._containers_manager.cleanup()
         return 0
-
-    def _iterate_body(self, containers, platform, tasks_measurements, tasks_resources,
-                      tasks_labels, common_labels):
-        """No-op implementation of inner loop body - called by iterate"""
-
-    def _initialize_rdt(self) -> bool:
-        """Nothing to configure in RDT to measure resource usage.
-        Returns state of rdt initialization (True ok, False for error)
-        """
-        return True
 
 
 def append_additional_labels_to_tasks(task_label_generators: Dict[str, TaskLabelGenerator],

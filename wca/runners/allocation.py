@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import logging
 import time
-from typing import Dict, Callable, Any, List, Optional
+from typing import Dict, Callable, Any, List
 
-from wca import nodes, storage, platforms
+from wca import platforms
 from wca import resctrl
 from wca.allocations import AllocationsDict, InvalidAllocations, AllocationValue, \
     MissingAllocationException
@@ -24,7 +25,7 @@ from wca.allocators import TasksAllocations, AllocationConfiguration, Allocation
 from wca.cgroups_allocations import QuotaAllocationValue, SharesAllocationValue, \
     CPUSetCPUSAllocationValue, CPUSetMemoryMigrateAllocationValue, CPUSetMEMSAllocationValue, \
     MigratePagesAllocationValue
-from wca.config import Numeric, Str, assure_type
+from wca.config import assure_type
 from wca.containers import ContainerInterface, Container
 from wca.detectors import convert_anomalies_to_metrics, \
     update_anomalies_metrics_with_task_information, Anomaly
@@ -34,9 +35,10 @@ from wca.nodes import Task
 from wca.resctrl_allocations import (RDTAllocationValue, RDTGroups,
                                      normalize_mb_string,
                                      validate_l3_string)
+from wca.runners import Runner
 from wca.runners.detection import AnomalyStatistics
-from wca.runners.measurement import MeasurementRunner, TaskLabelGenerator, DEFAULT_EVENTS
-from wca.storage import MetricPackage, DEFAULT_STORAGE
+from wca.runners.measurement import MeasurementRunner
+from wca.storage import MetricPackage, DEFAULT_STORAGE, Storage
 
 log = logging.getLogger(__name__)
 
@@ -158,7 +160,7 @@ def validate_shares_allocation_for_kubernetes(tasks: List[Task], allocations: Ta
                                          'is not supported.')
 
 
-class AllocationRunner(MeasurementRunner):
+class AllocationRunner(Runner):
     """Runner is responsible for getting information about tasks from node,
     calling allocate() callback on allocator, performing returning allocations
     and storing all allocation related metrics in allocations_storage.
@@ -167,72 +169,41 @@ class AllocationRunner(MeasurementRunner):
     in anomalies_storage and all other measurements in metrics_storage.
 
     Arguments:
-        node: component used for tasks discovery
-        allocator: component that provides allocation logic
-        metrics_storage: storage to store platform, internal, resource and task metrics
+        measurement_runner: Measurement runner object.
+        allocator: Component that provides allocation logic.
+        anomalies_storage: Storage to store serialized anomalies and extra metrics.
             (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-        anomalies_storage: storage to store serialized anomalies and extra metrics
+        allocations_storage: Storage to store serialized resource allocations.
             (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-        allocations_storage: storage to store serialized resource allocations
-            (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-        action_delay: iteration duration in seconds (None disables wait and iterations)
-            (defaults to 1 second)
-        rdt_enabled: enables or disabled support for RDT monitoring and allocation
-            (defaults to None(auto) based on platform capabilities)
-        gather_hw_mm_topology: gather hardware/memory topology based on lshw and ipmctl
+        rdt_mb_control_required: Indicates that MB control is required,
+            if the platform does not support this feature the WCA will exit.
+        rdt_cache_control_required: Indicates tha L3 control is required,
+            if the platform does not support this feature the WCA will exit.
+        remove_all_resctrl_groups (bool): Remove all RDT controls groups upon starting.
             (defaults to False)
-        rdt_mb_control_required: indicates that MB control is required,
-            if the platform does not support this feature the WCA will exit
-        rdt_cache_control_required: indicates tha L3 control is required,
-            if the platform does not support this feature the WCA will exit
-        extra_labels: additional labels attached to every metric
-            (defaults to empty dict)
-        allocation_configuration: allows fine grained control over allocations
-            (defaults to AllocationConfiguration() instance)
-        remove_all_resctrl_groups (bool): remove all RDT controls groups upon starting
-            (defaults to False)
-        event_names: perf counters to monitor
-            (defaults to instructions, cycles, cache-misses, memstalls)
-        enable_derived_metrics: enable derived metrics ips, ipc and cache_hit_ratio
-            (based on enabled_event names), default to False
-        task_label_generators: component to generate additional labels for tasks
     """
 
     def __init__(
             self,
-            node: nodes.Node,
+            measurement_runner: MeasurementRunner,
             allocator: Allocator,
-            metrics_storage: storage.Storage = DEFAULT_STORAGE,
-            anomalies_storage: storage.Storage = DEFAULT_STORAGE,
-            allocations_storage: storage.Storage = DEFAULT_STORAGE,
-            action_delay: Numeric(0, 60) = 1.,  # [s]
-            rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
-            gather_hw_mm_topology: Optional[bool] = False,
+            allocations_storage: Storage = DEFAULT_STORAGE,
+            anomalies_storage: Storage = DEFAULT_STORAGE,
             rdt_mb_control_required: bool = False,
             rdt_cache_control_required: bool = False,
-            extra_labels: Dict[Str, Str] = None,
-            allocation_configuration: Optional[AllocationConfiguration] = None,
-            remove_all_resctrl_groups: bool = False,
-            event_names: Optional[List[str]] = DEFAULT_EVENTS,
-            enable_derived_metrics: bool = False,
-            enable_perf_uncore: bool = True,
-            task_label_generators: Dict[str, TaskLabelGenerator] = None,
-            wss_reset_interval: int = 0,
+            remove_all_resctrl_groups: bool = False
     ):
 
-        self._allocation_configuration = allocation_configuration or AllocationConfiguration()
+        if not measurement_runner._allocation_configuration:
+            measurement_runner._allocation_configuration = AllocationConfiguration()
 
-        super().__init__(node, metrics_storage, action_delay, rdt_enabled, gather_hw_mm_topology,
-                         extra_labels, _allocation_configuration=self._allocation_configuration,
-                         event_names=event_names, enable_derived_metrics=enable_derived_metrics,
-                         enable_perf_uncore=enable_perf_uncore,
-                         task_label_generators=task_label_generators,
-                         wss_reset_interval=wss_reset_interval)
+        self._measurement_runner = measurement_runner
 
         # Allocation specific.
         self._allocator = allocator
         self._allocations_storage = allocations_storage
-        self._rdt_mb_control_required = rdt_mb_control_required  # Override False from superclass.
+
+        self._rdt_mb_control_required = rdt_mb_control_required
         self._rdt_cache_control_required = rdt_cache_control_required
 
         # Anomaly.
@@ -247,6 +218,12 @@ class AllocationRunner(MeasurementRunner):
 
         # Allocator need permission for writing to cgroups.
         self._write_to_cgroup = True
+
+        self._measurement_runner._set_iterate_body_callback(self._iterate_body)
+        self._measurement_runner._set_initialize_rdt_callback(self._initialize_rdt)
+
+    def run(self) -> int:
+        self._measurement_runner.run()
 
     def _initialize_rdt(self) -> bool:
         platform, _, _ = platforms.collect_platform_information()
@@ -275,12 +252,12 @@ class AllocationRunner(MeasurementRunner):
         )
 
         # ...override max values with values from allocation configuration
-        if self._allocation_configuration.default_rdt_l3 is not None and \
+        if self._measurement_runner._allocation_configuration.default_rdt_l3 is not None and \
                 platform.rdt_information.rdt_cache_control_enabled:
-            root_rdt_l3 = self._allocation_configuration.default_rdt_l3
-        if self._allocation_configuration.default_rdt_mb is not None and \
+            root_rdt_l3 = self._measurement_runner._allocation_configuration.default_rdt_l3
+        if self._measurement_runner._allocation_configuration.default_rdt_mb is not None and \
                 platform.rdt_information.rdt_mb_control_enabled:
-            root_rdt_mb = self._allocation_configuration.default_rdt_mb
+            root_rdt_mb = self._measurement_runner._allocation_configuration.default_rdt_mb
 
         try:
             if root_rdt_l3 is not None:
@@ -328,7 +305,8 @@ class AllocationRunner(MeasurementRunner):
 
         # Create context aware allocations objects for current allocations.
         current_allocations_values = TasksAllocationsValues.create(
-            self._rdt_enabled, current_allocations, self._containers_manager.containers, platform)
+            self._measurement_runner._rdt_enabled, current_allocations,
+            self._measurement_runner._containers_manager.containers, platform)
 
         # Handle allocations: calculate changeset and target allocations.
         allocations_changeset_values = None
@@ -341,7 +319,8 @@ class AllocationRunner(MeasurementRunner):
             # Create and validate context aware allocations objects for new allocations.
             log.debug('New allocations: %s', new_allocations)
             new_allocations_values = TasksAllocationsValues.create(
-                self._rdt_enabled, new_allocations, self._containers_manager.containers, platform)
+                self._measurement_runner._rdt_enabled, new_allocations,
+                self._measurement_runner._containers_manager.containers, platform)
             new_allocations_values.validate()
 
             # Calculate changeset and target_allocations.

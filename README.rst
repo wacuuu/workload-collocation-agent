@@ -225,4 +225,3 @@ Further reading
 - `Extending WCA <docs/extending.rst>`_
 
 .. _`WCA Architecture 1.7.pdf`: docs/WCA_Architecture_v1.7.pdf
-

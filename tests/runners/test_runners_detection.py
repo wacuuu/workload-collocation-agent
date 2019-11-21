@@ -15,13 +15,15 @@ from unittest.mock import Mock
 import pytest
 
 from wca import storage
-from wca.detectors import AnomalyDetector, LABEL_CONTENDED_TASK_ID, \
-    LABEL_CONTENDING_WORKLOAD_INSTANCE, LABEL_WORKLOAD_INSTANCE
+from wca.detectors import (AnomalyDetector, LABEL_CONTENDED_TASK_ID,
+                           LABEL_CONTENDING_WORKLOAD_INSTANCE,
+                           LABEL_WORKLOAD_INSTANCE)
 from wca.mesos import MesosNode
 from wca.runners.detection import DetectionRunner
-from tests.testing import metric, anomaly, \
-    assert_metric, redis_task_with_default_labels, prepare_runner_patches, \
-    platform_mock, assert_subdict, TASK_CPU_USAGE
+from wca.runners.measurement import MeasurementRunner
+from tests.testing import (metric, anomaly, assert_metric,
+                           redis_task_with_default_labels, prepare_runner_patches,
+                           platform_mock, assert_subdict, TASK_CPU_USAGE)
 
 
 @prepare_runner_patches
@@ -47,18 +49,21 @@ def test_detection_runner(subcgroups):
     )
 
     runner = DetectionRunner(
-        node=Mock(spec=MesosNode, get_tasks=Mock(return_value=[t1, t2])),
-        metrics_storage=Mock(spec=storage.Storage, store=Mock()),
-        anomalies_storage=Mock(spec=storage.Storage, store=Mock()),
-        detector=detector_mock,
-        rdt_enabled=False,
-        extra_labels=dict(extra_label='extra_value')  # extra label with some extra value
-    )
-    runner._wait = Mock()
-    runner._initialize()
+            measurement_runner=MeasurementRunner(
+                node=Mock(spec=MesosNode, get_tasks=Mock(return_value=[t1, t2])),
+                metrics_storage=Mock(spec=storage.Storage, store=Mock()),
+                rdt_enabled=False,
+                extra_labels=dict(extra_label='extra_value'),
+                ),
+            anomalies_storage=Mock(spec=storage.Storage, store=Mock()),
+            detector=detector_mock
+        )
+
+    runner._measurement_runner._wait = Mock()
+    runner._measurement_runner._initialize()
 
     # Mock to finish after one iteration.
-    runner._iterate()
+    runner._measurement_runner._iterate()
 
     got_anomalies_metrics = runner._anomalies_storage.store.mock_calls[0][1][0]
 

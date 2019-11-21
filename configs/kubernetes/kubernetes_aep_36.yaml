@@ -37,5 +37,3 @@ runner: !MeasurementRunner
 #  platform_derived_metrics_generators_factory: !DefaultPlatformDerivedMetricsGeneratorsFactory
 #    extra_metrics:
 #      dram_hit: 'dram_total_mb_per_second / (pmm_total_mb_per_second+dram_total_mb_per_second)'
-
-

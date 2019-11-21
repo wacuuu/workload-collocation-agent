@@ -47,6 +47,7 @@ To illustrate that, when someone uses WCA with configuration file like this:
 .. code-block:: yaml
 
     runner: !MeasurementRunner
+      config: !MeasurementRunnerConfig
         node: !MesosNode                # subclass of Node
         metric_storage: !LogStorage     # subclass of Storage
             output_filename: /tmp/logs.txt
@@ -56,9 +57,10 @@ it effectively means running equivalent of Python code:
 .. code-block:: python
 
     runner = MeasurementRunner(
-        node = MesosNode()
-        metric_storage = LogStorage(
-            output_filename = '/tmp/logs.txt'
+        config = MeasurementRunnerConfig(
+           node = MesosNode()
+           metric_storage = LogStorage(
+           output_filename = '/tmp/logs.txt')
         )
     )
     runner.run()
@@ -172,9 +174,10 @@ then in can be used with ``MeasurementRunner`` with following `configuration fil
 .. code-block:: yaml
 
     runner: !MeasurementRunner
-      node: !StaticNode
-        tasks: []                   # this disables any tasks metrics
-      metrics_storage: !HTTPStorage
+      config: !MeasurementRunnerConfig
+        node: !StaticNode
+          tasks: []                   # this disables any tasks metrics
+        metrics_storage: !HTTPStorage
 
 To be able to verify that data was posted to http service correctly please start naive service
 using ``socat``:
@@ -272,14 +275,15 @@ Note that it is possible by using `YAML anchors and aliases <https://yaml.org/re
 .. code-block:: yaml
 
     runner: !AllocationRunner
-      metrics_storage: &kafka_storage_instance !KafkaStorage
-        topic: all_metrics
-        broker_ips: 
-        - 127.0.0.1:9092
-        - 127.0.0.2:9092
-        max_timeout_in_seconds: 5.
-      anomalies_storage: *kafka_storage_instance
-      allocations_storage: *kafka_storage_instance
+      config: !AllocationRunnerConfig
+        metrics_storage: &kafka_storage_instance !KafkaStorage
+          topic: all_metrics
+          broker_ips: 
+          - 127.0.0.1:9092
+          - 127.0.0.2:9092
+          max_timeout_in_seconds: 5.
+        anomalies_storage: *kafka_storage_instance
+        allocations_storage: *kafka_storage_instance
 
 This approach can help to save resources (like connections), share state or simplify configuration (no need to repeat the same arguments).
             
@@ -339,7 +343,3 @@ Any children object that is used by any runner, can be replaced with extrnal com
 - ``Storage`` classes used to enable persistance for internal metrics (``*_storage`` properties),
 - ``Detector`` class to provide anomaly detection logic,
 - ``Allocator`` class to provide anomaly detection and anomaly mittigation logic (by resource allocation),
-
-
-
-

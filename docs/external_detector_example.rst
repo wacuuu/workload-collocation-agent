@@ -59,11 +59,10 @@ when configuration file `mesos_external_detector.yaml <example/mesos_external_de
 .. code:: yaml
 
     runner: !DetectionRunner
-      node: !MesosNode
-      action_delay: 1.
-      storage: !LogStorage
-      detector: !ExampleDetector
-        task_id: 'some_task_id'
+      config: !DetectionRunnerConfig
+        detector: !ExampleDetector
+          task_id: 'some_task_id'
+        ...
 
 
 you can run WCA in following way. Remember to use the absolute configuration path:
