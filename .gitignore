@@ -3,6 +3,9 @@
 /.idea
 __pycache__/
 *.swp
+*.swo
+*.swn
+*.swm
 .tags
 /.eggs/
 /.venv/
