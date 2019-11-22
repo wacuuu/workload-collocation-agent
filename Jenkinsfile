@@ -72,7 +72,7 @@ pipeline {
                  stage("Using tester") {
                      steps {
                      sh '''
-			         sudo make tester
+			         make tester
                      '''
                      }
                  }
