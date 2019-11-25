@@ -69,23 +69,29 @@ def find_cgroup(pid):
     """ Returns cgroup_path relative to 'cpu' subsystem based on /proc/{pid}/cgroup
     with leading '/'"""
     fname = f'/proc/{pid}/cgroup'
-    with open(fname) as f:
-        lines = f.readlines()
-        for line in lines:
-            _, subsystems, path = line.strip().split(':')
-            subsystems = subsystems.split(',')
-            if CGROUP_DEFAULT_SUBSYSTEM in subsystems:
-                if path == '/':
-                    raise MesosCgroupNotFoundException(
-                        'Mesos executor pid=%s found in root cgroup ("/") for %s subsystem in %r. '
-                        'Possible explanation: '
-                        ' cgroups/cpu isolator is missing, initialization races'
-                        ' or unsupported Mesos software stack'
-                        % (pid, CGROUP_DEFAULT_SUBSYSTEM, fname))
-                return path
+    try:
+        with open(fname) as f:
+            lines = f.readlines()
+            for line in lines:
+                _, subsystems, path = line.strip().split(':')
+                subsystems = subsystems.split(',')
+                if CGROUP_DEFAULT_SUBSYSTEM in subsystems:
+                    if path == '/':
+                        raise MesosCgroupNotFoundException(
+                            'Mesos executor pid=%s found in '
+                            'root cgroup ("/") for %s subsystem in %r. '
+                            'Possible explanation: '
+                            ' cgroups/cpu isolator is missing, initialization races'
+                            ' or unsupported Mesos software stack'
+                            % (pid, CGROUP_DEFAULT_SUBSYSTEM, fname))
+                    return path
 
+            raise MesosCgroupNotFoundException(
+                '%r controller not found for pid=%r in %s' % (CGROUP_DEFAULT_SUBSYSTEM, pid, fname))
+    except FileNotFoundError:
+        # in case of races between discovery and task removal
         raise MesosCgroupNotFoundException(
-            '%r controller not found for pid=%r in %s' % (CGROUP_DEFAULT_SUBSYSTEM, pid, fname))
+            'cgroup file %s for pid %s not found' % (fname, pid))
 
 
 @dataclass
