@@ -172,7 +172,6 @@ class MeasurementRunner(Runner):
         self._wss_reset_interval = wss_reset_interval
 
         self._uncore_pmu = None
-        self._write_to_cgroup = False
 
         self._initialize_rdt_callback = None
         self._iterate_body_callback = None
@@ -209,11 +208,13 @@ class MeasurementRunner(Runner):
             log.error('RDT explicitly enabled but not available - exiting!')
             return 1
 
-        use_cgroup = self._write_to_cgroup
+        # _allocation_configuration is set in allocation mode (AllocationRunner)
+        # so we need access to write in cgroups.
+        write_to_cgroup = self._allocation_configuration is not None
         use_resctrl = self._rdt_enabled
         use_perf = len(self._event_names) > 0
 
-        if not security.are_privileges_sufficient(use_cgroup, use_resctrl, use_perf):
+        if not security.are_privileges_sufficient(write_to_cgroup, use_resctrl, use_perf):
             return 1
 
         if self._rdt_enabled:
