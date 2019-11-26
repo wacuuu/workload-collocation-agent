@@ -26,7 +26,7 @@ import os
 from wca.allocators import AllocationConfiguration
 from wca.containers import Container, ContainerSet, ContainerInterface
 from wca.detectors import ContendedResource, ContentionAnomaly, LABEL_WORKLOAD_INSTANCE, \
-    _create_uuid_from_tasks_ids
+    _create_uuid_from_tasks_ids, TaskData
 from wca.metrics import Metric, MetricType
 from wca.nodes import TaskId, Task
 from wca.platforms import CPUCodeName, Platform, RDTInformation
@@ -126,16 +126,32 @@ def anomaly(contended_task_id: TaskId, contending_task_ids: List[TaskId],
     )
 
 
-def task(cgroup_path, labels=None, resources=None, subcgroups_paths=None):
+def task(cgroup_path, subcgroups_paths=None, labels=None, resources=None):
     """Helper method to create task with default values."""
     prefix = cgroup_path.replace('/', '')
     return Task(
-        cgroup_path=cgroup_path,
         name=prefix + '_tasks_name',
         task_id=prefix + '_task_id',
+        cgroup_path=cgroup_path,
+        subcgroups_paths=subcgroups_paths or [],
         labels=labels or dict(),
         resources=resources or dict(),
-        subcgroups_paths=subcgroups_paths or []
+    )
+
+
+def task_data(cgroup_path, subcgroups_paths=None, labels=None,
+              resources=None, measurements=None, allocations=None):
+    """Helper method to create task with default values."""
+    prefix = cgroup_path.replace('/', '')
+    return TaskData(
+        name=prefix + '_tasks_name',
+        task_id=prefix + '_task_id',
+        cgroup_path=cgroup_path,
+        subcgroups_paths=subcgroups_paths or [],
+        labels=labels or {},
+        resources=resources or {},
+        measurements=measurements or {},
+        allocations=allocations or {}
     )
 
 
@@ -318,7 +334,9 @@ def prepare_runner_patches(func):
                    return_value=(platform_mock, [metric('platform-cpu-usage')], {})), \
              patch('wca.platforms.collect_topology_information', return_value=(1, 1, 1)), \
              patch('wca.security.are_privileges_sufficient', return_value=True), \
-             patch('resource.getrusage', return_value=Mock(ru_maxrss=WCA_MEMORY_USAGE)):
+             patch('resource.getrusage', return_value=Mock(ru_maxrss=WCA_MEMORY_USAGE)), \
+             patch('wca.perf_uncore.UncorePerfCounters._open'), \
+             patch('wca.perf.PerfCounters._open'):
             func(*args, **kwargs)
 
     return _decorated_function

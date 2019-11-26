@@ -12,7 +12,7 @@ from wca.logger import init_logging
 from wca.allocators import Allocator, TasksAllocations
 from wca.config import load_config
 from wca.cgroups import CgroupSubsystem, CgroupType
-from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, Anomaly
+from wca.detectors import TasksData, Anomaly
 from wca.metrics import Metric
 from wca.nodes import Node, Task
 from wca.platforms import Platform
@@ -104,16 +104,12 @@ class IntegrationTester(Node, Allocator, Storage):
     def allocate(
             self,
             platform: Platform,
-            tasks_measurements: TasksMeasurements,
-            tasks_resources: TasksResources,
-            tasks_labels: TasksLabels,
-            tasks_allocations: TasksAllocations,
+            tasks_data: TasksData,
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
 
         allocator = self.testcases[self.current_iteration - 1]['allocator']
 
-        return allocator.allocate(
-                platform, tasks_measurements, tasks_resources, tasks_labels, tasks_allocations)
+        return allocator.allocate(platform, tasks_data)
 
     def store(self, metrics: List[Metric]) -> None:
         self.metrics.extend(metrics)

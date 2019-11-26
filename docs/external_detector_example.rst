@@ -30,9 +30,7 @@ Assuming that external implementation of detector is provided as
         def detect(
                 self,
                 platform: Platform,
-                tasks_measurements: TasksMeasurements,
-                tasks_resources: TasksResources,
-                tasks_labels: TasksLabels
+                tasks_data: TasksData,
                 ) -> (List[Anomaly], List[Metric]):
             anomalies = [
                 detectors.ContentionAnomaly(

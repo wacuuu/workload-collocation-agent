@@ -5,7 +5,7 @@ from typing import List, Dict
 from dataclasses import dataclass
 
 from wca.allocators import Allocator, TasksAllocations, AllocationType
-from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, Anomaly
+from wca.detectors import Anomaly, TaskData, TasksData
 from wca.metrics import Metric, MetricName
 from wca.logger import TRACE
 from wca.platforms import Platform, encode_listformat, decode_listformat
@@ -44,17 +44,14 @@ class NUMAAllocator(Allocator):
     def allocate(
             self,
             platform: Platform,
-            tasks_measurements: TasksMeasurements,
-            tasks_resources: TasksResources,
-            tasks_labels: TasksLabels,
-            tasks_allocations: TasksAllocations,
+            tasks_data: TasksData
     ) -> (TasksAllocations, List[Anomaly], List[Metric]):
         log.debug('NUMAAllocator v7: dryrun=%s cgroups_memory_binding/migrate=%s/%s'
                   ' migrate_pages=%s double_match/candidate=%s/%s tasks=%s', self.dryrun,
                   self.cgroups_memory_binding, self.cgroups_memory_migrate,
-                  self.migrate_pages, self.double_match, self.candidate, len(tasks_labels))
+                  self.migrate_pages, self.double_match, self.candidate, len(tasks_data))
         log.log(TRACE, 'Moves match=%s candidates=%s', self._match_moves, self._candidates_moves)
-        log.log(TRACE, 'Tasks resources %r', tasks_resources)
+        log.log(TRACE, 'Tasks data %r', tasks_data)
         allocations = {}
 
         # Total host memory
@@ -65,17 +62,17 @@ class NUMAAllocator(Allocator):
         extra_metrics.extend([
             Metric('numa__task_candidate_moves', value=self._candidates_moves),
             Metric('numa__task_match_moves', value=self._match_moves),
-            Metric('numa__task_tasks_count', value=len(tasks_measurements)),
+            Metric('numa__task_tasks_count', value=len(tasks_data)),
         ])
 
         tasks_memory = []
         # Collect tasks sizes and NUMA node usages
-        for task in tasks_labels:
+        for task, data in tasks_data.items():
             tasks_memory.append(
                 (task,
-                 _get_task_memory_limit(tasks_measurements[task], total_memory,
-                                        task, tasks_resources[task]),
-                 _get_numa_node_preferences(tasks_measurements[task], platform)))
+                 _get_task_memory_limit(data.measurements, total_memory,
+                                        task, data.resources),
+                 _get_numa_node_preferences(data.measurements, platform)))
         tasks_memory = sorted(tasks_memory, reverse=True, key=lambda x: x[1])
 
         # Current state of the system
@@ -85,7 +82,7 @@ class NUMAAllocator(Allocator):
         # 1. First, get current state of the system
         for task, memory, preferences in tasks_memory:
             current_node = _get_current_node(
-                decode_listformat(tasks_allocations[task][AllocationType.CPUSET_CPUS]),
+                decode_listformat(tasks_data[task].allocations[AllocationType.CPUSET_CPUS]),
                 platform.node_cpus)
             log.log(TRACE, "Task: %s Memory: %d Preferences: %s, Current node: %d" % (
                 task, memory, preferences, current_node))
@@ -127,24 +124,27 @@ class NUMAAllocator(Allocator):
         for task, memory, preferences in tasks_memory:
             log.log(TRACE, "Task %r: Memory: %d Preferences: %s" % (task, memory, preferences))
             current_node = _get_current_node(
-                decode_listformat(tasks_allocations[task][AllocationType.CPUSET_CPUS]),
+                decode_listformat(tasks_data[task].allocations[AllocationType.CPUSET_CPUS]),
                 platform.node_cpus)
             most_used_node = _get_most_used_node(preferences)
             best_memory_node = _get_best_memory_node(memory, balanced_memory)
             most_free_memory_node = \
                 _get_most_free_memory_node(memory,
                                            platform.measurements[MetricName.MEM_NUMA_FREE])
+
+            data: TaskData = tasks_data[task]
+
             extra_metrics.extend([
                 Metric('numa__task_current_node', value=current_node,
-                       labels=tasks_labels[task]),
+                       labels=data.labels),
                 Metric('numa__task_most_used_node', value=most_used_node,
-                       labels=tasks_labels[task]),
+                       labels=data.labels),
                 Metric('numa__task_best_memory_node', value=best_memory_node,
-                       labels=tasks_labels[task]),
+                       labels=data.labels),
                 Metric('numa__task_best_memory_node_preference', value=preferences[most_used_node],
-                       labels=tasks_labels[task]),
+                       labels=data.labels),
                 Metric('numa__task_most_free_memory_mode', value=most_free_memory_node,
-                       labels=tasks_labels[task])
+                       labels=data.labels)
             ])
 
             self._pages_to_move.setdefault(task, 0)
@@ -215,7 +215,7 @@ class NUMAAllocator(Allocator):
             # balanced_memory[best_node].append((task, memory))
 
         # Do not send metrics of not existing tasks.
-        old_tasks = [task for task in self._pages_to_move if task not in tasks_measurements]
+        old_tasks = [task for task in self._pages_to_move if task not in tasks_data]
         for old_task in old_tasks:
             if old_task in self._pages_to_move:
                 del self._pages_to_move[old_task]
@@ -249,7 +249,7 @@ class NUMAAllocator(Allocator):
 
             if self.migrate_pages:
                 self._pages_to_move[balance_task] += get_pages_to_move(
-                    balance_task, tasks_measurements, balance_task_node, 'assignment')
+                    balance_task, tasks_data, balance_task_node, 'assignment')
                 allocations.setdefault(balance_task, {})
                 allocations[balance_task][AllocationType.MIGRATE_PAGES] = balance_task_node
 
@@ -265,17 +265,20 @@ class NUMAAllocator(Allocator):
             for task in tasks_to_balance:
                 if tasks_current_nodes[task] == least_used_node:
                     current_node = tasks_current_nodes[task]
-                    self._pages_to_move[task] += get_pages_to_move(task, tasks_measurements,
-                                                                   current_node, 'unbalanced')
+                    self._pages_to_move[task] += get_pages_to_move(
+                            task, tasks_data, current_node, 'unbalanced')
+
                     allocations.setdefault(task, {})
+
                     allocations[task][AllocationType.MIGRATE_PAGES] = current_node
             else:
                 log.log(TRACE, 'no more tasks to move memory!')
 
         for task, page_to_move in self._pages_to_move.items():
+            data: TaskData = tasks_data[task]
             extra_metrics.append(
                 Metric('numa__task_pages_to_move', value=page_to_move,
-                       labels=tasks_labels[task])
+                       labels=data.labels)
             )
         total_pages_to_move = sum(p for p in self._pages_to_move.values())
         extra_metrics.append(
@@ -287,10 +290,11 @@ class NUMAAllocator(Allocator):
         return allocations, [], extra_metrics
 
 
-def get_pages_to_move(task, tasks_measurements, target_node, reason):
+def get_pages_to_move(task, tasks_data, target_node, reason):
+    data: TaskData = tasks_data[task]
     pages_to_move = sum(
         v for node, v
-        in tasks_measurements[task][MetricName.MEM_NUMA_STAT_PER_TASK].items()
+        in data.measurements[MetricName.MEM_NUMA_STAT_PER_TASK].items()
         if node != target_node)
     log.debug('Task: %s Moving %s MB to node %s reason %s', task,
               (pages_to_move * 4096) / 1024**2, target_node, reason)

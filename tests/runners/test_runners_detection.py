@@ -23,7 +23,7 @@ from wca.runners.detection import DetectionRunner
 from wca.runners.measurement import MeasurementRunner
 from tests.testing import (metric, anomaly, assert_metric,
                            redis_task_with_default_labels, prepare_runner_patches,
-                           platform_mock, assert_subdict, TASK_CPU_USAGE)
+                           platform_mock, TASK_CPU_USAGE, assert_subdict)
 
 
 @prepare_runner_patches
@@ -80,19 +80,20 @@ def test_detection_runner(subcgroups):
     assert_metric(got_anomalies_metrics, 'anomaly_last_occurrence')
 
     # Check that detector was called with proper arguments.
-    (platform, tasks_measurements,
-     tasks_resources, tasks_labels) = detector_mock.detect.mock_calls[0][1]
+    (platform, tasks_data) = detector_mock.detect.mock_calls[0][1]
     # Make sure that proper values are propagate to detect method for t1.
     assert platform == platform_mock
     # Measurements have to mach get_measurements mock from measurements_patch decorator.
-    cpu_usage = TASK_CPU_USAGE * (len(subcgroups) if subcgroups else 1)
-    assert_subdict(tasks_measurements, {t1.task_id: {'cpu_usage': cpu_usage}})
     # Labels should have extra LABEL_WORKLOAD_INSTANCE based on redis_task_with_default_labels
     # and sanitized version of other labels for mesos (without prefix).
-    assert_subdict(tasks_labels, {t1.task_id: {LABEL_WORKLOAD_INSTANCE: 'redis_6792_t1'}})
-    assert_subdict(tasks_labels, {t1.task_id: {'load_generator': 'rpc-perf-t1'}})
     # Resources should match resources from redis_task_with_default_labels
-    assert_subdict(tasks_resources, {t1.task_id: t1.resources})
-
     # Check any metrics for t2
-    assert_subdict(tasks_measurements, {t2.task_id: {'cpu_usage': cpu_usage}})
+    cpu_usage = TASK_CPU_USAGE * (len(subcgroups) if subcgroups else 1)
+
+    assert_subdict(tasks_data[t1.task_id].measurements, {'cpu_usage': cpu_usage})
+    assert_subdict(tasks_data[t1.task_id].labels,
+                   {LABEL_WORKLOAD_INSTANCE: 'redis_6792_t1', 'load_generator': 'rpc-perf-t1'})
+
+    assert_subdict(tasks_data[t1.task_id].resources, t1.resources)
+
+    assert_subdict(tasks_data[t1.task_id].measurements, {'cpu_usage': cpu_usage})

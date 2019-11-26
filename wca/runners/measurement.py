@@ -15,7 +15,7 @@
 from abc import abstractmethod
 import logging
 import time
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional
 
 import re
 import resource
@@ -27,7 +27,7 @@ from wca import security
 from wca.allocators import AllocationConfiguration
 from wca.config import Numeric, Str
 from wca.containers import ContainerManager, Container
-from wca.detectors import TasksMeasurements, TasksResources, TasksLabels, TaskResource
+from wca.detectors import TaskData, TasksData, TaskResource
 from wca.logger import trace, get_logging_metrics, TRACE
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
     export_metrics_from_measurements
@@ -314,8 +314,7 @@ class MeasurementRunner(Runner):
         common_labels = dict(platform_labels, **self._extra_labels)
 
         try:
-            # Tasks data
-            tasks_measurements, tasks_resources, tasks_labels = _prepare_tasks_data(containers)
+            tasks_data = _prepare_tasks_data(containers)
         except MissingMeasurementException as e:
             log.error('Cannot synchronize tasks measurements (error=%s) - skip this iteration!', e)
             self._wait()
@@ -323,8 +322,7 @@ class MeasurementRunner(Runner):
 
         # Inject other runners code.
         if self._iterate_body_callback is not None:
-            self._iterate_body_callback(containers, platform, tasks_measurements,
-                                        tasks_resources, tasks_labels, common_labels)
+            self._iterate_body_callback(containers, platform, tasks_data, common_labels)
 
         self._wait()
 
@@ -335,7 +333,7 @@ class MeasurementRunner(Runner):
         metrics_package = MetricPackage(self._metrics_storage)
         metrics_package.add_metrics(_get_internal_metrics(tasks))
         metrics_package.add_metrics(platform_metrics)
-        metrics_package.add_metrics(_build_tasks_metrics(tasks_labels, tasks_measurements))
+        metrics_package.add_metrics(_build_tasks_metrics(tasks_data))
         metrics_package.add_metrics(profiling.profiler.get_metrics())
         metrics_package.add_metrics(get_logging_metrics())
         metrics_package.send(common_labels)
@@ -385,15 +383,12 @@ def append_additional_labels_to_tasks(task_label_generators: Dict[str, TaskLabel
 
 @profiler.profile_duration('prepare_tasks_data')
 @trace(log, verbose=False)
-def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
-        Tuple[TasksMeasurements, TasksResources, TasksLabels]:
+def _prepare_tasks_data(containers: Dict[Task, Container]) -> TasksData:
     """Prepare all resource usage and resource allocation information and
     creates container-specific labels for all the generated metrics.
     """
-    # Prepare empty structures for return all the information.
-    tasks_measurements: TasksMeasurements = {}
-    tasks_resources: TasksResources = {}
-    tasks_labels: TasksLabels = {}
+    # Prepare empty structure for return all the information.
+    tasks_data: TasksData = {}
 
     for task, container in containers.items():
         # Task measurements and measurements based metrics.
@@ -413,30 +408,35 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> \
         if TaskResource.MEM in task.resources:
             task_measurements[MetricName.MEM.value] = task.resources[TaskResource.MEM.value]
 
-        task_labels = task.labels.copy()
+        tasks_data[task.task_id] = TaskData(
+                    name=task.name,
+                    task_id=task.task_id,
+                    cgroup_path=task.cgroup_path,
+                    subcgroups_paths=task.subcgroups_paths,
+                    labels=task.labels,
+                    resources=task.resources,
+                    measurements=task_measurements
+                )
 
-        # Aggregate over all tasks.
-        tasks_labels[task.task_id] = task_labels
-        tasks_measurements[task.task_id] = task_measurements
-        tasks_resources[task.task_id] = task.resources
-
-    return tasks_measurements, tasks_resources, tasks_labels
+    return tasks_data
 
 
-def _build_tasks_metrics(tasks_labels: TasksLabels,
-                         tasks_measurements: TasksMeasurements) -> List[Metric]:
+def _build_tasks_metrics(tasks_data: TasksData) -> List[Metric]:
     """TODO:  TBD ALSO ADDS PREFIX for name!"""
     tasks_metrics: List[Metric] = []
 
     TASK_METRICS_PREFIX = 'task__'
 
-    for task_id, task_measurements in tasks_measurements.items():
-        task_metrics = export_metrics_from_measurements(TASK_METRICS_PREFIX, task_measurements)
+    for task, data in tasks_data.items():
+        task_metrics = export_metrics_from_measurements(
+                TASK_METRICS_PREFIX, data.measurements)
 
         # Decorate metrics with task specific labels.
         for task_metric in task_metrics:
-            task_metric.labels.update(tasks_labels[task_id])
+            task_metric.labels.update(data.labels)
+
         tasks_metrics += task_metrics
+
     return tasks_metrics
 
 

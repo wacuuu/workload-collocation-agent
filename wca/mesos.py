@@ -22,7 +22,7 @@ from dataclasses import dataclass
 
 from wca.config import assure_type, Numeric, Url
 from wca.metrics import Measurements, Metric
-from wca.nodes import Node, Task, TaskId, TaskSynchronizationException, TasksResources
+from wca.nodes import Node, Task, TaskId, TaskSynchronizationException, TaskResources
 from wca.resources import calculate_scalar_resources
 from wca.security import SSL, HTTPSAdapter
 
@@ -51,7 +51,7 @@ class MesosTask(Task):
         assure_type(self.cgroup_path, str)
         assure_type(self.subcgroups_paths, List[str])
         assure_type(self.labels, Dict[str, str])
-        assure_type(self.resources, TasksResources)
+        assure_type(self.resources, TaskResources)
         assure_type(self.executor_pid, int)
         assure_type(self.container_id, str)
         assure_type(self.executor_id, str)

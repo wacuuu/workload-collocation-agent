@@ -109,10 +109,7 @@ corresponding storage classes.
         def allocate(
                 self,
                 platform: Platform,
-                tasks_measurements: TasksMeasurements,
-                tasks_resources: TasksResources,
-                tasks_labels: TasksLabels,
-                tasks_allocations: TasksAllocations,
+                tasks_data: TasksData
         ) -> (TasksAllocations, List[Anomaly], List[Metric]):
             ...
 
