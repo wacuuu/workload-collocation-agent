@@ -11,13 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from unittest.mock import patch, MagicMock, mock_open
 
-from unittest.mock import patch, MagicMock
-
-from wca.metrics import MetricName
 from wca.perf_uncore import Event, UncorePerfCounters, UncoreMetricName
 
-
+@patch('wca.perf_uncore._parse_event_groups', return_value={
+    UncoreMetricName.PMM_BANDWIDTH_READ: 0.0})
 @patch('wca.perf_uncore.UncorePerfCounters._open_for_cpu')
 @patch('wca.perf._create_file_from_fd')
 def test_get_measurements(*args):
@@ -26,10 +25,10 @@ def test_get_measurements(*args):
                              name=UncoreMetricName.PMM_BANDWIDTH_READ,
                              umask=0, config1=0)
                        ]})
-    assert upc.get_measurements() == {
-        UncoreMetricName.PMM_BANDWIDTH_READ: 0,
-        MetricName.SCALING_FACTOR_AVG: 0.0,
-        MetricName.SCALING_FACTOR_MAX: 0}
+    upc._group_event_leader_files_per_pmu[17] = {0: mock_open(), 18: mock_open()}
+    expected_measurements = {UncoreMetricName.PMM_BANDWIDTH_READ: {0: {17: 0.0}, 18: {17: 0.0}}}
+
+    assert upc.get_measurements() == expected_measurements
 
 
 @patch('wca.perf_uncore.UncorePerfCounters._open')

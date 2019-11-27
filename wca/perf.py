@@ -15,6 +15,8 @@
 
 import ctypes
 import logging
+from collections import defaultdict
+
 import os
 import statistics
 import struct
@@ -60,7 +62,7 @@ def _parse_online_cpus_string(raw_string) -> List[int]:
     return parsed_cpus_info
 
 
-def _parse_event_groups(file, event_names) -> Measurements:
+def _parse_event_groups(file, event_names, uncore=False) -> Measurements:
     """Reads event values from the event file"""
     measurements = {}
     scaling_factors = []
@@ -83,49 +85,10 @@ def _parse_event_groups(file, event_names) -> Measurements:
 
     # we add 2 non-standard metrics based on unpacked values,
     # we need to collect scaling factors here
-    measurements[MetricName.SCALING_FACTOR_AVG] = statistics.mean(scaling_factors)
-    measurements[MetricName.SCALING_FACTOR_MAX] = max(scaling_factors)
+    if not uncore:
+        measurements[MetricName.SCALING_FACTOR_AVG] = statistics.mean(scaling_factors)
+        measurements[MetricName.SCALING_FACTOR_MAX] = max(scaling_factors)
     return measurements
-
-
-def _aggregate_measurements(measurements_per_cpu, event_names, logctx='') -> Measurements:
-    """Sums measurements values from all cpus, handles average and max scaling factors"""
-    # because we later add 2 non-standard metrics,
-    # we shouldn't return them when they are dependent on other events
-    if len(event_names) == 0:
-        log.warning('not enough events to aggregate!')
-        return {}
-
-    aggregated_measurements: Measurements = {metric_name: 0 for metric_name in event_names}
-    aggregated_measurements.update(**{MetricName.SCALING_FACTOR_MAX: 0,
-                                      MetricName.SCALING_FACTOR_AVG: 0})
-
-    empty_metrics = set()
-
-    for cpu, measurements_from_single_cpu in measurements_per_cpu.items():
-        for metric_name in event_names:
-            aggregated_measurements[metric_name] += measurements_from_single_cpu[metric_name]
-
-        aggregated_measurements[MetricName.SCALING_FACTOR_MAX] = max(
-            aggregated_measurements[MetricName.SCALING_FACTOR_MAX],
-            measurements_from_single_cpu[MetricName.SCALING_FACTOR_MAX]
-        )
-        aggregated_measurements[MetricName.SCALING_FACTOR_AVG] += measurements_from_single_cpu[
-            MetricName.SCALING_FACTOR_AVG]
-
-    if len(measurements_per_cpu) > 0:
-        aggregated_measurements[MetricName.SCALING_FACTOR_AVG] /= len(
-            measurements_per_cpu)  # assuming even number of measurements per CPU
-
-    # Just check if there is some activity on counter on any cpu
-    for metric_name in event_names:
-        if aggregated_measurements[metric_name] == 0:
-            empty_metrics.add(metric_name)
-    if len(empty_metrics) > 0 and logctx == 'all pmus':
-        log.warning('number of measurements for %s with 0 value: %d (%s)', logctx,
-                    len(empty_metrics), ', '.join(empty_metrics))
-
-    return aggregated_measurements
 
 
 def _perf_event_open(perf_event_attr, pid, cpu, group_fd, flags) -> int:
@@ -369,8 +332,25 @@ class PerfCounters:
             scaled_measurements_and_factor_per_cpu[cpu] = _parse_event_groups(event_leader_file,
                                                                               self._event_names)
 
-        return _aggregate_measurements(scaled_measurements_and_factor_per_cpu,
-                                       self._event_names, 'task')
+        measurements = defaultdict(lambda: defaultdict(float))
+
+        for cpu, metrics in scaled_measurements_and_factor_per_cpu.items():
+            for metric in metrics:
+                measurements[metric][cpu] = scaled_measurements_and_factor_per_cpu[cpu][metric]
+
+        if self._group_event_leader_files:
+            measurements.update(**{MetricName.SCALING_FACTOR_MAX: 0,
+                                   MetricName.SCALING_FACTOR_AVG: 0})
+
+            for cpu, metrics in scaled_measurements_and_factor_per_cpu.items():
+                measurements[MetricName.SCALING_FACTOR_MAX] = max(
+                    scaled_measurements_and_factor_per_cpu[cpu][MetricName.SCALING_FACTOR_MAX],
+                    measurements[MetricName.SCALING_FACTOR_MAX])
+                measurements[MetricName.SCALING_FACTOR_AVG] += \
+                    scaled_measurements_and_factor_per_cpu[cpu][
+                        MetricName.SCALING_FACTOR_AVG]
+
+        return measurements
 
 
 class UnableToOpenPerfEvents(Exception):

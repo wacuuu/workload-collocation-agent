@@ -13,10 +13,11 @@
 # limitations under the License.
 import logging
 import time
-from typing import Dict, Union, List, Tuple, Callable
+from typing import Dict, Union, List, Tuple, Callable, Optional
 
 from dataclasses import dataclass, field
 from enum import Enum
+from operator import truediv, sub
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +76,21 @@ class MetricName(str, Enum):
     UP = 'up'
 
 
+class UncoreMetricName(str, Enum):
+    PMM_BANDWIDTH_READ = 'pmm_bandwidth_read'
+    PMM_BANDWIDTH_WRITE = 'pmm_bandwidth_write'
+    CAS_COUNT_READ = 'cas_count_read'
+    CAS_COUNT_WRITE = 'cas_count_write'
+
+
+class PerfMetricName(str, Enum):
+    MEMSTALLS = 'memstalls__ra310'
+    MEM_LOAD = 'mem_load_retired_local_pmm__rd180'
+    MEM_INST_RD081 = 'mem_inst_retired_all_loads__rd081'
+    MEM_INST_RD082 = 'mem_inst_retired_all_stores__rd082'
+    DTLB_LOAD_MISSES_R080e = 'dtlb_load_misses__r080e'
+
+
 class DerivedMetricName(str, Enum):
     # instructions/second
     IPS = 'ips'
@@ -84,6 +100,13 @@ class DerivedMetricName(str, Enum):
     CACHE_HIT_RATIO = 'cache_hit_ratio'
     # (cache-references - cache_misses) / cache_references
     CACHE_MISSES_PER_KILO_INSTRUCTIONS = 'cache_misses_per_kilo_instructions'
+    PMM_READS_MB_PER_SECOND = 'pmm_reads_mb_per_second'
+    PMM_WRITES_MB_PER_SECOND = 'pmm_writes_mb_per_second'
+    PMM_TOTAL_MB_PER_SECOND = 'pmm_total_mb_per_second'
+    DRAM_READS_MB_PER_SECOND = 'dram_reads_mb_per_second'
+    DRAM_WRITES_MB_PER_SECOND = 'dram_writes_mb_per_second'
+    DRAM_TOTAL_MB_PER_SECOND = 'dram_total_mb_per_second'
+    DRAM_HIT = 'dram_hit'
 
 
 class MetricType(str, Enum):
@@ -134,6 +157,10 @@ class MetricMetadata:
     type: MetricType
     unit: MetricUnit
     source: MetricSource
+    # function used to merge measurements across many cgroups for ContainerSet
+    # default behavior is sum (to cover both counters and resources like memory bandwidth, memory
+    # usage or cache usage)
+    merge_operation: Optional[Callable[[List[Union[float, int]]], Union[float, int]]] = sum
 
 
 # Structure linking a metric with description of hierarchy how it is kept.
@@ -141,7 +168,28 @@ METRICS_LEVELS = {
     MetricName.MEM_NUMA_STAT_PER_TASK: ["numa_node"],
     MetricName.MEM_NUMA_FREE: ["numa_node"],
     MetricName.MEM_NUMA_USED: ["numa_node"],
+    MetricName.CACHE_REFERENCES: ["cpu"],
     MetricName.CPU_USAGE_PER_CPU: ["cpu"],
+    MetricName.MEMSTALL: ["cpu"],
+    UncoreMetricName.PMM_BANDWIDTH_READ: ["cpu", "pmu"],
+    UncoreMetricName.PMM_BANDWIDTH_WRITE: ["cpu", "pmu"],
+    UncoreMetricName.CAS_COUNT_READ: ["cpu", "pmu"],
+    UncoreMetricName.CAS_COUNT_WRITE: ["cpu", "pmu"],
+    MetricName.CYCLES: ["cpu"],
+    MetricName.INSTRUCTIONS: ["cpu"],
+    MetricName.CACHE_MISSES: ["cpu"],
+    PerfMetricName.MEMSTALLS: ["cpu"],
+    PerfMetricName.MEM_LOAD: ["cpu"],
+    PerfMetricName.MEM_INST_RD081: ["cpu"],
+    PerfMetricName.MEM_INST_RD082: ["cpu"],
+    PerfMetricName.DTLB_LOAD_MISSES_R080e: ["cpu"],
+    DerivedMetricName.PMM_READS_MB_PER_SECOND: ["cpu", "pmu"],
+    DerivedMetricName.PMM_WRITES_MB_PER_SECOND: ["cpu", "pmu"],
+    DerivedMetricName.PMM_TOTAL_MB_PER_SECOND: ["cpu", "pmu"],
+    DerivedMetricName.DRAM_READS_MB_PER_SECOND: ["cpu", "pmu"],
+    DerivedMetricName.DRAM_WRITES_MB_PER_SECOND: ["cpu", "pmu"],
+    DerivedMetricName.DRAM_TOTAL_MB_PER_SECOND: ["cpu", "pmu"],
+    DerivedMetricName.DRAM_HIT: ["cpu", "pmu"],
 }
 
 # Structure linking a metric with its type and help.
@@ -188,31 +236,36 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Memory usage_in_bytes per tasks returned from cgroup memory subsystem.',
             MetricType.GAUGE,
             MetricUnit.BYTES,
-            MetricSource.CGROUP),
+            MetricSource.CGROUP,
+        ),
     MetricName.MEM_MAX_USAGE_PER_TASK:
         MetricMetadata(
             'Memory max_usage_in_bytes per tasks returned from cgroup memory subsystem.',
             MetricType.GAUGE,
             MetricUnit.BYTES,
-            MetricSource.CGROUP),
+            MetricSource.CGROUP,
+        ),
     MetricName.MEM_LIMIT_PER_TASK:
         MetricMetadata(
             'Memory limit_in_bytes per tasks returned from cgroup memory subsystem.',
             MetricType.GAUGE,
             MetricUnit.BYTES,
-            MetricSource.CGROUP),
+            MetricSource.CGROUP,
+        ),
     MetricName.MEM_SOFT_LIMIT_PER_TASK:
         MetricMetadata(
             'Memory soft_limit_in_bytes per tasks returned from cgroup memory subsystem.',
             MetricType.GAUGE,
             MetricUnit.BYTES,
-            MetricSource.CGROUP),
+            MetricSource.CGROUP,
+        ),
     MetricName.LLC_OCCUPANCY:
         MetricMetadata(
             'LLC occupancy.',
             MetricType.GAUGE,
             MetricUnit.BYTES,
-            MetricSource.RESCTRL),
+            MetricSource.RESCTRL,
+        ),
     MetricName.MEM_USAGE:
         MetricMetadata(
             'Total memory used by platform in bytes based on /proc/meminfo '
@@ -341,6 +394,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
             MetricSource.PERF_EVENT),
+    # TODO: metadata for uncore metrics
 }
 
 
@@ -385,22 +439,75 @@ def merge_measurements(measurements_list: List[Measurements]) -> \
 
     for metric_name in all_metrics_names:
         if metric_name in METRICS_METADATA:
-
-            if METRICS_METADATA[metric_name].type == MetricType.GAUGE:
-                operation = lambda values: sum(values) / len(values)  # noqa
-            else:
-                assert METRICS_METADATA[metric_name].type == MetricType.COUNTER
-                operation = sum
-
+            operation = METRICS_METADATA[metric_name].merge_operation
         else:
             log.debug('By default, unknown metric %r uses "sum" as merge operation.', metric_name)
             operation = sum
 
-        summed_metrics[metric_name] = operation(
-            [measurements[metric_name] for measurements in measurements_list
-             if metric_name in measurements])
+        if metric_name not in METRICS_LEVELS:
+            try:
+                summed_metrics[metric_name] = operation(
+                    [measurements[metric_name] for measurements in measurements_list
+                     if metric_name in measurements])
+            except TypeError:
+                log.exception("{} seems to be hierarchical but metric levels are "
+                              "not specified.".format(metric_name))
+                raise
+        else:
+            max_depth = len(METRICS_LEVELS[metric_name])
+            summed = dict()
+            for measurements in measurements_list:
+                if metric_name in measurements:
+                    _list_leveled_metrics(summed, measurements[metric_name], max_depth)
+            _operation_on_leveled_metric(summed, operation, max_depth)
+            summed_metrics[metric_name] = summed
 
     return summed_metrics
+
+
+def _list_leveled_metrics(aggregated_metric, new_metric, max_depth, depth=0):
+    """Making list of leveled metric with hierarchy preservation.
+    Results will be stored in aggregated_metric (numeric leafs will be converted to arrays)
+    and new_metric will be appended.
+    """
+    for key, value in new_metric.items():
+        if depth == max_depth - 1:
+            if key in aggregated_metric and type(aggregated_metric[key]) == list:
+                aggregated_metric[key].append(value)
+            else:
+                aggregated_metric[key] = [value]
+        else:
+            _list_leveled_metrics(aggregated_metric[key], value, max_depth, depth + 1)
+
+
+def _operation_on_leveled_metric(aggregated_metric, operation, max_depth,
+                                 depth=0):
+    """Performing declared operation on leveled metric. It is assumed
+    that result will be stored in aggregated and on max_depth there is
+    a list of values than can be aggregated using operation."""
+    for key, value in aggregated_metric.items():
+        if depth == max_depth - 1:
+            aggregated_metric[key] = operation(value)
+        else:
+            _operation_on_leveled_metric(
+                aggregated_metric[key], operation, max_depth, depth + 1)
+
+
+def _operation_on_leveled_dicts(a, b, operation, max_depth, depth=0):
+    """Performing declared operation on two leveled hierarchical metrics.
+    The result will be returned as new object."""
+    operation_result = {}
+    for key, value in a.items():
+        if depth == max_depth - 1:
+            try:
+                operation_result[key] = operation(a[key], b[key])
+            except ZeroDivisionError:
+                log.debug('Division by zero. Ignoring!')
+        else:
+            operation_result[key] = _operation_on_leveled_dicts(
+                a[key], b[key], operation, max_depth, depth + 1)
+
+    return operation_result
 
 
 class BaseDerivedMetricsGenerator:
@@ -434,11 +541,20 @@ class BaseDerivedMetricsGenerator:
         def delta(*names):
             if not available(*names):
                 return 0
-            if len(names) == 1:
-                name = names[0]
-                return measurements[name] - self._prev_measurements[name]
-            else:
-                return [measurements[name] - self._prev_measurements[name] for name in names]
+
+            calculated_delta = []
+            for metric_name in names:
+                if metric_name in METRICS_LEVELS:
+                    max_depth = len(METRICS_LEVELS[metric_name])
+                    calculated_delta.append(
+                        _operation_on_leveled_dicts(measurements[metric_name],
+                                                    self._prev_measurements[metric_name],
+                                                    sub, max_depth))
+                else:
+                    calculated_delta.append(
+                        measurements[metric_name] - self._prev_measurements[metric_name])
+
+            return calculated_delta
 
         # if specific pairs are available calculate derived metrics
         if self._prev_measurements is not None:
@@ -458,29 +574,38 @@ class DefaultDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
 
     def _derive(self, measurements, delta, available, time_delta):
 
+        def rate(value):
+            return float(value) / time_delta
+
         if available(MetricName.INSTRUCTIONS, MetricName.CYCLES):
-            inst_delta, cycles_delta = delta(MetricName.INSTRUCTIONS,
-                                             MetricName.CYCLES)
-            if cycles_delta > 0:
-                measurements[DerivedMetricName.IPC] = float(inst_delta) / cycles_delta
+            inst_delta, cycles_delta = delta(MetricName.INSTRUCTIONS, MetricName.CYCLES)
+            max_depth = len(METRICS_LEVELS[MetricName.INSTRUCTIONS])
+            ipc = _operation_on_leveled_dicts(inst_delta, cycles_delta, truediv, max_depth)
+            measurements[DerivedMetricName.IPC] = ipc
 
             if time_delta > 0:
-                measurements[DerivedMetricName.IPS] = float(inst_delta) / time_delta
+                _operation_on_leveled_metric(inst_delta, rate, max_depth)
+                measurements[DerivedMetricName.IPS] = inst_delta
 
         if available(MetricName.INSTRUCTIONS, MetricName.CACHE_MISSES):
-            inst_delta, cache_misses_delta = delta(MetricName.INSTRUCTIONS,
-                                                   MetricName.CACHE_MISSES)
-            if inst_delta > 0:
-                measurements[DerivedMetricName.CACHE_MISSES_PER_KILO_INSTRUCTIONS] = \
-                    float(cache_misses_delta) * 1000 / inst_delta
+            inst_delta, cache_misses_delta = delta(MetricName.INSTRUCTIONS, MetricName.CACHE_MISSES)
+
+            max_depth = len(METRICS_LEVELS[MetricName.CACHE_MISSES])
+            divided = _operation_on_leveled_dicts(
+                cache_misses_delta, inst_delta, truediv, max_depth)
+
+            _operation_on_leveled_metric(divided, lambda v: v * 1000, max_depth)
+            measurements[DerivedMetricName.CACHE_MISSES_PER_KILO_INSTRUCTIONS] = divided
 
         if available(MetricName.CACHE_REFERENCES, MetricName.CACHE_MISSES):
             cache_ref_delta, cache_misses_delta = delta(MetricName.CACHE_REFERENCES,
                                                         MetricName.CACHE_MISSES)
-            if cache_ref_delta > 0:
-                cache_hits_count = cache_ref_delta - cache_misses_delta
-                measurements[DerivedMetricName.CACHE_HIT_RATIO] = (
-                        float(cache_hits_count) / cache_ref_delta)
+            max_depth = len(METRICS_LEVELS[MetricName.CACHE_MISSES])
+            cache_hits_count = _operation_on_leveled_dicts(
+                cache_ref_delta, cache_misses_delta, sub, max_depth)
+            cache_hit_ratio = _operation_on_leveled_dicts(cache_hits_count, cache_ref_delta,
+                                                          truediv, max_depth)
+            measurements[DerivedMetricName.CACHE_HIT_RATIO] = cache_hit_ratio
 
 
 class BaseGeneratorFactory:
@@ -519,9 +644,10 @@ def export_metrics_from_measurements(name_prefix: str,
                     for parent_label_value, child in node.items():
                         new_parent_labels = {} if parent_labels is None else dict(parent_labels)
                         new_parent_labels[levels[depth]] = str(parent_label_value)
-                        metrics.extend(recursive_create_metric(child, new_parent_labels, depth+1))
+                        metrics.extend(recursive_create_metric(child, new_parent_labels, depth + 1))
                     return metrics
-            all_metrics.extend(recursive_create_metric(metric_node, {}, 0))
+
+            all_metrics.extend(recursive_create_metric(metric_node, {}))
         else:
             metric_value = metric_node
             all_metrics.append(Metric.create_metric_with_metadata(

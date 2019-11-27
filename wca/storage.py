@@ -389,6 +389,33 @@ class KafkaStorage(Storage):
             log.log(logger.TRACE,
                     'KafkaStorage succeeded to send message; message: {}'.format(msg))
 
+    @staticmethod
+    def divide_message(msg):
+        """Kafka won't accept more than 1Mb messages, therefore too big
+        messages need to be divided into smaller chunks"""
+        MAX_SIZE = 10 ** 5
+        devided_message = []
+        msg_size = sys.getsizeof(msg)
+        if msg_size < MAX_SIZE:
+            return [msg]
+        else:
+            message = msg.split('\n')
+            new_message = ''
+            for i in range(len(message)):
+                new_metric = ''
+                while message[i].startswith('#'):
+                    new_metric += message[i] + '\n'
+                    i += 1
+                new_metric += message[i] + '\n'
+
+                if sys.getsizeof(new_message + new_metric) > MAX_SIZE and new_message:
+                    devided_message.append(new_message)
+                    new_message = new_metric
+                else:
+                    new_message += new_metric
+
+        return devided_message
+
     def store(self, metrics: List[Metric]) -> None:
         """Stores synchronously metrics in kafka.
 
@@ -416,31 +443,32 @@ class KafkaStorage(Storage):
         timestamp = get_current_time()
 
         msg = convert_to_prometheus_exposition_format(metrics, timestamp)
-        self.producer.produce(self.topic, msg.encode('utf-8'),
-                              callback=self.callback_on_delivery)
+        messages = self.divide_message(msg)
+        for message in messages:
+            self.producer.produce(self.topic, message.encode('utf-8'),
+                                  callback=self.callback_on_delivery)
+            r = self.producer.flush(self.max_timeout_in_seconds)  # block until all send
 
-        r = self.producer.flush(self.max_timeout_in_seconds)  # block until all send
+            # check if timeout expired
+            if r > 0:
+                raise FailedDeliveryException(
+                    "Maximum timeout {} for sending message had passed.".format(
+                        self.max_timeout_in_seconds))
 
-        # check if timeout expired
-        if r > 0:
-            raise FailedDeliveryException(
-                "Maximum timeout {} for sending message had passed.".format(
-                    self.max_timeout_in_seconds))
+            # check if any failed to be delivered
+            if self.error_from_callback is not None:
+                # before resetting self.error_from_callback we
+                # assign the original value to separate value
+                # to pass it to exception
+                error_from_callback__original_ref = self.error_from_callback
+                self.error_from_callback = None
 
-        # check if any failed to be delivered
-        if self.error_from_callback is not None:
-            # before resetting self.error_from_callback we
-            # assign the original value to separate value
-            # to pass it to exception
-            error_from_callback__original_ref = self.error_from_callback
-            self.error_from_callback = None
+                raise FailedDeliveryException(
+                    "Message has failed to be writen to kafka. API error message: {}.".format(
+                        error_from_callback__original_ref))
 
-            raise FailedDeliveryException(
-                "Message has failed to be writen to kafka. API error message: {}.".format(
-                    error_from_callback__original_ref))
-
-        log.debug('message size=%i with timestamp=%s stored in kafka topic=%r',
-                  len(msg), timestamp, self.topic)
+            log.debug('message size=%i with timestamp=%s stored in kafka topic=%r',
+                      len(msg), timestamp, self.topic)
 
         return  # the message has been send to kafka
 

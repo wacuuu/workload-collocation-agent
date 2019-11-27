@@ -76,7 +76,7 @@ def _fetch_metrics(url):
     'twemcache_mutilate'
 ])
 def test_wca_metrics(workload_name):
-    test_wca(workload_name)
+    test_wca(workload_name, ['sli', 'task__cycles'])
 
 
 @pytest.mark.parametrize('workload_name', [
@@ -86,10 +86,10 @@ def test_wca_metrics(workload_name):
     'stress'
 ])
 def test_wca_metrics_kustomize(workload_name):
-    test_wca(workload_name)
+    test_wca(workload_name, ['apm__sli', 'task__cycles'])
 
 
-def test_wca(workload_name):
+def test_wca(workload_name, metrics):
     assert 'PROMETHEUS' in os.environ, 'prometheus host to connect'
     assert 'BUILD_NUMBER' in os.environ
     assert 'BUILD_COMMIT' in os.environ
@@ -112,17 +112,10 @@ def test_wca(workload_name):
     logging.info('testing for: BUILD_NUMBER=%r, BUILD_COMMIT=%r, ENV_UNIQ_ID=%r',
                  build_number, build_commit, env_uniq_id)
 
-    # Check SLI metrics for workloads
-    sli_query = _build_prometheus_url(prometheus, 'task__up',
-                                      tags, 1800, time())
-    sli_metrics = _fetch_metrics(sli_query)
-    assert len(sli_metrics['data']['result']) > 0, \
-        'queried prometheus for SLI metrics produced by workload ' \
-        '{} and did not received any'.format(workload_name)
-
-    cycles_query = _build_prometheus_url(prometheus, 'task__cycles',
-                                         tags, 1800, time())
-    cycles_metrics = _fetch_metrics(cycles_query)
-    assert len(cycles_metrics['data']['result']) > 0, \
-        'quried prometheus for cycles metrics for workload {} ' \
-        'produced by WCA agent and did not received any'
+    for metric in metrics:
+        metric_query = _build_prometheus_url(prometheus, metric,
+                                             tags, 1800, time())
+        fetched_metric = _fetch_metrics(metric_query)
+        assert len(fetched_metric['data']['result']) > 0, \
+            'queried prometheus for {} metrics produced by workload ' \
+            '{} and did not received any'.format(metric, workload_name)

@@ -25,6 +25,7 @@ from dataclasses import dataclass, field
 from wca import logger
 from wca.config import assure_type, Numeric, Url, Str, Path
 from wca.cgroups import CgroupSubsystem
+from wca.logger import TRACE
 from wca.metrics import MetricName
 from wca.nodes import Node, Task, TaskId, TaskSynchronizationException
 from wca.resources import calculate_pod_resources
@@ -272,14 +273,16 @@ def _build_cgroup_path(cgroup_driver, qos: str, pod_id: str, container_id=''):
                                        '' if qos == 'guaranteed' else qos,
                                        'pod{}'.format(pod_id.replace('-', '')))
 
+        log.log(TRACE, 'pod_id=%s container_id=%s cgroup locations %r and %r',
+                pod_id, container_id, pod_path, cutted_pod_path)
         if os.path.exists(CgroupSubsystem.CPU + pod_path):
-
+            log.log(TRACE, 'pod_id=%s container_id=%s cgroup path=%r location',
+                    pod_id, container_id, pod_path)
             result = os.path.join(pod_path, container_id, "")
-
         elif os.path.exists(CgroupSubsystem.CPU + cutted_pod_path):
-
             result = os.path.join(cutted_pod_path, container_id, "")
-
+            log.log(TRACE, 'pod_id=%s container_id=%s cgroup path=%r location',
+                    pod_id, container_id, cutted_pod_path)
         else:
             raise MissingCgroupException(
                     'There is no pod cgroup matching pod_id: {} !'.format(pod_id))

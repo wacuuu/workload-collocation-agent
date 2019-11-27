@@ -1,18 +1,20 @@
 import ctypes
 import json
 import logging
-import os
 import time
 from collections import defaultdict
-from enum import Enum
 from typing import List, Dict, BinaryIO
 
+import os
 from dataclasses import dataclass
+from operator import truediv, add
 
 from wca import perf_const as pc
-from wca.metrics import Measurements, BaseDerivedMetricsGenerator
+from wca.metrics import Measurements, BaseDerivedMetricsGenerator, \
+    UncoreMetricName, _operation_on_leveled_metric, METRICS_LEVELS, \
+    DerivedMetricName, _operation_on_leveled_dicts
 from wca.perf import _perf_event_open, _create_file_from_fd, \
-    _parse_event_groups, _aggregate_measurements, LIBC
+    _parse_event_groups, LIBC
 from wca.platforms import decode_listformat
 
 log = logging.getLogger(__name__)
@@ -76,19 +78,17 @@ class UncorePerfCounters:
     def get_measurements(self) -> Measurements:
         """Reads, scales and aggregates event measurements"""
         scaled_measurements_and_factor_per_cpu: Dict[int, Measurements] = {}
-        scaled_measurements_and_factor_per_pmu: Dict[int, Measurements] = {}
 
-        event_names = []
+        measurements = defaultdict(lambda: defaultdict(dict))
         for pmu, events in self.pmu_events.items():
             event_names = [e.name for e in events]
             for cpu, event_leader_file in self._group_event_leader_files_per_pmu[pmu].items():
                 scaled_measurements_and_factor_per_cpu[cpu] = _parse_event_groups(event_leader_file,
-                                                                                  event_names)
-            scaled_measurements_and_factor_per_pmu[pmu] = _aggregate_measurements(
-                scaled_measurements_and_factor_per_cpu, event_names, 'single pmu')
-
-        measurements = _aggregate_measurements(scaled_measurements_and_factor_per_pmu,
-                                               event_names, 'all pmus')
+                                                                                  event_names,
+                                                                                  uncore=True)
+                for metric in scaled_measurements_and_factor_per_cpu[cpu]:
+                    measurements[metric][cpu][pmu] = \
+                        scaled_measurements_and_factor_per_cpu[cpu][metric]
 
         return measurements
 
@@ -155,13 +155,6 @@ class UncorePerfCounters:
                 raise OSError("Cannot enable perf counts")
 
 
-class UncoreMetricName(str, Enum):
-    PMM_BANDWIDTH_READ = 'pmm_bandwidth_read'
-    PMM_BANDWIDTH_WRITE = 'pmm_bandwidth_write'
-    CAS_COUNT_READ = 'cas_count_read'
-    CAS_COUNT_WRITE = 'cas_count_write'
-
-
 UNCORE_IMC_EVENTS = [
     # https://github.com/opcm/pcm/blob/816dec444453c0e1253029e7faecfe1e024a071c/cpucounters.cpp#L3549
     Event(name=UncoreMetricName.PMM_BANDWIDTH_READ, event=0xe3),
@@ -193,23 +186,69 @@ def _discover_pmu_uncore_imc_config(events):
 class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
 
     def _derive(self, measurements, delta, available, time_delta):
-        scale = 64 / (1024 * 1024)
+        # each CAS opreration is 64bytes long and converted to MB
+        SCALE = 64 / 1e6
+
+        def rate(value):
+            return value * SCALE / time_delta
+
+        max_depth = len(METRICS_LEVELS[UncoreMetricName.PMM_BANDWIDTH_WRITE])
+        # both CAS and PMM should have the same level and it dervied metrics
+        # levels are cpu and pmu
+        assert max_depth == len(METRICS_LEVELS[UncoreMetricName.CAS_COUNT_READ])
+        assert max_depth == len(METRICS_LEVELS[DerivedMetricName.PMM_TOTAL_MB_PER_SECOND])
+
+        # DRAM
+        dram_read, dram_write = delta(UncoreMetricName.CAS_COUNT_READ,
+                                      UncoreMetricName.CAS_COUNT_WRITE)
+
+        # DRAM R/W mbps
+        _operation_on_leveled_metric(dram_read, rate, max_depth)
+        measurements[DerivedMetricName.DRAM_READS_MB_PER_SECOND] = dram_read
+
+        _operation_on_leveled_metric(dram_write, rate, max_depth)
+        measurements[DerivedMetricName.DRAM_WRITES_MB_PER_SECOND] = dram_write
+
+        # DRAM total mbps
+        total_dram_mb_per_second = _operation_on_leveled_dicts(
+            dram_read,
+            dram_write,
+            add, max_depth)
+        measurements[DerivedMetricName.DRAM_TOTAL_MB_PER_SECOND] = total_dram_mb_per_second
+
+        # PMM
         if available(UncoreMetricName.PMM_BANDWIDTH_WRITE, UncoreMetricName.PMM_BANDWIDTH_READ):
-            pmm_reads_delta, pmm_writes_delta = delta(UncoreMetricName.PMM_BANDWIDTH_READ,
-                                                      UncoreMetricName.PMM_BANDWIDTH_WRITE)
-            measurements['pmm_read_mb_per_second'] = pmm_reads_delta * scale / time_delta
-            measurements['pmm_write_mb_per_second'] = pmm_writes_delta * scale / time_delta
-            measurements['pmm_total_mb_per_second'] = measurements['pmm_read_mb_per_second'] + \
-                measurements['pmm_write_mb_per_second']
+            pmm_read, pmm_write = delta(UncoreMetricName.PMM_BANDWIDTH_READ,
+                                        UncoreMetricName.PMM_BANDWIDTH_WRITE)
+
+            # PMM R/W mbps
+            _operation_on_leveled_metric(pmm_read, rate, max_depth)
+            measurements[DerivedMetricName.PMM_READS_MB_PER_SECOND] = pmm_read
+
+            _operation_on_leveled_metric(pmm_write, rate, max_depth)
+            measurements[DerivedMetricName.PMM_WRITES_MB_PER_SECOND] = pmm_write
+
+            # PMM total mbps
+            total_pmm_mb_per_second = _operation_on_leveled_dicts(
+                pmm_read,
+                pmm_write,
+                add,
+                max_depth)
+            measurements[DerivedMetricName.PMM_TOTAL_MB_PER_SECOND] = total_pmm_mb_per_second
+
+            # DRAM HIT = dram_mbps / total_dram_and_pmm_mbps
+            total_dram_and_pmm_mbps = _operation_on_leveled_dicts(
+                total_pmm_mb_per_second,
+                total_dram_mb_per_second,
+                add,
+                max_depth)
+            dram_hit = _operation_on_leveled_dicts(
+                measurements[DerivedMetricName.DRAM_TOTAL_MB_PER_SECOND],
+                total_dram_and_pmm_mbps,
+                truediv, max_depth)
+            measurements[DerivedMetricName.DRAM_HIT] = dram_hit
         else:
             log.warning('pmm metrics not available!')
-
-        cas_reads_delta, cas_writes_delta = delta(UncoreMetricName.CAS_COUNT_READ,
-                                                  UncoreMetricName.CAS_COUNT_WRITE)
-        measurements['dram_read_mb_per_second'] = cas_reads_delta * scale / time_delta
-        measurements['dram_write_mb_per_second'] = cas_writes_delta * scale / time_delta
-        measurements['dram_total_mb_per_second'] = measurements['dram_read_mb_per_second'] + \
-            measurements['dram_write_mb_per_second']
 
 
 if __name__ == '__main__':

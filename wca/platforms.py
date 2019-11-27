@@ -645,7 +645,7 @@ def collect_platform_information(rdt_enabled: bool = True,
 def decode_listformat(value: str) -> Set[int]:
     """Parse "List Format" as describe by man cpuset(7)
 
-    can raise ValueError in case in inproper input.
+    can raise ValueError in case in improper input.
     """
     cores = set()
 

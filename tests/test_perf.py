@@ -16,7 +16,7 @@
 import os
 from io import BytesIO
 from unittest import mock
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, mock_open
 
 import pytest
 
@@ -116,35 +116,6 @@ def test_parse_event_groups(file, event_names, expected):
     assert perf._parse_event_groups(file, event_names) == expected
 
 
-@pytest.mark.parametrize("measurements_per_cpu,event_names,expected", [
-    (
-            {
-                0: {
-                    metrics.MetricName.CYCLES: 600,
-                    metrics.MetricName.INSTRUCTIONS: 400,
-                    metrics.MetricName.SCALING_FACTOR_AVG: 1.5,
-                    metrics.MetricName.SCALING_FACTOR_MAX: 2.0,
-                },
-                1: {
-                    metrics.MetricName.CYCLES: 500,
-                    metrics.MetricName.INSTRUCTIONS: 300,
-                    metrics.MetricName.SCALING_FACTOR_AVG: 1.0,
-                    metrics.MetricName.SCALING_FACTOR_MAX: 1.0,
-                }
-            },
-            [metrics.MetricName.CYCLES, metrics.MetricName.INSTRUCTIONS],
-            {
-                metrics.MetricName.CYCLES: 1100,
-                metrics.MetricName.INSTRUCTIONS: 700,
-                metrics.MetricName.SCALING_FACTOR_AVG: 1.25,
-                metrics.MetricName.SCALING_FACTOR_MAX: 2.0,
-            }
-    ),
-])
-def test_aggregate_measurements(measurements_per_cpu, event_names, expected):
-    assert perf._aggregate_measurements(measurements_per_cpu, event_names) == expected
-
-
 @patch('wca.perf._get_cgroup_fd')
 @patch('wca.perf.PerfCounters._open')
 def test_perf_counters_init(_open_mock, _get_cgroup_fd_mock):
@@ -162,12 +133,17 @@ def test_get_online_cpus(_parse_online_cpu_string_mock, open_mock):
     open_mock.assert_called_with('/sys/devices/system/cpu/online', 'r')
 
 
+@patch('wca.perf._parse_event_groups', return_value={
+    metrics.MetricName.CYCLES:  0,
+    metrics.MetricName.SCALING_FACTOR_MAX: 0,
+    metrics.MetricName.SCALING_FACTOR_AVG: 0})
 @patch('wca.perf._get_cgroup_fd')
 @patch('wca.perf.PerfCounters._open')
-def test_read_metrics(_open_mock, _get_cgroup_fd_mock):
+def test_read_metrics(*args):
     platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
     prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.CYCLES], platform_mock)
-    assert prf.get_measurements() == {metrics.MetricName.CYCLES: 0,
+    prf._group_event_leader_files[0] = {0: mock_open()}
+    assert prf.get_measurements() == {metrics.MetricName.CYCLES: {0: 0},
                                       metrics.MetricName.SCALING_FACTOR_AVG: 0,
                                       metrics.MetricName.SCALING_FACTOR_MAX: 0}
 
@@ -344,10 +320,10 @@ def test_get_event_config(cpu, event_name, expected_config):
 def test_derived_metrics():
     def gm_func():
         return {
-            MetricName.INSTRUCTIONS: 1000,
-            MetricName.CYCLES: 5,
-            MetricName.CACHE_MISSES: 10000,
-            MetricName.CACHE_REFERENCES: 50000,
+            MetricName.INSTRUCTIONS: {0: 1000},
+            MetricName.CYCLES: {0: 5},
+            MetricName.CACHE_MISSES: {0: 10000},
+            MetricName.CACHE_REFERENCES: {0: 50000},
         }
 
     derived_metrics_generator = DefaultDerivedMetricsGenerator(
@@ -365,10 +341,10 @@ def test_derived_metrics():
     # 5 seconds later
     def gm_func_2():
         return {
-            MetricName.INSTRUCTIONS: 11000,  # 10k more
-            MetricName.CYCLES: 15,  # 10 more
-            MetricName.CACHE_MISSES: 20000,  # 10k more
-            MetricName.CACHE_REFERENCES: 100000,  # 50k more
+            MetricName.INSTRUCTIONS: {0: 11000},  # 10k more
+            MetricName.CYCLES: {0: 15},  # 10 more
+            MetricName.CACHE_MISSES: {0: 20000},  # 10k more
+            MetricName.CACHE_REFERENCES: {0: 100000},  # 50k more
         }
 
     derived_metrics_generator.get_measurements_func = gm_func_2
@@ -379,15 +355,15 @@ def test_derived_metrics():
     assert DerivedMetricName.CACHE_HIT_RATIO in measurements
     assert DerivedMetricName.CACHE_MISSES_PER_KILO_INSTRUCTIONS in measurements
 
-    assert measurements[DerivedMetricName.IPC] == (10000 / 10)
-    assert measurements[DerivedMetricName.IPS] == (10000 / 5)
+    assert measurements[DerivedMetricName.IPC] == ({0: 10000 / 10})
+    assert measurements[DerivedMetricName.IPS] == ({0: 10000 / 5})
 
     # Assuming cache misses increase is 10k over all 50k cache references
     # Cache hit ratio should be 40k / 50k = 80%
-    assert measurements[DerivedMetricName.CACHE_HIT_RATIO] == 0.8
+    assert measurements[DerivedMetricName.CACHE_HIT_RATIO] == {0: 0.8}
 
     # 10k misses per 10k instructions / 1000 = 10k / 10
-    assert measurements[DerivedMetricName.CACHE_MISSES_PER_KILO_INSTRUCTIONS] == 1000
+    assert measurements[DerivedMetricName.CACHE_MISSES_PER_KILO_INSTRUCTIONS] == {0: 1000}
 
 
 @pytest.mark.parametrize('event_names, cpu_codename, expected', [
