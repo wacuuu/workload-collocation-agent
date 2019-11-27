@@ -12,7 +12,25 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from wca.metrics import METRICS_METADATA
+from wca.metrics import METRICS_METADATA, MetricGranurality
+
+
+def prepare_csv_table(data):
+    table = '.. csv-table::\n'
+    table += '\t:header: "Name", "Help", "Unit", "Type", "Source", "Levels"\n'
+    table += '\t:widths: 15, 20, 15, 15, 15, 20\n\n\t'
+
+    table += '\n\t'.join(['"{}", "{}", "{}", "{}", "{}", "{}"'.format(*row) for row in data])
+
+    return table
+
+
+def generate_title(title):
+    return title + '\n' + ''.join(['=' for _ in range(len(title))])
+
+
+def generate_subtitle(subtitle):
+    return subtitle + '\n' + ''.join(['-' for _ in range(len(subtitle))])
 
 
 METRICS_DOC_PATH = 'docs/metrics.rst'
@@ -28,30 +46,53 @@ Available metrics
 
 """
 
+METRICS_SOURCES = """
+Metrics sources
+===============
 
-def prepare_csv_table(data):
-    table = '.. csv-table::\n'
-    table += '\t:header: "Name", "Help", "Unit", "Type", "Source"\n'
-    table += '\t:widths: 10, 20, 10, 10, 10\n\n\t'
+Check out `metrics sources documentation <metrics_sources.rst>`_  to learn how measurement them.
 
-    table += '\n\t'.join(['"{}", "{}", "{}", "{}", "{}"'.format(*row) for row in data])
-
-    return table
+"""
 
 
 def generate_docs():
-    data = [(metric,
-             METRICS_METADATA[metric].help,
-             METRICS_METADATA[metric].unit,
-             METRICS_METADATA[metric].type,
-             METRICS_METADATA[metric].source) for metric in METRICS_METADATA]
 
-    metric_table = prepare_csv_table(data)
+    task_data = []
 
-    return metric_table
+    platform_data = []
+
+    internal_data = []
+
+    for metric, metadata in sorted(METRICS_METADATA.items()):
+        if metadata.levels is not None:
+            levels = ' '.join(metadata.levels)
+        else:
+            levels = ''
+
+        data = (metric, metadata.help, metadata.unit, metadata.type,
+                metadata.source, levels)
+
+        if metadata.granularity == MetricGranurality.TASK:
+            task_data.append(data)
+        elif metadata.granularity == MetricGranurality.PLATFORM:
+            platform_data.append(data)
+        elif metadata.granularity == MetricGranurality.INTERNAL:
+            internal_data.append(data)
+
+    tasks = generate_title("Task's metrics") + '\n\n'
+    tasks += prepare_csv_table(task_data) + '\n\n'
+
+    platforms = generate_title("Platform's metrics") + '\n\n'
+    platforms += prepare_csv_table(platform_data) + '\n\n'
+
+    internal = generate_title("Internal metrics") + '\n\n'
+    internal += prepare_csv_table(internal_data) + '\n\n'
+
+    return tasks + '\n\n' + platforms + '\n\n' + internal
 
 
 if __name__ == '__main__':
     with open(METRICS_DOC_PATH, 'w') as f:
         f.write(INTRO)
+        f.write(METRICS_SOURCES)
         f.write(generate_docs())
