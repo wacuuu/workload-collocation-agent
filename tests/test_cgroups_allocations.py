@@ -36,9 +36,6 @@ def test_cgroup_allocations(Cgroup_mock, PerfCounters_mock):
         node_cpus={0: [0, 1], 1: [2, 3]},
     )
 
-    foo_container = Container(
-        '/somepath', platform=platform_mock)
-
     foo_container = Container('/somepath', platform=platform_mock)
     foo_container._cgroup.allocation_configuration = AllocationConfiguration()
     foo_container._cgroup.platform = platform_mock
