@@ -81,6 +81,8 @@ class UncoreMetricName(str, Enum):
     PMM_BANDWIDTH_WRITE = 'pmm_bandwidth_write'
     CAS_COUNT_READ = 'cas_count_read'
     CAS_COUNT_WRITE = 'cas_count_write'
+    UPI_RxL_FLITS = 'upi_rxl_flits'
+    UPI_TxL_FLITS = 'upi_txl_flits'
 
 
 class PerfMetricName(str, Enum):
@@ -107,6 +109,7 @@ class DerivedMetricName(str, Enum):
     DRAM_WRITES_MB_PER_SECOND = 'dram_writes_mb_per_second'
     DRAM_TOTAL_MB_PER_SECOND = 'dram_total_mb_per_second'
     DRAM_HIT = 'dram_hit'
+    UPI_BANDWIDTH_MB_PER_SECOND = 'upi_bandwidth_mb_per_second'  # Based on UPI Flits
 
 
 class MetricType(str, Enum):
@@ -192,6 +195,9 @@ METRICS_LEVELS = {
     DerivedMetricName.DRAM_WRITES_MB_PER_SECOND: ["cpu", "pmu"],
     DerivedMetricName.DRAM_TOTAL_MB_PER_SECOND: ["cpu", "pmu"],
     DerivedMetricName.DRAM_HIT: ["cpu", "pmu"],
+    UncoreMetricName.UPI_RxL_FLITS: ["cpu", "pmu"],
+    UncoreMetricName.UPI_TxL_FLITS: ["cpu", "pmu"],
+    DerivedMetricName.UPI_BANDWIDTH_MB_PER_SECOND: ["cpu", "pmu"]
 }
 
 # Structure linking a metric with its type and help.
@@ -454,7 +460,18 @@ class Metric:
         return metric
 
 
-Measurements = Dict[MetricName, MetricValue]
+LevelMeasurements = Dict[Union[str, int], MetricValue]
+
+Measurements = Union[
+    # Simple mapping from name to value
+    Dict[MetricName, MetricValue],
+    # recursive hierarchical type  (levels may be represented by str or int)
+    # e.g. for levels cpu, pmu
+    # measurements = {
+    #   "instructions": {0: 1234, 1: 2452},
+    # }
+    Dict[MetricName, LevelMeasurements]
+]
 
 
 def merge_measurements(measurements_list: List[Measurements]) -> \

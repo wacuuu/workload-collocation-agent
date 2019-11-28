@@ -31,9 +31,11 @@ from wca.detectors import TaskData, TasksData, TaskResource
 from wca.logger import trace, get_logging_metrics, TRACE
 from wca.metrics import Metric, MetricType, MetricName, MissingMeasurementException, \
     export_metrics_from_measurements
-from wca.nodes import Node, Task, TaskSynchronizationException
-from wca.perf_uncore import UncorePerfCounters, _discover_pmu_uncore_imc_config, \
-    UNCORE_IMC_EVENTS, PMUNotAvailable, UncoreDerivedMetricsGenerator
+from wca.nodes import Node, Task
+from wca.nodes import TaskSynchronizationException
+from wca.perf_uncore import UncorePerfCounters, _discover_pmu_uncore_config, \
+    UNCORE_IMC_EVENTS, PMUNotAvailable, UncoreDerivedMetricsGenerator, \
+    UNCORE_UPI_EVENTS
 from wca.platforms import CPUCodeName
 from wca.profiling import profiler
 from wca.runners import Runner
@@ -258,9 +260,19 @@ class MeasurementRunner(Runner):
         self._uncore_pmu = None
         self._uncore_get_measurements = lambda: {}
         if enable_perf_uncore:
+            pmu_events = {}
             try:
-                cpus, pmu_events = _discover_pmu_uncore_imc_config(
-                    UNCORE_IMC_EVENTS)
+                # Cpus and events for perf uncore imc
+                cpus_imc, pmu_events_imc = _discover_pmu_uncore_config(
+                    UNCORE_IMC_EVENTS, 'uncore_imc_')
+                pmu_events.update(pmu_events_imc)
+                # Cpus and events for perf uncore upi
+                cpus_upi, pmu_events_upi = _discover_pmu_uncore_config(
+                    UNCORE_UPI_EVENTS, 'uncore_upi_')
+                pmu_events.update(pmu_events_upi)
+
+                cpus = list(set(cpus_imc + cpus_upi))
+
             except PMUNotAvailable as e:
                 self._uncore_pmu = None
                 self._uncore_get_measurements = lambda: {}

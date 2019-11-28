@@ -1,7 +1,18 @@
+# Copyright (c) 2018 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import ctypes
-import json
 import logging
-import time
 from collections import defaultdict
 from typing import List, Dict, BinaryIO
 
@@ -15,7 +26,7 @@ from wca.metrics import Measurements, BaseDerivedMetricsGenerator, \
     DerivedMetricName, _operation_on_leveled_dicts
 from wca.perf import _perf_event_open, _create_file_from_fd, \
     _parse_event_groups, LIBC
-from wca.platforms import decode_listformat
+from wca.platforms import decode_listformat, encode_listformat
 
 log = logging.getLogger(__name__)
 
@@ -77,18 +88,17 @@ class UncorePerfCounters:
 
     def get_measurements(self) -> Measurements:
         """Reads, scales and aggregates event measurements"""
-        scaled_measurements_and_factor_per_cpu: Dict[int, Measurements] = {}
+        measurements_per_cpu: Dict[int, Measurements] = {}
 
         measurements = defaultdict(lambda: defaultdict(dict))
         for pmu, events in self.pmu_events.items():
             event_names = [e.name for e in events]
             for cpu, event_leader_file in self._group_event_leader_files_per_pmu[pmu].items():
-                scaled_measurements_and_factor_per_cpu[cpu] = _parse_event_groups(event_leader_file,
-                                                                                  event_names,
-                                                                                  uncore=True)
-                for metric in scaled_measurements_and_factor_per_cpu[cpu]:
+                measurements_per_cpu[cpu] = _parse_event_groups(
+                    event_leader_file, event_names, include_scaling_info=False)
+                for metric in measurements_per_cpu[cpu]:
                     measurements[metric][cpu][pmu] = \
-                        scaled_measurements_and_factor_per_cpu[cpu][metric]
+                        measurements_per_cpu[cpu][metric]
 
         return measurements
 
@@ -163,23 +173,35 @@ UNCORE_IMC_EVENTS = [
     Event(name=UncoreMetricName.CAS_COUNT_WRITE, event=0x04, umask=0xc),  # * 64 to get bytes
 ]
 
+UNCORE_UPI_EVENTS = [
+    Event(name=UncoreMetricName.UPI_RxL_FLITS, event=0x3, umask=0xf),
+    Event(name=UncoreMetricName.UPI_TxL_FLITS, event=0x2, umask=0xf),
+]
+
 
 class PMUNotAvailable(Exception):
     pass
 
 
-def _discover_pmu_uncore_imc_config(events):
-    from os.path import join
+def _discover_pmu_uncore_config(events, dir_prefix):
+    """Detect available uncore PMUS and their types and CPUS, that events should be assigned to.
+    Can raise PMUNotAvailable exception if the is not cpusmask set for this PMU.
+    Returns configuration that can be used to program perf_event subsystem to collect given
+    events.
+    """
     base_path = '/sys/devices'
-    imcs = [d for d in os.listdir(base_path) if d.startswith('uncore_imc_')]
-    pmu_types = [int(open(join(base_path, imc, 'type')).read().rstrip()) for imc in imcs]
-    pmu_cpus_set = set([open(join(base_path, imc, 'cpumask')).read().rstrip() for imc in imcs])
+    pmus = [d for d in os.listdir(base_path) if d.startswith(dir_prefix)]
+    pmu_types = [int(open(os.path.join(base_path, imc, 'type')).read().rstrip()) for imc in pmus]
+    pmu_cpus_set = set(
+        [open(os.path.join(base_path, imc, 'cpumask')).read().rstrip() for imc in pmus])
     if len(pmu_cpus_set) == 0:
         raise PMUNotAvailable()
     assert len(pmu_cpus_set) == 1
     pmu_cpus_csv = list(pmu_cpus_set)[0]
     cpus = list(decode_listformat(pmu_cpus_csv))
     pmu_events = {pmu: events for pmu in pmu_types}
+    log.debug('discovered uncore pmus types for %s: %r with cpus=%r',
+              dir_prefix, pmu_types, encode_listformat(cpus))
     return cpus, pmu_events
 
 
@@ -250,17 +272,33 @@ class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
         else:
             log.warning('pmm metrics not available!')
 
+        # UPI bandwidth
+        if available(UncoreMetricName.UPI_RxL_FLITS, UncoreMetricName.UPI_TxL_FLITS):
+            """
+            based on "2.6.3 Intel® UPI LL Performance Monitoring Events" chapter from
+            "Intel® Xeon® Processor Scalable Memory Family Uncore Performance Monitoring"
+            document June/2017
 
-if __name__ == '__main__':
-    cpus, pmu_events = _discover_pmu_uncore_imc_config(UNCORE_IMC_EVENTS)
+            Extract from above document:
+            * Of particular interest, total link utilization may be calculated by capturing and
+            subtracting transmitted/received idle flits from Intel® UPI clocks.
+            Many of these events can be further broken down by message class, including link
+            utilization.
+            * A quick illustration on calculating UPI Bandwidth. Here are two basic examples. The
+            first is a typical DRd (data read) packet and the other is an IntLogical (logically
+            addressed interrupt) packet. The point is , in both these cases, the number of flits
+            sent are the same even in the rare case a full cacheline’s worth of data isn’t
+            transmitted. When measuring the amount of bandwidth consumed by transmission of
+            the data (i.e. NOT including the header), it should be .ALL_DATA / 9 * 64B. .
+            """
+            rxl_flits, txl_flits = delta(UncoreMetricName.UPI_RxL_FLITS,
+                                         UncoreMetricName.UPI_TxL_FLITS)
 
-    upc = UncorePerfCounters(
-        cpus=cpus,
-        pmu_events=pmu_events
-    )
+            def rate_for_upi(value):
+                return (value / time_delta / 9 * 64) / 1e6
 
-    g = UncoreDerivedMetricsGenerator(upc.get_measurements)
-
-    while True:
-        print(json.dumps(g.get_measurements(), indent=4))
-        time.sleep(1)
+            max_depth = len(METRICS_LEVELS[UncoreMetricName.UPI_TxL_FLITS])
+            bandwidth = _operation_on_leveled_dicts(rxl_flits, txl_flits, lambda x, y: x + y,
+                                                    max_depth)
+            _operation_on_leveled_metric(bandwidth, rate_for_upi, max_depth)
+            measurements[DerivedMetricName.UPI_BANDWIDTH_MB_PER_SECOND] = bandwidth

@@ -62,7 +62,7 @@ def _parse_online_cpus_string(raw_string) -> List[int]:
     return parsed_cpus_info
 
 
-def _parse_event_groups(file, event_names, uncore=False) -> Measurements:
+def _parse_event_groups(file, event_names, include_scaling_info) -> Measurements:
     """Reads event values from the event file"""
     measurements = {}
     scaling_factors = []
@@ -85,7 +85,7 @@ def _parse_event_groups(file, event_names, uncore=False) -> Measurements:
 
     # we add 2 non-standard metrics based on unpacked values,
     # we need to collect scaling factors here
-    if not uncore:
+    if include_scaling_info:
         measurements[MetricName.SCALING_FACTOR_AVG] = statistics.mean(scaling_factors)
         measurements[MetricName.SCALING_FACTOR_MAX] = max(scaling_factors)
     return measurements
@@ -210,15 +210,19 @@ def _create_file_from_fd(pfd):
     """Validates file description and creates a file-like object"""
     # -1 is returned on error: http://man7.org/linux/man-pages/man2/open.2.html#RETURN_VALUE
     if pfd == -1:
+        INVALID_ARG_ERRNO = 22
         errno = ctypes.get_errno()
-        raise UnableToOpenPerfEvents('Invalid perf event file descriptor: {}, {}.'
-                                     'HINT: If code error is 22 and '
-                                     'in traceback show problem in perf_uncore, '
-                                     'it would be problem with PERF_FORMAT_GROUP in'
-                                     'perf_event_attr structure for perf_event_open syscall. '
-                                     'Older kernel cannot handle with extended format group.'
-                                     'Kernel cannot be 3.10.0-862.el7.x86_64 or lower.'
-                                     .format(errno, os.strerror(errno)))
+        if errno == INVALID_ARG_ERRNO:
+            raise UnableToOpenPerfEvents('Invalid perf event file descriptor: {}, {}. '
+                                         'If traceback shows problem in perf_uncore '
+                                         'it could be problem with PERF_FORMAT_GROUP in'
+                                         'perf_event_attr structure for perf_event_open syscall.'
+                                         'Older kernel cannot handle with extended format group.'
+                                         'Kernel cannot be 3.10.0-862.el7.x86_64 or lower.'
+                                         ''.format(errno, os.strerror(errno)))
+        else:
+            raise UnableToOpenPerfEvents('Invalid perf event file descriptor: {}, {}.'
+                                         .format(errno, os.strerror(errno)))
     return os.fdopen(pfd, 'rb')
 
 
@@ -329,8 +333,8 @@ class PerfCounters:
         """Reads, scales and aggregates event measurements"""
         scaled_measurements_and_factor_per_cpu: Dict[int, Measurements] = {}
         for cpu, event_leader_file in self._group_event_leader_files.items():
-            scaled_measurements_and_factor_per_cpu[cpu] = _parse_event_groups(event_leader_file,
-                                                                              self._event_names)
+            scaled_measurements_and_factor_per_cpu[cpu] = _parse_event_groups(
+                event_leader_file, self._event_names, include_scaling_info=True)
 
         measurements = defaultdict(lambda: defaultdict(float))
 

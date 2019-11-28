@@ -1,6 +1,6 @@
 loggers:
-#  "wca.extra.numa_allocator": "trace"
-#  "wca.cgroups_allocations": "trace"
+  "wca.extra.numa_allocator": "trace"
+  "wca.cgroups_allocations": "trace"
   "wca": "info"
 runner: !AllocationRunner
   measurement_runner: !MeasurementRunner
@@ -52,7 +52,7 @@ runner: !AllocationRunner
     cgroups_memory_migrate: false
     double_match: false
     candidate: true
-    dryrun: true
+    dryrun: false
 
   allocations_storage: !LogStorage
     output_filename: allocations.prom

@@ -113,7 +113,7 @@ def test_parse_online_cpus_string(raw_string, expected):
      )
 ])
 def test_parse_event_groups(file, event_names, expected):
-    assert perf._parse_event_groups(file, event_names) == expected
+    assert perf._parse_event_groups(file, event_names, include_scaling_info=True) == expected
 
 
 @patch('wca.perf._get_cgroup_fd')
