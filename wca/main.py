@@ -115,7 +115,7 @@ def main():
             exit(1)
         # Merge config from cmd line and config file.
         # Overwrite config file values with values provided from command line.
-        log_levels = dict(log_levels, **log_levels_config)
+        log_levels = dict(log_levels_config, **log_levels)
         logger.configure_loggers_from_dict(log_levels)
 
     # Dump loggers configurations  to debug issues with loggers.
