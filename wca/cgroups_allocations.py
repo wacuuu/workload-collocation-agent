@@ -200,6 +200,12 @@ class MigratePagesAllocationValue(BoxedNumeric):
             self.platform.numa_nodes,
         )
 
+    def validate(self):
+        super().validate()
+        if self.platform.swap_enabled:
+            raise InvalidAllocations(
+                    "Swap should be disabled due to possibility of OOM killer occurrence!")
+
 
 def _migrate_pages(task_pids, to_node, number_of_nodes):
     # if not all pages yet on place force them to move

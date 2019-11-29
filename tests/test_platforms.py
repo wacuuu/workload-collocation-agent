@@ -171,7 +171,8 @@ def test_collect_platform_information(*mocks):
                       MetricName.MEM_USAGE: 1337,
                       MetricName.MEM_NUMA_FREE: {0: 1},
                       MetricName.MEM_NUMA_USED: {0: 2}},
-        static_information={}
+        static_information={},
+        swap_enabled=False
     )
 
     print(got_metrics)
