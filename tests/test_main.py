@@ -55,9 +55,9 @@ runner: !DummyRunner
 def test_main_unknown_field(mock_exit, perf_counters, mock_rmdir,
                             mock_argv, mock_log_error):
     main.main()
-    mock_log_error.assert_called_once_with('Error: Unknown field in '
-                                           'configuration file: unknownRunner.'
-                                           ' Possible fields are: \'loggers\', '
+    mock_log_error.assert_called_once_with('Error: Unknown fields in '
+                                           'configuration file!'
+                                           ' Possible are: \'loggers\', '
                                            '\'runner\'')
 
 
@@ -72,5 +72,5 @@ def test_main_unknown_field(mock_exit, perf_counters, mock_rmdir,
 def test_main_not_absolute_path(mock_exit, mock_argv, mock_log_error):
     main.main()
     mock_log_error.assert_called_once_with(
-        'Error: The config path \'configs/see_yaml_config_variable_above.yaml\' is not valid. '
+        'Error: The config path is not valid. '
         'The path must be absolute.')

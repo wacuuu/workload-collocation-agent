@@ -83,24 +83,23 @@ def main():
 
     if not os.path.isabs(args.config):
         log.error(
-            'Error: The config path \'%s\' is not valid. The path must be absolute.'
-            % args.config)
+            'Error: The config path is not valid. The path must be absolute.')
         exit(1)
 
     # Initialize all necessary objects.
     try:
         configuration = config.load_config(args.config)
     except config.ConfigLoadError as e:
-        log.error('Error: Cannot load config file %r: %s', args.config, e)
+        log.error('Error: Cannot load config file! : %s', e)
         if log.getEffectiveLevel() <= logging.DEBUG:
             log.exception('Detailed exception:')
         exit(1)
 
     for key in configuration:
         if key != 'loggers' and key != 'runner':
-            log.error('Error: Unknown field in configuration '
-                      'file: {}. Possible fields are: \'loggers\', '
-                      '\'runner\''.format(key))
+            log.error('Error: Unknown fields in configuration '
+                      'file! Possible are: \'loggers\', '
+                      '\'runner\'')
             exit(1)
 
     assure_type(configuration, dict)
@@ -111,7 +110,7 @@ def main():
         log_levels_config = configuration['loggers']
         if not isinstance(log_levels, dict):
             log.error('Loggers configuration error: log levels are mapping from logger name to'
-                      'log level got "%r" instead!' % log_levels_config)
+                      'log level!')
             exit(1)
         # Merge config from cmd line and config file.
         # Overwrite config file values with values provided from command line.
