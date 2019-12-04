@@ -30,7 +30,6 @@ from wca import allocators
 from wca import mesos
 from wca import kubernetes
 from wca import storage
-from wca import storage_http
 from wca.extra import static_node
 from wca.extra import numa_allocator
 from wca import security
@@ -46,7 +45,6 @@ REGISTERED_COMPONENTS = [
     storage.LogStorage,
     storage.KafkaStorage,
     storage.FilterStorage,
-    storage_http.HTTPStorage,
     detectors.NOPAnomalyDetector,
     allocators.NOPAllocator,
     allocators.AllocationConfiguration,
@@ -58,7 +56,7 @@ REGISTERED_COMPONENTS = [
     measurement.TaskLabelRegexGenerator,
     DefaultDerivedMetricsGenerator,
     UncoreDerivedMetricsGenerator,
-        ]
+]
 
 
 def register_components(extra_components: List[str]):
