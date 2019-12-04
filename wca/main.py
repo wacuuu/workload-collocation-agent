@@ -54,7 +54,8 @@ def valid_config_file(config):
     if other_write_mode:
         log.error(
             'Error: The config is not valid. It does not have correct ACLs. '
-            'Only owner should be able to write.')
+            'Only owner should be able to write (Hint: try chmod og-rwto fix the problem).'
+        )
         exit(1)
 
 

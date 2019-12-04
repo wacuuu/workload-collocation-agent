@@ -12,11 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import Mock, mock_open, patch, call
-
 import os
 
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import Mock, mock_open, patch, call
 
 from wca import main
 
@@ -77,6 +75,9 @@ def test_main_valid_config_file_not_absolute_path(os_stat, mock_exit, mock_log_e
                 'The path must be absolute.') in mock_log_error.mock_calls
 
 
+TEST_USER_UID = 1001
+
+
 @patch('wca.main.log.error')
 @patch('wca.main.exit')
 @patch('os.stat', return_value=Mock(st_size=35, st_uid=123123, st_mode=384))
@@ -98,8 +99,6 @@ def test_main_valid_config_file_wrong_acl(os_getuid, os_stat, mock_exit, mock_lo
     main.valid_config_file('/etc/configs/see_yaml_config_variable_above.yaml')
 
     mock_log_error.assert_called_with(
-        'Error: The config is not valid. '
-        'It does not have correct ACLs. Only owner should be able to write.'
-        '(Hint: try \'chmod og-rw /etc/configs/see_yaml_config_variable_above.yaml\' '
-        'to fix the problem).'
+        'Error: The config is not valid. It does not have correct ACLs. '
+        'Only owner should be able to write (Hint: try chmod og-rwto fix the problem).'
     )
