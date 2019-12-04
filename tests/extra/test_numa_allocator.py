@@ -1,3 +1,16 @@
+# Copyright (c) 2019 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from pprint import pprint
 from typing import Dict, List, Tuple
 from unittest.mock import Mock
@@ -6,10 +19,13 @@ import pytest
 
 from wca.allocators import AllocationType
 from wca.detectors import TaskData, TasksData, TaskResource
-from wca.extra.numa_allocator import NUMAAllocator, _get_platform_total_memory, GB, _get_task_memory_limit, \
+from wca.extra.numa_allocator import NUMAAllocator, _get_platform_total_memory, GB, \
+    _get_task_memory_limit, \
     _get_numa_node_preferences, _get_most_used_node, _get_least_used_node, _get_current_node, \
-    _get_best_memory_node, _get_best_memory_nodes, _get_most_free_memory_node, _get_most_free_memory_nodes, \
-    _is_enough_memory_on_target, get_page_size, TaskId, NumaNodeId, _build_tasks_memory, _build_balanced_memory, \
+    _get_best_memory_node, _get_best_memory_nodes, _get_most_free_memory_node, \
+    _get_most_free_memory_nodes, \
+    _is_enough_memory_on_target, get_page_size, TaskId, NumaNodeId, _build_tasks_memory, \
+    _build_balanced_memory, \
     _get_pages_to_move, _is_ghost_task, _is_task_pinned, migration_minimizer_core
 from wca.metrics import MetricName, MetricValue
 from wca.platforms import Platform
@@ -41,8 +57,10 @@ def prepare_input(tasks: Dict[TaskId, Dict[NumaNodeId, PercentageMemUsage]],
         measurements[MetricName.TASK_MEM_NUMA_PAGES] = \
             {str(numa_id): int(v * node_size_pages) for numa_id, v in numa_memory.items()}
         data = TaskData(
-            name=task_name, task_id=task_name, cgroup_path='', subcgroups_paths=[''], labels={'uid': task_name},
-            resources={'mem': int(sum(numa_memory.values()) * node_size)}, measurements=measurements)
+            name=task_name, task_id=task_name, cgroup_path='', subcgroups_paths=[''],
+            labels={'uid': task_name},
+            resources={'mem': int(sum(numa_memory.values()) * node_size)},
+            measurements=measurements)
         tasks_data[task_name] = data
     if print_structures:
         pprint(tasks_data)
@@ -65,16 +83,19 @@ def prepare_input(tasks: Dict[TaskId, Dict[NumaNodeId, PercentageMemUsage]],
     # Only percentage first
     for numa_node in range(numa_nodes):
         platform_mock.measurements[MetricName.PLATFORM_MEM_NUMA_FREE_BYTES][numa_node] = \
-            (1.0 - cp_memory_per_node_percentage - sum([memory.get(numa_node, 0) for memory in tasks.values()]))
+            (1.0 - cp_memory_per_node_percentage - sum(
+                [memory.get(numa_node, 0) for memory in tasks.values()]))
     if print_structures:
         pprint(platform_mock.measurements)
 
     # Multiply by node_size
     for numa_node in range(numa_nodes):
         platform_mock.measurements[MetricName.PLATFORM_MEM_NUMA_FREE_BYTES][numa_node] = \
-            int(platform_mock.measurements[MetricName.PLATFORM_MEM_NUMA_FREE_BYTES][numa_node] * node_size)
+            int(platform_mock.measurements[MetricName.PLATFORM_MEM_NUMA_FREE_BYTES][
+                    numa_node] * node_size)
         platform_mock.measurements[MetricName.PLATFORM_MEM_NUMA_USED_BYTES][numa_node] = \
-            node_size - platform_mock.measurements[MetricName.PLATFORM_MEM_NUMA_FREE_BYTES][numa_node]
+            node_size - platform_mock.measurements[MetricName.PLATFORM_MEM_NUMA_FREE_BYTES][
+                numa_node]
     if print_structures:
         pprint(platform_mock.measurements)
 
@@ -83,7 +104,8 @@ def prepare_input(tasks: Dict[TaskId, Dict[NumaNodeId, PercentageMemUsage]],
         # if len(..) == 1, then pinned, just to shorten notation
         if len(numa_memory.keys()) == 1:
             tasks_data[task_name].allocations = \
-                {AllocationType.CPUSET_CPUS: ','.join(map(str, platform_mock.node_cpus[list(numa_memory.keys())[0]]))}
+                {AllocationType.CPUSET_CPUS: ','.join(
+                    map(str, platform_mock.node_cpus[list(numa_memory.keys())[0]]))}
         # cpuset_cpus no pinned, means pinned to all available cpus
         else:
             tasks_data[task_name].allocations = \
@@ -188,23 +210,25 @@ def test_migration_minimizer_core(most_used, best_memory, best_free, expected):
 def test_build_tasks_memory():
     mem_usage_on_node = 0.3
     platform, tasks_data = prepare_input({'t1': {0: mem_usage_on_node}}, 2)
-    assert _build_tasks_memory(tasks_data, platform) == \
-           [('t1', get_task_size_on_node(mem_usage_on_node), {0: 1.0, 1: 0.0})]
+    assert _build_tasks_memory(tasks_data, platform) == [
+        ('t1', get_task_size_on_node(mem_usage_on_node), {0: 1.0, 1: 0.0})
+    ]
 
 
 def test_build_balanced_memory():
     mem_usage_on_node = 0.3
     platform, tasks_data = prepare_input({'t1': {0: mem_usage_on_node}}, 2)
     tasks_memory = _build_tasks_memory(tasks_data, platform)
-    assert _build_balanced_memory(tasks_memory, tasks_data, platform) == \
-    {0: [ ('t1', get_task_size_on_node(mem_usage_on_node)), ], 1: []}
+    assert _build_balanced_memory(tasks_memory, tasks_data, platform) == {
+        0: [('t1', get_task_size_on_node(mem_usage_on_node)), ], 1: []
+    }
 
 
 def test_get_pages_to_move():
     mem_usage_on_node = 0.3
     platform, tasks_data = prepare_input({'t1': {0: mem_usage_on_node}}, 2)
-    assert _get_pages_to_move('t1', tasks_data, 1, 'for fun') == \
-    tasks_data['t1'].measurements[MetricName.TASK_MEM_NUMA_PAGES]['0']
+    assert (_get_pages_to_move('t1', tasks_data, 1, 'for fun') ==
+            tasks_data['t1'].measurements[MetricName.TASK_MEM_NUMA_PAGES]['0'])
 
 
 def test_platform_total_memory():
@@ -219,7 +243,8 @@ def test_get_task_memory_limit():
     tasks_measurements = {}
     total_memory = 96 * GB
     task = 't1'
-    task_resources = {TaskResource.MEM: 20 * GB, TaskResource.CPUS: 11.0, TaskResource.DISK: 10 * GB}
+    task_resources = {TaskResource.MEM: 20 * GB, TaskResource.CPUS: 11.0,
+                      TaskResource.DISK: 10 * GB}
 
     # where 'mem' in task_resources
     assert _get_task_memory_limit(tasks_measurements, total_memory, task, task_resources) == 20 * GB
@@ -245,7 +270,7 @@ def test_get_task_memory_limit():
 ))
 def test_get_numa_node_preferences(numa_nodes, task_measurements_vals, expected):
     task_measurements = {MetricName.TASK_MEM_NUMA_PAGES: {inode: val for inode, val in
-                                                             enumerate(task_measurements_vals)}}
+                                                          enumerate(task_measurements_vals)}}
     assert _get_numa_node_preferences(task_measurements, numa_nodes) == expected
 
 
@@ -279,7 +304,9 @@ def test_get_current_node(cpus_assigned, node_cpus, expected):
 
 
 @pytest.mark.parametrize('memory, balanced_memory, expected', (
-        (10 * GB, {0: [('task1', 20 * GB), ('task2', 20 * GB)], 1: [('task3', 15 * GB), ('task4', 10 * GB)]}, 1),
+        (10 * GB,
+         {0: [('task1', 20 * GB), ('task2', 20 * GB)], 1: [('task3', 15 * GB), ('task4', 10 * GB)]},
+         1),
 ))
 def test_get_best_memory_node(memory, balanced_memory, expected):
     assert _get_best_memory_node(memory, balanced_memory) == expected
@@ -312,8 +339,10 @@ def test_get_free_memory_node_v3(memory, node_memory_free, expected):
 
 
 @pytest.mark.parametrize('target_node, task_max_memory, numa_free, numa_task, expected', (
-        (1, 10 * GB, {0: 2 * GB, 1: 3 * GB}, {"0": 3 * GB / get_page_size(), "1": 2 * GB / get_page_size()}, False),
-        (1, 10 * GB, {0: 6 * GB, 1: 6 * GB}, {"0": 5 * GB / get_page_size(), "1": 5 * GB / get_page_size()}, True),
+        (1, 10 * GB, {0: 2 * GB, 1: 3 * GB},
+         {"0": 3 * GB / get_page_size(), "1": 2 * GB / get_page_size()}, False),
+        (1, 10 * GB, {0: 6 * GB, 1: 6 * GB},
+         {"0": 5 * GB / get_page_size(), "1": 5 * GB / get_page_size()}, True),
 ))
 def test_is_enough_memory_on_target(target_node, task_max_memory, numa_free, numa_task, expected):
     platform = Mock()
@@ -324,10 +353,10 @@ def test_is_enough_memory_on_target(target_node, task_max_memory, numa_free, num
 
 
 def test_is_task_pinned():
-    assert _is_task_pinned(-1) == False
-    assert _is_task_pinned(0) == True
+    assert not _is_task_pinned(-1)
+    assert _is_task_pinned(0)
 
 
 def test_is_ghost_task():
-    assert _is_ghost_task(0) == True
-    assert _is_ghost_task(1024) == False
+    assert _is_ghost_task(0)
+    assert not _is_ghost_task(1024)
