@@ -10,12 +10,12 @@ runner: !AllocationRunner
       timeout: 5
 
     # Disable all measurements based on perf system and resctrl
-    enable_perf_uncore: false
+    enable_perf_uncore: true
     gather_hw_mm_topology: false
-    rdt_enabled: false
-    enable_derived_metrics: false
-    event_names: []  # if uncommented disables metrics from perf event subsystem
-    wss_reset_interval: 0
+    rdt_enabled: true
+    enable_derived_metrics: true
+#    event_names: []  # if uncommented disables metrics from perf event subsystem
+    wss_reset_interval: 1
     #event_names:  # if uncommented disables metrics from perf event subsystem
     #- instructions
     #- cycles

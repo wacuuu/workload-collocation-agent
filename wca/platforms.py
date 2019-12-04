@@ -203,7 +203,7 @@ def get_platform_static_information(strict_mode: bool) -> Measurements:
         except FileNotFoundError:
             log.warning('ipmctl unavailable, cannot read memory mode size')
             if strict_mode:
-                raise MissingPlatformStaticInformation
+                raise MissingPlatformStaticInformation('ipmctl binary is missing!')
 
         try:
             # nosec: B603. We deliberately use 'subprocess'. There is a permanent input.
@@ -244,7 +244,7 @@ def get_platform_static_information(strict_mode: bool) -> Measurements:
         except FileNotFoundError:
             log.warning('lshw unavailable, cannot read memory topology size!')
             if strict_mode:
-                raise MissingPlatformStaticInformation
+                raise MissingPlatformStaticInformation('ipmctl binary is missing!')
 
         except JSONDecodeError:
             log.warning('lshw unavailable (incorrect version or missing data), '

@@ -15,12 +15,12 @@
 
 import ctypes
 import logging
+import statistics
 from collections import defaultdict
+from typing import List, Dict, BinaryIO, Iterable
 
 import os
-import statistics
 import struct
-from typing import List, Dict, BinaryIO, Iterable
 
 from wca import logger
 from wca import perf_const as pc
@@ -346,13 +346,17 @@ class PerfCounters:
             measurements.update(**{MetricName.TASK_SCALING_FACTOR_MAX: 0,
                                    MetricName.TASK_SCALING_FACTOR_AVG: 0})
 
-            for cpu, metrics in scaled_measurements_and_factor_per_cpu.items():
-                measurements[MetricName.TASK_SCALING_FACTOR_MAX] = max(
+            max_values = []
+            avg_values = []
+            for cpu in scaled_measurements_and_factor_per_cpu:
+                max_values.append(max(
                     scaled_measurements_and_factor_per_cpu[cpu][MetricName.TASK_SCALING_FACTOR_MAX],
-                    measurements[MetricName.TASK_SCALING_FACTOR_MAX])
-                measurements[MetricName.TASK_SCALING_FACTOR_AVG] += \
-                    scaled_measurements_and_factor_per_cpu[cpu][
-                        MetricName.TASK_SCALING_FACTOR_AVG]
+                    measurements[MetricName.TASK_SCALING_FACTOR_MAX]))
+                avg_values.append(scaled_measurements_and_factor_per_cpu[cpu][
+                                      MetricName.TASK_SCALING_FACTOR_AVG])
+
+            measurements[MetricName.TASK_SCALING_FACTOR_AVG] = statistics.mean(avg_values)
+            measurements[MetricName.TASK_SCALING_FACTOR_MAX] = max(max_values)
 
         return measurements
 

@@ -342,7 +342,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranurality.TASK,
-            [],  # TODO: check levels
+            [],
             'yes',
         ),
     MetricName.TASK_SCALING_FACTOR_MAX:
@@ -352,7 +352,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranurality.TASK,
-            [],  # TODO: check levels
+            [],
             'yes',
         ),
     # perf per task derived
