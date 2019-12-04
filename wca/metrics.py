@@ -189,7 +189,6 @@ class MetricSource(str, Enum):
     LSHW_BINARY = 'lshw binary output'
     IPMCTL_BINARY = 'ipmctl binary output'
 
-
     def __repr__(self):
         return repr(self.value)
 
@@ -1171,11 +1170,6 @@ class DefaultDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
             cache_hit_ratio = _operation_on_leveled_dicts(cache_hits_count, cache_ref_delta,
                                                           truediv, max_depth)
             measurements[MetricName.TASK_CACHE_HIT_RATIO] = cache_hit_ratio
-
-
-class BaseGeneratorFactory:
-    def create(self, get_measurements):
-        raise NotImplementedError
 
 
 class MissingMeasurementException(Exception):
