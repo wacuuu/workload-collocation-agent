@@ -127,6 +127,7 @@ minimize_migrate_params = {
 
 
 def merge_dicts(a, b):
+    # TODO: replace with dict(a, **b)
     c = a.copy()
     c.update(b)
     return c
