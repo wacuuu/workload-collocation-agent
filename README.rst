@@ -166,16 +166,16 @@ Components
 
 Following built-in components are available (stable API):
 
-- `MesosNode <wca/mesos.py#L76>`_ provides workload discovery on Mesos cluster node where `mesos containerizer <http://mesos.apache.org/documentation/latest/mesos-containerizer/>`_ is used (see the docs `here <docs/mesos.rst>`_)
-- `KubernetesNode <wca/kubernetes.py#L71>`_ provides workload discovery on Kubernetes cluster node (see the docs `here <docs/kubernetes.rst>`_)
-- `MeasurementRunner <wca/runners/measurement.py#L42>`_ implements simple loop that reads state of the system, encodes this information as metrics and stores them,
-- `DetectionRunner <wca/runners/detection.py#L59>`_ extends ``MeasurementRunner`` and additionally implements anomaly detection callback and encodes anomalies as metrics to enable alerting and analysis. See `Detection API <docs/detection.rst>`_ for more details.
-- `AllocationRunner <wca/runners/allocation.py#L155>`_ extends ``MeasurementRunner`` and additionally implements resource allocation callback. See `Allocation API <docs/allocation.rst>`_ for more details.
-- `NOPAnomalyDetector <wca/detectors.py#L164>`_ dummy "no operation" detector that returns no metrics, nor anomalies. See `Detection API <docs/detection.rst>`_ for more details.
-- `NOPAllocator <wca/allocators.py#L98>`_ dummy "no operation" allocator that returns no metrics, nor anomalies and does not configure resources. See `Detection API <docs/detection.rst>`_ for more details.
-- `KafkaStorage <wca/storage.py#L253>`_ logs metrics to `Kafka streaming platform <https://kafka.apache.org/>`_ using configurable topics.
-- `LogStorage <wca/storage.py#L49>`_ logs metrics to standard error or to a file at configurable location.
-- `SSL <wca/security.py#L116>`_ to enabled secure communication with external components (more information `here <docs/ssl.rst>`_).
+- `MesosNode <docs/api.rst#mesosnode>`_ provides workload discovery on Mesos cluster node where `mesos containerizer <http://mesos.apache.org/documentation/latest/mesos-containerizer/>`_ is used (see the docs `here <docs/mesos.rst>`_)
+- `KubernetesNode <docs/api.rst#kubernetesnode>`_ provides workload discovery on Kubernetes cluster node (see the docs `here <docs/kubernetes.rst>`_)
+- `MeasurementRunner <docs/api.rst#measurementrunner>`_ implements simple loop that reads state of the system, encodes this information as metrics and stores them,
+- `DetectionRunner <docs/api.rst#detectionrunner>`_ extends ``MeasurementRunner`` and additionally implements anomaly detection callback and encodes anomalies as metrics to enable alerting and analysis. See `Detection API <docs/detection.rst>`_ for more details.
+- `AllocationRunner <docs/api.rst#allocationrunner>`_ extends ``MeasurementRunner`` and additionally implements resource allocation callback. See `Allocation API <docs/allocation.rst>`_ for more details.
+- `NOPAnomalyDetector <docs/api.rst#nopanomalydetector>`_ dummy "no operation" detector that returns no metrics, nor anomalies. See `Detection API <docs/detection.rst>`_ for more details.
+- `NOPAllocator <docs/api.rst#nopallocator>`_ dummy "no operation" allocator that returns no metrics, nor anomalies and does not configure resources. See `Detection API <docs/detection.rst>`_ for more details.
+- `KafkaStorage <docs/api.rst#kafkastorage>`_ logs metrics to `Kafka streaming platform <https://kafka.apache.org/>`_ using configurable topics.
+- `LogStorage <docs/api.rst#logstorage>`_ logs metrics to standard error or to a file at configurable location.
+- `SSL <docs/api.rst#ssl>`_ to enabled secure communication with external components (more information `here <docs/ssl.rst>`_).
 
 Following built-in components are available as provisional API:
 
