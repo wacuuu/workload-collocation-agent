@@ -6,7 +6,7 @@ pipeline {
       booleanParam defaultValue: true, description: 'Build workload images.', name: 'BUILD_IMAGES'
     }
     environment {
-        DOCKER_REPOSITORY_URL = 'http://100.64.176.12:80'
+        DOCKER_REPOSITORY_URL = '100.64.176.12:80'
     }
     stages{
         stage("Flake8 formatting scan") {
@@ -69,9 +69,10 @@ pipeline {
             when {expression{return params.BUILD_WCA_IMAGE}}
             steps {
                 sh '''
-                WCA_IMAGE=${DOCKER_REPOSITORY_URL}/wca
-                WCA_TAG=${GIT_COMMIT}
-
+                export WCA_IMAGE=${DOCKER_REPOSITORY_URL}/wca
+                export WCA_TAG=${GIT_COMMIT}
+                echo $WCA_IMAGE
+                echo $WCA_TAG
                 make wca_package_in_docker
                 docker push $WCA_IMAGE:$WCA_TAG
                 '''
