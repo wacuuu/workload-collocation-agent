@@ -35,6 +35,7 @@ The diagram below puts WCA in context of a cluster and monitoring infrastructure
 
 For context regarding Mesos see `this document <docs/mesos.rst>`_ and for Kubernetes see `this document <docs/kubernetes.rst>`_.
 
+
 See `WCA Architecture 1.7.pdf`_ for further details.
 
 

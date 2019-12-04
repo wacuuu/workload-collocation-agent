@@ -21,8 +21,8 @@ COPY /configs/confluent_repo/confluent.repo /etc/yum.repos.d/confluent.repo
 
 RUN yum -y update
 RUN yum -y install epel-release
-RUN yum -y install python36 python-pip which make git
-RUN yum install -y librdkafka1 librdkafka-devel gcc python36-devel.x86_64
+RUN yum -y install python3 python-pip which make git
+RUN yum install -y librdkafka1 librdkafka-devel gcc python3-devel
 
 RUN pip install pipenv
 
@@ -49,12 +49,12 @@ ENV CONFIG=/etc/wca/wca_config.yml \
     ENV_UNIQ_ID=0
 
 RUN yum install -y epel-release
-RUN yum install -y python36
+RUN yum install -y python3
 
 COPY --from=wca /wca/dist/wca.pex /usr/bin/
 
 ENTRYPOINT \
-    python36 /usr/bin/wca.pex \
+    python3 /usr/bin/wca.pex \
         --config $CONFIG \
         --register $EXTRA_COMPONENT \
         --log $LOG \
