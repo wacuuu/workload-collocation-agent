@@ -6,7 +6,7 @@ pipeline {
       booleanParam defaultValue: true, description: 'Build workload images.', name: 'BUILD_IMAGES'
     }
     environment {
-        DOCKER_REPOSITORY_URL = credentials('DOCKER_REPOSITORY_URL')
+        DOCKER_REPOSITORY_URL = 'http://100.64.176.12:80'
     }
     stages{
         stage("Flake8 formatting scan") {
