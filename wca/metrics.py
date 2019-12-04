@@ -1178,6 +1178,8 @@ class MissingMeasurementException(Exception):
 
 
 def export_metrics_from_measurements(measurements: Measurements) -> List[Metric]:
+    """Generate (recursively) Metric based on hierarchical measurements taking levels into
+     consideration and attaching labels to those metrics based on defined levels."""
     all_metrics = []
     for metric_name, metric_node in measurements.items():
         if metric_name in METRICS_METADATA and METRICS_METADATA[metric_name].levels:
