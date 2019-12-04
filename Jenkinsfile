@@ -44,6 +44,7 @@ pipeline {
             steps {
                 sh '''
                   make wca_package_in_docker
+                  make wca_docker_devel
                 '''
             }
         }
@@ -69,11 +70,11 @@ pipeline {
             when {expression{return params.BUILD_WCA_IMAGE}}
             steps {
                 sh '''
-                IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca:${GIT_COMMIT}
-                IMAGE_DIR=${WORKSPACE}
+                WCA_IMAGE=${DOCKER_REPOSITORY_URL}/wca
+                WCA_TAG=${GIT_COMMIT}
 
-                docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
-                docker push ${IMAGE_NAME}
+                make wca_package_in_docker
+                docker push $WCA_IMAGE:$WCA_TAG
                 '''
             }
         }
