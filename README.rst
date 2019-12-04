@@ -179,8 +179,8 @@ Following built-in components are available (stable API):
 
 Following built-in components are available as provisional API:
 
-- `StaticNode <wca/extra/static_node.py#L28>`_ to support static list of tasks (does not require full orchestration software stack),
-- `StaticAllocator <wca/extra/static_allocator.py#L108>`_ to support simple rules based logic for resource allocation.
+- `StaticNode <docs/api.rst#staticnode>`_ to support static list of tasks (does not require full orchestration software stack),
+- `StaticAllocator <docs/api.rst#staticallocator>`_ to support simple rules based logic for resource allocation.
 
 Officially supported third-party components:
 
