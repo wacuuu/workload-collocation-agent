@@ -239,7 +239,7 @@ pipeline {
                 LABELS="{additional_labels: {build_number: \"${BUILD_NUMBER}\", build_node_name: \"${NODE_NAME}\", build_commit: \"${GIT_COMMIT}\"}}"
                 RUN_WORKLOADS_SLEEP_TIME = 300
                 INVENTORY="tests/e2e/demo_scenarios/common/inventory.yaml"
-                TAGS = "redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,twemcache_mutilate,specjbb,stress_ng"
+                TAGS = "redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,specjbb,stress_ng"
             }
             failFast true
             parallel {
@@ -263,7 +263,6 @@ pipeline {
                         }
                     }
                 }
-                /*
                 stage('WCA E2E for Kubernetes') {
                     agent { label 'kubernetes' }
                     environment {
@@ -300,7 +299,6 @@ pipeline {
                         }
                     }
                 }
-                */
             }
         }
     }
@@ -334,12 +332,10 @@ def wca_and_workloads_check() {
 def kustomize_wca_and_workloads_check() {
     print('Configure wca and workloads...')
     kustomize_replace_commit()
-    kustomize_add_labels("memcached-mutilate")
     kustomize_add_labels("redis-memtier")
     kustomize_add_labels("stress")
     kustomize_add_labels("sysbench-memory")
 
-    kustomize_set_docker_image("memcached-mutilate", "mutilate")
     kustomize_set_docker_image("redis-memtier", "memtier_benchmark")
     kustomize_set_docker_image("stress", "stress_ng")
     kustomize_set_docker_image("sysbench-memory", "sysbench")
@@ -350,7 +346,7 @@ def kustomize_wca_and_workloads_check() {
     print('Starting workloads...')
     sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_WORKLOAD}"
 
-    def list = ["stress-stream-small", "memcached-small","mutilate-small","redis-small","memtier-small","sysbench-memory-small"]
+    def list = ["stress-stream-small","redis-small","memtier-small","sysbench-memory-small"]
     for(item in list){
         sh "kubectl scale --replicas=1 statefulset $item"
     }
