@@ -181,7 +181,6 @@ class MetricSource(str, Enum):
     PERF_SUBSYSTEM_WITH_CGROUPS = 'perf subsystem with cgroups'
     RESCTRL = 'resctrl'
     CGROUP = 'cgroup'
-    GENERIC = 'generic'
     PROCFS = '/proc filesystems'
     SYSFS = '/sys filesystems'
     INTERNAL = 'internal'
@@ -661,7 +660,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'NUMA memory free per NUMA used based on /sys/devices/system/node/* (MemUsed:)',
             MetricType.GAUGE,
             MetricUnit.BYTES,
-            MetricSource.PROCFS,
+            MetricSource.SYSFS,
             MetricGranurality.PLATFORM,
             ['numa_node'],
             'yes',

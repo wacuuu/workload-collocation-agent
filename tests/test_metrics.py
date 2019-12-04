@@ -93,7 +93,7 @@ class TestMetric(object):
         METRICS_METADATA['test_metric'] = MetricMetadata('Non existing metric for unit test.',
                                                          MetricType.COUNTER,
                                                          MetricUnit.NUMERIC,
-                                                         MetricSource.GENERIC,
+                                                         MetricSource.CGROUP,
                                                          MetricGranurality.PLATFORM,
                                                          levels=['numa_node', 'container'],
                                                          enabled='no'
