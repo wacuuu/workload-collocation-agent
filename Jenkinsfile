@@ -4,7 +4,6 @@ pipeline {
       booleanParam defaultValue: true, description: 'Run all pre-checks.', name: 'PRECHECKS'
       booleanParam defaultValue: true, description: 'Build WCA image.', name: 'BUILD_WCA_IMAGE'
       booleanParam defaultValue: true, description: 'Build workload images.', name: 'BUILD_IMAGES'
-      booleanParam defaultValue: 300, description: 'Run workloads sleep time', name: 'RUN_WORKLOADS_SLEEP_TIME'
     }
     environment {
         DOCKER_REPOSITORY_URL = credentials('DOCKER_REPOSITORY_URL')
@@ -237,7 +236,7 @@ pipeline {
                 BUILD_COMMIT="${GIT_COMMIT}"
                 EXTRA_ANSIBLE_PARAMS = " "
                 LABELS="{additional_labels: {build_number: \"${BUILD_NUMBER}\", build_node_name: \"${NODE_NAME}\", build_commit: \"${GIT_COMMIT}\"}}"
-                RUN_WORKLOADS_SLEEP_TIME = RUN_WORKLOADS_SLEEP_TIME
+                RUN_WORKLOADS_SLEEP_TIME = 300
                 INVENTORY="tests/e2e/demo_scenarios/common/inventory.yaml"
                 TAGS = "redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,twemcache_mutilate,specjbb,stress_ng"
             }
