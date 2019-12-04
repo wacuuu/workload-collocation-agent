@@ -97,6 +97,9 @@ Available metrics
 
 For searchable list of metrics `metrics as csv file <metrics.csv>`_ .
 
+The "Enabled" describes if metric is enabled by default and in brackets there is information which 
+option in MeasurementRunner is responsible for configuring it.
+
 .. contents:: Table of Contents
 
 """
