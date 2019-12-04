@@ -26,7 +26,7 @@ from wca.extra.numa_allocator import NUMAAllocator, _get_platform_total_memory, 
     _get_most_free_memory_nodes, \
     _is_enough_memory_on_target, get_page_size, TaskId, NumaNodeId, _build_tasks_memory, \
     _build_balanced_memory, \
-    _get_pages_to_move, _is_ghost_task, _is_task_pinned, migration_minimizer_core
+    _get_pages_to_move, _is_ghost_task, _is_task_pinned, migration_minimizer_core, NUMAAlgorithm
 from wca.metrics import MetricName, MetricValue
 from wca.platforms import Platform
 
@@ -117,11 +117,11 @@ def prepare_input(tasks: Dict[TaskId, Dict[NumaNodeId, PercentageMemUsage]],
 
 
 fill_biggest_first_params = {
-    'algorithm': NUMAAllocator.fill_biggest_first_,
+    'algorithm': NUMAAlgorithm.FILL_BIGGEST_FIRST,
     'migrate_pages': True
 }
 minimize_migrate_params = {
-    'algorithm': NUMAAllocator.minimize_migration_,
+    'algorithm': NUMAAlgorithm.MINIMIZE_MIGRATIONS,
     'migrate_pages': True
 }
 
@@ -315,8 +315,7 @@ def test_get_best_memory_node(memory, balanced_memory, expected):
 
 @pytest.mark.parametrize('memory, balanced_memory, expected', (
         (10 * GB, {0: [('task1', 20 * GB), ], 1: [('task3', 19 * GB), ]}, {0, 1}),
-        (10 * GB, {0: [('task1', 20 * GB), ], 1: [('task3', 17 * GB), ]}, {0, 1}),
-        (50 * GB, {0: [('task1', 80 * GB), ], 1: [('task3', 60 * GB), ]}, {0, 1}),
+        (50 * GB, {0: [('task1', 80 * GB), ], 1: [('task3', 70 * GB), ]}, {0, 1}),
         (10 * GB, {0: [('task1', 20 * GB), ], 1: [('task3', 13 * GB), ]}, {1}),
         (10 * GB, {0: [('task1', 20 * GB), ], 1: [('task3', 5 * GB), ]}, {1}),
 ))
@@ -332,8 +331,8 @@ def test_get_free_memory_node(memory, node_memory_free, expected):
 
 
 @pytest.mark.parametrize('memory, node_memory_free, expected', (
-        (27 * GB, {0: 34 * GB, 1: 35 * GB}, {0, 1}),
-        (28 * GB, {0: 34 * GB, 1: 35 * GB}, {1}),
+        (10 * GB, {0: 34 * GB, 1: 35 * GB}, {0, 1}),
+        (34 * GB, {0: 34 * GB, 1: 35 * GB}, {1}),
 ))
 def test_get_free_memory_node_v3(memory, node_memory_free, expected):
     assert _get_most_free_memory_nodes(memory, node_memory_free) == expected
