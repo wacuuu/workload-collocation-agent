@@ -7,6 +7,9 @@ Available metrics
 
 For searchable list of metrics `metrics as csv file <metrics.csv>`_ .
 
+The "Enabled" describes if metric is enabled by default and in brackets there is information which 
+option in MeasurementRunner is responsible for configuring it.
+
 .. contents:: Table of Contents
 
 
@@ -30,6 +33,7 @@ Task's metrics
 	"task_offcore_requests_l3_miss_demand_data_rd", "Increment each cycle of the number of offcore outstanding demand data read requests from SQ that missed L3.", "no (event_names)", "numeric",  "counter", "perf subsystem with cgroups", "cpu"
 	"task_offcore_requests_outstanding_l3_miss_demand_data_rd", "Demand data read requests that missed L3.", "no (event_names)", "numeric",  "counter", "perf subsystem with cgroups", "cpu"
 	"task_mem_load_retired_local_pmm", "TBD mem_load_retired_local_pmm__rd180", "no (event_names)", "numeric",  "counter", "perf subsystem with cgroups", "cpu"
+	"task_mem_load_retired_local_dram", "TBD task__mem_load_retired_local_dram__rd301", "no (event_names)", "numeric",  "counter", "perf subsystem with cgroups", "cpu"
 	"task_mem_inst_retired_loads", "TBD mem_load_retired_local_pmm__rd180", "no (event_names)", "numeric",  "counter", "perf subsystem with cgroups", "cpu"
 	"task_mem_inst_retired_stores", "TBD", "no (event_names)", "numeric",  "counter", "perf subsystem with cgroups", "cpu"
 	"task_dtlb_load_misses", "TBD", "no (event_names)", "numeric",  "counter", "perf subsystem with cgroups", "cpu"
@@ -37,7 +41,7 @@ Task's metrics
 	"task_scaling_factor_max", "Perf subsystem metric scaling factor, max value of all perf per task metrics.", "yes", "numeric",  "gauge", "perf subsystem with cgroups", ""
 	"task_ips", "Instructions per second.", "no (enable_derived_metrics)", "numeric",  "gauge", "derived", ""
 	"task_ipc", "Instructions per cycle.", "no (enable_derived_metrics)", "numeric",  "gauge", "derived", ""
-	"task_cache_hit_ratio", "Cache hit ratio, based on cache-misses and cache-references.", "enable_derived_metrics", "numeric",  "gauge", "derived", ""
+	"task_cache_hit_ratio", "Cache hit ratio, based on cache-misses and cache-references.", "no (enable_derived_metrics)", "numeric",  "gauge", "derived", ""
 	"task_cache_misses_per_kilo_instructions", "Cache misses per kilo instructions.", "no (enable_derived_metrics)", "numeric",  "gauge", "derived", ""
 	"task_llc_occupancy_bytes", "LLC occupancy from resctrl filesystem based on Intel RDT technology.", "auto (rdt_enabled)", "bytes",  "gauge", "resctrl", ""
 	"task_mem_bandwidth_bytes", "Total memory bandwidth using Memory Bandwidth Monitoring.", "auto (rdt_enabled)", "bytes",  "counter", "resctrl", ""
@@ -73,7 +77,7 @@ Platform's metrics
 	"platform_cpu_usage", "Logical CPU usage in 1/USER_HZ (usually 10ms).Calculated using values based on /proc/stat.", "yes", "numeric",  "counter", "/proc filesystems", "cpu"
 	"platform_mem_usage_bytes", "Total memory used by platform in bytes based on /proc/meminfo and uses heuristic based on linux free tool (total - free - buffers - cache).", "yes", "bytes",  "gauge", "/proc filesystems", ""
 	"platform_mem_numa_free_bytes", "NUMA memory free per NUMA node based on /sys/devices/system/node/* (MemFree:)", "yes", "bytes",  "gauge", "/sys filesystems", "numa_node"
-	"platform_mem_numa_used_bytes", "NUMA memory free per NUMA used based on /sys/devices/system/node/* (MemUsed:)", "yes", "bytes",  "gauge", "/proc filesystems", "numa_node"
+	"platform_mem_numa_used_bytes", "NUMA memory free per NUMA used based on /sys/devices/system/node/* (MemUsed:)", "yes", "bytes",  "gauge", "/sys filesystems", "numa_node"
 	"platform_vmstat_numa_pages_migrated", "Virtual Memory stats based on /proc/vmstat for number of migrates pages (autonuma)", "yes", "numeric",  "counter", "/proc filesystems", ""
 	"platform_vmstat_pgmigrate_success", "Virtual Memory stats based on /proc/vmstat for number of migrates pages (succeed)", "yes", "numeric",  "counter", "/proc filesystems", ""
 	"platform_vmstat_pgmigrate_fail", "Virtual Memory stats based on /proc/vmstat for number of migrates pages (failed)", "yes", "numeric",  "counter", "/proc filesystems", ""

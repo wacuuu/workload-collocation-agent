@@ -385,7 +385,6 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricSource.DERIVED,
             MetricGranurality.TASK,
             [],
-            'enable_derived_metrics',
             'no (enable_derived_metrics)',
         ),
     MetricName.TASK_CACHE_MISSES_PER_KILO_INSTRUCTIONS:
