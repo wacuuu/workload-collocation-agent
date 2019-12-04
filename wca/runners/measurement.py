@@ -110,7 +110,7 @@ class MeasurementRunner(Runner):
         enable_derived_metrics: Enable derived metrics ips, ipc and cache_hit_ratio.
             (based on enabled_event names, default to False)
         enable_perf_uncore: Enable perf event uncore metrics.
-            (defaults to True)
+            (defaults to None - auto)
         task_label_generators: Component to generate additional labels for tasks.
             (optional)
         allocation_configuration: Allows fine grained control over allocations.
@@ -131,7 +131,7 @@ class MeasurementRunner(Runner):
             extra_labels: Optional[Dict[Str, Str]] = None,
             event_names: List[str] = DEFAULT_EVENTS,
             enable_derived_metrics: bool = False,
-            enable_perf_uncore: bool = True,
+            enable_perf_uncore: bool = None,
             task_label_generators: Optional[Dict[str, TaskLabelGenerator]] = None,
             allocation_configuration: Optional[AllocationConfiguration] = None,
             wss_reset_interval: int = 0,
@@ -259,9 +259,11 @@ class MeasurementRunner(Runner):
 
     def _init_uncore_pmu(self, enable_derived_metrics, enable_perf_uncore,
                          platform: platforms.Platform):
+        strict_mode = enable_perf_uncore is True
+        _enable_perf_uncore = enable_perf_uncore in (True, None)
         self._uncore_pmu = None
         self._uncore_get_measurements = lambda: {}
-        if enable_perf_uncore:
+        if _enable_perf_uncore:
             pmu_events = {}
             try:
                 # Cpus and events for perf uncore imc
@@ -278,10 +280,13 @@ class MeasurementRunner(Runner):
             except PMUNotAvailable as e:
                 self._uncore_pmu = None
                 self._uncore_get_measurements = lambda: {}
-                log.warning('Perf pmu metrics requested, but not available. '
-                            'Not collecting perf pmu metrics! '
-                            'error={}'.format(e))
-                return
+                if strict_mode:
+                    raise
+                else:
+                    log.warning('Perf pmu metrics requested, but not available. '
+                                'Not collecting perf pmu metrics! '
+                                'error={}'.format(e))
+                    return
 
             # Prepare uncore object
             self._uncore_pmu = UncorePerfCounters(

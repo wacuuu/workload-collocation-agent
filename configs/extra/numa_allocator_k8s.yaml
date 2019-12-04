@@ -47,12 +47,16 @@ runner: !AllocationRunner
 
   allocator: !NUMAAllocator
     loop_min_task_balance: 0.0
+    free_space_check: false
+    #---
     migrate_pages: true
-    cgroups_cpus_binding: false
+    migrate_pages_min_task_balance: 0.95
+    #---
     cgroups_memory_binding: false
     cgroups_memory_migrate: false
-    double_match: false
-    candidate: true
+    #---
+    algorithm: 'fill_biggest_first'
+    #---
     dryrun: false
 
   allocations_storage: !LogStorage
