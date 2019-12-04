@@ -84,13 +84,13 @@ MesosNode
 =========
 .. code-block:: 
 
-	MesosNode(mesos_agent_endpoint:<function Url at 0x7f7b1f87bae8>='https://127.0.0.1:5051', timeout:wca.config.Numeric=5.0, ssl:Union[wca.security.SSL, NoneType]=None)
+	MesosNode(mesos_agent_endpoint:<function Url at 0x7f72ee9b78c8>='https://127.0.0.1:5051', timeout:wca.config.Numeric=5.0, ssl:Union[wca.security.SSL, NoneType]=None)
 
 KubernetesNode
 ==============
 .. code-block:: 
 
-	KubernetesNode(cgroup_driver:wca.kubernetes.CgroupDriverType=<factory>, ssl:Union[wca.security.SSL, NoneType]=None, client_token_path:Union[wca.config.Path, NoneType]='/var/run/secrets/kubernetes.io/serviceaccount/token', server_cert_ca_path:Union[wca.config.Path, NoneType]='/var/run/secrets/kubernetes.io/serviceaccount/ca.crt', kubelet_enabled:bool=False, kubelet_endpoint:<function Url at 0x7f7b1f87bae8>='https://127.0.0.1:10250', kubeapi_host:<function Str at 0x7f7b1f87b8c8>=None, kubeapi_port:<function Str at 0x7f7b1f87b8c8>=None, node_ip:<function Str at 0x7f7b1f87b8c8>=None, timeout:wca.config.Numeric=5, monitored_namespaces:List[Str]=<factory>)
+	KubernetesNode(cgroup_driver:wca.kubernetes.CgroupDriverType=<CgroupDriverType.CGROUPFS: 'cgroupfs'>, ssl:Union[wca.security.SSL, NoneType]=None, client_token_path:Union[wca.config.Path, NoneType]='/var/run/secrets/kubernetes.io/serviceaccount/token', server_cert_ca_path:Union[wca.config.Path, NoneType]='/var/run/secrets/kubernetes.io/serviceaccount/ca.crt', kubelet_enabled:bool=False, kubelet_endpoint:<function Url at 0x7f72ee9b78c8>='https://127.0.0.1:10250', kubeapi_host:<function Str at 0x7f72ee9b76a8>=None, kubeapi_port:<function Str at 0x7f72ee9b76a8>=None, node_ip:<function Str at 0x7f72ee9b76a8>=None, timeout:wca.config.Numeric=5, monitored_namespaces:List[Str]=<factory>)
 
 LogStorage
 ==========
@@ -123,12 +123,6 @@ FilterStorage
 
 	FilterStorage(storages:List[wca.storage.Storage], filter:Union[List[str], NoneType]=None)
 
-HTTPStorage
-===========
-.. code-block:: 
-
-	HTTPStorage(port:int=9100)
-
 NOPAnomalyDetector
 ==================
 .. code-block:: 
@@ -145,7 +139,7 @@ AllocationConfiguration
 =======================
 .. code-block:: 
 
-	AllocationConfiguration(cpu_quota_period:wca.config.Numeric=1000, cpu_shares_unit:wca.config.Numeric=1000, default_rdt_l3:<function Str at 0x7f7b1f87b8c8>=None, default_rdt_mb:<function Str at 0x7f7b1f87b8c8>=None)
+	AllocationConfiguration(cpu_quota_period:wca.config.Numeric=1000, cpu_shares_unit:wca.config.Numeric=1000, default_rdt_l3:<function Str at 0x7f72ee9b76a8>=None, default_rdt_mb:<function Str at 0x7f72ee9b76a8>=None)
 
 CgroupDriverType
 ================
@@ -172,7 +166,13 @@ NUMAAllocator
 =============
 .. code-block:: 
 
-	NUMAAllocator(loop_min_task_balance:float=0.0, migrate_pages:bool=True, migrate_pages_min_task_balance:float=0.95, cgroups_cpus_binding:bool=True, cgroups_memory_binding:bool=False, cgroups_memory_migrate:bool=False, double_match:bool=False, candidate:bool=True, dryrun:bool=False)
+	NUMAAllocator(algorithm:wca.extra.numa_allocator.NUMAAlgorithm=<NUMAAlgorithm.FILL_BIGGEST_FIRST: 'fill_biggest_first'>, loop_min_task_balance:float=0.0, free_space_check:bool=False, migrate_pages:bool=True, migrate_pages_min_task_balance:Union[float, NoneType]=0.95, cgroups_cpus_binding:bool=True, cgroups_memory_binding:bool=False, cgroups_memory_migrate:bool=False, dryrun:bool=False)
+
+NUMAAlgorithm
+=============
+.. code-block:: 
+
+	solve bin packing problem by heuristic which takes the biggest first
 
 StaticAllocator
 ===============
@@ -205,7 +205,13 @@ SSL
 ===
 .. code-block:: 
 
-	SSL(server_verify:Union[bool, wca.config.Path]=True, client_cert_path:Union[wca.config.Path, NoneType]=None, client_key_path:Union[wca.config.Path, NoneType]=None)
+	    Common configuration for SSL communication.
+	
+	    * server_verify: Union[bool, Path(absolute=True, mode=os.R_OK)] = True
+	    * client_cert_path: Optional[Path(absolute=True, mode=os.R_OK)] = None
+	    * client_key_path: Optional[Path(absolute=True, mode=os.R_OK)] = None
+	
+	    
 
 TaskLabelRegexGenerator
 =======================
