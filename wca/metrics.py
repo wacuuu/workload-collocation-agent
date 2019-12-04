@@ -36,6 +36,7 @@ class MetricName(str, Enum):
     TASK_OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD = \
         'task_offcore_requests_outstanding_l3_miss_demand_data_rd'
     TASK_MEM_LOAD_RETIRED_LOCAL_PMM = 'task_mem_load_retired_local_pmm'
+    TASK_MEM_LOAD_RETIRED_LOCAL_DRAM = 'task_mem_load_retired_local_dram'
     TASK_MEM_INST_RETIRED_LOADS = 'task_mem_inst_retired_loads'
     TASK_MEM_INST_RETIRED_STORES = 'task_mem_inst_retired_stores'
     TASK_DTLB_LOAD_MISSES = 'task_dtlb_load_misses'
@@ -285,6 +286,16 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
     MetricName.TASK_MEM_LOAD_RETIRED_LOCAL_PMM:
         MetricMetadata(
             'TBD mem_load_retired_local_pmm__rd180',
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
+            MetricGranurality.TASK,
+            ['cpu'],
+            'no (event_names)',
+        ),
+    MetricName.TASK_MEM_LOAD_RETIRED_LOCAL_DRAM:
+        MetricMetadata(
+            'TBD task__mem_load_retired_local_dram__rd301',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,

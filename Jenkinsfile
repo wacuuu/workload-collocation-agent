@@ -1,13 +1,17 @@
 pipeline {
     agent any
     parameters {
+      booleanParam defaultValue: true, description: 'Run all pre-checks.', name: 'PRECHECKS'
+      booleanParam defaultValue: true, description: 'Build WCA image.', name: 'BUILD_WCA_IMAGE'
       booleanParam defaultValue: true, description: 'Build workload images.', name: 'BUILD_IMAGES'
+      booleanParam defaultValue: 300, description: 'Run workloads sleep time', name: 'RUN_WORKLOADS_SLEEP_TIME'
     }
     environment {
         DOCKER_REPOSITORY_URL = credentials('DOCKER_REPOSITORY_URL')
     }
     stages{
         stage("Flake8 formatting scan") {
+            when {expression{return params.PRECHECKS}}
             steps {
                 sh '''
                   make venv flake8
@@ -15,6 +19,7 @@ pipeline {
             }
         }
         stage("Run unit tests suite") {
+            when {expression{return params.PRECHECKS}}
             steps {
                 sh '''
                   make venv junit
@@ -27,6 +32,7 @@ pipeline {
             }
         }
         stage("Generate documentation") {
+            when {expression{return params.PRECHECKS}}
             steps {
                 sh '''
                   make generate_docs
@@ -34,6 +40,7 @@ pipeline {
             }
         }
         stage("Build WCA pex") {
+            when {expression{return params.BUILD_WCA_IMAGE}}
             steps {
                 sh '''
                   make wca_package_in_docker
@@ -41,6 +48,7 @@ pipeline {
             }
         }
         stage("Build pex files") {
+            when {expression{return params.BUILD_WCA_IMAGE}}
             steps {
                 sh '''
                   make venv wrapper_package
@@ -49,6 +57,7 @@ pipeline {
             }
         }
         stage("Check code with bandit") {
+            when {expression{return params.PRECHECKS}}
              steps {
              sh '''
                make bandit bandit_pex
@@ -57,6 +66,7 @@ pipeline {
            }
         }
         stage("Build and push Workload Collocation Agent Docker image") {
+            when {expression{return params.BUILD_WCA_IMAGE}}
             steps {
                 sh '''
                 IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca:${GIT_COMMIT}
@@ -70,12 +80,14 @@ pipeline {
         stage("Building Docker images and do tests in parallel") {
             parallel {
                  stage("Using tester") {
+                     when {expression{return params.PRECHECKS}}
                      steps {
                      sh '''
 			         make tester
                      '''
                      }
                  }
+                // Redis
                 stage("Build and push Redis Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -87,6 +99,7 @@ pipeline {
                     '''
                     }
                 }
+                // memtire-benchmar
                 stage("Build and push memtier_benchmark Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -99,6 +112,7 @@ pipeline {
                     '''
                     }
                 }
+                // rpc-perf
                 stage("Build and push stress-ng Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -111,6 +125,7 @@ pipeline {
                     '''
                     }
                 }
+                // rpc-perf
                 stage("Build and push rpc-perf Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -123,6 +138,7 @@ pipeline {
                     '''
                     }
                 }
+                // Twemcache
                 stage("Build and push Twemcache Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -135,6 +151,7 @@ pipeline {
                     '''
                     }
                 }
+                // YCSB
                 stage("Build and push YCSB Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -147,6 +164,7 @@ pipeline {
                     '''
                     }
                 }
+                // Stress
                 stage("Build and push Cassandra Stress Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -171,18 +189,7 @@ pipeline {
                     '''
                     }
                 }
-                stage("Build and push mutilate Docker image") {
-                    when {expression{return params.BUILD_IMAGES}}
-                    steps {
-                    sh '''
-                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/mutilate:${GIT_COMMIT}
-                    IMAGE_DIR=${WORKSPACE}/examples/workloads/mutilate
-                    cp -r dist ${IMAGE_DIR}
-                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
-                    docker push ${IMAGE_NAME}
-                    '''
-                    }
-                }
+                // SpecJBB
                 stage("Build and push SpecJBB Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -229,7 +236,7 @@ pipeline {
                 BUILD_COMMIT="${GIT_COMMIT}"
                 EXTRA_ANSIBLE_PARAMS = " "
                 LABELS="{additional_labels: {build_number: \"${BUILD_NUMBER}\", build_node_name: \"${NODE_NAME}\", build_commit: \"${GIT_COMMIT}\"}}"
-                RUN_WORKLOADS_SLEEP_TIME = 300
+                RUN_WORKLOADS_SLEEP_TIME = RUN_WORKLOADS_SLEEP_TIME
                 INVENTORY="tests/e2e/demo_scenarios/common/inventory.yaml"
                 TAGS = "redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,twemcache_mutilate,specjbb,stress_ng"
             }
@@ -255,6 +262,7 @@ pipeline {
                         }
                     }
                 }
+                /*
                 stage('WCA E2E for Kubernetes') {
                     agent { label 'kubernetes' }
                     environment {
@@ -291,6 +299,7 @@ pipeline {
                         }
                     }
                 }
+                */
             }
         }
     }
