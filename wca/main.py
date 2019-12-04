@@ -1,4 +1,4 @@
-# Copyright (c) 2018 Intel Corporation
+# Copyright (c) 2019 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ and start main loop from Runner.
 """
 import argparse
 import logging
+
 import os
 import stat
 
@@ -35,20 +36,16 @@ log = logging.getLogger('wca.main')
 
 
 def valid_config_file(config):
-
     if not os.path.isabs(config):
         log.error(
-            'Error: The config path %r is not valid. The path must be absolute.'
-            '(Hint: try adding $PWD in front like this: \'$PWD/%s\')'
-            % (config, config))
+            'Error: The config path is not valid. The path must be absolute.')
         exit(1)
 
     file_owner_uid = os.stat(config).st_uid
     user_uid = os.getuid()
     if user_uid != file_owner_uid and user_uid != 0:
         log.error(
-            'Error: The config \'%s\' is not valid. User is not owner of the config or is not root.'
-            % config)
+            'Error: The config is not valid. User is not owner of the config or is not root.')
         exit(1)
 
     mode = stat.S_IMODE(os.stat(config).st_mode)
@@ -56,10 +53,8 @@ def valid_config_file(config):
 
     if other_write_mode:
         log.error(
-            'Error: The config \'%s\' is not valid. It does not have correct ACLs. '
-            'Only owner should be able to write.'
-            '(Hint: try \'chmod og-rw %s\' to fix the problem).'
-            % (config, config))
+            'Error: The config is not valid. It does not have correct ACLs. '
+            'Only owner should be able to write.')
         exit(1)
 
 
@@ -118,16 +113,16 @@ def main():
     try:
         configuration = config.load_config(args.config)
     except config.ConfigLoadError as e:
-        log.error('Error: Cannot load config file %r: %s', args.config, e)
+        log.error('Error: Cannot load config file! : %s', e)
         if log.getEffectiveLevel() <= logging.DEBUG:
             log.exception('Detailed exception:')
         exit(1)
 
     for key in configuration:
         if key != 'loggers' and key != 'runner':
-            log.error('Error: Unknown field in configuration '
-                      'file: {}. Possible fields are: \'loggers\', '
-                      '\'runner\''.format(key))
+            log.error('Error: Unknown fields in configuration '
+                      'file! Possible are: \'loggers\', '
+                      '\'runner\'')
             exit(1)
 
     assure_type(configuration, dict)
@@ -138,7 +133,7 @@ def main():
         log_levels_config = configuration['loggers']
         if not isinstance(log_levels, dict):
             log.error('Loggers configuration error: log levels are mapping from logger name to'
-                      'log level got "%r" instead!' % log_levels_config)
+                      'log level!')
             exit(1)
         # Merge config from cmd line and config file.
         # Overwrite config file values with values provided from command line.
