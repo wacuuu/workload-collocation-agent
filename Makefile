@@ -52,8 +52,8 @@ junit:
 	@echo Running unit tests.	
 	pipenv run env PYTHONPATH=.:examples/workloads/wrapper pytest --cov-report term-missing --cov=wca tests --junitxml=unit_results.xml -vvv -s --ignore=tests/e2e/test_wca_metrics.py
 
-wca_package_in_docker: WCA_IMAGE := wca
-wca_package_in_docker: WCA_TAG := $(shell git rev-parse HEAD)
+wca_package_in_docker: WCA_IMAGE ?= wca
+wca_package_in_docker: WCA_TAG ?= $(shell git rev-parse HEAD)
 wca_package_in_docker:
 	@echo Building wca pex file inside docker and copying to ./dist/wca.pex
 	# target: standalone
@@ -68,8 +68,8 @@ wca_package_in_docker:
 	@echo WCA image name is: $(WCA_IMAGE):$(WCA_TAG)
 	@echo WCA pex file: dist/wca.pex
 
-wca_package_in_docker_with_kafka: WCA_IMAGE := wca
-wca_package_in_docker_with_kafka: WCA_TAG := $(shell git rev-parse HEAD)
+wca_package_in_docker_with_kafka: WCA_IMAGE ?= wca
+wca_package_in_docker_with_kafka: WCA_TAG ?= $(shell git rev-parse HEAD)
 wca_package_in_docker_with_kafka:
 	@echo "Building wca pex (version with Kafka) file inside docker and copying to ./dist/wca.pex"
 	# target: standalone
