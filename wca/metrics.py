@@ -186,6 +186,9 @@ class MetricSource(str, Enum):
     INTERNAL = 'internal'
     DERIVED = 'derived'
     ORCHESTRATOR = 'orchestrator'
+    LSHW_BINARY = 'lshw binary output'
+    IPMCTL_BINARY = 'ipmctl binary output'
+
 
     def __repr__(self):
         return repr(self.value)
@@ -595,7 +598,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Number of RAM DIMM (all types memory modules)',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            'lshw binary output',
+            MetricSource.LSHW_BINARY,
             MetricGranurality.PLATFORM,
             ['dimm_type'],
             'no (gather_hw_mm_topology)'
@@ -605,7 +608,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Total RAM size (all types memory modules)',
             MetricType.GAUGE,
             MetricUnit.BYTES,
-            'lshw binary output',
+            MetricSource.LSHW_BINARY,
             MetricGranurality.PLATFORM,
             ['dimm_type'],
             'no (gather_hw_mm_topology)',
@@ -615,7 +618,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Size of RAM (Persistent memory) configured in memory mode.',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            'ipmctl binary output',
+            MetricSource.IPMCTL_BINARY,
             MetricGranurality.PLATFORM,
             [],
             'no (gather_hw_mm_topology)',
@@ -974,16 +977,16 @@ class Metric:
         return metric
 
 
-LevelMeasurements = Dict[Union[str, int], MetricValue]
+LevelMeasurements = Dict[Union[str, int], Union[MetricValue, 'LevelMeasurements']]
 
 Measurements = Union[
     # Simple mapping from name to value
+    # "task_llc_occupancy_bytes": 1234566,
     Dict[MetricName, MetricValue],
+
     # recursive hierarchical type  (levels may be represented by str or int)
-    # e.g. for levels cpu, pmu
-    # measurements = {
-    #   "task_instructions": {0: 1234, 1: 2452},
-    # }
+    # e.g. for levels=[CPU]
+    # "task_instructions": {0: 1234, 1: 2452},
     Dict[MetricName, LevelMeasurements]
 ]
 
