@@ -13,7 +13,47 @@
 # limitations under the License.
 
 import enum
-from wca.metrics import METRICS_METADATA, MetricGranurality, MetricName, MetricMetadata
+from wca.metrics import METRICS_METADATA, MetricGranurality, MetricName
+from wca.components import REGISTERED_COMPONENTS
+
+API_PATH = 'docs/api.rst'
+API_INTRO = """
+==============================
+Workload Collocation Agent API
+==============================
+
+**This software is pre-production and should not be deployed to production servers.**
+
+.. contents:: Table of Contents
+
+
+"""
+
+
+class MissingDocstring(Exception):
+    pass
+
+
+def prepare_api_docs():
+    docs = ''
+    for component in REGISTERED_COMPONENTS:
+        docs += generate_title(component.__name__) + '\n'
+        docs += '.. code-block:: ' + '\n'
+
+        try:
+            docstring = str(component.__doc__)
+        except TypeError:
+            continue  # TODO: Remove after complete doc strings for all components.
+            raise MissingDocstring(component.__name__)
+
+        lines = docstring.splitlines(True)
+        if len(lines) == 1:
+            docs += '\n\t' + docstring
+        else:
+            docs += '\t'.join(lines)
+        docs += '\n\n'
+
+    return docs
 
 
 def prepare_csv_table(data, header=True, csv_header=False):
@@ -31,7 +71,8 @@ def prepare_csv_table(data, header=True, csv_header=False):
     else:
         pref = ''
 
-    table += ('\n%s'%(pref)).join(['"{}", "{}", "{}", "{}",  "{}", "{}", "{}"'.format(*row) for row in data])
+    table += ('\n%s' % (pref)).join(
+            ['"{}", "{}", "{}", "{}",  "{}", "{}", "{}"'.format(*row) for row in data])
 
     return table
 
@@ -131,3 +172,6 @@ if __name__ == '__main__':
         f.write(generate_docs())
     with open(METRICS_CSV_PATH, 'w') as f:
         f.write(generate_docs(csv=True))
+    with open(API_PATH, 'w') as f:
+        f.write(API_INTRO)
+        f.write(prepare_api_docs())

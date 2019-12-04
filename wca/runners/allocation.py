@@ -49,7 +49,8 @@ RegistryType = Dict[AllocationType, Callable[[Any, Container, dict], AllocationV
 
 
 class TaskAllocationsValues(AllocationsDict):
-    """Subclass of generic AllocationsDict that is dedicated to be used only for specific case
+    """
+    Subclass of generic AllocationsDict that is dedicated to be used only for specific case
     at second level mapping between, task and and its allocations.
     Provides an staticmethod as constructor.
     """
@@ -75,7 +76,8 @@ class TaskAllocationsValues(AllocationsDict):
 
 
 class TasksAllocationsValues(AllocationsDict):
-    """Subclass of AllocationsDict that is dedicate to be used only for specific case
+    """
+    Subclass of AllocationsDict that is dedicate to be used only for specific case
     of first level mapping between, many tasks and TaskAllocationsValues.
     Provides an staticmethod as constructor.
     """
@@ -161,7 +163,8 @@ def validate_shares_allocation_for_kubernetes(tasks: List[Task], allocations: Ta
 
 
 class AllocationRunner(Runner):
-    """Runner is responsible for getting information about tasks from node,
+    """
+    Runner is responsible for getting information about tasks from node,
     calling allocate() callback on allocator, performing returning allocations
     and storing all allocation related metrics in allocations_storage.
 

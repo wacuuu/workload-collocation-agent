@@ -58,7 +58,8 @@ class AnomalyStatistics:
 
 
 class DetectionRunner(Runner):
-    """DetectionRunner extends MeasurementRunner with ability to callback Detector,
+    """
+    DetectionRunner extends MeasurementRunner with ability to callback Detector,
     serialize received anomalies and storing them in anomalies_storage.
 
     Arguments:

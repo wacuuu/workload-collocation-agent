@@ -89,7 +89,8 @@ class TaskLabelResourceGenerator(TaskLabelGenerator):
 
 
 class MeasurementRunner(Runner):
-    """MeasurementRunner run iterations to collect platform, resource, task measurements
+    """
+    MeasurementRunner run iterations to collect platform, resource, task measurements
     and store them in metrics_storage component.
 
     Arguments:

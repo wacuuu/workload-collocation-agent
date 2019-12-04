@@ -18,4 +18,4 @@ Index of documents
 - `Mesos integration <mesos.rst>`_
 - `Extending WCA <extending.rst>`_
 - `Secure transport guide <ssl.rst>`_
-
+- `Workload Collocation Agent API <api.rst>`_

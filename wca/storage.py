@@ -56,7 +56,8 @@ class Storage(abc.ABC):
 
 @dataclass
 class LogStorage(Storage):
-    """Outputs metrics encoded in Prometheus exposition format
+    """
+    Outputs metrics encoded in Prometheus exposition format
     to standard error (default) or provided file (output_filename).
     """
 
@@ -308,7 +309,8 @@ class SSLConfigError(Exception):
 
 @dataclass
 class KafkaStorage(Storage):
-    """Storage for saving metrics in Kafka.
+    """
+    Storage for saving metrics in Kafka.
 
     Args:
         topic: name of a kafka topic where message should be saved
