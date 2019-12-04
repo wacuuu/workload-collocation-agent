@@ -16,6 +16,7 @@ from typing import List, Dict, Union, Tuple, Optional, Set
 
 import math
 from dataclasses import dataclass
+from enum import Enum
 
 from wca.allocators import Allocator, TasksAllocations, AllocationType, TaskAllocations
 from wca.detectors import Anomaly, TaskData, TasksData, TaskResource
@@ -25,8 +26,8 @@ from wca.platforms import Platform, encode_listformat, decode_listformat
 
 log = logging.getLogger(__name__)
 
-GB = 2 ** 30
-MB = 2 ** 20
+GB = 1000 ** 3
+MB = 1000 ** 2
 
 NumaNodeId = int
 Preferences = Dict[NumaNodeId, float]
@@ -38,16 +39,17 @@ TaskMemory = Tuple[TaskId, MemoryLimit, Preferences]
 TasksMemory = List[TaskMemory]
 
 
-@dataclass
-class NUMAAllocator(Allocator):
+class NUMAAlgorithm(str, Enum):
     """solve bin packing problem by heuristic which takes the biggest first"""
-    fill_biggest_first_ = 'fill_biggest_first'
-
+    FILL_BIGGEST_FIRST = 'fill_biggest_first'
     # tries to minimize how much memory is migrated between NUMA nodes;
     # in other words tries to keep task where most of its memory resides
-    minimize_migration_ = 'minimize_migration'
+    MINIMIZE_MIGRATIONS = 'minimize_migration'
 
-    algorithm: str = fill_biggest_first_
+
+@dataclass
+class NUMAAllocator(Allocator):
+    algorithm: NUMAAlgorithm = NUMAAlgorithm.FILL_BIGGEST_FIRST
 
     # minimal value of task_balance so the task is not skipped during rebalancing analysis
     # by default turn off, none of tasks are skipped due to this reason
@@ -104,10 +106,10 @@ class NUMAAllocator(Allocator):
                 continue
 
             if balance_task is None:
-                if self.algorithm == self.minimize_migration_:
+                if self.algorithm == NUMAAlgorithm.MINIMIZE_MIGRATIONS:
                     balance_task, balance_task_node = self.migration_minimizer(
                         task_data, task_memory, balanced_memory, platform)
-                elif self.algorithm == self.fill_biggest_first_:
+                elif self.algorithm == NUMAAlgorithm.FILL_BIGGEST_FIRST:
                     balance_task, balance_task_node = self.fill_biggest_first(
                         task, memory_limit,
                         balanced_memory)

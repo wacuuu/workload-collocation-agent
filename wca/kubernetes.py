@@ -83,8 +83,7 @@ class KubernetesNode(Node):
     # We need to know what cgroup driver is used to properly build cgroup paths for pods.
     #   Reference in source code for kubernetes version stable 1.13:
     #   https://github.com/kubernetes/kubernetes/blob/v1.13.3/pkg/kubelet/cm/cgroup_manager_linux.go#L207
-    cgroup_driver: CgroupDriverType = field(
-        default_factory=lambda: CgroupDriverType(CgroupDriverType.CGROUPFS))
+    cgroup_driver: CgroupDriverType = CgroupDriverType.CGROUPFS
 
     ssl: Optional[SSL] = None
 
