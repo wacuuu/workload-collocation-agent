@@ -415,7 +415,8 @@ def _validate_allocate_return_vals(
 
 
 def _update_tasks_data_with_allocations(tasks_data: TasksData,
-                                        current_allocations: TaskAllocations):
+                                        current_allocations: TasksAllocations):
     for task, data in tasks_data.items():
         if task in current_allocations:
-            data.allocations = current_allocations[task]
+            # no need to make deep copy, as only one level and unmutable types as leafs
+            data.allocations = dict(current_allocations[task])
