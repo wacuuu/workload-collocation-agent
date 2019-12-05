@@ -19,7 +19,7 @@ MeasurementRunner
 	        node: Component used for tasks discovery.
 	        metrics_storage: Storage to store platform, internal, resource and task metrics.
 	            (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-	        action_delay: Iteration duration in seconds (None disables wait and iterations).
+	        interval: Iteration duration in seconds (None disables wait and iterations).
 	            (defaults to 1 second)
 	        rdt_enabled: Enables or disabled support for RDT monitoring.
 	            (defaults to None(auto) based on platform capabilities)

@@ -4,7 +4,7 @@ loggers:
   "wca": "info"
 runner: !AllocationRunner
   measurement_runner: !MeasurementRunner
-    action_delay: 5
+    interval: 5
     node: !StaticNode
       require_pids: true  # This will ignore cgroups without tasks - no more empty measurements.
       default_resources:

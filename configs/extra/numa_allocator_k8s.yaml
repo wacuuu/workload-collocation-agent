@@ -4,7 +4,7 @@ loggers:
   "wca": "debug"
 runner: !AllocationRunner
   measurement_runner: !MeasurementRunner
-    action_delay: 5
+    interval: 5
     node: !KubernetesNode
       cgroup_driver: cgroupfs
       ssl: !SSL

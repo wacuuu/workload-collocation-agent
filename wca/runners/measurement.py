@@ -93,7 +93,7 @@ class MeasurementRunner(Runner):
         node: Component used for tasks discovery.
         metrics_storage: Storage to store platform, internal, resource and task metrics.
             (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-        action_delay: Iteration duration in seconds (None disables wait and iterations).
+        interval: Iteration duration in seconds (None disables wait and iterations).
             (defaults to 1 second)
         rdt_enabled: Enables or disabled support for RDT monitoring.
             (defaults to None(auto) based on platform capabilities)
@@ -121,7 +121,7 @@ class MeasurementRunner(Runner):
             self,
             node: Node,
             metrics_storage: Storage = DEFAULT_STORAGE,
-            action_delay: Numeric(0, 60) = 1.,
+            interval: Numeric(0, 60) = 1.,
             rdt_enabled: Optional[bool] = None,
             gather_hw_mm_topology: bool = False,
             extra_labels: Optional[Dict[Str, Str]] = None,
@@ -136,7 +136,7 @@ class MeasurementRunner(Runner):
 
         self._node = node
         self._metrics_storage = metrics_storage
-        self._action_delay = action_delay
+        self._interval = interval
         self._rdt_enabled = rdt_enabled
         self._gather_hw_mm_topology = gather_hw_mm_topology
         self._include_optional_labels = include_optional_labels
@@ -185,7 +185,7 @@ class MeasurementRunner(Runner):
         now = time.time()
         iteration_duration = now - self._last_iteration
 
-        residual_time = max(0., self._action_delay - iteration_duration)
+        residual_time = max(0., self._interval - iteration_duration)
         time.sleep(residual_time)
         self._last_iteration = time.time()
 

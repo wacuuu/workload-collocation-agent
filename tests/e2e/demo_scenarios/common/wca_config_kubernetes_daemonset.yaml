@@ -7,7 +7,7 @@ runner: !AllocationRunner
         client_key_path: "CRT_PATH/apiserver-kubelet-client.key"
         client_cert_path: "CRT_PATH/apiserver-kubelet-client.crt"
       monitored_namespaces: ["default"]
-    action_delay: 10.
+    interval: 10.
     metrics_storage: !KafkaStorage
       brokers_ips: ['100.64.176.12:9092']
       topic: "wca_metrics"
