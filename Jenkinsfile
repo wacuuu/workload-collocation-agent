@@ -4,6 +4,10 @@ pipeline {
       booleanParam defaultValue: true, description: 'Run all pre-checks.', name: 'PRECHECKS'
       booleanParam defaultValue: true, description: 'Build WCA image.', name: 'BUILD_WCA_IMAGE'
       booleanParam defaultValue: true, description: 'Build workload images.', name: 'BUILD_IMAGES'
+      booleanParam defaultValue: true, description: 'E2E for Mesos.', name: 'E2E_MESOS'
+      booleanParam defaultValue: true, description: 'E2E for Kubernetes.', name: 'E2E_K8S'
+      booleanParam defaultValue: true, description: 'E2E for Kubernetes as Daemonset.', name: 'E2E_K8S_DS'
+      string defaultValue: 300, description: 'Sleep time for E2E tests', name: 'SLEEP_TIME'
     }
     environment {
         DOCKER_REPOSITORY_URL = '100.64.176.12:80'
@@ -237,13 +241,14 @@ pipeline {
                 BUILD_COMMIT="${GIT_COMMIT}"
                 EXTRA_ANSIBLE_PARAMS = " "
                 LABELS="{additional_labels: {build_number: \"${BUILD_NUMBER}\", build_node_name: \"${NODE_NAME}\", build_commit: \"${GIT_COMMIT}\"}}"
-                RUN_WORKLOADS_SLEEP_TIME = 300
+                RUN_WORKLOADS_SLEEP_TIME = ${params.SLEEP_TIME}
                 INVENTORY="tests/e2e/demo_scenarios/common/inventory.yaml"
                 TAGS = "redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,specjbb,stress_ng"
             }
             failFast true
             parallel {
                 stage('WCA Daemonset E2E for Kubernetes') {
+                    when {expression{return params.E2E_K8S_DS}}
                     agent { label 'Daemonset' }
                     environment {
                         PROMETHEUS = 'http://100.64.176.18:30900'
@@ -264,6 +269,7 @@ pipeline {
                     }
                 }
                 stage('WCA E2E for Kubernetes') {
+                    when {expression{return params.E2E_K8S}}
                     agent { label 'kubernetes' }
                     environment {
                         KUBERNETES_HOST='100.64.176.17'
@@ -283,6 +289,7 @@ pipeline {
                     }
                 }
                 stage('WCA E2E for Mesos') {
+                    when {expression{return params.E2E_MESOS}}
                     agent { label 'mesos' }
                     environment {
                         MESOS_AGENT='100.64.176.14'
