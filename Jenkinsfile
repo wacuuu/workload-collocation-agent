@@ -243,7 +243,7 @@ pipeline {
                 // ALL SET OF WORKLOADS
                 // TAGS = "redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,twemcache_mutilate,specjbb,stress_ng"
             }
-            failFast true
+            failFast false
             parallel {
                 stage('WCA Daemonset E2E for Kubernetes') {
                     when {expression{return params.E2E_K8S_DS}}
@@ -263,6 +263,7 @@ pipeline {
                             print('Cleaning workloads and wca...')
                             sh "kubectl delete -k ${WORKSPACE}/${KUSTOMIZATION_WORKLOAD} --wait=false"
                             sh "kubectl delete -k ${WORKSPACE}/${KUSTOMIZATION_MONITORING} --wait=false"
+                            junit 'unit_results.xml'
                         }
                     }
                 }
