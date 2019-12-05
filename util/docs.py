@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import enum
-from wca.metrics import METRICS_METADATA, MetricGranurality, MetricName
+from wca.metrics import METRICS_METADATA, MetricGranularity, MetricName
 from wca.components import REGISTERED_COMPONENTS
 
 API_PATH = 'docs/api.rst'
@@ -149,11 +149,11 @@ def generate_docs(csv=False):
             levels
         )
 
-        if metadata.granularity == MetricGranurality.TASK:
+        if metadata.granularity == MetricGranularity.TASK:
             task_data.append(data)
-        elif metadata.granularity == MetricGranurality.PLATFORM:
+        elif metadata.granularity == MetricGranularity.PLATFORM:
             platform_data.append(data)
-        elif metadata.granularity == MetricGranurality.INTERNAL:
+        elif metadata.granularity == MetricGranularity.INTERNAL:
             internal_data.append(data)
 
     tasks = generate_title("Task's metrics") + '\n\n' if not csv else ''
