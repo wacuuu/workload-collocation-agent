@@ -64,7 +64,6 @@ class NUMAAllocator(Allocator):
     migrate_pages_min_task_balance: Optional[float] = 0.95
 
     # cgroups based memory migration, cpu and memory pinning
-    cgroups_cpus_binding: bool = True
     cgroups_memory_binding: bool = False
     # can be used only when cgroups_memory_binding is set to True
     cgroups_memory_migrate: bool = False
