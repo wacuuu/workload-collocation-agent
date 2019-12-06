@@ -51,13 +51,11 @@ class NUMAAlgorithm(str, Enum):
 class NUMAAllocator(Allocator):
     """rst
 
-    Allocator aimed to minimize remote NUMA memory accesses for processes.
+    For fuller documentation please refer to `NUMAAllocator documentation <numa_allocator.rst>`_.
+
+    Allocator aims to minimize remote NUMA memory accesses for processes.
 
     - ``algorithm``: **NUMAAlgorithm** = *'fill_biggest_first'*:
-
-        User can choose from options: *'fill_biggest_first'*, *'minimize_migration'*
-        to specify policy determining which task is chosen to be pinned.
-
         - *'fill_biggest_first'*
 
             Algorithm only cares about sum of already pinned task's memory to each numa node.
@@ -74,13 +72,13 @@ class NUMAAllocator(Allocator):
 
     - ``loop_min_task_balance``: **float** = *0.0*:
 
+        Useful when autoNUMA used on system.
         Minimal value of task_balance so the task is not skipped during rebalancing analysis
-        by default turn off, none of tasks are skipped due to this reason
-
+        by default turn off, none of tasks are skipped due to this reason.
 
     - ``free_space_check``: **bool** = *False*:
 
-        If True, then do not migrate if not enough space on target numa node.
+        If True, then do not pin task to node where there is not enough free memory.
 
 
     - ``migrate_pages``: **bool** = *True*:
@@ -95,11 +93,6 @@ class NUMAAllocator(Allocator):
         If not at least ``migrate_pages_min_task_balance * TASK_TOTAL_SIZE``
         bytes of memory resides on pinned node, then
         tries to remigrate all pages allocated on other nodes to target node.
-
-
-    - ``cgroups_cpus_binding``: **bool** = *True*:
-
-        cgroups based cpu pinning
 
 
     - ``cgroups_memory_binding``: **bool** = *False*:
@@ -128,7 +121,6 @@ class NUMAAllocator(Allocator):
     migrate_pages: bool = True
     migrate_pages_min_task_balance: Optional[float] = 0.95
 
-    # cgroups based memory migration, cpu and memory pinning
     cgroups_memory_binding: bool = False
     cgroups_memory_migrate: bool = False
 
@@ -310,7 +302,7 @@ class NUMAAllocator(Allocator):
                     current_node, 'NUMA nodes balance disturbed')
 
                 allocations.setdefault(task, {})
-                allocations[task][AllocationType.MIGRATE_PAGES] = str(current_node)
+                allocations[task][AllocationType.MIGRATE_PAGES] = current_node
         log.log(TRACE, 'Finished migrating pages of tasks')
 
     def _log_initial(self, platform: Platform, tasks_data: TasksData):
@@ -319,13 +311,11 @@ class NUMAAllocator(Allocator):
                   ' migrate_pages=%s algorithm=%s tasks=%s', self.dryrun,
                   self.cgroups_memory_binding, self.cgroups_memory_migrate,
                   self.migrate_pages, self.algorithm, len(tasks_data))
-        log.log(TRACE, 'Tasks data %r', tasks_data)
 
 
 def migration_minimizer_core(task: TaskId, most_used_nodes: Set[NumaNodeId],
                              best_memory_nodes: Set[NumaNodeId],
                              most_free_memory_nodes: Set[NumaNodeId]):
-    """seperated into function to simplify writing of unit test"""
     balance_task, balance_task_node = None, None
     if len(most_used_nodes.intersection(best_memory_nodes)) >= 1:
         log.debug("\tOK: found task for best memory node")
@@ -554,9 +544,8 @@ def _log_task_basic_info(extra_metrics, tasks_data, task_memory, current_node):
 
 def _log_initial_state(tasks_data, balanced_memory, extra_metrics):
     log.log(TRACE, "Current state of the system, balanced_memory=%s[bytes]" % balanced_memory)
-    log.log(TRACE,
-            "Current task assigments to nodes, expressed "
-            "in sum of memory limits of pinned tasks: %s[bytes]" % {
+    log.debug("Current task assigments to nodes, expressed "
+              "in sum of memory limits of pinned tasks: %s[bytes]" % {
                 node: sum(t[1] for t in tasks) / 2 ** 10 for node, tasks in
                 balanced_memory.items()})
     log.debug("Current task assigments: %s" % {
