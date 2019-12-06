@@ -33,8 +33,6 @@ from wca import storage
 from wca.extra import static_node
 from wca.extra import numa_allocator
 from wca import security
-from wca.metrics import DefaultDerivedMetricsGenerator
-from wca.perf_uncore import UncoreDerivedMetricsGenerator
 
 REGISTERED_COMPONENTS = [
     measurement.MeasurementRunner,
@@ -54,8 +52,6 @@ REGISTERED_COMPONENTS = [
     static_allocator.StaticAllocator,
     security.SSL,
     measurement.TaskLabelRegexGenerator,
-    DefaultDerivedMetricsGenerator,
-    UncoreDerivedMetricsGenerator,
 ]
 
 

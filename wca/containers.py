@@ -26,8 +26,9 @@ from wca import resctrl
 from wca.allocators import AllocationConfiguration, TaskAllocations, AllocationType
 from wca.logger import TRACE
 from wca.metrics import Measurements, merge_measurements, \
-    DefaultDerivedMetricsGenerator, MetricName
+    MetricName
 from wca.nodes import Task
+from wca.perf import PerfCgroupDerivedMetricsGenerator
 from wca.platforms import Platform
 from wca.profiling import profiler
 from wca.resctrl import ResGroup
@@ -110,7 +111,8 @@ class ContainerSet(ContainerInterface):
                  resgroup: ResGroup = None,
                  event_names: List[str] = None,
                  enable_derived_metrics: bool = False,
-                 wss_reset_interval: int = 0
+                 wss_reset_interval: int = 0,
+                 perf_aggregate_cpus: bool = True
                  ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
@@ -118,7 +120,7 @@ class ContainerSet(ContainerInterface):
 
         self._platform = platform
         self._resgroup = resgroup
-
+        self._perf_aggregate_cpus = perf_aggregate_cpus
         # Create Cgroup object representing itself.
         self._cgroup = cgroups.Cgroup(
             cgroup_path=self._cgroup_path,
@@ -134,7 +136,8 @@ class ContainerSet(ContainerInterface):
                 allocation_configuration=allocation_configuration,
                 event_names=event_names,
                 enable_derived_metrics=enable_derived_metrics,
-                wss_reset_interval=wss_reset_interval
+                wss_reset_interval=wss_reset_interval,
+                perf_aggregate_cpus=perf_aggregate_cpus
             )
 
     def get_subcgroups(self) -> List[cgroups.Cgroup]:
@@ -210,16 +213,16 @@ class ContainerSet(ContainerInterface):
             if AllocationType.CPUSET_CPUS in cpuset_allocations:
                 if cpuset_allocations[AllocationType.CPUSET_CPUS] != cpus:
                     log.warn(
-                            'Different CPUSET cpus allocation in subcgroups of %s cgroup!',
-                            self._name)
+                        'Different CPUSET cpus allocation in subcgroups of %s cgroup!',
+                        self._name)
             else:
                 cpuset_allocations[AllocationType.CPUSET_CPUS] = cpus
 
             if AllocationType.CPUSET_MEMS in cpuset_allocations:
                 if cpuset_allocations[AllocationType.CPUSET_MEMS] != mems:
                     log.warn(
-                            'Different CPUSET cpus allocation in subcgroups of %s cgroup!',
-                            self._name)
+                        'Different CPUSET cpus allocation in subcgroups of %s cgroup!',
+                        self._name)
             else:
                 cpuset_allocations[AllocationType.CPUSET_MEMS] = mems
 
@@ -251,7 +254,8 @@ class Container(ContainerInterface):
                  Optional[AllocationConfiguration] = None,
                  event_names: List[MetricName] = None,
                  enable_derived_metrics: bool = False,
-                 wss_reset_interval: int = 0
+                 wss_reset_interval: int = 0,
+                 perf_aggregate_cpus: bool = True
                  ):
         self._cgroup_path = cgroup_path
         self._name = _sanitize_cgroup_path(self._cgroup_path)
@@ -260,6 +264,7 @@ class Container(ContainerInterface):
         self._platform = platform
         self._resgroup = resgroup
         self._event_names = event_names
+        self._perf_aggregate_cpus = perf_aggregate_cpus
 
         self._cgroup = cgroups.Cgroup(
             cgroup_path=self._cgroup_path,
@@ -271,17 +276,19 @@ class Container(ContainerInterface):
         else:
             self.wss = None
 
+        self._perf_counters = None
         if self._event_names:
             self._perf_counters = perf.PerfCounters(
                 self._cgroup_path,
                 event_names=event_names,
-                platform=platform)
-            if enable_derived_metrics:
-                self._derived_metrics_generator = \
-                    DefaultDerivedMetricsGenerator(self.get_measurements)
-        else:
-            self._perf_counters = None
-            self._derived_metrics_generator = None
+                platform=platform,
+                aggregate_for_all_cpus_with_sum=self._perf_aggregate_cpus,
+            )
+
+        self._derived_metrics_generator = None
+        if enable_derived_metrics:
+            self._derived_metrics_generator = \
+                PerfCgroupDerivedMetricsGenerator(self._get_measurements)
 
     def __repr__(self):
         return 'Container(%r)' % self._cgroup_path
@@ -316,6 +323,11 @@ class Container(ContainerInterface):
                                     mongroup_name=self._name)
 
     def get_measurements(self) -> Measurements:
+        if self._derived_metrics_generator is not None:
+            return self._derived_metrics_generator.get_measurements()
+        return self._get_measurements()
+
+    def _get_measurements(self) -> Measurements:
         # Cgroup measurements
         cgroup_measurements = self._cgroup.get_measurements()
         # Perf events measurements
@@ -375,7 +387,8 @@ class ContainerManager:
     def __init__(self, platform: Platform,
                  allocation_configuration: Optional[AllocationConfiguration],
                  event_names: List[str], enable_derived_metrics: bool = False,
-                 wss_reset_interval: int = 0
+                 wss_reset_interval: int = 0,
+                 perf_aggregate_cpus: bool = True,
                  ):
         self.containers: Dict[Task, ContainerInterface] = {}
         self._platform = platform
@@ -383,6 +396,7 @@ class ContainerManager:
         self._event_names = event_names
         self._enable_derived_metrics = enable_derived_metrics
         self._wss_reset_interval = wss_reset_interval
+        self._perf_aggregate_cpus = perf_aggregate_cpus
 
     def _create_container(self, task: Task) -> ContainerInterface:
         """Check whether the task groups multiple containers,
@@ -397,7 +411,7 @@ class ContainerManager:
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
                 wss_reset_interval=self._wss_reset_interval,
-
+                perf_aggregate_cpus=self._perf_aggregate_cpus,
             )
         else:
             container = Container(
@@ -407,6 +421,7 @@ class ContainerManager:
                 event_names=self._event_names,
                 enable_derived_metrics=self._enable_derived_metrics,
                 wss_reset_interval=self._wss_reset_interval,
+                perf_aggregate_cpus=self._perf_aggregate_cpus
             )
         return container
 

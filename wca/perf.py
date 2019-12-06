@@ -21,10 +21,13 @@ from typing import List, Dict, BinaryIO, Iterable
 
 import os
 import struct
+from operator import truediv, sub
 
 from wca import logger
 from wca import perf_const as pc
-from wca.metrics import Measurements, MetricName, MissingMeasurementException
+from wca.metrics import Measurements, MetricName, MissingMeasurementException, \
+    BaseDerivedMetricsGenerator, METRICS_METADATA, _operation_on_leveled_dicts, \
+    _operation_on_leveled_metric
 from wca.platforms import Platform, CPUCodeName
 
 LIBC = ctypes.CDLL('libc.so.6', use_errno=True)
@@ -63,7 +66,9 @@ def _parse_online_cpus_string(raw_string) -> List[int]:
 
 
 def _parse_event_groups(file, event_names, include_scaling_info) -> Measurements:
-    """Reads event values from the event file"""
+    """Reads event values from the event file (For single cpu)
+    Returns all declared metrics in "event_names".
+    """
     measurements = {}
     scaling_factors = []
     size = struct.unpack('q', file.read(8))[0]
@@ -229,7 +234,13 @@ def _create_file_from_fd(pfd):
 class PerfCounters:
     """Perf facade on perf_event_open system call"""
 
-    def __init__(self, cgroup_path: str, event_names: Iterable[MetricName], platform: Platform):
+    def __init__(
+            self,
+            cgroup_path: str,
+            event_names: Iterable[MetricName],
+            platform: Platform,
+            aggregate_for_all_cpus_with_sum: bool = True
+    ):
         # Provide cgroup_path with leading '/'
         assert cgroup_path.startswith('/')
         # cgroup path without leading '/'
@@ -243,14 +254,13 @@ class PerfCounters:
 
         self._platform = platform
 
+        self._aggregate_for_all_cpus_with_sum = aggregate_for_all_cpus_with_sum
+
         # keep event names for output information
         self._event_names: List[MetricName] = event_names
 
         # DO the magic and enabled everything + start counting
         self._open()
-
-    def get_measurements(self) -> Measurements:
-        return self._read_events()
 
     def cleanup(self):
         """Closes all opened file descriptors"""
@@ -329,37 +339,101 @@ class PerfCounters:
             if LIBC.ioctl(group_event_leader_file.fileno(), pc.PERF_EVENT_IOC_ENABLE, 0) < 0:
                 raise OSError("Cannot enable perf counts")
 
-    def _read_events(self) -> Measurements:
-        """Reads, scales and aggregates event measurements"""
-        scaled_measurements_and_factor_per_cpu: Dict[int, Measurements] = {}
+    def get_measurements(self) -> Measurements:
+        """Reads, scales and aggregates event measurements."""
+
+        # Measurements:
+        # levels: ['metric_name', 'cpu']
+        per_metric_per_cpu = {}
+        # levels: ['metric_name'] - Aggregated values (sum for all cpus)
+        per_metric = defaultdict(float)
+
+        max_values_for_all_cpus = []
+        avg_values_for_all_cpus = []
+
         for cpu, event_leader_file in self._group_event_leader_files.items():
-            scaled_measurements_and_factor_per_cpu[cpu] = _parse_event_groups(
+            per_cpu = _parse_event_groups(
                 event_leader_file, self._event_names, include_scaling_info=True)
+            for metric_name, metric_value in per_cpu.items():
+                # not aggregated  version
+                per_metric_per_cpu.setdefault(metric_name, {})
+                per_metric_per_cpu[metric_name][cpu] = metric_value
+                # sum (aggregate operation)
+                per_metric[metric_name] += metric_value
+            max_values_for_all_cpus.append(per_cpu[MetricName.TASK_SCALING_FACTOR_MAX])
+            avg_values_for_all_cpus.append(per_cpu[MetricName.TASK_SCALING_FACTOR_AVG])
 
-        measurements = defaultdict(lambda: defaultdict(float))
-
-        for cpu, metrics in scaled_measurements_and_factor_per_cpu.items():
-            for metric in metrics:
-                measurements[metric][cpu] = scaled_measurements_and_factor_per_cpu[cpu][metric]
-
-        if self._group_event_leader_files:
-            measurements.update(**{MetricName.TASK_SCALING_FACTOR_MAX: 0,
-                                   MetricName.TASK_SCALING_FACTOR_AVG: 0})
-
-            max_values = []
-            avg_values = []
-            for cpu in scaled_measurements_and_factor_per_cpu:
-                max_values.append(max(
-                    scaled_measurements_and_factor_per_cpu[cpu][MetricName.TASK_SCALING_FACTOR_MAX],
-                    measurements[MetricName.TASK_SCALING_FACTOR_MAX]))
-                avg_values.append(scaled_measurements_and_factor_per_cpu[cpu][
-                                      MetricName.TASK_SCALING_FACTOR_AVG])
-
-            measurements[MetricName.TASK_SCALING_FACTOR_AVG] = statistics.mean(avg_values)
-            measurements[MetricName.TASK_SCALING_FACTOR_MAX] = max(max_values)
-
-        return measurements
+        if self._aggregate_for_all_cpus_with_sum \
+                and avg_values_for_all_cpus and max_values_for_all_cpus:
+            # average for all metric of averages for cpus
+            per_metric[MetricName.TASK_SCALING_FACTOR_AVG] = statistics.mean(
+                avg_values_for_all_cpus)
+            # max of max
+            per_metric[MetricName.TASK_SCALING_FACTOR_MAX] = max(max_values_for_all_cpus)
+            return dict(per_metric)
+        else:
+            # no aggreated values
+            return per_metric_per_cpu
 
 
 class UnableToOpenPerfEvents(Exception):
     pass
+
+
+class PerfCgroupDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
+    def _derive(self, measurements, delta, available, time_delta):
+
+        def rate(value):
+            return float(value) / time_delta
+
+        if available(MetricName.TASK_INSTRUCTIONS, MetricName.TASK_CYCLES):
+            inst_delta, cycles_delta = delta(MetricName.TASK_INSTRUCTIONS, MetricName.TASK_CYCLES)
+            max_depth = len(METRICS_METADATA[MetricName.TASK_INSTRUCTIONS].levels)
+
+            if max_depth == 0:
+                measurements[MetricName.TASK_IPC] = float(inst_delta) / cycles_delta
+                if time_delta > 0:
+                    measurements[MetricName.TASK_IPS] = rate(inst_delta)
+            else:
+                # leveled calculations
+                ipc = _operation_on_leveled_dicts(inst_delta, cycles_delta, truediv, max_depth)
+                measurements[MetricName.TASK_IPC] = ipc
+                if time_delta > 0:
+                    _operation_on_leveled_metric(inst_delta, rate, max_depth)
+                    measurements[MetricName.TASK_IPS] = inst_delta
+
+        if available(MetricName.TASK_INSTRUCTIONS, MetricName.TASK_CACHE_MISSES):
+            inst_delta, cache_misses_delta = delta(MetricName.TASK_INSTRUCTIONS,
+                                                   MetricName.TASK_CACHE_MISSES)
+
+            max_depth = len(METRICS_METADATA[MetricName.TASK_CACHE_MISSES].levels)
+
+            def times1000(x):
+                return x * 1000
+
+            if max_depth == 0:
+                mpki = times1000(float(cache_misses_delta) / inst_delta)
+                measurements[MetricName.TASK_CACHE_MISSES_PER_KILO_INSTRUCTIONS] = mpki
+            else:
+                # leveled calculations
+                divided = _operation_on_leveled_dicts(
+                    cache_misses_delta, inst_delta, truediv, max_depth)
+
+                _operation_on_leveled_metric(divided, times1000, max_depth)
+                measurements[MetricName.TASK_CACHE_MISSES_PER_KILO_INSTRUCTIONS] = divided
+
+        if available(MetricName.TASK_CACHE_REFERENCES, MetricName.TASK_CACHE_MISSES):
+            cache_ref_delta, cache_misses_delta = delta(MetricName.TASK_CACHE_REFERENCES,
+                                                        MetricName.TASK_CACHE_MISSES)
+            max_depth = len(METRICS_METADATA[MetricName.TASK_CACHE_MISSES].levels)
+            if max_depth == 0:
+                cache_hits = cache_ref_delta - cache_misses_delta
+                cache_hit_ratio = float(cache_hits) / cache_ref_delta
+                measurements[MetricName.TASK_CACHE_HIT_RATIO] = cache_hit_ratio
+            else:
+                # leveled calculations
+                cache_hits_count = _operation_on_leveled_dicts(
+                    cache_ref_delta, cache_misses_delta, sub, max_depth)
+                cache_hit_ratio = _operation_on_leveled_dicts(cache_hits_count, cache_ref_delta,
+                                                              truediv, max_depth)
+                measurements[MetricName.TASK_CACHE_HIT_RATIO] = cache_hit_ratio

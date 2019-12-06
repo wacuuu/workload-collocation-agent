@@ -28,7 +28,7 @@ runner: !AllocationRunner
       - task_stalled_mem_loads
       - task_offcore_requests_l3_miss_demand_data_rd
       - task_offcore_requests_outstanding_l3_miss_demand_data_rd
-      #- ble_mem_inst_retired_all_loads__rD081
+      - kurde_mem_inst_retired_all_loads__rD081
 
     # Metrics to files
     metrics_storage: !LogStorage
@@ -44,19 +44,13 @@ runner: !AllocationRunner
     extra_labels:
       node: !Env HOSTNAME
 
-  allocator: !NUMAAllocator
-    loop_min_task_balance: 0.0
-    free_space_check: false
-    #---
-    migrate_pages: true
-    migrate_pages_min_task_balance: 0.95
-    #---
-    cgroups_memory_binding: false
-    cgroups_memory_migrate: false
-    #---
-    algorithm: 'fill_biggest_first'
-    #---
-    dryrun: false
+  allocator: !StaticAllocator
+    rules:
+    - name: default rule for all
+      allocations:
+        cpuset_cpus: "20-39"
+        cpuset_mems: "1"
+        migrate_pages: 1
 
   allocations_storage: !LogStorage
     output_filename: allocations.prom

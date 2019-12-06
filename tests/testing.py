@@ -216,7 +216,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 platform=platform,
                 allocation_configuration=AllocationConfiguration() if with_config else None,
                 resgroup=ResGroup(name=resgroup_name) if rdt_enabled else None,
-                event_names=['task_cycles']
+                event_names=['task_cycles'],
             )
 
     if should_patch:

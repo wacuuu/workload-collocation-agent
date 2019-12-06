@@ -23,8 +23,8 @@ from io import BytesIO
 from wca import metrics
 from wca import perf
 from wca import perf_const as pc
-from wca.metrics import MetricName, DefaultDerivedMetricsGenerator
-from wca.perf import _parse_raw_event_name, _get_event_config
+from wca.metrics import MetricName
+from wca.perf import _parse_raw_event_name, _get_event_config, PerfCgroupDerivedMetricsGenerator
 from wca.platforms import CPUCodeName, Platform
 from wca.runners.measurement import _filter_out_event_names_for_cpu
 
@@ -138,18 +138,39 @@ def test_get_online_cpus(_parse_online_cpu_string_mock, open_mock):
 
 
 @patch('wca.perf._parse_event_groups', return_value={
-    metrics.MetricName.TASK_CYCLES: 0,
-    metrics.MetricName.TASK_SCALING_FACTOR_MAX: 0,
-    metrics.MetricName.TASK_SCALING_FACTOR_AVG: 0})
+    metrics.MetricName.TASK_CYCLES: 2,
+    metrics.MetricName.TASK_INSTRUCTIONS: 4,
+    metrics.MetricName.TASK_SCALING_FACTOR_MAX: 3,
+    metrics.MetricName.TASK_SCALING_FACTOR_AVG: 2})
 @patch('wca.perf._get_cgroup_fd')
 @patch('wca.perf.PerfCounters._open')
-def test_read_metrics(*args):
+def test_read_metrics_non_aggregated(*args):
     platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
-    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.TASK_CYCLES], platform_mock)
+    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.TASK_CYCLES],
+                            platform_mock, aggregate_for_all_cpus_with_sum=False)
     prf._group_event_leader_files[0] = {0: mock_open()}
-    assert prf.get_measurements() == {metrics.MetricName.TASK_CYCLES: {0: 0},
-                                      metrics.MetricName.TASK_SCALING_FACTOR_AVG: 0,
-                                      metrics.MetricName.TASK_SCALING_FACTOR_MAX: 0}
+    assert prf.get_measurements() == {metrics.MetricName.TASK_CYCLES: {0: 2},
+                                      metrics.MetricName.TASK_INSTRUCTIONS: {0: 4},
+                                      metrics.MetricName.TASK_SCALING_FACTOR_AVG: {0: 2},
+                                      metrics.MetricName.TASK_SCALING_FACTOR_MAX: {0: 3}}
+
+
+@patch('wca.perf._parse_event_groups', return_value={
+    metrics.MetricName.TASK_CYCLES: 2,
+    metrics.MetricName.TASK_INSTRUCTIONS: 4,
+    metrics.MetricName.TASK_SCALING_FACTOR_MAX: 3,
+    metrics.MetricName.TASK_SCALING_FACTOR_AVG: 2})
+@patch('wca.perf._get_cgroup_fd')
+@patch('wca.perf.PerfCounters._open')
+def test_read_metrics_aggregated(*args):
+    platform_mock = Mock(Spec=Platform, cpu_model='intel xeon', cpu_codename=CPUCodeName.SKYLAKE)
+    prf = perf.PerfCounters('/mycgroup', [metrics.MetricName.TASK_CYCLES],
+                            platform_mock, aggregate_for_all_cpus_with_sum=True)
+    prf._group_event_leader_files[0] = {0: mock_open()}
+    assert prf.get_measurements() == {metrics.MetricName.TASK_CYCLES: 2,
+                                      metrics.MetricName.TASK_INSTRUCTIONS: 4,
+                                      metrics.MetricName.TASK_SCALING_FACTOR_AVG: 2,
+                                      metrics.MetricName.TASK_SCALING_FACTOR_MAX: 3}
 
 
 @patch('wca.perf.LIBC.ioctl', return_value=1)
@@ -267,21 +288,21 @@ def test_open_for_cpu_with_existing_event_group_leader(_open_mock,
 
 @patch('wca.perf._get_cgroup_fd')
 @patch('wca.perf.PerfCounters._open')
-def test_read_events_zero_values_zero_cpus(_open_mock, _get_cgroup_fd_mock):
+def test_get_measurements_zero_values_zero_cpus(_open_mock, _get_cgroup_fd_mock):
     platform_mock = Mock(Spec=Platform, cpu_codename=CPUCodeName.SKYLAKE)
     prf = perf.PerfCounters('/mycgroup', [], platform_mock)
     prf._group_event_leaders = {}
-    assert prf._read_events() == {}
+    assert prf.get_measurements() == {}
 
 
 @patch('wca.perf._get_cgroup_fd')
 @patch('wca.perf.PerfCounters._open')
-def test_read_events_zero_values_one_cpu(_open_mock, _get_cgroup_fd_mock):
+def test_get_measurements_zero_values_one_cpu(_open_mock, _get_cgroup_fd_mock):
     platform_mock = Mock(Spec=Platform, cpu_codename=CPUCodeName.SKYLAKE)
     prf = perf.PerfCounters('/mycgroup', [], platform_mock)
     # File descriptor mock for single cpu
     prf._group_event_leaders = {0: Mock()}
-    assert prf._read_events() == {}
+    assert prf.get_measurements() == {}
 
 
 @pytest.mark.parametrize('event_name, expected_attr_config', [
@@ -321,16 +342,16 @@ def test_get_event_config(cpu, event_name, expected_config):
     assert expected_config == _get_event_config(cpu, event_name)
 
 
-def test_derived_metrics():
+def test_derived_metrics_flat():
     def gm_func():
         return {
-            MetricName.TASK_INSTRUCTIONS: {0: 1000},
-            MetricName.TASK_CYCLES: {0: 5},
-            MetricName.TASK_CACHE_MISSES: {0: 10000},
-            MetricName.TASK_CACHE_REFERENCES: {0: 50000},
+            MetricName.TASK_INSTRUCTIONS: 1000,
+            MetricName.TASK_CYCLES: 5,
+            MetricName.TASK_CACHE_MISSES: 10000,
+            MetricName.TASK_CACHE_REFERENCES: 50000,
         }
 
-    derived_metrics_generator = DefaultDerivedMetricsGenerator(
+    derived_metrics_generator = PerfCgroupDerivedMetricsGenerator(
         get_measurements_func=gm_func)
 
     # First run, does not have enough information to generate those metrics.
@@ -345,10 +366,10 @@ def test_derived_metrics():
     # 5 seconds later
     def gm_func_2():
         return {
-            MetricName.TASK_INSTRUCTIONS: {0: 11000},  # 10k more
-            MetricName.TASK_CYCLES: {0: 15},  # 10 more
-            MetricName.TASK_CACHE_MISSES: {0: 20000},  # 10k more
-            MetricName.TASK_CACHE_REFERENCES: {0: 100000},  # 50k more
+            MetricName.TASK_INSTRUCTIONS: 11000,  # 10k more
+            MetricName.TASK_CYCLES: 15,  # 10 more
+            MetricName.TASK_CACHE_MISSES: 20000,  # 10k more
+            MetricName.TASK_CACHE_REFERENCES: 100000,  # 50k more
         }
 
     derived_metrics_generator.get_measurements_func = gm_func_2
@@ -359,15 +380,15 @@ def test_derived_metrics():
     assert MetricName.TASK_CACHE_HIT_RATIO in measurements
     assert MetricName.TASK_CACHE_MISSES_PER_KILO_INSTRUCTIONS in measurements
 
-    assert measurements[MetricName.TASK_IPC] == ({0: 10000 / 10})
-    assert measurements[MetricName.TASK_IPS] == ({0: 10000 / 5})
+    assert measurements[MetricName.TASK_IPC] == 10000 / 10
+    assert measurements[MetricName.TASK_IPS] == 10000 / 5
 
     # Assuming cache misses increase is 10k over all 50k cache references
     # Cache hit ratio should be 40k / 50k = 80%
-    assert measurements[MetricName.TASK_CACHE_HIT_RATIO] == {0: 0.8}
+    assert measurements[MetricName.TASK_CACHE_HIT_RATIO] == 0.8
 
-    # 10k misses per 10k instructions / 1000 = 10k / 10
-    assert measurements[MetricName.TASK_CACHE_MISSES_PER_KILO_INSTRUCTIONS] == {0: 1000}
+    # 10000 / (10k/1000) = 10000 / 10
+    assert measurements[MetricName.TASK_CACHE_MISSES_PER_KILO_INSTRUCTIONS] == 1000
 
 
 @pytest.mark.parametrize('event_names, cpu_codename, expected', [

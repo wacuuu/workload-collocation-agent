@@ -103,13 +103,16 @@ PREDEFINED_RAW_EVENTS = {
     # CPUCodeName: tuple(event_id, event_mask, counter_mask)
     MetricName.TASK_STALLED_MEM_LOADS: {
         CPUCodeName.SKYLAKE: (0xA3, 0x14, 20),
+        CPUCodeName.CASCADE_LAKE: (0xA3, 0x14, 20),
         CPUCodeName.BROADWELL: (0xA3, 0x06, 6)
     },
     MetricName.TASK_OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD: {
         CPUCodeName.SKYLAKE: (0x60, 0x10, 0),
+        CPUCodeName.CASCADE_LAKE: (0x60, 0x10, 0),
     },
     MetricName.TASK_OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD: {
         CPUCodeName.SKYLAKE: (0xB0, 0x10, 0),
+        CPUCodeName.CASCADE_LAKE: (0x60, 0x10, 0),
     },
     MetricName.TASK_MEM_LOAD_RETIRED_LOCAL_PMM: {
         CPUCodeName.SKYLAKE: (0xd1, 0x80, 0),

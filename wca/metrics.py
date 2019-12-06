@@ -17,7 +17,7 @@ from typing import Dict, Union, List, Tuple, Callable, Optional
 
 from dataclasses import dataclass, field
 from enum import Enum
-from operator import truediv, sub
+from operator import sub
 
 log = logging.getLogger(__name__)
 
@@ -222,7 +222,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_CYCLES:
@@ -232,7 +232,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_CACHE_MISSES:
@@ -242,7 +242,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_CACHE_REFERENCES:
@@ -252,7 +252,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_STALLED_MEM_LOADS:
@@ -262,7 +262,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD:
@@ -273,7 +273,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD:
@@ -283,7 +283,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_MEM_LOAD_RETIRED_LOCAL_PMM:
@@ -293,7 +293,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_MEM_LOAD_RETIRED_LOCAL_DRAM:
@@ -303,7 +303,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_MEM_INST_RETIRED_LOADS:
@@ -313,7 +313,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_MEM_INST_RETIRED_STORES:
@@ -323,7 +323,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     MetricName.TASK_DTLB_LOAD_MISSES:
@@ -333,7 +333,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
-            ['cpu'],
+            [],
             'no (event_names)',
         ),
     # Perf subsystem meta metrics (errors)
@@ -1143,44 +1143,6 @@ class BaseDerivedMetricsGenerator:
 
     def _derive(self, measurements, delta, available, time_delta):
         raise NotImplementedError
-
-
-class DefaultDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
-    def _derive(self, measurements, delta, available, time_delta):
-
-        def rate(value):
-            return float(value) / time_delta
-
-        if available(MetricName.TASK_INSTRUCTIONS, MetricName.TASK_CYCLES):
-            inst_delta, cycles_delta = delta(MetricName.TASK_INSTRUCTIONS, MetricName.TASK_CYCLES)
-            max_depth = len(METRICS_METADATA[MetricName.TASK_INSTRUCTIONS].levels)
-            ipc = _operation_on_leveled_dicts(inst_delta, cycles_delta, truediv, max_depth)
-            measurements[MetricName.TASK_IPC] = ipc
-
-            if time_delta > 0:
-                _operation_on_leveled_metric(inst_delta, rate, max_depth)
-                measurements[MetricName.TASK_IPS] = inst_delta
-
-        if available(MetricName.TASK_INSTRUCTIONS, MetricName.TASK_CACHE_MISSES):
-            inst_delta, cache_misses_delta = delta(MetricName.TASK_INSTRUCTIONS,
-                                                   MetricName.TASK_CACHE_MISSES)
-
-            max_depth = len(METRICS_METADATA[MetricName.TASK_CACHE_MISSES].levels)
-            divided = _operation_on_leveled_dicts(
-                cache_misses_delta, inst_delta, truediv, max_depth)
-
-            _operation_on_leveled_metric(divided, lambda v: v * 1000, max_depth)
-            measurements[MetricName.TASK_CACHE_MISSES_PER_KILO_INSTRUCTIONS] = divided
-
-        if available(MetricName.TASK_CACHE_REFERENCES, MetricName.TASK_CACHE_MISSES):
-            cache_ref_delta, cache_misses_delta = delta(MetricName.TASK_CACHE_REFERENCES,
-                                                        MetricName.TASK_CACHE_MISSES)
-            max_depth = len(METRICS_METADATA[MetricName.TASK_CACHE_MISSES].levels)
-            cache_hits_count = _operation_on_leveled_dicts(
-                cache_ref_delta, cache_misses_delta, sub, max_depth)
-            cache_hit_ratio = _operation_on_leveled_dicts(cache_hits_count, cache_ref_delta,
-                                                          truediv, max_depth)
-            measurements[MetricName.TASK_CACHE_HIT_RATIO] = cache_hit_ratio
 
 
 class MissingMeasurementException(Exception):

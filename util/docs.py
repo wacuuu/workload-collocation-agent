@@ -17,7 +17,7 @@ import re
 
 from wca.metrics import METRICS_METADATA, MetricGranularity, MetricName
 from wca.components import REGISTERED_COMPONENTS
-from wca.metrics import DefaultDerivedMetricsGenerator
+from wca.perf import PerfCgroupDerivedMetricsGenerator
 from wca.kubernetes import CgroupDriverType
 from wca.perf_uncore import UncoreDerivedMetricsGenerator
 
@@ -39,8 +39,8 @@ class MissingDocstring(Exception):
     pass
 
 
-SKIPPED_COMPONENTS = [DefaultDerivedMetricsGenerator, 
-                      UncoreDerivedMetricsGenerator, 
+SKIPPED_COMPONENTS = [PerfCgroupDerivedMetricsGenerator,
+                      UncoreDerivedMetricsGenerator,
                       CgroupDriverType]
 
 

@@ -13,12 +13,12 @@
 # limitations under the License.
 
 import logging
-import re
 import time
-from abc import abstractmethod
 from typing import Dict, List, Optional
 
+import re
 import resource
+from abc import abstractmethod
 from dataclasses import dataclass
 
 from wca import platforms, profiling, perf_const as pc
@@ -30,7 +30,8 @@ from wca.containers import ContainerManager, Container
 from wca.detectors import TaskData, TasksData, TaskResource
 from wca.logger import trace, get_logging_metrics, TRACE
 from wca.metrics import Metric, MetricName, MissingMeasurementException, \
-    export_metrics_from_measurements
+    export_metrics_from_measurements, METRICS_METADATA, MetricSource, MetricType, MetricUnit, \
+    MetricGranularity, MetricMetadata
 from wca.nodes import Node, Task
 from wca.nodes import TaskSynchronizationException
 from wca.perf_uncore import UncorePerfCounters, _discover_pmu_uncore_config, \
@@ -126,6 +127,10 @@ class MeasurementRunner(Runner):
         Perf counters to monitor.
         (defaults to not collect perf counters - empty list of events)
 
+    - ``perf_aggregate_cpus``: **bool** = `True`,
+        Should perf events collected for cgroups be aggregated (sum) by CPUs.
+        (defaults to true, to limit number of exposed metrics)
+
     - ``enable_derived_metrics``: **bool** = *False*
 
         Enable derived metrics ips, ipc and cache_hit_ratio.
@@ -166,6 +171,7 @@ class MeasurementRunner(Runner):
             gather_hw_mm_topology: bool = False,
             extra_labels: Optional[Dict[Str, Str]] = None,
             event_names: List[str] = [],
+            perf_aggregate_cpus: bool = True,
             enable_derived_metrics: bool = False,
             enable_perf_uncore: Optional[bool] = None,
             task_label_generators: Optional[Dict[str, TaskLabelGenerator]] = None,
@@ -190,6 +196,31 @@ class MeasurementRunner(Runner):
         self._event_names = event_names
         log.info('Enabling %i perf events: %s', len(self._event_names),
                  ', '.join(self._event_names))
+        self._perf_aggregate_cpus = perf_aggregate_cpus
+
+        # TODO: fix those workarounds for dynamic levels and dynamic perf event metrics.
+        # First add dynamic metrics
+        for event_name in event_names:
+            # is dynamic raw event
+            if '__r' in event_name:
+                log.debug('Creating metadata for dynamic metric: %r', event_name)
+                METRICS_METADATA[event_name] = MetricMetadata(
+                    'Hardware PMU counter (raw event)',
+                    MetricType.COUNTER,
+                    MetricUnit.NUMERIC,
+                    MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
+                    MetricGranularity.TASK,
+                    [],
+                    'no (event_names)',
+                )
+        # We had the modify levels for all metrics
+        # The set proper levels based on perf_aggregate_cpus value
+        if not perf_aggregate_cpus:
+            log.debug('Enabling "cpu" level for PERF_SUBSYSTEM_WITH_CGROUPS metrics.')
+            for metric_metadata in METRICS_METADATA.values():
+                if metric_metadata.source == MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS:
+                    metric_metadata.levels = ['cpu']
+
         self._enable_derived_metrics = enable_derived_metrics
         self._enable_perf_uncore = enable_perf_uncore
 
@@ -287,6 +318,7 @@ class MeasurementRunner(Runner):
             event_names=self._event_names,
             enable_derived_metrics=self._enable_derived_metrics,
             wss_reset_interval=self._wss_reset_interval,
+            perf_aggregate_cpus=self._perf_aggregate_cpus
         )
 
         self._init_uncore_pmu(self._enable_derived_metrics, self._enable_perf_uncore, platform)
