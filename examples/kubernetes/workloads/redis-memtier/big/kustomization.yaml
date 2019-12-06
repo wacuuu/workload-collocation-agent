@@ -1,0 +1,19 @@
+nameSuffix: -big
+bases:
+- ../base
+
+commonLabels:
+  app: redis-big
+  size: big
+
+configMapGenerator:
+- name: memtier
+  behavior: merge
+  literals:
+    - clients=50
+    - threads=8
+    - keymaximum=40000000     # 40M
+    - datasize=512           # eff
+
+patchesStrategicMerge:
+  - resources.yaml

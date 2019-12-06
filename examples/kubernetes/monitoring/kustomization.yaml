@@ -1,0 +1,10 @@
+bases:
+- fluentd
+- grafana
+- prometheus
+- wca
+- kube-state-metrics
+- dashboard
+
+resources:
+- kube-system/service_monitor.yaml

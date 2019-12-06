@@ -15,19 +15,19 @@
 
 """Module for independent simple helper functions."""
 
-import functools
-import os
 import json
 import time
 from typing import List, Dict, Union, Optional
 from unittest.mock import mock_open, Mock, patch
 
+import functools
+import os
+
 from wca.allocators import AllocationConfiguration
-from wca.runners.measurement import DEFAULT_EVENTS
 from wca.containers import Container, ContainerSet, ContainerInterface
 from wca.detectors import ContendedResource, ContentionAnomaly, LABEL_WORKLOAD_INSTANCE, \
-    _create_uuid_from_tasks_ids
-from wca.metrics import Metric, MetricType
+    _create_uuid_from_tasks_ids, TaskData
+from wca.metrics import Metric, MetricType, MetricName
 from wca.nodes import TaskId, Task
 from wca.platforms import CPUCodeName, Platform, RDTInformation
 from wca.resctrl import ResGroup
@@ -37,9 +37,9 @@ from wca.runners import Runner
 def create_json_fixture_mock(name, path=__file__, status_code=200):
     """ Helper function to shorten the notation. """
     return Mock(
-                json=Mock(return_value=json.load(
-                    open(relative_module_path(path, 'fixtures/' + name + '.json')))),
-                status_code=status_code,)
+        json=Mock(return_value=json.load(
+            open(relative_module_path(path, 'fixtures/' + name + '.json')))),
+        status_code=status_code, )
 
 
 def relative_module_path(module_file, relative_path):
@@ -125,16 +125,32 @@ def anomaly(contended_task_id: TaskId, contending_task_ids: List[TaskId],
     )
 
 
-def task(cgroup_path, labels=None, resources=None, subcgroups_paths=None):
+def task(cgroup_path, subcgroups_paths=None, labels=None, resources=None):
     """Helper method to create task with default values."""
     prefix = cgroup_path.replace('/', '')
     return Task(
-        cgroup_path=cgroup_path,
         name=prefix + '_tasks_name',
         task_id=prefix + '_task_id',
+        cgroup_path=cgroup_path,
+        subcgroups_paths=subcgroups_paths or [],
         labels=labels or dict(),
         resources=resources or dict(),
-        subcgroups_paths=subcgroups_paths or []
+    )
+
+
+def task_data(cgroup_path, subcgroups_paths=None, labels=None,
+              resources=None, measurements=None, allocations=None):
+    """Helper method to create task with default values."""
+    prefix = cgroup_path.replace('/', '')
+    return TaskData(
+        name=prefix + '_tasks_name',
+        task_id=prefix + '_task_id',
+        cgroup_path=cgroup_path,
+        subcgroups_paths=subcgroups_paths or [],
+        labels=labels or {},
+        resources=resources or {},
+        measurements=measurements or {},
+        allocations=allocations or {}
     )
 
 
@@ -142,7 +158,7 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
               should_patch=True, resgroup_name='',
               rdt_enabled=True, rdt_mb_control_enabled=True,
               rdt_cache_control_enabled=True) \
-              -> ContainerInterface:
+        -> ContainerInterface:
     """Helper method to create Container or ContainerSet
         (depends if subcgroups_paths is empty or not),
         optionally with patched subsystems."""
@@ -156,15 +172,19 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 sockets=1,
                 cores=1,
                 cpus=2,
+                numa_nodes=2,
+                topology={0: {0: [1, 2]}},
                 cpu_model='intel xeon',
                 cpu_model_number=0x5E,
                 cpu_codename=CPUCodeName.SKYLAKE,
-                cpus_usage={0: 10, 1: 10},
-                total_memory_used=10,
                 timestamp=time.time(),
                 rdt_information=RDTInformation(
                     True, True, rdt_mb_control_enabled,
-                    rdt_cache_control_enabled, '0', '0', 0, 0, 0)
+                    rdt_cache_control_enabled, '0', '0', 0, 0, 0),
+                node_cpus={0: {0, 1}},
+                node_distances={0: {0: 10}},
+                measurements={},
+                swap_enabled=False
             )
             return ContainerSet(
                 cgroup_path=cgroup_path,
@@ -172,27 +192,31 @@ def container(cgroup_path, subcgroups_paths=None, with_config=False,
                 platform=platform,
                 allocation_configuration=AllocationConfiguration() if with_config else None,
                 resgroup=ResGroup(name=resgroup_name) if rdt_enabled else None,
-                event_names=DEFAULT_EVENTS)
+                event_names=['task_cycles'])
         else:
             platform = Platform(
                 sockets=1,
                 cores=1,
                 cpus=2,
+                numa_nodes=2,
+                topology={0: {0: [1, 2]}},
                 cpu_model='intel xeon',
                 cpu_model_number=0x5E,
                 cpu_codename=CPUCodeName.SKYLAKE,
-                cpus_usage={0: 10, 1: 10},
-                total_memory_used=10,
                 timestamp=time.time(),
                 rdt_information=RDTInformation(
-                    True, True, True, True, '0', '0', 0, 0, 0)
+                    True, True, True, True, '0', '0', 0, 0, 0),
+                node_cpus={0: {0, 1}},
+                node_distances={0: {0: 10}},
+                measurements={},
+                swap_enabled=False
             )
             return Container(
                 cgroup_path=cgroup_path,
                 platform=platform,
                 allocation_configuration=AllocationConfiguration() if with_config else None,
                 resgroup=ResGroup(name=resgroup_name) if rdt_enabled else None,
-                event_names=DEFAULT_EVENTS
+                event_names=['task_cycles'],
             )
 
     if should_patch:
@@ -234,8 +258,10 @@ class DummyRunner(Runner):
 
 platform_mock = Mock(
     spec=Platform,
+    cpus=4,
     sockets=1,
-    cpus=1,
+    topology={0: {0: [0, 1], 1: [2, 3]}},
+    numa_nodes=2,
     cpu_codename=CPUCodeName.SKYLAKE,
     rdt_information=RDTInformation(
         cbm_mask='fffff',
@@ -292,7 +318,7 @@ def prepare_runner_patches(func):
              patch('wca.cgroups.Cgroup.set_quota'), \
              patch('wca.cgroups.Cgroup.set_shares'), \
              patch('wca.cgroups.Cgroup.get_measurements',
-                   return_value=dict(cpu_usage=TASK_CPU_USAGE)), \
+                   return_value={MetricName.TASK_CPU_USAGE_SECONDS: TASK_CPU_USAGE}), \
              patch('wca.resctrl.ResGroup.add_pids'), \
              patch('wca.resctrl.ResGroup.get_measurements'), \
              patch('wca.resctrl.ResGroup.get_mon_groups'), \
@@ -302,11 +328,14 @@ def prepare_runner_patches(func):
              patch('wca.resctrl.check_resctrl', return_value=True), \
              patch('wca.resctrl.cleanup_resctrl'), \
              patch('wca.perf.PerfCounters'), \
+             patch('time.time', return_value=12345.6), \
              patch('wca.platforms.collect_platform_information',
                    return_value=(platform_mock, [metric('platform-cpu-usage')], {})), \
              patch('wca.platforms.collect_topology_information', return_value=(1, 1, 1)), \
              patch('wca.security.are_privileges_sufficient', return_value=True), \
-             patch('resource.getrusage', return_value=Mock(ru_maxrss=WCA_MEMORY_USAGE)):
+             patch('resource.getrusage', return_value=Mock(ru_maxrss=WCA_MEMORY_USAGE)), \
+             patch('wca.perf_uncore.UncorePerfCounters._open'), \
+             patch('wca.perf.PerfCounters._open'):
             func(*args, **kwargs)
 
     return _decorated_function
@@ -364,8 +393,9 @@ def assert_metric(got_metrics: List[Metric],
                 break
     if not found_metric:
         raise AssertionError(
-                'metric %r not found (labels=%s)' %
-                (expected_metric_name, expected_metric_some_labels))
+            'metric %r not found (labels=%s) available_metrics=%s' %
+            (expected_metric_name, expected_metric_some_labels,
+             ', '.join(m.name for m in got_metrics)))
     # Check values as well
     if expected_metric_value is not None:
         assert found_metric.value == expected_metric_value, \

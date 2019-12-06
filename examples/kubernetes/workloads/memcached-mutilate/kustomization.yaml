@@ -1,0 +1,7 @@
+bases:
+- small
+- medium
+- big
+
+commonLabels:
+  fit: 2lm

@@ -1,0 +1,16 @@
+nameSuffix: -stream-medium
+bases:
+- ../base
+
+commonLabels:
+  app: stress-stream-medium
+  size: medium
+
+configMapGenerator:
+- name: stress
+  behavior: merge
+  literals:
+    - extra='--stream 1 --stream-l3-size=1g --stream-index=0' # 12GB RSS
+
+patchesStrategicMerge:
+  - resources.yaml

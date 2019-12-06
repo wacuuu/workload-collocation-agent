@@ -1,0 +1,21 @@
+resources:
+- redis.yaml
+- memtier.yaml
+
+configMapGenerator:
+- name: redis
+  literals:
+  - cpus=0-1000
+  - extra=
+
+- name: memtier
+  literals:
+    - cpus=0-1000
+    - extra=
+    - test_time=7200         # 7200 (overrides --requests)
+    - pipeline=1             # defaults from memtire
+    - ratio=1:10             # defaults from memtire
+    - threads=4              # TO OVERRIDE
+    - clients=200            # TO OVERRIDE
+    - datasize=32            # TO OVERRIDE (default)
+    - keymaximum=50000000    # TO OVERRIDE

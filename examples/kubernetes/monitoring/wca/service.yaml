@@ -1,0 +1,14 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: wca
+  namespace: wca
+  labels:
+    name: wca
+spec:
+  selector:
+    name: wca
+  ports:
+    - name: web
+      port: 9100
+      targetPort: 9100

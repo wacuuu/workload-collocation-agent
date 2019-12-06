@@ -17,23 +17,22 @@
 Module is responsible for exposing functionality of storing labeled metrics
 in durable external storage.
 """
-import abc
 import itertools
 import logging
-import os
-import re
+import pathlib
 import sys
-import tempfile
 import time
 from typing import List, Tuple, Dict, Optional
 
+import abc
+import os
+import re
 from dataclasses import dataclass, field
 
-from wca.config import Numeric, Path, Str, IpPort, ValidationError
 from wca import logger
+from wca.config import Numeric, Path, Str, IpPort, ValidationError
 from wca.metrics import Metric, MetricType
 from wca.security import SSL, SECURE_CIPHERS
-
 
 log = logging.getLogger(__name__)
 try:
@@ -57,25 +56,38 @@ class Storage(abc.ABC):
 
 @dataclass
 class LogStorage(Storage):
-    """Outputs metrics encoded in Prometheus exposition format
+    """rst
+    Outputs metrics encoded in Prometheus exposition format
     to standard error (default) or provided file (output_filename).
+
+    - ``output_filename``: **Optional[Path]** = *None*
+
+        If set to None, then prints data to stderr.
+
+    - ``overwrite``: **bool** = *False*
+
+        When set to True the `output_filename` file will always contain
+        only last stored metrics.
+
+    - ``include_timestamp``: **Optional[bool]** = *None*
+
+        Whether to add timestamps to metrics.
+        If set to None while constructing (default value), then it will be
+        set in the constructor to a value depending on the field `overwrite`:
+
+        - with `overwrite` set to True, timestamps are not added
+          (in order to minimise number of parameters needed to be
+          set when one use node exporter),
+        - with `overwrite` set to False, timestamps are added.
+
+    - ``filter_labels``: **Optional[List[str]]** = *None*
+
     """
 
-    # If set to None, then prints data to stderr.
     output_filename: Optional[Path] = None
-
-    # When set to True the `output_filename` file will always contain
-    # only last stored metrics.
     overwrite: bool = False
-
-    # Whether to add timestamps to metrics.
-    # If set to None while constructing (default value), then it will be
-    # set in the constructor to a value depending on the field `overwrite`:
-    # * with `overwrite` set to True, timestamps are not added
-    #   (in order to minimise number of parameters needed to be
-    #    set when one use node exporter),
-    # * with `overwrite` set to False, timestamps are added.
     include_timestamp: Optional[bool] = None
+    filter_labels: Optional[List[str]] = None
 
     def __post_init__(self):
         # Auto configure timestamp, based on "overwrite" flag.
@@ -95,7 +107,6 @@ class LogStorage(Storage):
             self._output = sys.stderr
 
     def store(self, metrics):
-        log.debug('Storing %d metrics to %s.', len(metrics), self.output_filename)
         log.log(logger.TRACE, 'Dump of metrics: %r', metrics)
 
         is_convertable, error_message = is_convertable_to_prometheus_exposition_format(metrics)
@@ -110,12 +121,17 @@ class LogStorage(Storage):
                 timestamp = get_current_time()
             else:
                 timestamp = None
-            msg = convert_to_prometheus_exposition_format(metrics, timestamp)
+            msg = convert_to_prometheus_exposition_format(metrics, timestamp, self.filter_labels)
             log.log(logger.TRACE, 'Dump of metrics (text format): %r', msg)
+            log.debug('LogStorage: Storing %d metrics to %s (%s).', len(metrics), len(msg),
+                      self.output_filename or 'None(stderr)')
             if self.overwrite:
-                with tempfile.NamedTemporaryFile(dir=self._dir, delete=False) as fp:
-                    fp.write(msg.encode('utf-8'))
-                os.rename(fp.name, self.output_filename)
+                p = pathlib.Path(self.output_filename)
+                p_tmp = p.with_suffix('.tmp')
+                with open(p_tmp, "w", encoding="utf-8") as fp:
+                    fp.write(msg)
+                p_tmp.rename(p)
+
             else:
                 print(msg, file=self._output, flush=True)
 
@@ -160,8 +176,8 @@ def is_convertable_to_prometheus_exposition_format(metrics: List[Metric]) -> (bo
             return (False, "Wrong metric name {}.".format(metric.name))
         for label_key, label_val in metric.labels.items():
             if not isinstance(label_val, str):
-                return (False, "Label (at key {}) should be str type got {!r}"
-                        .format(label_key, metric.name, type(label_val)))
+                return (False, "Label (at key {}) {} should be {!r} type got {!r}"
+                        .format(label_key, metric.name, str, type(label_val)))
 
             if not _METRIC_LABEL_NAME_RE.match(label_key):
                 return (False, "Used wrong label name {} in metric {}."
@@ -177,6 +193,10 @@ def is_convertable_to_prometheus_exposition_format(metrics: List[Metric]) -> (bo
                                         metric.type != MetricType.COUNTER):
             return (False, "Wrong metric type (used type {})."
                     .format(metric.type))
+
+        if not isinstance(metric.value, (float, int)):
+            return (False, "Wrong metric type of value (used type {}) "
+                           "in Metric: {}.".format(type(metric.value), metric.__str__()))
 
     return (True, "")
 
@@ -213,31 +233,50 @@ def group_metrics_by_name(metrics: List[Metric]) -> \
 
 
 def convert_to_prometheus_exposition_format(metrics: List[Metric],
-                                            timestamp: Optional[str] = None) -> str:
+                                            timestamp: Optional[str] = None,
+                                            filter_labels: Optional[List[str]] = None
+                                            ) -> str:
     """Convert metrics to the prometheus format."""
     output = []
 
     grouped_metrics = group_metrics_by_name(metrics)
-
-    for metric_name, metrics in grouped_metrics:
+    group_separator = ''
+    for n, (metric_name, metrics) in enumerate(grouped_metrics):
         first_metric = metrics[0]
         if first_metric.help:
-            output.append('# HELP {0} {1}\n'.format(
-                first_metric.name, first_metric.help.replace('\\', r'\\').replace('\n', r'\n')))
+            group_separator = '\n' if n > 0 else ''
+            output.append('{0}# HELP {1} {2}\n'.format(group_separator,
+                                                       first_metric.name,
+                                                       first_metric.help.replace('\\',
+                                                                                 r'\\').replace(
+                                                           '\n', r'\n')))
 
         if first_metric.type:
             output.append('# TYPE {0} {1}\n'.format(first_metric.name, first_metric.type))
 
+        if not first_metric.help and not first_metric.type:
+            output.append(group_separator)
+        else:
+            # reset group separator
+            group_separator = ''
+
         # Assert that all metrics with the same name have the same metadata.
-        assert {metric.type for metric in metrics} == {first_metric.type}
-        assert {metric.help for metric in metrics} == {first_metric.help}
+        assert {metric.type for metric in metrics} == {first_metric.type}, \
+            'improper type for %s' % metric_name
+        assert {metric.help for metric in metrics} == {first_metric.help}, \
+            'improper help for %s' % metric_name
 
         for metric in metrics:
 
             label_str = '{{{0}}}'.format(','.join(
-                ['{0}="{1}"'.format(
-                    k, v.replace('\\', r'\\').replace('\n', r'\n').replace('"', r'\"'))
-                    for k, v in sorted(metric.labels.items())]))
+                [
+                    '{0}="{1}"'.format(
+                        k, v.replace('\\', r'\\').replace('\n', r'\n').replace('"', r'\"')
+                    )
+                    for k, v in sorted(metric.labels.items())
+                    if (filter_labels is None or k in filter_labels)
+                ]
+            ))
 
             # Do not send empty labels.
             if label_str == '{}':
@@ -247,6 +286,7 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
             if type(metric.value) == float:
                 value_str = repr(float(metric.value))  # here we use repr instead of str
             else:
+                assert isinstance(metric.value, int)
                 value_str = str(metric.value)
 
             if timestamp is not None:
@@ -254,8 +294,6 @@ def convert_to_prometheus_exposition_format(metrics: List[Metric],
                                                         value_str, timestamp))
             else:
                 output.append('{0}{1} {2}\n'.format(metric.name, label_str, value_str))
-
-        output.append('\n')
 
     return ''.join(output)
 
@@ -282,17 +320,31 @@ class SSLConfigError(Exception):
 
 @dataclass
 class KafkaStorage(Storage):
-    """Storage for saving metrics in Kafka.
+    """rst
+    Storage for saving metrics in Kafka.
 
-    Args:
-        topic: name of a kafka topic where message should be saved
-        brokers_ips:  list of addresses with ports of all kafka brokers (kafka nodes)
-        max_timeout_in_seconds: if a message was not delivered in maximum_timeout seconds
-            self.store will throw FailedDeliveryException
-        extra_config: additionall key value pairs that will be passed to kafka driver
-            https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
-            e.g. {'debug':'broker,topic,msg'} to enable logging for kafka producer threads
-        ssl: secure socket layer object
+    - ``topic``: **Str**
+
+        name of a kafka topic where message should be saved
+
+    - ``brokers_ips``: **List[IpPort]** = *"127.0.0.1:9092"*
+
+        list of addresses with ports of all kafka brokers (kafka nodes)
+
+    - ``max_timeout_in_seconds``: **Numeric(0, 5)** = *0.5*
+
+        if a message was not delivered in maximum_timeout seconds
+        self.store will throw FailedDeliveryException
+
+    - ``extra_config``: **Dict[Str, Str]** = *None*
+
+        additionall key value pairs that will be passed to kafka driver
+        https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
+        e.g. {'debug':'broker,topic,msg'} to enable logging for kafka producer threads
+
+    - ``ssl``: **Optional[SSL]** = *None*
+
+        secure socket layer object
     """
     topic: Str
     brokers_ips: List[IpPort] = field(default=("127.0.0.1:9092",))
@@ -365,6 +417,33 @@ class KafkaStorage(Storage):
             log.log(logger.TRACE,
                     'KafkaStorage succeeded to send message; message: {}'.format(msg))
 
+    @staticmethod
+    def divide_message(msg):
+        """Kafka won't accept more than 1Mb messages, therefore too big
+        messages need to be divided into smaller chunks"""
+        MAX_SIZE = 10 ** 5
+        devided_message = []
+        msg_size = sys.getsizeof(msg)
+        if msg_size < MAX_SIZE:
+            return [msg]
+        else:
+            message = msg.split('\n')
+            new_message = ''
+            for i in range(len(message)):
+                new_metric = ''
+                while message[i].startswith('#'):
+                    new_metric += message[i] + '\n'
+                    i += 1
+                new_metric += message[i] + '\n'
+
+                if sys.getsizeof(new_message + new_metric) > MAX_SIZE and new_message:
+                    devided_message.append(new_message)
+                    new_message = new_metric
+                else:
+                    new_message += new_metric
+
+        return devided_message
+
     def store(self, metrics: List[Metric]) -> None:
         """Stores synchronously metrics in kafka.
 
@@ -392,31 +471,32 @@ class KafkaStorage(Storage):
         timestamp = get_current_time()
 
         msg = convert_to_prometheus_exposition_format(metrics, timestamp)
-        self.producer.produce(self.topic, msg.encode('utf-8'),
-                              callback=self.callback_on_delivery)
+        messages = self.divide_message(msg)
+        for message in messages:
+            self.producer.produce(self.topic, message.encode('utf-8'),
+                                  callback=self.callback_on_delivery)
+            r = self.producer.flush(self.max_timeout_in_seconds)  # block until all send
 
-        r = self.producer.flush(self.max_timeout_in_seconds)  # block until all send
+            # check if timeout expired
+            if r > 0:
+                raise FailedDeliveryException(
+                    "Maximum timeout {} for sending message had passed.".format(
+                        self.max_timeout_in_seconds))
 
-        # check if timeout expired
-        if r > 0:
-            raise FailedDeliveryException(
-                "Maximum timeout {} for sending message had passed.".format(
-                    self.max_timeout_in_seconds))
+            # check if any failed to be delivered
+            if self.error_from_callback is not None:
+                # before resetting self.error_from_callback we
+                # assign the original value to separate value
+                # to pass it to exception
+                error_from_callback__original_ref = self.error_from_callback
+                self.error_from_callback = None
 
-        # check if any failed to be delivered
-        if self.error_from_callback is not None:
-            # before resetting self.error_from_callback we
-            # assign the original value to separate value
-            # to pass it to exception
-            error_from_callback__original_ref = self.error_from_callback
-            self.error_from_callback = None
+                raise FailedDeliveryException(
+                    "Message has failed to be writen to kafka. API error message: {}.".format(
+                        error_from_callback__original_ref))
 
-            raise FailedDeliveryException(
-                "Message has failed to be writen to kafka. API error message: {}.".format(
-                    error_from_callback__original_ref))
-
-        log.debug('message size=%i with timestamp=%s stored in kafka topic=%r',
-                  len(msg), timestamp, self.topic)
+            log.debug('KafkaStorage: Message size=%i with timestamp=%s stored in kafka topic=%r',
+                      len(msg), timestamp, self.topic)
 
         return  # the message has been send to kafka
 
@@ -438,4 +518,30 @@ class MetricPackage:
         if common_labels:
             for metric in self.metrics:
                 metric.labels.update(common_labels)
+        log.debug('storing %s metrics using %r' % (len(self.metrics), self.storage))
         self.storage.store(self.metrics)
+
+
+@dataclass
+class FilterStorage(Storage):
+    """rst
+    Helper class to store metrics in multiple standard storages.
+    Additionally filters can be provided to filter metrics which will be provided to storages.
+
+    - ``storages``: **List[Storage]**
+
+        list of storages
+
+    - ``filter``: **Optional[List[str]]** = *None*
+
+        list of filters
+
+    """
+    storages: List[Storage]
+    filter: Optional[List[str]] = None
+
+    def store(self, metrics):
+        if self.filter is not None:
+            metrics = list(filter(lambda metric: metric.name in self.filter, metrics))
+        for storage in self.storages:
+            storage.store(metrics)

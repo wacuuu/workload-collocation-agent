@@ -1,0 +1,13 @@
+kind: Service
+apiVersion: v1
+metadata:
+  name: fluentd
+  labels:
+    app: fluentd
+spec:
+  selector:
+    app: fluentd
+  ports:
+  - name: web
+    port: 24231
+    targetPort: 24231

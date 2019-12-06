@@ -1,0 +1,17 @@
+nameSuffix: -medium
+bases:
+- ../base
+
+commonLabels:
+  app: memcached-medium
+  size: medium
+
+configMapGenerator:
+- name: mutilate
+  behavior: merge
+  literals:
+  - value=10000      # 10k * 1M = 10G
+  - qps=40000      # 500k
+
+patchesStrategicMerge:
+  - resources.yaml

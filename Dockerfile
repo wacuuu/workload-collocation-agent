@@ -12,51 +12,70 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#### Multistage Dockerfile
+# to build wca in three flavors:
+# 1. devel: development version (without verision)
+# 2. pex: pex based Dockerfile that includes version number based on .git repo
+# 3. standalone: empty image with just and not any development tools
 
-# Building stage first: wca.
-FROM centos:7 AS wca
+## Testing
+# 1. Build
+# docker build -t wca:latest .
 
-RUN echo "" && rpm --import https://packages.confluent.io/rpm/5.2/archive.key
-COPY /configs/confluent_repo/confluent.repo /etc/yum.repos.d/confluent.repo
+# 2. Run
+# sudo docker run -it --privileged --rm wca -c /wca/configs/extra/static_measurements.yaml -0
+# should output some metrics
 
-RUN yum -y update
-RUN yum -y install epel-release
-RUN yum -y install python3 python-pip which make git
-RUN yum install -y librdkafka1 librdkafka-devel gcc python3-devel
+# ------------------------ devel ----------------------
+FROM centos:7 AS devel
 
-RUN pip install pipenv
+RUN yum -y update && yum -y install python36 python-pip which make git
+RUN pip3.6 install pipenv
+
+# 2LM binries for topology discovery (WIP) -- TO BE REMOVED FROM master/1.0.x
+RUN yum install -y wget lshw
+RUN (cd /etc/yum.repos.d/; \
+        wget https://copr.fedorainfracloud.org/coprs/jhli/ipmctl/repo/epel-7/jhli-ipmctl-epel-7.repo; \
+        wget https://copr.fedorainfracloud.org/coprs/jhli/safeclib/repo/epel-7/jhli-safeclib-epel-7.repo)
+RUN yum install -y ndctl ndctl-libs ndctl-devel libsafec ipmctl
+# --- TODO: consider moving that to init container just responsilbe for preparing this data
 
 WORKDIR /wca
 
-RUN [ ! -d confluent-kafka-python ] && git clone https://github.com/confluentinc/confluent-kafka-python
-RUN cd confluent-kafka-python && git checkout v1.0.1
 
-# Cache will be propably invalidated here.
+COPY Pipfile Pipfile
+COPY Pipfile.lock Pipfile.lock
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+RUN pipenv install --dev --deploy
+ENV PYTHONPATH=/wca
+
+
+
+# note: Cache will be propably invalidated here.
+COPY configs ./configs
+
+COPY examples/external_package.py ./examples
+COPY examples/hello_world_runner.py ./examples
+COPY examples/hello_world_runner_with_dateutil.py ./examples
+COPY examples/http_storage.py ./examples
+COPY examples/__init__.py ./examples
+
+COPY wca ./wca
+
+ENTRYPOINT ["pipenv", "run", "python3.6", "wca/main.py"]
+
+# ------------------------ pex ----------------------
+# "pex" stage includes pex file in /usr/bin/
+FROM devel AS pex
 COPY . .
+RUN make wca_package
+RUN cp /wca/dist/wca.pex /usr/bin/
+ENTRYPOINT /usr/bin/wca.pex
 
-RUN git clean -fdx
-RUN pipenv install --dev
-RUN pipenv run make wca_package OPTIONAL_FEATURES=kafka_storage
-
-
-# Building final container that consists of wca only.
-FROM centos:7
-
-ENV CONFIG=/etc/wca/wca_config.yml \
-    EXTRA_COMPONENT=example.external_package:ExampleDetector \
-    LOG=info \
-    OWN_IP=0.0.0.0 \
-    ENV_UNIQ_ID=0
-
-RUN yum install -y epel-release
-RUN yum install -y python3
-
-COPY --from=wca /wca/dist/wca.pex /usr/bin/
-
-ENTRYPOINT \
-    python3 /usr/bin/wca.pex \
-        --config $CONFIG \
-        --register $EXTRA_COMPONENT \
-        --log $LOG \
-        -0 \
-        $WCA_EXTRA_PARAMS
+## ------------------------ standalone ----------------------
+## Building final container that consists of wca only.
+FROM centos:7 AS standalone
+RUN yum -y update && yum -y install python36
+COPY --from=pex /wca/dist/wca.pex /usr/bin/
+ENTRYPOINT /usr/bin/wca.pex

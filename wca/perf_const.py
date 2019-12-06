@@ -14,6 +14,7 @@
 
 
 import ctypes
+
 from wca.metrics import MetricName
 from wca.platforms import CPUCodeName
 
@@ -57,16 +58,17 @@ class PerfEventAttr(ctypes.Structure):
                 ('sample_type', ctypes.c_ulong),
                 ('read_format', ctypes.c_ulong),
                 ('flags', ctypes.c_ulong),
-                ('wakeup_events', ctypes.c_uint),
-                ('IGNORE3', ctypes.c_uint),
-                ('IGNORE4', ctypes.c_ulong),
-                ('IGNORE5', ctypes.c_ulong),
-                ('IGNORE6', ctypes.c_ulong),
-                ('IGNORE7', ctypes.c_uint),
-                ('IGNORE8', ctypes.c_int),
-                ('IGNORE9', ctypes.c_ulong),
+                ('wakeup_events', ctypes.c_uint),  # union {wakeup_events, wakeup_watermark}
+                ('bp_type', ctypes.c_uint),  # bp_type
+                ('config1', ctypes.c_ulong),  # union {bp_addr, kprobe_func, kprobe_path, config1}
+                ('config2', ctypes.c_ulong),  # union {bp_len, kprobe_addr, probe_offset, config2}
+                ('branch_sample_type', ctypes.c_ulong),
+                ('sample_regs_user', ctypes.c_uint),  # sample_regs_user
+                ('sample_stack_user', ctypes.c_int),  # sample_stack_user
+                ('IGNORE9', ctypes.c_ulong),  # TODO: check me for 3.10 vs 5.15
                 ('IGNORE10', ctypes.c_uint),
-                ('IGNORE11', ctypes.c_uint)]
+                ('IGNORE11', ctypes.c_uint),
+                ]
 
 
 class EventType:
@@ -90,27 +92,49 @@ class EventTypeConfig:
 
 
 HardwareEventNameMap = {
-    MetricName.CYCLES: EventTypeConfig.PERF_COUNT_HW_CPU_CYCLES,
-    MetricName.INSTRUCTIONS: EventTypeConfig.PERF_COUNT_HW_INSTRUCTIONS,
-    MetricName.CACHE_MISSES: EventTypeConfig.PERF_COUNT_HW_CACHE_MISSES,
-    MetricName.CACHE_REFERENCES: EventTypeConfig.PERF_COUNT_HW_CACHE_REFERENCES,
+    MetricName.TASK_CYCLES: EventTypeConfig.PERF_COUNT_HW_CPU_CYCLES,
+    MetricName.TASK_INSTRUCTIONS: EventTypeConfig.PERF_COUNT_HW_INSTRUCTIONS,
+    MetricName.TASK_CACHE_MISSES: EventTypeConfig.PERF_COUNT_HW_CACHE_MISSES,
+    MetricName.TASK_CACHE_REFERENCES: EventTypeConfig.PERF_COUNT_HW_CACHE_REFERENCES,
 }
-
 
 # According SDM-vol-3b 19-48
 PREDEFINED_RAW_EVENTS = {
     # CPUCodeName: tuple(event_id, event_mask, counter_mask)
-    MetricName.MEMSTALL: {
+    MetricName.TASK_STALLED_MEM_LOADS: {
         CPUCodeName.SKYLAKE: (0xA3, 0x14, 20),
+        CPUCodeName.CASCADE_LAKE: (0xA3, 0x14, 20),
         CPUCodeName.BROADWELL: (0xA3, 0x06, 6)
-        },
-    MetricName.OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD: {
+    },
+    MetricName.TASK_OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD: {
         CPUCodeName.SKYLAKE: (0x60, 0x10, 0),
-        },
-    MetricName.OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD: {
+        CPUCodeName.CASCADE_LAKE: (0x60, 0x10, 0),
+    },
+    MetricName.TASK_OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD: {
         CPUCodeName.SKYLAKE: (0xB0, 0x10, 0),
-        }
-    }
+        CPUCodeName.CASCADE_LAKE: (0x60, 0x10, 0),
+    },
+    MetricName.TASK_MEM_LOAD_RETIRED_LOCAL_PMM: {
+        CPUCodeName.SKYLAKE: (0xd1, 0x80, 0),
+        CPUCodeName.CASCADE_LAKE: (0xd1, 0x80, 0),
+    },
+    MetricName.TASK_MEM_LOAD_RETIRED_LOCAL_DRAM: {
+        CPUCodeName.SKYLAKE: (0xd3, 0x01, 0),
+        CPUCodeName.CASCADE_LAKE: (0xd3, 0x01, 0),
+    },
+    MetricName.TASK_MEM_INST_RETIRED_LOADS: {
+        CPUCodeName.SKYLAKE: (0xd0, 0x81, 0),
+        CPUCodeName.CASCADE_LAKE: (0xd0, 0x81, 0),
+    },
+    MetricName.TASK_MEM_INST_RETIRED_STORES: {
+        CPUCodeName.SKYLAKE: (0xd0, 0x82, 0),
+        CPUCodeName.CASCADE_LAKE: (0xd0, 0x82, 0),
+    },
+    MetricName.TASK_DTLB_LOAD_MISSES: {
+        CPUCodeName.SKYLAKE: (0x08, 0x0e, 0),
+        CPUCodeName.CASCADE_LAKE: (0x08, 0x0e, 0),
+    },
+}
 
 
 class PerfType:

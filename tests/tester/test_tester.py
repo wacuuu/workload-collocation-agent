@@ -17,7 +17,7 @@ from wca.config import register
 
 from wca.extra.static_allocator import StaticAllocator
 
-from tests.tester.tester import Tester, FileCheck, MetricCheck
+from tests.tester.tester import IntegrationTester, FileCheck, MetricCheck
 
 
 @patch('tests.tester.tester._delete_cgroup')
@@ -33,7 +33,7 @@ def test_tester(
 
     mock_check = MagicMock()
 
-    tester = Tester('tests/tester/test_config.yaml')
+    tester = IntegrationTester('tests/tester/test_config.yaml')
 
     tester.testcases[0]['checks'] = [mock_check]
     tester.testcases[1]['checks'] = [mock_check]

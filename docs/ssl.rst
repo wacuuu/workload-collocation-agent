@@ -40,7 +40,7 @@ Example of minimal configuration that uses ``SSL``:
 
 .. code:: yaml
 
-    runner: !AllocationRunner
+    runner: !MeasurementRunner
       node: !KubernetesNode
         ssl: !SSL
           server_verify: True

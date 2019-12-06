@@ -11,17 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
 import logging
+import shlex
 import socket
+import subprocess  # nosec: B404, we deliberately use this module
 import time
-from typing import List, Dict, Set, Tuple, Optional
+from collections import defaultdict
+from itertools import groupby
+from json.decoder import JSONDecodeError
+from typing import List, Dict, Optional, Set
 
 import os
-import re
 from dataclasses import dataclass
 from enum import Enum
 
-from wca.metrics import Metric, MetricName
+from wca.metrics import Metric, MetricName, Measurements, export_metrics_from_measurements
 from wca.profiling import profiler
 
 try:
@@ -44,7 +49,7 @@ class CPUCodeName(Enum):
     ICE_LAKE = 'Ice Lake'
 
 
-def _parse_cpuinfo() -> Dict[str, str]:
+def _parse_cpuinfo() -> List[Dict[str, str]]:
     """Make dictionary from '/proc/cpuinfo' file."""
     with open('/proc/cpuinfo') as f:
         cpuinfo_string = f.read()
@@ -62,9 +67,9 @@ def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
 
     # https://elixir.bootlin.com/linux/v5.3/source/arch/x86/include/asm/intel-family.h#L64
     if model in [
-            0x4E, 0x5E,  # Client
-            0x55  # Server
-            ]:
+        0x4E, 0x5E,  # Client
+        0x55  # Server
+    ]:
         # Intel quirk to recognize Cascade Lake:
         # https://github.com/torvalds/linux/blob/54ecb8f7028c5eb3d740bb82b0f1d90f2df63c5c/arch/x86/kernel/cpu/resctrl/core.c#L887
         if stepping > 4:
@@ -72,9 +77,9 @@ def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
         else:
             return CPUCodeName.SKYLAKE
     elif model in [
-            0x3D, 0x47,  # Client
-            0x4F, 0x56  # Server
-            ]:
+        0x3D, 0x47,  # Client
+        0x4F, 0x56  # Server
+    ]:
         return CPUCodeName.BROADWELL
     else:
         return CPUCodeName.UNKNOWN
@@ -82,20 +87,25 @@ def get_cpu_codename(model: int, stepping: int) -> CPUCodeName:
 
 # 0-based logical processor number (matches the value of "processor" in /proc/cpuinfo)
 CpuId = int
+NodeId = int
+
+_version = None
 
 
 def get_wca_version():
     """Returns information about wca version."""
-    try:
-        version = get_distribution('wca').version
-    except DistributionNotFound:
-        log.warning("Version is not available. "
-                    "Probably egg-info directory does not exist"
-                    "(which is required for pkg_resources module "
-                    "to find the version).")
-        return "unknown_version"
+    global _version
+    if _version is None:
+        try:
+            _version = get_distribution('wca').version
+        except DistributionNotFound:
+            log.warning("Version is not available. "
+                        "Probably egg-info directory does not exist"
+                        "(which is required for pkg_resources module "
+                        "to find the version).")
+            _version = "unknown_version"
 
-    return version
+    return _version
 
 
 @dataclass
@@ -114,7 +124,7 @@ class RDTInformation:
     # is supported by platform,otherwise set to None.
     cbm_mask: Optional[str]  # based on /sys/fs/resctrl/info/L3/cbm_mask
     min_cbm_bits: Optional[str]  # based on /sys/fs/resctrl/info/L3/min_cbm_bits
-    num_closids: Optional[int]  # based on /sys/fs/resctrl/info/L3/num_closids
+    num_closids: Optional[int]  # based on /sys/fs/resctrl/info/L3/num_closids or MB/closids
 
     # MB control read-only parameters.
     mb_bandwidth_gran: Optional[int]  # based on /sys/fs/resctrl/info/MB/bandwidth_gran
@@ -133,56 +143,174 @@ class Platform:
     sockets: int  # number of sockets
     cores: int  # number of physical cores in total (sum over all sockets)
     cpus: int  # logical processors equal to the output of "nproc" Linux command
+    numa_nodes: int  # number of NUMA nodes
 
     cpu_model: str  # /proc/cpuinfo -> model_name
     cpu_model_number: int  # /proc/cpuinfo -> model
     cpu_codename: CPUCodeName
+    # mapping from socket, core id to CPU based on /proc/cpuinfo
+    topology: Dict[int, Dict[int, List[int]]]
 
-    # Utilization (usage):
-    # counter like, sum of all modes based on /proc/stat
-    # "cpu line" with 10ms resolution expressed in [ms]
-    cpus_usage: Dict[CpuId, int]
+    cpu_model: str
 
-    # [bytes] based on /proc/meminfo (gauge like)
-    # difference between MemTotal and MemAvail (or MemFree)
-    total_memory_used: int
-
+    # NUMA info
+    # mapping from numa node id to CPU (to support SNC), based on /sys/devices/system/numa
+    node_cpus: Dict[int, Set[int]]
+    # Distance based on /sys/devices/system/node/node*/distance
+    node_distances: Dict[int, Dict[int, int]]
     # [unix timestamp] Recorded timestamp of finishing data gathering (as returned from time.time)
     timestamp: float
 
     rdt_information: Optional[RDTInformation]
 
+    measurements: Measurements
+
+    swap_enabled: bool
+
+
+class MissingPlatformStaticInformation(Exception):
+    pass
+
+
+_platform_static_information_initialized = False
+_platform_static_information = {}
+
+
+def get_platform_static_information(strict_mode: bool) -> Measurements:
+    """Time-consuming gathering information function that calles external binaries e.g.
+    lshw and ipmctl. Assumption is that this information is not changing over life of WCA
+    application and should be called only once upon WCA starting.
+    :param strict_mode: raise expection if collection
+                        is not possible e.g. required binaries is missing
+    :return: cached platform information
+    """
+    # RETURN MEMORY DIMM DETAILS based on lshw
+    global _platform_static_information
+    global _platform_static_information_initialized
+    # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
+    if not _platform_static_information_initialized:
+
+        try:
+            # nosec: B603. We deliberately use 'subprocess'. There is a permanent input.
+            ipmctl_output = subprocess.check_output(  # nosec
+                shlex.split('ipmctl show -u B -memoryresources')).decode("utf-8")
+            memorymode_size = 0
+            for line in ipmctl_output.splitlines():
+                if 'MemoryCapacity' in line:
+                    memorymode_size = line.split('=')[1].split(' ')[0]
+            _platform_static_information[MetricName.PLATFORM_MEM_MODE_SIZE_BYTES] = int(
+                memorymode_size)
+        except FileNotFoundError:
+            log.warning('ipmctl unavailable, cannot read memory mode size')
+            if strict_mode:
+                raise MissingPlatformStaticInformation('ipmctl binary is missing!')
+
+        try:
+            # nosec: B603. We deliberately use 'subprocess'. There is a permanent input.
+            lshw_raw = subprocess.check_output(  # nosec
+                shlex.split('lshw -class memory -json -quiet -sanitize -notime'))
+            lshw_str = lshw_raw.decode("utf-8")
+            lshw_str = lshw_str.rstrip()
+            lshw_str = '[' + lshw_str[0:(len(lshw_str) - 1)] + ']'
+            lshw_data = json.loads(lshw_str)
+            nvm_dimm_count = 0
+            ram_dimm_count = 0
+            nvm_dimm_size = 0
+            ram_dimm_size = 0
+            for system in lshw_data:
+                if system['id'] == 'memory' and 'children' in system:
+                    for bank in system['children']:
+                        if '[empty]' in bank['description']:
+                            continue
+                        elif 'DDR4' in bank['description']:
+                            assert bank['units'] == 'bytes'
+                            ram_dimm_count += 1
+                            ram_dimm_size += bank['size']
+                        elif 'Non-volatile' in bank['description']:
+                            assert bank['units'] == 'bytes'
+                            nvm_dimm_count += 1
+                            nvm_dimm_size += bank['size']
+
+            _platform_static_information[MetricName.PLATFORM_DIMM_COUNT] = {}
+            _platform_static_information[MetricName.PLATFORM_DIMM_COUNT]['ram'] = int(
+                ram_dimm_count)
+            _platform_static_information[MetricName.PLATFORM_DIMM_COUNT]['nvm'] = int(
+                nvm_dimm_count)
+            _platform_static_information[MetricName.PLATFORM_DIMM_TOTAL_SIZE_BYTES] = {}
+            _platform_static_information[MetricName.PLATFORM_DIMM_TOTAL_SIZE_BYTES]['ram'] = int(
+                ram_dimm_size)
+            _platform_static_information[MetricName.PLATFORM_DIMM_TOTAL_SIZE_BYTES]['nvm'] = int(
+                nvm_dimm_size)
+        except FileNotFoundError:
+            log.warning('lshw unavailable, cannot read memory topology size!')
+            if strict_mode:
+                raise MissingPlatformStaticInformation('ipmctl binary is missing!')
+
+        except JSONDecodeError:
+            log.warning('lshw unavailable (incorrect version or missing data), '
+                        'cannot parse output, cannot read memory topology size!')
+            if strict_mode:
+                raise MissingPlatformStaticInformation
+
+        _platform_static_information_initialized = True
+        log.debug('platform static information: %r', _platform_static_information)
+
+    return _platform_static_information
+
 
 def create_metrics(platform: Platform) -> List[Metric]:
     """Creates a list of Metric objects from data in Platform object"""
-    platform_metrics = list()
+    platform_metrics = []
+
+    platform_metrics.extend([
+        Metric.create_metric_with_metadata(MetricName.PLATFORM_TOPOLOGY_CORES,
+                                           value=platform.cores),
+        Metric.create_metric_with_metadata(MetricName.PLATFORM_TOPOLOGY_CPUS,
+                                           value=platform.cpus),
+        Metric.create_metric_with_metadata(MetricName.PLATFORM_TOPOLOGY_SOCKETS,
+                                           value=platform.sockets),
+        Metric.create_metric_with_metadata(MetricName.PLATFORM_LAST_SEEN,
+                                           value=time.time()),
+    ])
+
+    # Exporting measurements into metrics.
+    platform_metrics.extend(export_metrics_from_measurements(platform.measurements))
+
     platform_metrics.append(
         Metric.create_metric_with_metadata(
-            name=MetricName.MEM_USAGE,
-            value=platform.total_memory_used)
-    )
-    for cpu_id, cpu_usage in platform.cpus_usage.items():
-        platform_metrics.append(
-            Metric.create_metric_with_metadata(
-                name=MetricName.CPU_USAGE_PER_CPU,
-                value=cpu_usage,
-                labels={"cpu": str(cpu_id)}
+            MetricName.WCA_INFORMATION,
+            value=1,
+            labels=dict(
+                sockets=str(platform.sockets),
+                cores=str(platform.cores),
+                cpus=str(platform.cpus),
+                cpu_model=platform.cpu_model,
+                wca_version=get_wca_version(),
             )
         )
+    )
+
     return platform_metrics
 
 
-def create_labels(platform: Platform) -> Dict[str, str]:
-    """Returns dict of topology and hostname labels"""
+def create_labels(platform: Platform, include_optional_labels: bool) -> Dict[str, str]:
+    """Returns dict of topology and hostname labels
+    Note: Those will will assigned to every returned metric.
+    """
     labels = dict()
-    # Topology labels
-    labels["sockets"] = str(platform.sockets)
-    labels["cores"] = str(platform.cores)
-    labels["cpus"] = str(platform.cpus)
-    # Additional labels
+
+    # REQUIRED (for host identification)
     labels["host"] = socket.gethostname()
-    labels["wca_version"] = get_wca_version()
-    labels["cpu_model"] = platform.cpu_model
+
+    # OPTIONAL (for further metrics analysis)
+    if include_optional_labels:
+        # Topology labels
+        labels["sockets"] = str(platform.sockets)
+        labels["cores"] = str(platform.cores)
+        labels["cpus"] = str(platform.cpus)
+        # Additional labels
+        labels["cpu_model"] = platform.cpu_model
+        labels["wca_version"] = get_wca_version()
 
     return labels
 
@@ -226,6 +354,95 @@ def read_proc_meminfo() -> str:
     return out
 
 
+BASE_SYSFS_NODES_PATH = '/sys/devices/system/node'
+
+
+def get_numa_nodes_count() -> int:
+    """returns how many numa nodes are available"""
+    node_count = 0
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            node_count += 1
+    return node_count
+
+
+def parse_node_meminfo() -> (Dict[NodeId, int], Dict[NodeId, int]):
+    """Parses /sys/devices/system/node/node*/meminfo and returns free/used
+    return values are in bytes.
+    """
+    node_free = {}
+    node_used = {}
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            meminfo_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'meminfo')
+            with open(meminfo_filename) as f:
+                for line in f.readlines():
+                    s = line.split()
+                    if len(s) != 5:
+                        continue
+                    if s[2] == "MemFree:":
+                        node_free[int(s[1])] = int(s[3]) << 10
+                    if s[2] == "MemUsed:":
+                        node_used[int(s[1])] = int(s[3]) << 10
+    return node_free, node_used
+
+
+def parse_node_cpus() -> Dict[NodeId, Set[int]]:
+    """
+    Parses /sys/devices/system/node/node*/cpulist"
+    Read CPU to NUMA node mapping based on /sys/devices/system/node
+    :return: mapping from numa_node -> list of cpus (as List[Set] of int)
+    """
+    node_cpus = {}
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            node_id = int(nodedir[4:])
+            cpu_list_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'cpulist')
+            with open(cpu_list_filename) as cpu_list_file:
+                node_cpus[node_id] = decode_listformat(cpu_list_file.read())
+    return node_cpus
+
+
+VMSTAT_METRICS = {
+    MetricName.PLATFORM_VMSTAT_NUMA_PAGES_MIGRATED: 'numa_pages_migrated',
+    MetricName.PLATFORM_VMSTAT_PGMIGRATE_SUCCESS: 'pgmigrate_success',
+    MetricName.PLATFORM_VMSTAT_PGMIGRATE_FAIL: 'pgmigrate_fail',
+    MetricName.PLATFORM_VMSTAT_NUMA_HINT_FAULTS: 'numa_hint_faults',
+    MetricName.PLATFORM_VMSTAT_NUMA_HINT_FAULTS_LOCAL: 'numa_hint_faults_local',
+    MetricName.PLATFORM_VMSTAT_PGFAULTS: 'pgfault',
+}
+
+
+def parse_proc_vmstat() -> Measurements:
+    """Read/parse and return measurements based on /proc/vmstat/"""
+    measurements = {}
+    with open('/proc/vmstat') as f:
+        for line in f.readlines():
+            for metric_name, key in VMSTAT_METRICS.items():
+                if line.startswith(key):
+                    measurements[metric_name] = int(line.split()[1])
+    return measurements
+
+
+def parse_node_distances() -> Dict[int, Dict[int, int]]:
+    """
+    Parses "/sys/devices/system/node/node*/distance"
+    Read distance to NUMA node mapping based on /sys/devices/system/node
+    :return: mapping from numa_node -> dict of distances (as dict with int key and value)
+    """
+    node_distances = {}
+
+    for nodedir in os.listdir(BASE_SYSFS_NODES_PATH):
+        if nodedir.startswith('node'):
+            node_id = int(nodedir[4:])
+            distance_filename = os.path.join(BASE_SYSFS_NODES_PATH, nodedir, 'distance')
+            with open(distance_filename) as distance_file:
+                distances = distance_file.readline()
+                node_distances[node_id] = {i: int(val) for i, val in enumerate(distances.split())}
+
+    return node_distances
+
+
 def parse_proc_stat(proc_stat_output) -> Dict[CpuId, int]:
     """Parses output of /proc/stat and calculates cpu usage for each cpu"""
     cpus_usage = {}
@@ -267,52 +484,40 @@ def read_proc_stat() -> str:
     return out
 
 
-def collect_topology_information() -> (int, int, int):
+def collect_topology_information(parsed_cpuinfo: List[Dict[str, str]]) -> (int, int, int,
+                                                                           Dict[int, Dict[
+                                                                               int, List[int]]],
+                                                                           Dict[int, List[int]]
+                                                                           ):
     """
     Reads files from /sys/devices/system/cpu to collect topology information
-    :return: tuple (nr_of_online_cpus, nr_of_cores, nr_of_sockets)
+    :return: tuple (nr_of_online_cpus, nr_of_cores, nr_of_sockets,
+                    mapping from [socket][core] -> list of cpus)
     """
 
-    def read_cpu_info_file(cpu, rel_file_path) -> int:
-        with open(os.path.join(sys_devices_system_cpu_path,
-                               cpu, rel_file_path)) as f:
-            return int(f.read())
+    def by_physical_id(processor):
+        return int(processor['physical id'])
 
-    sys_devices_system_cpu_path = "/sys/devices/system/cpu"
-    cpus = os.listdir(sys_devices_system_cpu_path)
-    # Filter out all unneeded folders
-    cpu_regex = re.compile(r'cpu[0-9]+')
-    cpus = [cpu for cpu in cpus if cpu_regex.match(cpu)]
-    cores_sockets_pairs: Set[Tuple[int, int]] = set()
-    sockets = set()
-    nr_of_online_cpus = 0
+    def by_core_id(processor):
+        return int(processor['core id'])
 
-    for cpu in cpus:
-        # Check whether current cpu is online
-        # There is no online status file for cpu0 so we omit checking it
-        # and assume it is online
-        if cpu != "cpu0":
-            cpu_online_status = read_cpu_info_file(cpu, "online")
-            if 1 == cpu_online_status:
-                nr_of_online_cpus += 1
-            else:
-                # If the cpu is not online, files topology/{physical_package_id, core_id}
-                # do not exist, so we continue
-                continue
-        else:
-            nr_of_online_cpus += 1
+    topology = defaultdict(dict)
 
-        socket_id = read_cpu_info_file(cpu, "topology/physical_package_id")
-        core_id = read_cpu_info_file(cpu, "topology/core_id")
-        cores_sockets_pairs.add((socket_id, core_id))
-        sockets.add(socket_id)
+    for physical_id, socket_processors in groupby(
+            sorted(parsed_cpuinfo, key=by_physical_id), key=by_physical_id):
+        for core_id, core_processors in groupby(
+                sorted(list(socket_processors), key=by_core_id), key=by_core_id):
+            topology[int(physical_id)][
+                int(core_id)] = [int(p['processor']) for p in core_processors]
 
-    # Get nr of cores by counting unique (socket_id, core_id) tuples
-    nr_of_cores = len(cores_sockets_pairs)
-    # Get nr of sockets by counting unique socket_ids
-    nr_of_sockets = len(sockets)
+    # get rid of defaultdict
+    topology = dict(topology)
 
-    return nr_of_online_cpus, nr_of_cores, nr_of_sockets
+    nr_of_online_cpus = len(parsed_cpuinfo)
+    nr_of_cores = sum(len(core_ids) for core_ids in topology.values())
+    nr_of_sockets = len(topology)
+
+    return nr_of_online_cpus, nr_of_cores, nr_of_sockets, topology
 
 
 BASE_RESCTRL_PATH = '/sys/fs/resctrl'
@@ -342,9 +547,9 @@ def _collect_rdt_information() -> RDTInformation:
     if rdt_cache_control_enabled:
         cbm_mask = _read_value('info/L3/cbm_mask')
         min_cbm_bits = _read_value('info/L3/min_cbm_bits')
-        num_closids = int(_read_value('info/L3/num_closids'))
+        cache_num_closids = int(_read_value('info/L3/num_closids'))
     else:
-        cbm_mask, min_cbm_bits, num_closids = None, None, None
+        cbm_mask, min_cbm_bits, cache_num_closids = None, None, None
 
     rdt_mb_control_enabled = 'MB:' in schemata_body
     if rdt_mb_control_enabled:
@@ -354,8 +559,11 @@ def _collect_rdt_information() -> RDTInformation:
     else:
         mb_bandwidth_gran, mb_min_bandwidth, mb_num_closids = None, None, None
 
-    if rdt_cache_control_enabled and rdt_mb_control_enabled:
-        num_closids = min(num_closids, mb_num_closids)
+    if rdt_cache_control_enabled or rdt_mb_control_enabled:
+        # Minimum of available closids readt from MB or L3
+        num_closids = min(filter(None, [cache_num_closids, mb_num_closids]))
+    else:
+        num_closids = None
 
     return RDTInformation(rdt_cache_monitoring_enabled,
                           rdt_mb_monitoring_enabled,
@@ -369,7 +577,10 @@ def _collect_rdt_information() -> RDTInformation:
 
 
 @profiler.profile_duration(name='collect_platform_information')
-def collect_platform_information(rdt_enabled: bool = True) -> (
+def collect_platform_information(rdt_enabled: bool = True,
+                                 gather_hw_mm_topology: bool = False,
+                                 extra_platform_measurements: Optional[Measurements] = None,
+                                 include_optional_labels: bool = False) -> (
         Platform, List[Metric], Dict[str, str]):
     """Returns Platform information, metrics and common labels.
 
@@ -383,35 +594,107 @@ def collect_platform_information(rdt_enabled: bool = True) -> (
     Note: returned metrics should be consistent with information covered by platform
 
     """
+    cpu_info = _parse_cpuinfo()
     # Static information
-    nr_of_cpus, nr_of_cores, no_of_sockets = collect_topology_information()
+    nr_of_cpus, nr_of_cores, no_of_sockets, topology = collect_topology_information(cpu_info)
     if rdt_enabled:
         rdt_information = _collect_rdt_information()
     else:
         rdt_information = None
-
-    # Dynamic information
-    cpus_usage = parse_proc_stat(read_proc_stat())
-    total_memory_used = parse_proc_meminfo(read_proc_meminfo())
-    cpu_info = _parse_cpuinfo()
 
     # All information are based on first CPU.
     cpu_model = cpu_info[0]['model name']
     cpu_model_number = int(cpu_info[0]['model'])
     cpu_codename = get_cpu_codename(int(cpu_info[0]['model']), int(cpu_info[0]['stepping']))
 
+    # Dynamic information
+    platform_measurements = {}
+    platform_measurements[MetricName.PLATFORM_CPU_USAGE] = parse_proc_stat(read_proc_stat())
+    platform_measurements[MetricName.PLATFORM_MEM_USAGE_BYTES] = parse_proc_meminfo(
+        read_proc_meminfo())
+    node_free, node_used = parse_node_meminfo()
+    platform_measurements[MetricName.PLATFORM_MEM_NUMA_FREE_BYTES] = node_free
+    platform_measurements[MetricName.PLATFORM_MEM_NUMA_USED_BYTES] = node_used
+
+    # Merge local platform measurements with passed extra_platform_measurements
+    platform_measurements.update(extra_platform_measurements
+                                 if extra_platform_measurements is not None
+                                 else {})
+
+    if gather_hw_mm_topology is None:
+        platform_static_information = get_platform_static_information(strict_mode=False)
+    elif gather_hw_mm_topology:
+        platform_static_information = get_platform_static_information(strict_mode=True)
+    else:
+        platform_static_information = {}
+    platform_measurements.update(platform_static_information)
+
+    platform_measurements.update(parse_proc_vmstat())
+
     platform = Platform(
         sockets=no_of_sockets,
         cores=nr_of_cores,
         cpus=nr_of_cpus,
+        numa_nodes=get_numa_nodes_count(),
+        topology=topology,
         cpu_model=cpu_model,
         cpu_model_number=cpu_model_number,
         cpu_codename=cpu_codename,
-        cpus_usage=cpus_usage,
-        total_memory_used=total_memory_used,
         timestamp=time.time(),
-        rdt_information=rdt_information
+        rdt_information=rdt_information,
+        node_cpus=parse_node_cpus(),
+        node_distances=parse_node_distances(),
+        measurements=platform_measurements,
+        swap_enabled=is_swap_enabled()
     )
-    assert len(platform.cpus_usage) == platform.cpus, \
+    assert len(platform_measurements[MetricName.PLATFORM_CPU_USAGE]) == platform.cpus, \
         "Inconsistency in cpu data returned by kernel"
-    return platform, create_metrics(platform), create_labels(platform)
+    return platform, create_metrics(platform), create_labels(platform, include_optional_labels)
+
+
+def decode_listformat(value: str) -> Set[int]:
+    """Parse "List Format" as describe by man cpuset(7)
+
+    can raise ValueError in case in improper input.
+    """
+    cores = set()
+
+    if not value:
+        return set()
+
+    ranges = value.split(',')
+
+    for r in ranges:
+        boundaries = r.split('-')
+
+        if len(boundaries) == 1:
+            cores.add(int(boundaries[0].strip()))
+        elif len(boundaries) == 2:
+            start = int(boundaries[0].strip())
+            end = int(boundaries[1].strip())
+
+            for i in range(start, end + 1):
+                cores.add(i)
+
+    return set(cores)
+
+
+def encode_listformat(ints: Set[int]) -> str:
+    """ Encode as "List Format" man cpuset(7) list of ints as comma separated list of cpus.
+    Works for numa nodes as well.
+    Assumptions:
+    - returned list is sorted and always comma separated.
+    """
+    assert all(isinstance(i, int) for i in ints), 'simple type check'
+    return ','.join(map(str, sorted(ints)))
+
+
+def is_swap_enabled() -> bool:
+    mem_info = read_proc_meminfo()
+    for line in mem_info.split('\n'):
+        if line.startswith("SwapTotal"):
+            value = line.split()[1]
+            if value.startswith('0'):
+                return False
+            return True
+    return False

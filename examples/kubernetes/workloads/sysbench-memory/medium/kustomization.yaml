@@ -1,0 +1,19 @@
+nameSuffix: -medium
+
+bases:
+- ../base
+
+commonLabels:
+  app: sysbench-memory-medium
+  size: medium
+
+patchesStrategicMerge:
+  - resources.yaml
+
+configMapGenerator:
+- name: sysbench-memory
+  behavior: merge
+  literals:
+    - threads=2
+    - memory=2g
+    - report_interval=1

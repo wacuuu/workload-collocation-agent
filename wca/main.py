@@ -49,15 +49,13 @@ def valid_config_file(config):
         exit(1)
 
     mode = stat.S_IMODE(os.stat(config).st_mode)
-    rwx_r = (stat.S_IEXEC | stat.S_IWRITE | stat.S_IREAD
-             | stat.S_IRGRP | stat.S_IROTH)
-    rwx = (stat.S_IEXEC | stat.S_IWRITE | stat.S_IREAD)
-    rw_r = (stat.S_IWRITE | stat.S_IREAD | stat.S_IRGRP | stat.S_IROTH)
-    rw = (stat.S_IWRITE | stat.S_IREAD)
-    if mode != rwx_r and mode != rwx and mode != rw_r and mode != rw:
+    other_write_mode = mode & 0b10  # Check if other class write mode flag is set.
+
+    if other_write_mode:
         log.error(
             'Error: The config is not valid. It does not have correct ACLs. '
-            'Only owner should be able to write.')
+            'Only owner should be able to write (Hint: try chmod og-rwto fix the problem).'
+        )
         exit(1)
 
 
@@ -99,7 +97,8 @@ def main():
 
     # Initialize logging subsystem from command line options.
     log_levels = logger.parse_loggers_from_list(args.levels)
-    log_levels.setdefault(logger.DEFAULT_MODULE, 'info')
+    log_levels_copy_with_default = dict(**log_levels)
+    log_levels_copy_with_default.setdefault(logger.DEFAULT_MODULE, 'info')
     logger.configure_loggers_from_dict(log_levels)
 
     log.warning('This software is pre-production and should not be deployed to production servers.')
@@ -173,4 +172,6 @@ def debug():
 
 
 if __name__ == '__main__':
+    if 'WCA_DEBUG' in os.environ and os.environ['WCA_DEBUG'] == 'True':
+        debug()
     main()

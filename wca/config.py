@@ -25,19 +25,20 @@ It is connected with 'components' module which plays a role of registry of all c
 One additionally feature is builtin support for including other yaml files
 using special tag called !file (check _file_loader_constructor docs for detailed descriptor).
 """
-import enum
-import functools
 import inspect
-import io
 import ipaddress
 import logging
-import os
-import types
 import typing
-from os.path import exists, isabs, split  # direct target import for mocking purposes in test_main
-from ruamel import yaml
 from typing import Any, Optional
 from urllib.parse import urlparse
+
+import enum
+import functools
+import io
+import os
+import types
+from os.path import exists, isabs, split  # direct target import for mocking purposes in test_main
+from ruamel import yaml
 
 from wca import logger
 
@@ -48,6 +49,16 @@ log = logging.getLogger(__name__)
 ROOT_PATH = ''
 
 _registered_tags = set()
+
+
+def _read_env(loader: yaml.loader.Loader, node: yaml.nodes.Node):
+    value = loader.construct_scalar(node)
+    seq = os.environ.get(value, "")
+    return seq
+
+
+_yaml.constructor.add_constructor('!Env', functools.partial(_read_env))
+_registered_tags.add('!Env')
 
 
 class ConfigLoadError(Exception):
@@ -108,8 +119,8 @@ def assure_absolute_path(value):
 def assure_permission_path(value, permission):
     if not os.access(value, permission):
         raise ValidationError(
-                'file does not exist or cannot access to `{}` with permission `{}`'.format(
-                    value, permission))
+            'file does not exist or cannot access to `{}` with permission `{}`'.format(
+                value, permission))
 
 
 def assure_no_parent_directory_access(value):
@@ -231,7 +242,6 @@ def Path(absolute: Optional[bool] = False,
          max_size: int = 400,
          mode: Optional[int] = None  # Permission mode
          ):
-
     return _PathType('Path', (_PathType, SemanticType),
                      dict(absolute=absolute, max_size=max_size, mode=mode))
 
@@ -276,7 +286,7 @@ def _assure_dict_type(value: dict, expected_type):
     """Validate that value is type of dict and recursively matches expected Dict type."""
     if not isinstance(value, dict):
         raise ValidationError('expected dict-like type %r, but got %r' % (expected_type,
-                              type(value)))
+                                                                          type(value)))
     else:
         expected_key_type, expected_value_type = expected_type.__args__
         for key, item_value in value.items():

@@ -11,12 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import os
 
 import pytest
 
 from wca import config
-from wca import testing
+from tests import testing
 from wca.config import ConfigLoadError
 
 
@@ -74,6 +74,17 @@ def test_config_with_simple_classes():
     assert boo.foo is foo
     assert len(boo.items) == 2
     assert isinstance(boo.items[0], Item)
+
+
+def test_config_with_env_class():
+    test_config_path = testing.relative_module_path(__file__, 'test_config_env.yaml')
+    data = config.load_config(test_config_path)
+
+    user = data['from_env']
+    assert user == os.environ["USER"]
+    assert user.strip() != ''
+
+    assert data['unset_env'] == ''
 
 
 def test_config_unsafe_object_creation():

@@ -12,23 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from enum import Enum
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Union
-import os
-from urllib.parse import urljoin
 import logging
+import pathlib
+from typing import Dict, List, Optional, Union
+from urllib.parse import urljoin
+
+import os
 import requests
+from dataclasses import dataclass, field
+from enum import Enum
 
 from wca import logger
-from wca.config import assure_type, Numeric, Url, Str
-from wca.metrics import MetricName
+from wca.cgroups import CgroupSubsystem
+from wca.config import assure_type, Numeric, Url, Str, Path
+from wca.logger import TRACE
 from wca.nodes import Node, Task, TaskId, TaskSynchronizationException
+from wca.resources import calculate_pod_resources
 from wca.security import SSL, HTTPSAdapter
 
-DEFAULT_EVENTS = (MetricName.INSTRUCTIONS, MetricName.CYCLES, MetricName.CACHE_MISSES)
-
 log = logging.getLogger(__name__)
+
+SERVICE_TOKEN_FILENAME = "/var/run/secrets/kubernetes.io/serviceaccount/token"  # nosec
+SERVICE_CERT_FILENAME = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"  # nosec
 
 
 @dataclass
@@ -75,22 +80,97 @@ class QosClass(str, Enum):
 
 @dataclass
 class KubernetesNode(Node):
-    # We need to know what cgroup driver is used to properly build cgroup paths for pods.
-    #   Reference in source code for kubernetes version stable 1.13:
-    #   https://github.com/kubernetes/kubernetes/blob/v1.13.3/pkg/kubelet/cm/cgroup_manager_linux.go#L207
-    cgroup_driver: CgroupDriverType = field(
-        default_factory=lambda: CgroupDriverType(CgroupDriverType.CGROUPFS))
+    """rst
+    Class to communicate with orchestrator: Kubernetes.
+    Derived from abstract Node class providing get_tasks interface.
 
+    - ``cgroup_driver``: **CgroupDriverType** = *CgroupDriverType.CGROUPFS*
+
+        We need to know what cgroup driver is used to properly build cgroup paths for pods.
+        Reference in source code for kubernetes version stable 1.13:
+        https://github.com/kubernetes/kubernetes/blob/v1.13.3/pkg/kubelet/cm/cgroup_manager_linux.go#L207
+
+
+    - ``ssl``: **Optional[SSL]** = *None*
+
+        ssl object used to communicate with kubernetes
+
+    - ``client_token_path``: **Optional[Path]** = *SERVICE_TOKEN_FILENAME*
+
+        Default path is using by pods. You can override it to use wca outside pod.
+
+    - ``server_cert_ca_path``: **Optional[Path]** = *SERVICE_CERT_FILENAME*
+
+        Default path is using by pods. You can override it to use wca outside pod.
+
+    - ``kubelet_enabled``: **bool** = *False*
+
+        If true use **kubelet**, otherwise **kubeapi**.
+
+    - ``kubelet_endpoint``: **Url** = *'https://127.0.0.1:10250'*
+
+        By default use localhost.
+
+    - ``kubeapi_host``: **Str** = *None*
+
+    - ``kubeapi_port``: **Str** = *None*
+
+    - ``node_ip``: **Str** = *None*
+
+    - ``timeout``: **Numeric(1, 60)** = *5*
+
+        Timeout to access kubernetes agent [seconds].
+
+    - ``monitored_namespaces``: **List[Str]** =  *["default"]*
+
+        List of namespaces to monitor pods in.
+    """
+    cgroup_driver: CgroupDriverType = CgroupDriverType.CGROUPFS
     ssl: Optional[SSL] = None
 
-    # By default use localhost, however kubelet may not listen on it.
+    client_token_path: Optional[Path(absolute=True, mode=os.R_OK)] = SERVICE_TOKEN_FILENAME
+    server_cert_ca_path: Optional[Path(absolute=True, mode=os.R_OK)] = SERVICE_CERT_FILENAME
+
+    kubelet_enabled: bool = False
     kubelet_endpoint: Url = 'https://127.0.0.1:10250'
 
-    # Timeout to access kubernetes agent.
+    kubeapi_host: Str = None
+    kubeapi_port: Str = None  # Because !Env is String and another type cast might be problematic
+    node_ip: Str = None
+
     timeout: Numeric(1, 60) = 5  # [s]
 
-    # List of namespaces to monitor pods in.
     monitored_namespaces: List[Str] = field(default_factory=lambda: ["default"])
+
+    def _request_kubeapi(self):
+        kubeapi_endpoint = "https://{}:{}".format(self.kubeapi_host, self.kubeapi_port)
+        log.debug("Created kubeapi endpoint %s", kubeapi_endpoint)
+
+        with pathlib.Path(self.client_token_path).open() as f:
+            service_token = f.read()
+
+        pod_list_from_all_namespaces = []
+        for namespace in self.monitored_namespaces:
+            full_url = urljoin(kubeapi_endpoint, "/api/v1/namespaces/{}/pods".format(namespace))
+
+            r = requests.get(
+                full_url,
+                headers={
+                    "Authorization": "Bearer {}".format(service_token)
+                },
+                timeout=self.timeout,
+                verify=self.server_cert_ca_path
+            )
+
+            if not r.ok:
+                log.error('An unexpected error occurred for namespace "%s": %i %s - %s',
+                          namespace, r.status_code, r.reason, r.raw)
+            r.raise_for_status()
+
+            pod_list_from_namespace = r.json().get('items')
+            pod_list_from_all_namespaces.extend(pod_list_from_namespace)
+
+        return pod_list_from_all_namespaces
 
     def _request_kubelet(self):
         PODS_PATH = '/pods'
@@ -100,37 +180,52 @@ class KubernetesNode(Node):
             s = requests.Session()
             s.mount(self.kubelet_endpoint, HTTPSAdapter())
             r = s.get(
-                    full_url,
-                    json=dict(type='GET_STATE'),
-                    timeout=self.timeout,
-                    verify=self.ssl.server_verify,
-                    cert=self.ssl.get_client_certs())
+                full_url,
+                json=dict(type='GET_STATE'),
+                timeout=self.timeout,
+                verify=self.ssl.server_verify,
+                cert=self.ssl.get_client_certs())
         else:
             r = requests.get(
                 full_url,
                 json=dict(type='GET_STATE'),
                 timeout=self.timeout)
 
+        if not r.ok:
+            log.error('%i %s - %s', r.status_code, r.reason, r.raw)
         r.raise_for_status()
 
-        return r.json()
+        return r.json().get('items')
 
     def get_tasks(self) -> List[Task]:
         """Returns only running tasks."""
         try:
-            kubelet_json_response = self._request_kubelet()
+            if self.kubelet_enabled:
+                podlist_json_response = self._request_kubelet()
+            else:
+                podlist_json_response = self._request_kubeapi()
+                if self.node_ip is None:
+                    raise ValueError("node_ip is not set in config")
         except requests.exceptions.ConnectionError as e:
-            raise TaskSynchronizationException('%s' % e) from e
+            raise TaskSynchronizationException('connection error: %s' % e) from e
+        except requests.exceptions.ReadTimeout as e:
+            raise TaskSynchronizationException('timeout: %s' % e) from e
 
         tasks = []
-        for pod in kubelet_json_response.get('items'):
+        for pod in podlist_json_response:
             container_statuses = pod.get('status').get('containerStatuses')
-            if not container_statuses:
-                # Lacking needed information.
+
+            # Kubeapi returns all pods in cluster
+            if not self.kubelet_enabled and pod["status"]["hostIP"] != self.node_ip.strip():
                 continue
 
-            # Ignore pods in not monitored namespaces.
-            if pod.get('metadata').get('namespace') not in self.monitored_namespaces:
+            # Kubelet return all pods on the node. Ignore pods in not monitored namespaces.
+            if self.kubelet_enabled and \
+                    pod.get('metadata').get('namespace') not in self.monitored_namespaces:
+                continue
+
+            # Lacking needed information.
+            if not container_statuses:
                 continue
 
             # Read into variables essential information about pod.
@@ -173,7 +268,7 @@ class KubernetesNode(Node):
             container_spec = pod.get('spec').get('containers')
             tasks.append(KubernetesTask(
                 name=task_name, task_id=pod_id, qos=qos, labels=labels,
-                resources=_calculate_pod_resources(container_spec),
+                resources=calculate_pod_resources(container_spec),
                 cgroup_path=_build_cgroup_path(self.cgroup_driver, qos, pod_id),
                 subcgroups_paths=containers_cgroups))
 
@@ -182,7 +277,11 @@ class KubernetesNode(Node):
         return tasks
 
 
-def _build_cgroup_path(cgroup_driver, qos, pod_id, container_id=''):
+class MissingCgroupException(Exception):
+    pass
+
+
+def _build_cgroup_path(cgroup_driver, qos: str, pod_id: str, container_id=''):
     """If cgroup for pod needed set container_id to empty string."""
     result: str = ""
     if cgroup_driver == CgroupDriverType.SYSTEMD:
@@ -195,63 +294,36 @@ def _build_cgroup_path(cgroup_driver, qos, pod_id, container_id=''):
                               container_id, "")
 
     elif cgroup_driver == CgroupDriverType.CGROUPFS:
-        result = os.path.join('/kubepods',
-                              '' if qos == 'guaranteed' else qos,
-                              'pod{}'.format(pod_id),
-                              container_id, "")
+        # Pod cgroup is same as pod_id.
+        # StaticPod cgroup is hash (metadata.annotations.kubernetes.io/config.hash)
+        # same as pod_id but without `-` characters.
+
+        pod_path = os.path.join('/kubepods',
+                                '' if qos == 'guaranteed' else qos,
+                                'pod{}'.format(pod_id))
+
+        cutted_pod_path = os.path.join('/kubepods',
+                                       '' if qos == 'guaranteed' else qos,
+                                       'pod{}'.format(pod_id.replace('-', '')))
+
+        log.log(TRACE, 'pod_id=%s container_id=%s cgroup locations %r and %r',
+                pod_id, container_id, pod_path, cutted_pod_path)
+        if os.path.exists(CgroupSubsystem.CPU + pod_path):
+            log.log(TRACE, 'pod_id=%s container_id=%s cgroup path=%r location',
+                    pod_id, container_id, pod_path)
+            result = os.path.join(pod_path, container_id, "")
+        elif os.path.exists(CgroupSubsystem.CPU + cutted_pod_path):
+            result = os.path.join(cutted_pod_path, container_id, "")
+            log.log(TRACE, 'pod_id=%s container_id=%s cgroup path=%r location',
+                    pod_id, container_id, cutted_pod_path)
+        else:
+            raise MissingCgroupException(
+                'There is no pod cgroup matching pod_id: {} !'.format(pod_id))
+
     # Remove last slash from path.
     if len(result) > 1 and result[-1] == '/':
         result = result[:-1]
     return result
-
-
-# https://kubernetes.io/docs/concepts/configuration/manage-compute-resources-container/#meaning-of-memory
-_MEMORY_UNITS = {'Ki': 1024, 'Mi': 1024**2, 'Gi': 1024**3, 'Ti': 1024**4,
-                 'K': 1000, 'M': 1000**2, 'G': 1000**3, 'T': 1000**4}
-_CPU_UNITS = {'m': 0.001}
-_RESOURCE_TYPES = ['requests', 'limits']
-_MAPPING = {'requests_memory': 'mem', 'ephemeral-storage': 'disk', 'requests_cpu': 'cpus'}
-
-
-def _calculate_pod_resources(containers_spec: List[Dict[str, str]]):
-    """Returns flat dictionary with keys created as resource_name + '_' + resource_type,
-       e.g. 'cpu_limits': '0.25' """
-    resources = dict()
-
-    units = {'memory': _MEMORY_UNITS,  'ephemeral-storage': _MEMORY_UNITS,
-             'cpu': _CPU_UNITS}
-
-    for container in containers_spec:
-        container_resources = container.get('resources')
-        if not container_resources:
-            continue
-
-        for resource_type in _RESOURCE_TYPES:
-            if resource_type not in container_resources:
-                continue
-
-            for resource_name, resource_value in \
-                    container_resources.get(resource_type).items():
-                value = resource_value
-                for unit, multiplier in units.get(resource_name).items():
-                    if resource_value.endswith(unit):
-                        value = float(resource_value.split(unit)[0]) * multiplier
-                        break
-
-                resource_key = resource_type + '_' + resource_name
-                if resource_key in resources:
-                    resources[resource_key] += float(value)
-                else:
-                    resources[resource_key] = float(value)
-
-    # Mapping resource names to make them consistent with mesos
-    mapped_resources = dict()
-    for original_resource, mapped_resource in _MAPPING.items():
-        if original_resource in resources:
-            mapped_resources[mapped_resource] = resources[original_resource]
-    resources.update(mapped_resources)
-
-    return resources
 
 
 def _sanitize_label(label_key):

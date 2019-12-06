@@ -1,0 +1,17 @@
+nameSuffix: -small
+bases:
+- ../base
+
+commonLabels:
+  app: memcached-small
+  size: small
+
+configMapGenerator:
+- name: mutilate
+  behavior: merge
+  literals:
+  - value=2000       # 1k * 1M = 2GB
+  - qps=50000       # 200k per second
+
+patchesStrategicMerge:
+  - resources.yaml

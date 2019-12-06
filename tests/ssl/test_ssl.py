@@ -7,7 +7,7 @@ from wca.security import HTTPSAdapter
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 
-class TestHTTPRequestHandler(BaseHTTPRequestHandler):
+class HTTPRequestHandlerForTest(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
@@ -15,7 +15,8 @@ class TestHTTPRequestHandler(BaseHTTPRequestHandler):
 
 
 def run_simple_https_server(ssl_context: ssl.SSLContext):
-    server = HTTPServer(('127.0.0.1', 8080), TestHTTPRequestHandler)
+
+    server = HTTPServer(('127.0.0.1', 8080), HTTPRequestHandlerForTest)
 
     server.socket = ssl_context.wrap_socket(server.socket, server_side=True)
 
@@ -23,6 +24,10 @@ def run_simple_https_server(ssl_context: ssl.SSLContext):
 
 
 def test_good_certificate():
+    # Disable due to https://github.com/urllib3/urllib3/issues/497
+    requests.packages.urllib3.disable_warnings(
+            requests.packages.urllib3.exceptions.SubjectAltNameWarning)
+
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
     ssl_context.load_cert_chain('tests/ssl/goodkey.crt', 'tests/ssl/goodkey.key')
     server = Process(target=run_simple_https_server, args=(ssl_context,))
@@ -91,6 +96,10 @@ def test_supported_rsa_2048():
 
 
 def test_supported_tls_1_2():
+    # Disable for older openssl versions.
+    requests.packages.urllib3.disable_warnings(
+            requests.packages.urllib3.exceptions.SubjectAltNameWarning)
+
     ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2)
     ssl_context.load_cert_chain('tests/ssl/goodkey.crt', 'tests/ssl/goodkey.key')
     server = Process(target=run_simple_https_server, args=(ssl_context,))

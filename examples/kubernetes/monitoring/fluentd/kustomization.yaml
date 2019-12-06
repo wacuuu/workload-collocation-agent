@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: fluentd
+configMapGenerator:
+  - name: fconf
+    files:
+    - configurations/fluent.conf
+    - configurations/stress.conf
+    - configurations/mutilate.conf
+    - configurations/sysbench.conf
+    - configurations/memtier.conf
+resources:
+  - daemonset.yaml
+  - service.yaml
+  - service_account.yaml
+  - service_monitor.yaml

@@ -18,6 +18,7 @@ from wca import storage
 from wca.allocators import AllocationType, RDTAllocation, Allocator
 from wca.mesos import MesosNode
 from wca.runners.allocation import AllocationRunner
+from wca.runners.measurement import MeasurementRunner
 from tests.testing import redis_task_with_default_labels,\
     prepare_runner_patches, assert_subdict, assert_metric,\
     platform_mock
@@ -47,33 +48,36 @@ def test_allocation_runner(
     # Allocator mock (lower the quota and number of cache ways in dedicated group).
     # Patch some of the functions of AllocationRunner.
     runner = AllocationRunner(
-        node=Mock(spec=MesosNode, get_tasks=Mock(return_value=[])),
-        metrics_storage=Mock(spec=storage.Storage, store=Mock()),
+        measurement_runner=MeasurementRunner(
+            node=Mock(spec=MesosNode, get_tasks=Mock(return_value=[])),
+            metrics_storage=Mock(spec=storage.Storage, store=Mock()),
+            rdt_enabled=True,
+            gather_hw_mm_topology=False,
+            extra_labels=dict(extra_labels='extra_value'),
+            ),
         anomalies_storage=Mock(spec=storage.Storage, store=Mock()),
         allocations_storage=Mock(spec=storage.Storage, store=Mock()),
-        rdt_enabled=True,
         rdt_mb_control_required=True,
         rdt_cache_control_required=True,
-        allocator=Mock(spec=Allocator, allocate=Mock(return_value=({}, [], []))),
-        extra_labels=dict(extra_labels='extra_value'),
-    )
-    runner._wait = Mock()
-    runner._initialize()
+        allocator=Mock(spec=Allocator, allocate=Mock(return_value=({}, [], []))))
+
+    runner._measurement_runner._wait = Mock()
+    runner._measurement_runner._initialize()
 
     ############
     # First run (one task, one allocation).
-    runner._node.get_tasks.return_value = [t1]
+    runner._measurement_runner._node.get_tasks.return_value = [t1]
     runner._allocator.allocate.return_value = (
         {t1.task_id: {AllocationType.QUOTA: .5,
                       AllocationType.RDT: RDTAllocation(name=None, l3='L3:0=0000f')}},
         [], []
     )
-    runner._iterate()
+    runner._measurement_runner._iterate()
 
     # Check that allocator.allocate was called with proper arguments.
     assert runner._allocator.allocate.call_count == 1
-    (_, _, _, _, tasks_allocations) = runner._allocator.allocate.mock_calls[0][1]
-    assert_subdict(tasks_allocations, {t1.task_id: _os_tasks_allocations})
+    (_, tasks_data) = runner._allocator.allocate.mock_calls[0][1]
+    assert_subdict(tasks_data[t1.task_id].allocations, _os_tasks_allocations)
 
     # Check allocation metrics ...
     got_allocations_metrics = runner._allocations_storage.store.call_args[0][0]
@@ -103,13 +107,13 @@ def test_allocation_runner(
 
     ############################
     # Second run (two tasks, one allocation)
-    runner._node.get_tasks.return_value = [t1, t2]
+    runner._measurement_runner._node.get_tasks.return_value = [t1, t2]
     first_run_t1_task_allocations = {
         t1.task_id: {AllocationType.QUOTA: .5,
                      AllocationType.RDT: RDTAllocation(name=None, l3='L3:0=0000f')}
     }
     runner._allocator.allocate.return_value = (first_run_t1_task_allocations, [], [])
-    runner._iterate()
+    runner._measurement_runner._iterate()
 
     # Check allocation metrics...
     got_allocations_metrics = runner._allocations_storage.store.call_args[0][0]
@@ -123,14 +127,14 @@ def test_allocation_runner(
     assert_metric(got_allocations_metrics, 'allocation_rdt_l3_mask', dict(task=t1.task_id), 15)
 
     # Check allocate call.
-    (_, _, _, _, tasks_allocations) = runner._allocator.allocate.mock_calls[1][1]
+    (_, tasks_data) = runner._allocator.allocate.mock_calls[1][1]
     # (note: tasks_allocations are always read from filesystem)
-    assert_subdict(tasks_allocations, {t1.task_id: _os_tasks_allocations,
-                                       t2.task_id: _os_tasks_allocations})
+    assert_subdict(tasks_data[t1.task_id].allocations, _os_tasks_allocations)
+    assert_subdict(tasks_data[t2.task_id].allocations, _os_tasks_allocations)
 
     ############
     # Third run (two tasks, two allocations) - modify L3 cache and put in the same group
-    runner._node.get_tasks.return_value = [t1, t2]
+    runner._measurement_runner._node.get_tasks.return_value = [t1, t2]
     runner._allocator.allocate.return_value = \
         {
             t1.task_id: {
@@ -142,7 +146,7 @@ def test_allocation_runner(
                 AllocationType.RDT: RDTAllocation(name='one_group', l3='L3:0=00fff')
             }
         }, [], []
-    runner._iterate()
+    runner._measurement_runner._iterate()
 
     got_allocations_metrics = runner._allocations_storage.store.call_args[0][0]
 

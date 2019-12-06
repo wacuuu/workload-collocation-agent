@@ -12,13 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ctypes
+import logging
+import subprocess  # nosec
+import time
 from typing import Dict, Tuple, Optional, List
+
+import os
 
 from wca.allocations import AllocationValue, BoxedNumeric, InvalidAllocations, LabelsUpdater
 from wca.allocators import AllocationType
-from wca.containers import ContainerInterface
 from wca.cgroups import QUOTA_NORMALIZED_MAX
+from wca.containers import ContainerInterface
+from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
+from wca.platforms import decode_listformat
+
+LIBC = ctypes.CDLL('libc.so.6', use_errno=True)
+
+log = logging.getLogger(__name__)
+
+# https://filippo.io/linux-syscall-table/
+NR_MIGRATE_PAGES = 256
 
 
 class QuotaAllocationValue(BoxedNumeric):
@@ -62,36 +77,29 @@ class SharesAllocationValue(BoxedNumeric):
         self.cgroup.set_shares(self.value)
 
 
-class CPUSetAllocationValue(AllocationValue):
-
+class ListFormatBasedAllocationValue(AllocationValue):
     def __init__(self, value: str, container: ContainerInterface, common_labels: dict):
         assert isinstance(value, str)
         self.cgroup = container.get_cgroup()
-        self._original_value = value
-        self.value = _parse_cpuset(value)
+        self.subcgroups = container.get_subcgroups()
+        self.value = value
         self.common_labels = common_labels
         self.labels_updater = LabelsUpdater(common_labels or {})
-        # First core
         self.min_value = 0
-        # Last core
-        self.max_value = self.cgroup.platform_cpus - 1
+        self.max_value = None  # TO BE UPDATED by subclass
 
-    def __repr__(self):
-        return repr(self.value)
+    def __eq__(self, other) -> bool:
+        """Compare listformat based value to another value by taking value into consideration."""
+        assert isinstance(other, self.__class__)
+        return decode_listformat(self.value) == decode_listformat(other.value)
 
-    def __eq__(self, other: 'CPUSetAllocationValue') -> bool:
-        """Compare cpuset value to another value by taking value into consideration."""
-        assert isinstance(other, CPUSetAllocationValue)
-        return self.value == other.value
-
-    def calculate_changeset(self, current: 'CPUSetAllocationValue') \
-            -> Tuple['CPUSetAllocationValue', Optional['CPUSetAllocationValue']]:
+    def calculate_changeset(self, current) \
+            -> Tuple['ListFormatBasedAllocationValue', Optional['ListFormatBasedAllocationValue']]:
         if current is None:
             # There is no old value, so there is a change
             value_changed = True
         else:
             # If we have old value compare them.
-            assert isinstance(current, CPUSetAllocationValue)
             value_changed = (self != current)
 
         if value_changed:
@@ -99,61 +107,162 @@ class CPUSetAllocationValue(AllocationValue):
         else:
             return current, None
 
+    def validate(self):
+        try:
+            value = decode_listformat(self.value)
+        except ValueError as e:
+            raise InvalidAllocations('cannot decode list format %r: %s' % (self.value, e)) from e
+        as_sorted_list = list(sorted(value))
+        assert self.max_value is not None, 'should be initialized by subclass'
+        if len(self.value) > 0:
+            if as_sorted_list[0] < self.min_value or as_sorted_list[-1] > self.max_value:
+                raise InvalidAllocations(
+                    '{} not in range <{};{}>'.format(self.value, self.min_value,
+                                                     self.max_value))
+        else:
+            log.debug('found cpuset/memset set to empty string!')
+
+    def __repr__(self):
+        return self.value
+
+
+class CPUSetCPUSAllocationValue(ListFormatBasedAllocationValue):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_value = self.cgroup.platform.cpus - 1
+
     def generate_metrics(self) -> List[Metric]:
-        assert isinstance(self.value, list)
+        cpus = decode_listformat(self.value)
         metrics = [Metric(
-            name='allocation_cpuset',
-            value=self.value,
+            name='allocation_cpuset_cpus_number_of_cpus',
+            value=len(cpus),
             type=MetricType.GAUGE,
-            labels=dict(allocation_type='cpuset')
+            labels=dict(allocation_type=AllocationType.CPUSET_CPUS)
         )]
         self.labels_updater.update_labels(metrics)
         return metrics
 
-    def validate(self):
-        if len(self.value) > 0:
-            if self.value[0] < self.min_value or self.value[-1] > self.max_value:
-                raise InvalidAllocations(
-                        '{} not in range <{};{}>'
-                        .format(self._original_value, self.min_value, self.max_value))
+    def perform_allocations(self):
+        cpus = decode_listformat(self.value)
+
+        if len(self.subcgroups) > 0:
+            for subcgroup in self.subcgroups:
+                subcgroup.set_cpuset_cpus(cpus)
         else:
-            raise InvalidAllocations(
-                    '{} is invalid argument!'
-                    .format(self._original_value))
+            self.cgroup.set_cpuset_cpus(cpus)
+
+
+class CPUSetMEMSAllocationValue(ListFormatBasedAllocationValue):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.max_value = len(self.cgroup.platform.node_cpus) - 1
+
+    def generate_metrics(self) -> List[Metric]:
+        mems = decode_listformat(self.value)
+        metrics = [Metric(
+            name='allocation_cpuset_mems_number_of_mems',
+            value=len(mems),
+            type=MetricType.GAUGE,
+            labels=dict(allocation_type=AllocationType.CPUSET_MEMS)
+        )]
+        self.labels_updater.update_labels(metrics)
+        return metrics
 
     def perform_allocations(self):
-        self.validate()
-        normalized_cpus = _normalize_cpuset(self.value)
-        normalized_mems = _normalize_cpuset(list(range(0, self.cgroup.platform_sockets)))
-        self.cgroup.set_cpuset(normalized_cpus, normalized_mems)
+        mems = decode_listformat(self.value)
+
+        if len(self.subcgroups) > 0:
+            for subcgroup in self.subcgroups:
+                subcgroup.set_cpuset_mems(mems)
+        else:
+            self.cgroup.set_cpuset_mems(mems)
 
 
-def _parse_cpuset(value: str) -> List[int]:
-    cores = set()
+class CPUSetMemoryMigrateAllocationValue(BoxedNumeric):
 
-    if not value:
-        return list()
+    def __init__(self, value: bool, container: ContainerInterface, common_labels: Dict[str, str]):
+        self.value = value
+        self.cgroup = container.get_cgroup()
+        super().__init__(value=value, common_labels=common_labels, min_value=0, max_value=1)
 
-    ranges = value.split(',')
+    def generate_metrics(self):
+        metrics = super().generate_metrics()
+        for metric in metrics:
+            metric.labels.update(allocation_type=AllocationType.CPUSET_MEMORY_MIGRATE)
+            metric.name = 'allocation_%s' % AllocationType.CPUSET_MEMORY_MIGRATE.value
+        return metrics
 
-    for r in ranges:
-        boundaries = r.split('-')
-
-        if len(boundaries) == 1:
-            cores.add(int(boundaries[0]))
-        elif len(boundaries) == 2:
-            start = int(boundaries[0])
-            end = int(boundaries[1])
-
-            for i in range(start, end + 1):
-                cores.add(i)
-
-    return list(sorted(cores))
+    def perform_allocations(self):
+        self.cgroup._set_memory_migrate(self.value)
 
 
-def _normalize_cpuset(cores: List[int]) -> str:
-    all(isinstance(core, int) for core in cores)
-    if len(cores) > 0:
-        return str(cores[0])+''.join(','+str(core) for core in cores[1:])
-    else:
-        return ''
+class MigratePagesAllocationValue(BoxedNumeric):
+    """Values represents."""
+
+    def __init__(self, value: int, container: ContainerInterface, common_labels: Dict[str, str]):
+        self.value = value
+        self.container = container
+        self.platform = self.container.get_cgroup().platform
+        super().__init__(value=value, common_labels=common_labels,
+                         min_value=0, max_value=self.platform.numa_nodes - 1)
+
+    def generate_metrics(self):
+        metrics = super().generate_metrics()
+        for metric in metrics:
+            metric.labels.update(allocation_type=AllocationType.MIGRATE_PAGES)
+            metric.name = 'allocation_%s' % AllocationType.MIGRATE_PAGES.value
+        return metrics
+
+    def perform_allocations(self):
+        _migrate_pages(
+            self.container.get_pids(include_threads=False),
+            self.value,
+            self.platform.numa_nodes,
+        )
+
+    def validate(self):
+        super().validate()
+        if self.platform.swap_enabled:
+            raise InvalidAllocations(
+                "Swap should be disabled due to possibility of OOM killer occurrence!")
+
+
+def _migrate_pages(task_pids, to_node, number_of_nodes):
+    # if not all pages yet on place force them to move
+
+    # set 1 in mask for all numa nodes without to_node
+    mask_all_nodes = 2 ** number_of_nodes - 1
+    mask_without_to_node = mask_all_nodes - 2 ** to_node
+
+    # set 1 in mask for to_node
+    mask_to_node = 2 ** to_node
+
+    for pid in task_pids:
+        log.log(TRACE, 'migrate pages pid %s to node %d', pid, to_node)
+        try:
+            start = time.time()
+            _migrate_page_call(pid, number_of_nodes, mask_without_to_node, mask_to_node)
+            duration = time.time() - start
+            log.log(TRACE, 'Moving pages syscall duration %0.2fs', duration)
+        except subprocess.CalledProcessError as e:
+            log.warning('cannot migrate pages for pid=%s: %s (ignored)', pid, e)
+
+
+def _migrate_page_call(pid, max_node, old_nodes, new_node) -> int:
+    """Wrapper on migrate_pages function using libc syscall"""
+
+    pid = int(pid)
+    max = ctypes.c_ulong(max_node + 1)
+    old = ctypes.pointer(ctypes.c_ulong(old_nodes))
+    new = ctypes.pointer(ctypes.c_ulong(new_node))
+
+    # Example memory_migrate(256, pid, 5, 13 -> b'1101', 2 -> b'0010')
+    result = LIBC.syscall(NR_MIGRATE_PAGES, pid, max, old, new)
+
+    if result == -1:
+        errno = ctypes.get_errno()
+        log.warning('Migrate page. Error number %d. Problem: %s', errno, os.strerror(errno))
+    log.log(TRACE, 'Number of not moved pages (return from migrate_pages syscall): %d', result)
+    return result

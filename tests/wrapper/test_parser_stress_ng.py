@@ -13,18 +13,21 @@
 # limitations under the License.
 
 
+from unittest.mock import patch
+
 from io import StringIO
 
 from wca.metrics import Metric, MetricType
 from wrapper.parser_stress_ng import parse
 
 
-def test_parse():
+@patch('builtins.print')
+def test_parse(mock_print):
     data = """
-        stress-ng: info:  [99] Time 1546433449, counter=173
-        stress-ng: info:  [96] Time 1546433449, counter=210
-        stress-ng: info:  [103] Time 1546433449, counter=191
-        stress-ng: info:  [104] Time 1546433449, counter=195
+        stress-ng: info:  [99] Time 1546433449, counter 173, diff 33
+        stress-ng: info:  [96] Time 1546433449, counter 210, diff 37
+        stress-ng: info:  [103] Time 1546433449, counter 191, diff 41
+        stress-ng: info:  [104] Time 1546433449, counter 195, diff 29
     """
 
     number_of_reads = len(data.splitlines())
@@ -34,25 +37,45 @@ def test_parse():
     for _ in range(number_of_reads):
         got.extend(parse(input_, '', None, {}, 'stress_ng_'))
     expected = [
-        Metric('stress_ng_bogo_ops_counter', value=173, labels={'id_proc_stress_ng': '99'},
+        Metric('stress_ng_bogo_ops_counter', value=173, labels={'id_proc_stress_ng': '99',
+                                                                'stress_ng_time': '1546433449'},
                type=MetricType.COUNTER,
                help="Counter bogo ops per proc stress-ng, updated per 1 sec"),
-        Metric('stress_ng_bogo_ops_counter', value=210, labels={'id_proc_stress_ng': '96'},
+        Metric('stress_ng_bogo_ops_gauge', value=33, labels={'id_proc_stress_ng': '99',
+                                                             'stress_ng_time': '1546433449'},
+               type=MetricType.GAUGE,
+               help="Gauge bogo ops per proc stress-ng, updated per 1 sec"),
+        Metric('stress_ng_bogo_ops_counter', value=210, labels={'id_proc_stress_ng': '96',
+                                                                'stress_ng_time': '1546433449'},
                type=MetricType.COUNTER,
                help="Counter bogo ops per proc stress-ng, updated per 1 sec"),
-        Metric('stress_ng_bogo_ops_counter', value=191, labels={'id_proc_stress_ng': '103'},
+        Metric('stress_ng_bogo_ops_gauge', value=37, labels={'id_proc_stress_ng': '96',
+                                                             'stress_ng_time': '1546433449'},
+               type=MetricType.GAUGE,
+               help="Gauge bogo ops per proc stress-ng, updated per 1 sec"),
+        Metric('stress_ng_bogo_ops_counter', value=191, labels={'id_proc_stress_ng': '103',
+                                                                'stress_ng_time': '1546433449'},
                type=MetricType.COUNTER,
                help="Counter bogo ops per proc stress-ng, updated per 1 sec"),
-        Metric('stress_ng_bogo_ops_counter', value=195, labels={'id_proc_stress_ng': '104'},
+        Metric('stress_ng_bogo_ops_gauge', value=41, labels={'id_proc_stress_ng': '103',
+                                                             'stress_ng_time': '1546433449'},
+               type=MetricType.GAUGE,
+               help="Gauge bogo ops per proc stress-ng, updated per 1 sec"),
+        Metric('stress_ng_bogo_ops_counter', value=195, labels={'id_proc_stress_ng': '104',
+                                                                'stress_ng_time': '1546433449'},
                type=MetricType.COUNTER,
-               help="Counter bogo ops per proc stress-ng, updated per 1 sec")
+               help="Counter bogo ops per proc stress-ng, updated per 1 sec"),
+        Metric('stress_ng_bogo_ops_gauge', value=29, labels={'id_proc_stress_ng': '104',
+                                                             'stress_ng_time': '1546433449'},
+               type=MetricType.GAUGE,
+               help="Gauge bogo ops per proc stress-ng, updated per 1 sec")
     ]
 
     assert expected == got
 
 
-def test_parse_end_stress():
-
+@patch('builtins.print')
+def test_parse_end_stress(print_mock):
     data = """
         ---
         system-info:

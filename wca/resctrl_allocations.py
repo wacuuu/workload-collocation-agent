@@ -32,7 +32,7 @@ class RDTGroups:
     verifies that number of used closids is not out of limit.
     """
 
-    def __init__(self, closids_limit):
+    def __init__(self, closids_limit: int):
         self.closids_limit = closids_limit
         self.already_executed_resgroup_names = set()
         self.existing_groups = set()

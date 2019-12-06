@@ -1,0 +1,7 @@
+namespace: kube-state-metrics
+
+resources:
+- deployment.yaml
+- service_account.yaml
+- service.yaml
+- service_monitor.yaml

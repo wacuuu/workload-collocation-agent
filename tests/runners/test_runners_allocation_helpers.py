@@ -16,12 +16,13 @@ from unittest.mock import patch
 
 import pytest
 
-from tests.testing import allocation_metric, task, container
-from tests.testing import platform_mock
+from tests.testing import allocation_metric, task, task_data, container, platform_mock
 from wca.allocations import InvalidAllocations
-from wca.allocators import AllocationType, RDTAllocation, AllocationConfiguration
+from wca.allocators import (AllocationType, RDTAllocation,
+                            AllocationConfiguration, Allocator)
 from wca.cgroups import Cgroup
 from wca.containers import Container
+from wca.nodes import Node
 from wca.platforms import RDTInformation
 from wca.resctrl import ResGroup
 from wca.resctrl_allocations import RDTGroups, RDTAllocationValue
@@ -29,7 +30,10 @@ from wca.runners.allocation import (TasksAllocationsValues,
                                     TaskAllocationsValues,
                                     AllocationRunner,
                                     validate_shares_allocation_for_kubernetes,
-                                    _get_tasks_allocations)
+                                    _get_tasks_allocations,
+                                    _update_tasks_data_with_allocations)
+from wca.runners.measurement import MeasurementRunner
+from wca.storage import Storage
 
 
 @pytest.mark.parametrize('tasks_allocations, expected_metrics', (
@@ -283,16 +287,18 @@ def test_rdt_initialize(rdt_max_values_mock, cleanup_resctrl_mock,
         default_rdt_l3=default_rdt_l3
     )
     runner = AllocationRunner(
-        node=Mock(),
-        allocator=Mock(),
-        metrics_storage=Mock(),
-        anomalies_storage=Mock(),
-        allocations_storage=Mock(),
-        action_delay=1,
-        rdt_enabled=True,
+        measurement_runner=MeasurementRunner(
+            node=Mock(spec=Node),
+            interval=1,
+            rdt_enabled=True,
+            metrics_storage=Mock(spec=Storage),
+            allocation_configuration=allocation_configuration,
+            ),
+        allocator=Mock(spec=Allocator),
+        anomalies_storage=Mock(spec=Storage),
+        allocations_storage=Mock(spec=Storage),
         rdt_mb_control_required=config_rdt_mb_control_enabled,
-        rdt_cache_control_required=config_rdt_cache_control_enabled,
-        allocation_configuration=allocation_configuration,
+        rdt_cache_control_required=config_rdt_cache_control_enabled
     )
 
     with patch('tests.testing.platform_mock.rdt_information', Mock(
@@ -338,4 +344,22 @@ def test_get_tasks_allocations_fail(*mock):
                       allocation_configuration=AllocationConfiguration(
                           cpu_quota_period=1000))
     }
+
     assert {} == _get_tasks_allocations(containers)
+
+
+@pytest.mark.parametrize(
+        'allocations, tasks_data, expected',
+        (({'t1_task_id': {AllocationType.SHARES: 10}},
+            {'t1_task_id': task_data('/t1')},
+            {'t1_task_id': task_data('/t1', allocations={AllocationType.SHARES: 10})}),
+         ({'t1_task_id': {AllocationType.SHARES: 10},
+           't2_task_id': {AllocationType.SHARES: 20}},
+            {'t1_task_id': task_data('/t1')},
+            {'t1_task_id': task_data('/t1', allocations={AllocationType.SHARES: 10})}),
+         ({}, {'t1_task_id': task_data('/t1'), 't2_task_id': task_data('/t2')},
+            {'t1_task_id': task_data('/t1'), 't2_task_id': task_data('/t2')}))
+        )
+def test_update_tasks_data_with_allocations(allocations, tasks_data, expected):
+    _update_tasks_data_with_allocations(tasks_data, allocations)
+    assert tasks_data == expected

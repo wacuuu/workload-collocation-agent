@@ -13,9 +13,9 @@
 # limitations under the License.
 
 import logging
-import os
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
 
+import os
 from dataclasses import dataclass, field
 
 from wca.config import Str
@@ -26,25 +26,39 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class StaticNode(Node):
-    """Simple implementation of Node that returns tasks based on
+    """rst
+    Simple implementation of Node that returns tasks based on
     provided list on tasks names.
 
     Tasks are returned only if corresponding cgroups exists:
-    - /sys/fs/cgroup/cpu/(task_name)
-    - /sys/fs/cgroup/cpuacct/(task_name)
-    - /sys/fs/cgroup/perf_event/(task_name)
+
+    - ``/sys/fs/cgroup/cpu/(task_name)``
+    - ``/sys/fs/cgroup/cpuacct/(task_name)``
+    - ``/sys/fs/cgroup/perf_event/(task_name)``
 
     Otherwise, the item is ignored.
+
+    Arguments:
+
+    - ``tasks``: **List[Str]**
+    - ``require_pids``: **bool** = *False*
+    - ``default_labels``: **Dict[Str, Str]** = *{}*
+    - ``default_resources``: **Dict[Str, Union[Str, float, int]]** = *{}*
+    - ``tasks_labels``: **Optional[Dict[str, Dict[str, str]]]** = *None*
     """
 
     # List of task names.
     tasks: List[Str]
     require_pids: bool = False
     default_labels: Dict[Str, Str] = field(default_factory=dict)
-    default_resources: Dict[Str, Union[Str, float]] = field(default_factory=dict)
+    default_resources: Dict[Str, Union[Str, float, int]] = field(default_factory=dict)
+    tasks_labels: Optional[Dict[str, Dict[str, str]]] = None
 
     _BASE_CGROUP_PATH = '/sys/fs/cgroup'
-    _REQUIRED_CONTROLLERS = ('cpu', 'cpuacct', 'perf_event')
+    _REQUIRED_CONTROLLERS = ('cpu', 'cpuacct')
+
+    def __post_init__(self):
+        log.info('Static task discovery on cgroups: %r', self.tasks)
 
     def get_tasks(self) -> List[Task]:
         tasks = []
@@ -61,12 +75,15 @@ class StaticNode(Node):
                                 full_cgroup_path, task_name)
                     break
             else:
+                labels = dict(self.default_labels)
+                if self.tasks_labels:
+                    labels.update(self.tasks_labels.get(task_name))
                 tasks.append(
                     Task(
                         name=task_name,
                         task_id=task_name,
                         cgroup_path='/%s' % task_name,
-                        labels=dict(self.default_labels),
+                        labels=labels,
                         resources=dict(self.default_resources),
                         subcgroups_paths=[]
                     )

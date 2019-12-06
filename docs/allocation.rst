@@ -1,6 +1,6 @@
-===============================
+================================
 Allocation algorithm interface
-===============================
+================================
 
 **This software is pre-production and should not be deployed to production servers.**
 
@@ -25,74 +25,56 @@ Example of minimal configuration that uses ``AllocationRunner``:
 
     # Basic configuration to dump metrics on stderr with NOPAnomaly detector
     runner: !AllocationRunner
-      node: !MesosNode
+      measurement_runner: !MeasurementRunner
+        node: !MesosNode
       allocator: !NOPAllocator
 
-``runner`` is responsible for discovering tasks running on ``node``, provides this information to
+``measurement_runner`` is responsible for discovering tasks running on ``node``, provides this information to
 ``allocator`` and then reconfigures resources like cpu shares/quota, cache or memory bandwidth.
+
+For more information about ``MeasurementRunner`` please refer to `Measurement API <measurement.rst>`_.
+
 All information about existing allocations, detected anomalies or other metrics are stored in
 corresponding storage classes.
+
 
 ``AllocationRunner`` class has the following required and optional attributes:
 
 .. code-block:: python
 
-    class AllocationRunner(MeasurementRunner):
-        """Runner is responsible for getting information about tasks from node,
-        calling allocate() callback on allocator, performing returning allocations
-        and storing all allocation related metrics in allocations_storage.
+        class AllocationRunner(Runner):
+            """Runner is responsible for getting information about tasks from node,
+            calling allocate() callback on allocator, performing returning allocations
+            and storing all allocation related metrics in allocations_storage.
 
-        Because Allocator interface is also detector, we store serialized detected anomalies
-        in anomalies_storage and all other measurements in metrics_storage.
+            Because Allocator interface is also detector, we store serialized detected anomalies
+            in anomalies_storage and all other measurements in metrics_storage.
 
-        Arguments:
-            node: component used for tasks discovery
-            allocator: component that provides allocation logic
-            metrics_storage: storage to store platform, internal, resource and task metrics
-                (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-            anomalies_storage: storage to store serialized anomalies and extra metrics
-                (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-            allocations_storage: storage to store serialized resource allocations
-                (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-            action_delay: iteration duration in seconds (None disables wait and iterations)
-                (defaults to 1 second)
-            rdt_enabled: enables or disabled support for RDT monitoring and allocation
-                (defaults to None(auto) based on platform capabilities)
-            rdt_mb_control_required: indicates that MB control is required,
-                if the platform does not support this feature the WCA will exit
-            rdt_cache_control_required: indicates tha L3 control is required,
-                if the platform does not support this feature the WCA will exit
-            extra_labels: additional labels attached to every metric
-                (defaults to empty dict)
-            allocation_configuration: allows fine grained control over allocations
-                (defaults to AllocationConfiguration() instance)
-            remove_all_resctrl_groups (bool): remove all RDT controls groups upon starting
-                (defaults to False)
-            event_names: perf counters to monitor
-                (defaults to instructions, cycles, cache-misses, memstalls)
-            enable_derived_metrics: enable derived metrics ips, ipc and cache_hit_ratio
-                (based on enabled_event names), default to False
-            task_label_generators: component to generate additional labels for tasks
-        """
+            Arguments:
+                measurement_runner: Measurement runner object.
+                allocator: Component that provides allocation logic.
+                anomalies_storage: Storage to store serialized anomalies and extra metrics.
+                    (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
+                allocations_storage: Storage to store serialized resource allocations.
+                    (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
+                rdt_mb_control_required: Indicates that MB control is required,
+                    if the platform does not support this feature the WCA will exit.
+                rdt_cache_control_required: Indicates tha L3 control is required,
+                    if the platform does not support this feature the WCA will exit.
+                remove_all_resctrl_groups (bool): Remove all RDT controls groups upon starting.
+                    (defaults to False)
+            """
 
-        def __init__(
-                self,
-                node: nodes.Node,
-                allocator: Allocator,
-                metrics_storage: storage.Storage = DEFAULT_STORAGE,
-                anomalies_storage: storage.Storage = DEFAULT_STORAGE,
-                allocations_storage: storage.Storage = DEFAULT_STORAGE,
-                action_delay: Numeric(0, 60) = 1.,  # [s]
-                rdt_enabled: Optional[bool] = None,  # Defaults(None) - auto configuration.
-                rdt_mb_control_required: bool = False,
-                rdt_cache_control_required: bool = False,
-                extra_labels: Dict[Str, Str] = None,
-                allocation_configuration: Optional[AllocationConfiguration] = None,
-                remove_all_resctrl_groups: bool = False,
-                event_names: Optional[List[str]] = None,
-                enable_derived_metrics: bool = False,
-                task_label_generators: Dict[str, TaskLabelGenerator] = None,
-        ):
+            def __init__(
+                    self,
+                    measurement_runner: MeasurementRunner,
+                    allocator: Allocator,
+                    allocations_storage: Storage = DEFAULT_STORAGE,
+                    anomalies_storage: Storage = DEFAULT_STORAGE,
+                    rdt_mb_control_required: bool = False,
+                    rdt_cache_control_required: bool = False,
+                    remove_all_resctrl_groups: bool = False
+            ):
         ...
 
 
@@ -131,10 +113,7 @@ corresponding storage classes.
         def allocate(
                 self,
                 platform: Platform,
-                tasks_measurements: TasksMeasurements,
-                tasks_resources: TasksResources,
-                tasks_labels: TasksLabels,
-                tasks_allocations: TasksAllocations,
+                tasks_data: TasksData
         ) -> (TasksAllocations, List[Anomaly], List[Metric]):
             ...
 
@@ -148,7 +127,10 @@ Both ``TaskAllocations`` and ``TasksAllocations`` structures are simple python d
         QUOTA = 'cpu_quota'
         SHARES = 'cpu_shares'
         RDT = 'rdt'
-        CPUSET = 'cpu_set'
+        CPUSET_CPUS = 'cpuset_cpus'
+        CPUSET_MEMS = 'cpuset_mems'
+        CPUSET_MEMORY_MIGRATE = 'cpuset_memory_migrate'
+        MIGRATE_PAGES = 'migrate_pages'
 
     TaskId = str
     TaskAllocations = Dict[AllocationType, Union[float, int, RDTAllocation]]
@@ -200,7 +182,10 @@ Following built-in allocations types are supported:
 - ``cpu_quota`` - CPU Bandwidth Control called quota (normalized),
 - ``cpu_shares`` - CPU shares for Linux CFS (normalized),
 - ``rdt`` - Intel RDT resources.
-- ``cpu_set`` - **experimental** support for cpu pinning(requires specific isolator for Mesos)
+- ``cpuset_cpus`` - support for cpu pinning(requires specific isolator for Mesos)
+- ``cpuset_mems`` - support for memory pinning
+- ``cpuset_memory_migrate`` - cgroups based memory migration to NUMA nodes
+- ``migrate_pages`` - syscall based memory migration to NUMA node
 
 cpu_quota
 ^^^^^^^^^
@@ -301,14 +286,33 @@ Note that the configured values are passed as is to resctrl filesystem without v
 Refer to `Kernel x86/intel_rdt_ui.txt <https://www.kernel.org/doc/Documentation/x86/intel_rdt_ui.txt>`_ document for further reference.
 
 
-cpu_set
-^^^^^^^
-**Experimental** support for cpu pinning:
+cpuset_cpus
+^^^^^^^^^^^
+Support for CPU pinning.
 
-- requires specific isolator for Mesos
-- may conflict with ``cpu manager`` feature in Kubernetes
+**Requires specific isolator** ``cgroups/cpuset`` **enabled for Mesos!**
 
-TODO: example configuration
+**May conflict with** ``CPU manager`` **feature in Kubernetes!**
+
+cpuset_mems
+^^^^^^^^^^^
+Support for memory pinning.
+
+**Requires specific isolator** ``cgroups/cpuset`` **enabled for Mesos!**
+
+**May conflict with** ``CPU manager`` **feature in Kubernetes!**
+
+cpuset_memory_migrate
+^^^^^^^^^^^^^^^^^^^^^
+If set, moves task's memory pages in use to a NUMA node provided in ``cpuset_mems``.
+
+Refer to `Memory migration <http://man7.org/linux/man-pages/man7/cpuset.7.html>`_ for further description.
+
+migrate_pages
+^^^^^^^^^^^^^
+Attempts to immediately (blocking) move task's memory pages to a NUMA node provided as an argument.
+
+Possible values are target NUMA node from 0 to ( **number of memory NUMA nodes** - 1 ).
 
 Extended topology information
 -----------------------------

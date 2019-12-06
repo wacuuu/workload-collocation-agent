@@ -17,11 +17,13 @@ from unittest.mock import patch
 
 import pytest
 
-from wca.metrics import Metric, MetricName
-from wca.platforms import Platform, parse_proc_meminfo, parse_proc_stat, \
-    collect_topology_information, collect_platform_information, RDTInformation, \
-    CPUCodeName, _parse_cpuinfo
-from tests.testing import create_open_mock, relative_module_path, _is_dict_match
+from tests.testing import create_open_mock, relative_module_path, _is_dict_match, assert_metric
+from wca.metrics import MetricName
+from wca.platforms import Platform, CPUCodeName, parse_proc_stat, \
+    parse_proc_meminfo, _parse_cpuinfo, parse_proc_vmstat
+from wca.platforms import collect_topology_information, collect_platform_information, \
+    RDTInformation, decode_listformat, parse_node_cpus, parse_node_meminfo, encode_listformat, \
+    parse_node_distances
 
 
 @pytest.mark.parametrize("raw_meminfo_output,expected", [
@@ -39,6 +41,20 @@ from tests.testing import create_open_mock, relative_module_path, _is_dict_match
 ])
 def test_parse_proc_meminfo(raw_meminfo_output, expected):
     assert parse_proc_meminfo(raw_meminfo_output) == expected
+
+
+@patch('builtins.open', new=create_open_mock({
+    "/proc/vmstat": open(relative_module_path(__file__, 'fixtures/proc-vmstat.txt')).read(),
+}))
+def test_parse_proc_vmstat(*mocks):
+    assert parse_proc_vmstat() == {
+        MetricName.PLATFORM_VMSTAT_NUMA_HINT_FAULTS: 97909,
+        MetricName.PLATFORM_VMSTAT_NUMA_HINT_FAULTS_LOCAL: 97909,
+        MetricName.PLATFORM_VMSTAT_NUMA_PAGES_MIGRATED: 14266,
+        MetricName.PLATFORM_VMSTAT_PGFAULTS: 2911936,
+        MetricName.PLATFORM_VMSTAT_PGMIGRATE_FAIL: 5633,
+        MetricName.PLATFORM_VMSTAT_PGMIGRATE_SUCCESS: 14266
+    }
 
 
 @pytest.mark.parametrize("raw_proc_state_output,expected", [
@@ -68,7 +84,7 @@ def test_parse_proc_state(raw_proc_state_output, expected):
     ('fixtures/procinfo_2sockets_ht.txt', 72, {}),
     ('fixtures/procinfo_2sockets_noht.txt', 28, {}),
 ])
-def test_collect_topology_information(filename, expected_cpus, expected_cpu):
+def test_parse_cpu_info(filename, expected_cpus, expected_cpu):
     with patch('builtins.open',
                new=create_open_mock(
                    {"/proc/cpuinfo": open(relative_module_path(__file__, filename)).read()})
@@ -78,44 +94,42 @@ def test_collect_topology_information(filename, expected_cpus, expected_cpu):
         assert _is_dict_match(got_data[0], expected_cpu), 'some keys do not match!'
 
 
-@patch('builtins.open', new=create_open_mock({
-    "/sys/devices/system/cpu/cpu0/topology/physical_package_id": "0",
-    "/sys/devices/system/cpu/cpu0/topology/core_id": "0",
-    "/sys/devices/system/cpu/cpu1/topology/physical_package_id": "0",
-    "/sys/devices/system/cpu/cpu1/topology/core_id": "0",
-    "/sys/devices/system/cpu/cpu1/online": "1",
-    "/sys/devices/system/cpu/cpu2/online": "0",
-    "/sys/devices/system/cpu/cpu3/online": "0",
-}))
-@patch('os.listdir', return_value=['cpu0', 'cpuidle', 'uevent', 'nohz_full', 'hotplug',
-                                   'cpu1', 'cpu2', 'possible', 'offline', 'present',
-                                   'power', 'microcode', 'cpu3', 'online',
-                                   'vulnerabilities', 'cpufreq', 'intel_pstate',
-                                   'isolated', 'kernel_max', 'modalias'])
-def test_collect_topology_information_2_cpus_in_1_core_offline_rest_online(*mocks):
-    assert (2, 1, 1) == collect_topology_information()
+@pytest.mark.parametrize("filename,expected_cpus,expected_cores,expected_sockets", [
+    ('fixtures/procinfo_1socket_4cores_8cpus.txt', 8, 4, 1),
+    ('fixtures/procinfo_2sockets_ht.txt', 72, 36, 2),
+    ('fixtures/procinfo_2sockets_noht.txt', 28, 28, 2),
+])
+def test_collect_topology_information(filename, expected_cpus, expected_cores,
+                                      expected_sockets):
+    with patch('builtins.open',
+               new=create_open_mock(
+                   {"/proc/cpuinfo": open(relative_module_path(__file__, filename)).read()})
+               ):
+        cpuinfo = _parse_cpuinfo()
+        got_cpus, got_cores, got_sockets, got_topology = collect_topology_information(cpuinfo)
+        assert got_cpus == expected_cpus
+        assert got_cores == expected_cores
+        assert got_sockets == expected_sockets
 
 
 @patch('builtins.open', new=create_open_mock({
-    "/sys/devices/system/cpu/cpu0/topology/physical_package_id": "0",
-    "/sys/devices/system/cpu/cpu0/topology/core_id": "0",
-    "/sys/devices/system/cpu/cpu1/topology/physical_package_id": "0",
-    "/sys/devices/system/cpu/cpu1/topology/core_id": "1",
-    "/sys/devices/system/cpu/cpu1/online": "1",
-    "/sys/devices/system/cpu/cpu2/topology/physical_package_id": "1",
-    "/sys/devices/system/cpu/cpu2/topology/core_id": "0",
-    "/sys/devices/system/cpu/cpu2/online": "1",
-    "/sys/devices/system/cpu/cpu3/topology/physical_package_id": "1",
-    "/sys/devices/system/cpu/cpu3/topology/core_id": "1",
-    "/sys/devices/system/cpu/cpu3/online": "1",
+    "/sys/devices/system/node/node0/cpulist": "1-2,6-8",
+    "/sys/devices/system/node/node1/cpulist": "3,4,5-6",
 }))
-@patch('os.listdir', return_value=['cpu0', 'cpuidle', 'uevent', 'nohz_full', 'hotplug',
-                                   'cpu1', 'cpu2', 'possible', 'offline', 'present',
-                                   'power', 'microcode', 'cpu3', 'online',
-                                   'vulnerabilities', 'cpufreq', 'intel_pstate',
-                                   'isolated', 'kernel_max', 'modalias'])
-def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks):
-    assert (4, 4, 2) == collect_topology_information()
+@patch('os.listdir', return_value=['node0', 'node1', 'ble', 'cpu'])
+def test_parse_node_cpus(*mocks):
+    node_cpus = parse_node_cpus()
+    assert node_cpus == {0: {1, 2, 6, 7, 8}, 1: {3, 4, 5, 6}}
+
+
+@patch('builtins.open', new=create_open_mock({
+    "/sys/devices/system/node/node0/distance": "10 21",
+    "/sys/devices/system/node/node1/distance": "21 10",
+}))
+@patch('os.listdir', return_value=['node0', 'node1', 'ble', 'cpu'])
+def test_parse_node_distances(*mocks):
+    node_distances = parse_node_distances()
+    assert node_distances == {0: {0: 10, 1: 21}, 1: {0: 21, 1: 10}}
 
 
 @patch('builtins.open', new=create_open_mock({
@@ -137,28 +151,89 @@ def test_collect_topology_information_2_cores_per_socket_all_cpus_online(*mocks)
 @patch('wca.platforms.get_wca_version', return_value="0.1")
 @patch('socket.gethostname', return_value="test_host")
 @patch('wca.platforms.parse_proc_meminfo', return_value=1337)
+@patch('wca.platforms.read_proc_meminfo', return_value='does not matter, because parse is mocked')
 @patch('wca.platforms.parse_proc_stat', return_value={0: 100, 1: 200})
+@patch('wca.platforms.parse_node_cpus', return_value={})
+@patch('wca.platforms.parse_proc_vmstat',
+       return_value={MetricName.PLATFORM_VMSTAT_NUMA_PAGES_MIGRATED: 5})
+@patch('wca.platforms.parse_node_distances', return_value={})
+@patch('wca.platforms.parse_node_meminfo', return_value=[{0: 1}, {0: 2}])
+@patch('wca.platforms.get_numa_nodes_count', return_value=1)
+@patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1, {}))
+@patch('wca.platforms.read_proc_stat', return_value='noop, because above parse is mocked')
 @patch('wca.platforms.collect_topology_information', return_value=(2, 1, 1))
 @patch('wca.platforms._parse_cpuinfo', return_value=[
     {'model': 0x5E, 'model name': 'intel xeon', 'stepping': 1}])
+@patch('wca.platforms.get_platform_static_information', return_value={})
 @patch('time.time', return_value=1536071557.123456)
 def test_collect_platform_information(*mocks):
-    assert collect_platform_information() == (
-        Platform(1, 1, 2, 'intel xeon', 0x5E,
-                 CPUCodeName.SKYLAKE, {0: 100, 1: 200},
-                 1337, 1536071557.123456,
-                 RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20)),
-        [
-            Metric.create_metric_with_metadata(
-                name=MetricName.MEM_USAGE, value=1337
-            ),
-            Metric.create_metric_with_metadata(
-                name=MetricName.CPU_USAGE_PER_CPU, value=100, labels={"cpu": "0"}
-            ),
-            Metric.create_metric_with_metadata(
-                name=MetricName.CPU_USAGE_PER_CPU, value=200, labels={"cpu": "1"}
-            ),
-        ],
-        {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
-            "wca_version": "0.1", "cpu_model": "intel xeon"}
+    got_platform, got_metrics, got_labels = collect_platform_information(
+        include_optional_labels=True
     )
+
+    assert got_platform == Platform(
+        sockets=1,
+        cores=1,
+        cpus=2,
+        numa_nodes=1,
+        topology={},
+        cpu_model='intel xeon',
+        cpu_model_number=0x5E,
+        cpu_codename=CPUCodeName.SKYLAKE,
+        timestamp=1536071557.123456,  # timestamp,
+        node_cpus={},
+        node_distances={},
+        rdt_information=RDTInformation(True, True, True, True, 'fffff', '2', 8, 10, 20),
+        measurements={MetricName.PLATFORM_CPU_USAGE: {0: 100, 1: 200},
+                      MetricName.PLATFORM_MEM_USAGE_BYTES: 1337,
+                      MetricName.PLATFORM_MEM_NUMA_FREE_BYTES: {0: 1},
+                      MetricName.PLATFORM_MEM_NUMA_USED_BYTES: {0: 2},
+                      MetricName.PLATFORM_VMSTAT_NUMA_PAGES_MIGRATED: 5,
+                      },
+        swap_enabled=False
+    )
+
+    assert_metric(got_metrics, MetricName.PLATFORM_MEM_USAGE_BYTES, expected_metric_value=1337)
+    assert_metric(got_metrics, MetricName.PLATFORM_CPU_USAGE, {'cpu': '0'},
+                  expected_metric_value=100)
+    assert_metric(got_metrics, MetricName.PLATFORM_TOPOLOGY_CORES, expected_metric_value=1)
+    assert_metric(got_metrics, MetricName.PLATFORM_VMSTAT_NUMA_PAGES_MIGRATED,
+                  expected_metric_value=5)
+    assert got_labels == {"sockets": "1", "cores": "1", "cpus": "2", "host": "test_host",
+                          "wca_version": "0.1", "cpu_model": "intel xeon"}
+
+
+@pytest.mark.parametrize(
+    'raw_cpulist, expected_cpus', [
+        ('1,2,3-4,10-11', {1, 2, 3, 4, 10, 11}),
+        ('1-2', {1, 2}),
+        ('5,1-2', {1, 2, 5}),
+        ('1,  2', {1, 2}),
+        ('5,1- 2', {1, 2, 5}),
+    ])
+def test_decode_listform(raw_cpulist, expected_cpus):
+    got_cpus = decode_listformat(raw_cpulist)
+    assert got_cpus == expected_cpus
+
+
+@pytest.mark.parametrize(
+    'intset, expected_encoded', [
+        ({1, 2, 3, 4, 10, 11}, '1,2,3,4,10,11'),
+        ({1, 2}, '1,2'),
+        ({2, 1}, '1,2'),
+        ({}, ''),
+    ])
+def test_encode_listformat(intset, expected_encoded):
+    got_encoded = encode_listformat(intset)
+    assert got_encoded == expected_encoded
+
+
+@patch('builtins.open', new=create_open_mock(
+    {'/sys/devices/system/node/node0/meminfo': open(
+        relative_module_path(__file__, 'fixtures/sys-devices-system-nodex-meminfo.txt')).read()})
+       )
+@patch('os.listdir', return_value=['node0'])
+def test_parse_node_meminfo(*mocks):
+    expected_node_free, expected_node_used = parse_node_meminfo()
+    assert expected_node_free == {0: 454466117632}
+    assert expected_node_used == {0: 77696421888}

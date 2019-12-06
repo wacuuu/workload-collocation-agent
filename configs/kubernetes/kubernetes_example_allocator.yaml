@@ -4,30 +4,35 @@
 #   allocator with detector and remove allocations_storage.
 
 runner: !AllocationRunner
-  node: !KubernetesNode
-    # We support two options: cgroupfs, systemd.
-    cgroup_driver: cgroupfs
+  measurement_runner: !MeasurementRunner
+    node: !KubernetesNode
+      # We support two options: cgroupfs, systemd.
+      cgroup_driver: cgroupfs
 
-    # Fill needed PATH to key and certificate to access kubelet.
-    ssl: !SSL
-      server_verify: True
-      client_cert_path: "$PATH/apiserver-kubelet-client.crt"
-      client_key_path: "$PATH/apiserver-kubelet-client.key"
+      # Fill needed PATH to key and certificate to access kubelet.
+      # Can be found at kubernetes master at /etc/kuberentes/pki as apiserver-kubelet-client.{key,crt}
+      ssl: !SSL
+        server_verify: True
+        client_cert_path: "$PATH/apiserver-kubelet-client.crt"
+        client_key_path: "$PATH/apiserver-kubelet-client.key"
 
-    # If the kubelet agent does not listen on localhost,
-    #   the endpoint must be provided.
-    kubelet_endpoint: "https://$IP:10250"
+      # If the kubelet agent does not listen on localhost,
+      #   the endpoint must be provided.
+      kubelet_enabled: true
+      kubelet_endpoint: "https://$IP:10250"
 
-    # List of namespaces to monitor pods in.
-    monitored_namespaces: ["default"]
+      # List of namespaces to monitor pods in.
+      monitored_namespaces: ["default"]
 
-  metrics_storage: !LogStorage
-    output_filename: metrics.logs
-  anomalies_storage: !LogStorage
-    output_filename: anomalies.logs
+    metrics_storage: !LogStorage
+      output_filename: metrics.logs
 
   allocator: !StaticAllocator
     config: "$PATH/static_alloc_config.yaml"
+
   allocations_storage: !KafkaStorage
     topic: wca_allocations
     max_timeout_in_seconds: 5.
+
+  anomalies_storage: !LogStorage
+    output_filename: anomalies.logs

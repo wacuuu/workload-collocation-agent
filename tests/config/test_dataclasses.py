@@ -18,7 +18,7 @@ import pytest
 from dataclasses import dataclass, field
 
 from wca import config
-from wca import testing
+from tests import testing
 
 
 class FooEnum(Enum):

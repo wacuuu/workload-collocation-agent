@@ -1,0 +1,16 @@
+nameSuffix: -stream-big
+bases:
+- ../base
+
+commonLabels:
+  app: stress-stream-big
+  size: big
+
+configMapGenerator:
+- name: stress
+  behavior: merge
+  literals:
+    - extra='--stream 3 --stream-l3-size=1g --stream-index=0' # 12GB RSS + 3 threads
+
+patchesStrategicMerge:
+  - resources.yaml

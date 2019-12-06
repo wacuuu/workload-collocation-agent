@@ -79,7 +79,6 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
             '# HELP percentile_99th_miliseconds 99th percentile in miliseconds\n'
             '# TYPE percentile_99th_miliseconds counter\n'
             'percentile_99th_miliseconds{node="slave_1",user="felidadae"} 89 1531729598001\n'
-            '\n'
         )
     )
 
@@ -90,7 +89,6 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
             '# TYPE average_latency_miliseconds counter\n'
             'average_latency_miliseconds'  # next string the same line
             '{node="slave_1 called \\"brave heart\\"",user="felidadae"} 8 1531729598001\n'
-            '\n'
         )
     )
 
@@ -101,7 +99,6 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
             '# TYPE average_latency_miliseconds counter\n'
             'average_latency_miliseconds'  # next string the same line
             '{node="slave_1 called \\"brave heart\\"",user="felidadae"} 8\n'
-            '\n'
         )
     )
 
@@ -113,7 +110,6 @@ def test_convert_to_prometheus_exposition_format(mock_get_current_time, sample_m
             '# TYPE average_latency_miliseconds counter\n'
             'average_latency_miliseconds'  # next string the same line
             '{node="slave_1",user="felidadae"} 8.223 1531729598001\n'
-            '\n'
         )
     )
 
@@ -136,13 +132,14 @@ def test_kafkastorage_ssl_replace_ca_location(mock_create_kafka_consumer):
     assert kafka.extra_config['ssl.ca.location'] == '/ca'
 
 
-@pytest.mark.skip
+@mock.patch('wca.storage.log')
 @mock.patch('wca.storage.create_kafka_consumer')
-def test_kafkastorage_ssl_log_replace_ca_location(mock_create_kafka_consumer, caplog):
+def test_kafkastorage_ssl_log_replace_ca_location(mock_create_kafka_consumer, mock_log):
     storage.KafkaStorage(
             'test', extra_config={'ssl.ca.location': 'location'},
             ssl=SSL('/ca', '/cert', '/key'))
-    assert 'KafkaStorage `ssl.ca.location` in config replaced with SSL object!' in caplog.messages
+    mock_log.warning.assert_called_once_with(
+            'KafkaStorage `ssl.ca.location` in config replaced with SSL object!')
 
 
 @mock.patch('wca.storage.create_kafka_consumer')
@@ -160,14 +157,14 @@ def test_kafkastorage_ssl_replace_client_cert_path(mock_create_kafka_consumer):
     assert kafka.extra_config['ssl.certificate.location'] == '/cert'
 
 
-@pytest.mark.skip
+@mock.patch('wca.storage.log')
 @mock.patch('wca.storage.create_kafka_consumer')
-def test_kafkastorage_ssl_log_replace_client_cert_path(mock_create_kafka_consumer, caplog):
+def test_kafkastorage_ssl_log_replace_client_cert_path(mock_create_kafka_consumer, mock_log):
     storage.KafkaStorage(
             'test', extra_config={'ssl.certificate.location': 'location'},
             ssl=SSL('/ca', '/cert', '/key'))
-    assert 'KafkaStorage `ssl.certificate.location` '\
-           'in config replaced with SSL object!' in caplog.messages
+    mock_log.warning.assert_called_once_with('KafkaStorage `ssl.certificate.location` '
+                                             'in config replaced with SSL object!')
 
 
 @mock.patch('wca.storage.create_kafka_consumer')
@@ -179,14 +176,14 @@ def test_kafkastorage_ssl_replace_client_key_path(mock_create_kafka_consumer):
     assert kafka.extra_config['ssl.key.location'] == '/key'
 
 
-@pytest.mark.skip
+@mock.patch('wca.storage.log')
 @mock.patch('wca.storage.create_kafka_consumer')
-def test_kafkastorage_ssl_log_replace_client_key_path(mock_create_kafka_consumer, caplog):
+def test_kafkastorage_ssl_log_replace_client_key_path(mock_create_kafka_consumer, mock_log):
     storage.KafkaStorage(
             'test', extra_config={'ssl.key.location': 'location'},
             ssl=SSL('/ca', '/cert', '/key'))
-    assert 'KafkaStorage `ssl.key.location` '\
-           'in config replaced with SSL object!' in caplog.messages
+    mock_log.warning.assert_called_once_with('KafkaStorage `ssl.key.location` '
+                                             'in config replaced with SSL object!')
 
 
 @mock.patch('wca.storage.create_kafka_consumer')
@@ -201,22 +198,12 @@ def test_kafkastorage_ssl_assign_cipher_suites(mock_create_kafka_consumer):
             .extra_config['ssl.cipher.suites'] == SECURE_CIPHERS
 
 
-@pytest.mark.skip
+@mock.patch('wca.storage.log')
 @mock.patch('wca.storage.create_kafka_consumer')
-def test_kafkastorage_ssl_log_using_own_cipher_suites(mock_create_kafka_consumer, caplog):
+def test_kafkastorage_ssl_log_using_own_cipher_suites(mock_create_kafka_consumer, mock_log):
     storage.KafkaStorage(
             'test', extra_config={'ssl.cipher.suites': 'ciphers'}, ssl=SSL('/ca', '/cert', '/key'))
-    assert 'KafkaStorage SSL uses extra config cipher suites!' in caplog.messages
-
-
-@pytest.mark.skip
-def test_kafkastorage_ssl_assign_protocols():
-    assert False
-
-
-@pytest.mark.skip
-def test_kafkastorage_ssl_log_using_own_protocols(caplog):
-    assert False
+    mock_log.warning.assert_called_once_with('KafkaStorage SSL uses extra config cipher suites!')
 
 
 def test_is_convertable_to_prometheus_exposition_format(
@@ -277,7 +264,6 @@ def test_convert_to_prometheus_exposition_format_grouped_case(
                                                           storage.get_current_time())
     assert msg == '''# HELP bar bar-help
 bar 89 1531729598000
-
 bar2 89 1531729598000
 
 # HELP foo foo-help
@@ -285,5 +271,4 @@ bar2 89 1531729598000
 foo{a="1"} 1 1531729598000
 foo{a="3"} 1 1531729598000
 foo{a="20"} 1 1531729598000
-
 '''

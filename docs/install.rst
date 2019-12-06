@@ -41,7 +41,7 @@ Running
 Runtime requirements
 --------------------
 
-- Hardware with `Intel RDT <https://www.intel.pl/content/www/pl/pl/architecture-and-technology/resource-director-technology.html>`_ support.
+- Hardware with `Intel RDT <https://www.intel.com/content/www/us/en/architecture-and-technology/resource-director-technology.html>`_ support.
 - Centos 7.5 with at least 3.10.0-862 kernel with support of `resctrl filesystem <https://www.kernel.org/doc/Documentation/x86/intel_rdt_ui.txt>`_.
 - Python 3.6.x 
 
@@ -65,6 +65,8 @@ To enable RDT please add kernel boot time parameters ``rdt=cmt,mbmtotal,mbmlocal
 
 Python 3.6 Centos installation (recommended)
 --------------------------------------------
+
+:Note: For Centos 7.6 Python 3.6 is already available, so you **do not** need to install epel-release.
 
 The recommended way of installing Python 3.6.x is to use `Software Collections <https://www.softwarecollections.org/en/>`_.
 SCL repository is maintained by a CentOS SIG.
@@ -97,17 +99,20 @@ Running WCA as non-root user
 
 WCA processes should not be run with root privileges. Following privileges are needed to run WCA as non-root user:
 
-- `CAP_DAC_OVERRIDE and CAP_SETUID capabilities`_ - for CPU discover and to allow non-root user writing to cgroups and resctrlfs kernel filesystems.
-- running process with `SECBIT_NO_SETUID_FIXUP`_ secure bit set, to not drop above capabilities when switching to unprivileged user,
+- `CAP_DAC_OVERRIDE`_ - to allow non-root use cgroups filesystem.
+
+- `CAP_SETUID`_ capability and `SECBIT_NO_SETUID_FIXUP`_ secure bit set - to allow non-root use resctrl filesystem.  
+
 - ``/proc/sys/kernel/perf_event_paranoid`` - `content of the file`_ must be set to ``0`` or ``-1`` to allow non-root
-  user to collect all the necessary event information.
+  user to collect all the necessary perf event information.
 
 If it is impossible or undesired to run WCA with privileges outlined above, then you must add ``-0`` (or its
 long form: ``--root``) argument when starting the process)
 
-..  _`SECBIT_NO_SETUID_FIXUP`: https://github.com/torvalds/linux/blob/master/include/uapi/linux/securebits.h#L32
-..  _`CAP_DAC_OVERRIDE and CAP_SETUID capabilities`: https://github.com/torvalds/linux/blob/6f0d349d922ba44e4348a17a78ea51b7135965b1/include/uapi/linux/capability.h#L119
-.. _`content of the file`: https://linux.die.net/man/2/perf_event_open
+..  _`CAP_DAC_OVERRIDE`: https://elixir.bootlin.com/linux/v3.10.108/source/include/uapi/linux/capability.h#L104 
+..  _`CAP_SETUID`: https://elixir.bootlin.com/linux/v3.10.108/source/include/uapi/linux/capability.h#L142
+..  _`SECBIT_NO_SETUID_FIXUP`: https://elixir.bootlin.com/linux/v3.10.108/source/include/uapi/linux/securebits.h#L31  
+..  _`content of the file`: https://linux.die.net/man/2/perf_event_open
 
 Running as systemd service
 --------------------------
@@ -163,25 +168,23 @@ Config ``/etc/wca/wca_config.yml`` must exists. See an `example configuration fi
 .. code-block:: yaml
 
     runner: !AllocationRunner
+      config: !AllocationRunnerConfig
         node: !MesosNode
-            mesos_agent_endpoint: 'http://127.0.0.1:5051'
-            timeout: 5
-
-        action_delay: 1.
-
+          mesos_agent_endpoint: 'http://127.0.0.1:5051'
+        timeout: 5
+        interval: 1.
         metrics_storage: !LogStorage
-            output_filename: '/tmp/output_anomalies.log'
-
+          output_filename: '/tmp/output_anomalies.log'    
+        extra_labels:
+          env_id: "$HOST_IP"
         anomalies_storage: !KafkaStorage
             brokers_ips: ['$KAFKA_BROKER_IP:9092']
             topic: wca_anomalies
             max_timeout_in_seconds: 5.
-
         allocator: !NOPAllocator
-
-        # Decorate every metric with extra labels.
-        extra_labels:
-            env_id: "$HOST_IP"
+            ...
+        ...
+            
 
 Apply following changes to the file above:
 

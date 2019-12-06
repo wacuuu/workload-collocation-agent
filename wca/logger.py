@@ -84,7 +84,6 @@ def configure_loggers_from_dict(loggers: Dict[str, str]):
 
 def init_logging(level: str, package_name: str):
     level = level.upper()
-    logging.captureWarnings(True)
     logging.addLevelName(TRACE, 'TRACE')
     log_colors = dict(colorlog.default_log_colors, **dict(TRACE='cyan'))
 

@@ -1,0 +1,14 @@
+resources:
+  - sysbench-memory.yaml
+
+configMapGenerator:
+  - name: sysbench-memory
+    literals:
+      - threads=4
+      - cpus=0-1000
+      - memory=16g
+      - report_interval=1
+      - extra=
+
+patchesStrategicMerge:
+- resources.yaml

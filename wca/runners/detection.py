@@ -13,16 +13,17 @@
 # limitations under the License.
 import logging
 import time
-from typing import Dict, List, Optional
+from typing import List
 
-from wca.config import Numeric, Str, assure_type
-from wca import nodes, storage, detectors
-from wca.detectors import convert_anomalies_to_metrics, \
-    update_anomalies_metrics_with_task_information, Anomaly
+from wca.config import assure_type
+from wca.detectors import (convert_anomalies_to_metrics,
+                           update_anomalies_metrics_with_task_information,
+                           Anomaly, AnomalyDetector)
 from wca.metrics import Metric, MetricType
 from wca.profiling import profiler
-from wca.runners.measurement import MeasurementRunner, TaskLabelGenerator, DEFAULT_EVENTS
-from wca.storage import MetricPackage, DEFAULT_STORAGE
+from wca.runners import Runner
+from wca.runners.measurement import MeasurementRunner
+from wca.storage import MetricPackage, DEFAULT_STORAGE, Storage
 
 log = logging.getLogger(__name__)
 
@@ -56,67 +57,56 @@ class AnomalyStatistics:
         return statistics_metrics
 
 
-class DetectionRunner(MeasurementRunner):
-    """DetectionRunner extends MeasurementRunner with ability to callback Detector,
+class DetectionRunner(Runner):
+    """rst
+    DetectionRunner extends MeasurementRunner with ability to callback Detector,
     serialize received anomalies and storing them in anomalies_storage.
 
-    Arguments:
-        node: component used for tasks discovery
-        metrics_storage: storage to store platform, internal, resource and task metrics
-            (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-        anomalies_storage: storage to store serialized anomalies and extra metrics
-            (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-        action_delay: iteration duration in seconds (None disables wait and iterations)
-            (defaults to 1 second)
-        rdt_enabled: enables or disabled support for RDT monitoring and allocation
-            (defaults to None(auto) based on platform capabilities)
-        extra_labels: additional labels attached to every metric
-            (defaults to empty dict)
-        event_names: perf counters to monitor
-            (defaults to instructions, cycles, cache-misses, memstalls)
-        enable_derived_metrics: enable derived metrics ips, ipc and cache_hit_ratio
-            (based on enabled_event names), default to False
-        task_label_generators: component to generate additional labels for tasks
+    - ``measurement_runner``: **MeasurementRunner**
+
+        Measurement runner object.
+
+    - ``allocator``: **AnomalyDetector**
+
+        Component that provides allocation logic.
+
+    - ``anomalies_storages``: **Storage** = *DEFAULT_STORAGE*
+
+        Storage to store serialized anomalies.
     """
 
     def __init__(
             self,
-            node: nodes.Node,
-            detector: detectors.AnomalyDetector,
-            metrics_storage: storage.Storage = DEFAULT_STORAGE,
-            anomalies_storage: storage.Storage = DEFAULT_STORAGE,
-            action_delay: Numeric(0, 60) = 1.,
-            rdt_enabled: Optional[bool] = None,
-            extra_labels: Dict[Str, Str] = None,
-            event_names: Optional[List[str]] = DEFAULT_EVENTS,
-            enable_derived_metrics: bool = False,
-            task_label_generators: Dict[str, TaskLabelGenerator] = None,
+            measurement_runner: MeasurementRunner,
+            detector: AnomalyDetector,
+            anomalies_storage: Storage = DEFAULT_STORAGE
     ):
-        super().__init__(node, metrics_storage,
-                         action_delay, rdt_enabled,
-                         extra_labels, event_names,
-                         enable_derived_metrics, task_label_generators)
+        self._measurement_runner = measurement_runner
         self._detector = detector
 
         # Anomaly.
         self._anomalies_storage = anomalies_storage
         self._anomalies_statistics = AnomalyStatistics()
 
-    def _iterate_body(self, containers, platform, tasks_measurements,
-                      tasks_resources, tasks_labels, common_labels):
+        self._measurement_runner._set_iterate_body_callback(self._iterate_body)
+
+    def run(self):
+        self._measurement_runner._run()
+
+    def _iterate_body(self, containers, platform, tasks_data, common_labels):
         """Detector callback body."""
 
         # Call Detector's detect function.
         detection_start = time.time()
         anomalies, extra_metrics = self._detector.detect(
-            platform, tasks_measurements, tasks_resources, tasks_labels)
+            platform, tasks_data)
         detection_duration = time.time() - detection_start
         profiler.register_duration('detect', detection_duration)
         log.debug('Anomalies detected: %d', len(anomalies))
 
         # Prepare anomaly metrics
-        anomaly_metrics = convert_anomalies_to_metrics(anomalies, tasks_labels)
-        update_anomalies_metrics_with_task_information(anomaly_metrics, tasks_labels)
+        anomaly_metrics = convert_anomalies_to_metrics(anomalies, tasks_data)
+        update_anomalies_metrics_with_task_information(anomaly_metrics, tasks_data)
 
         # Prepare and send all output (anomalies) metrics.
         anomalies_package = MetricPackage(self._anomalies_storage)

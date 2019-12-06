@@ -1,0 +1,20 @@
+nameSuffix: -medium
+
+bases:
+- ../base
+
+commonLabels:
+  app: redis-medium
+  size: medium
+
+configMapGenerator:
+- name: memtier
+  behavior: merge
+  literals:
+    - clients=50
+    - threads=5
+    - keymaximum=15000000 # 15M
+    - datasize=512         # eff
+
+patchesStrategicMerge:
+  - resources.yaml
