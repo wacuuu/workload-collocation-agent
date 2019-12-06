@@ -1146,7 +1146,6 @@ class BaseDerivedMetricsGenerator:
 
 
 class DefaultDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
-
     def _derive(self, measurements, delta, available, time_delta):
 
         def rate(value):
