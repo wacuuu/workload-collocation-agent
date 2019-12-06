@@ -163,7 +163,7 @@ def validate_shares_allocation_for_kubernetes(tasks: List[Task], allocations: Ta
 
 
 class AllocationRunner(Runner):
-    """
+    """rst
     Runner is responsible for getting information about tasks from node,
     calling allocate() callback on allocator, performing returning allocations
     and storing all allocation related metrics in allocations_storage.
@@ -171,19 +171,36 @@ class AllocationRunner(Runner):
     Because Allocator interface is also detector, we store serialized detected anomalies
     in anomalies_storage and all other measurements in metrics_storage.
 
-    Arguments:
-        measurement_runner: Measurement runner object.
-        allocator: Component that provides allocation logic.
-        anomalies_storage: Storage to store serialized anomalies and extra metrics.
-            (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-        allocations_storage: Storage to store serialized resource allocations.
-            (defaults to DEFAULT_STORAGE/LogStorage to output for standard error)
-        rdt_mb_control_required: Indicates that MB control is required,
-            if the platform does not support this feature the WCA will exit.
-        rdt_cache_control_required: Indicates tha L3 control is required,
-            if the platform does not support this feature the WCA will exit.
-        remove_all_resctrl_groups (bool): Remove all RDT controls groups upon starting.
-            (defaults to False)
+
+    - ``measurement_runner``: **MeasurementRunner**
+
+        Measurement runner object.
+
+    - ``allocator``: **Allocator**
+
+        Component that provides allocation logic.
+
+    - ``anomalies_storage``: **Storage** = `DEFAULT_STORAGE`
+
+        Storage to store serialized anomalies and extra metrics.
+
+    - ``allocations_storage``: **tdwiboolype** = `DEFAULT_STORAGE`
+
+        Storage to store serialized resource allocations.
+
+    - ``rdt_mb_control_required``: **bool** = *False*
+
+        Indicates that MB control is required,
+        if the platform does not support this feature the WCA will exit.
+
+    - ``rdt_cache_control_required``: **bool** = *False*
+
+        Indicates tha L3 control is required,
+        if the platform does not support this feature the WCA will exit.
+
+    - ``remove_all_resctrl_groups``: **bool** = *False*
+
+        Remove all RDT controls groups upon starting.
     """
 
     def __init__(

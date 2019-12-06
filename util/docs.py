@@ -13,8 +13,13 @@
 # limitations under the License.
 
 import enum
+import re
+
 from wca.metrics import METRICS_METADATA, MetricGranularity, MetricName
 from wca.components import REGISTERED_COMPONENTS
+from wca.metrics import DefaultDerivedMetricsGenerator
+from wca.kubernetes import CgroupDriverType
+from wca.perf_uncore import UncoreDerivedMetricsGenerator
 
 API_PATH = 'docs/api.rst'
 API_INTRO = """
@@ -34,23 +39,35 @@ class MissingDocstring(Exception):
     pass
 
 
+SKIPPED_COMPONENTS = [DefaultDerivedMetricsGenerator, 
+                      UncoreDerivedMetricsGenerator, 
+                      CgroupDriverType]
+
+
 def prepare_api_docs():
     docs = ''
     for component in REGISTERED_COMPONENTS:
+        if component in SKIPPED_COMPONENTS:
+            continue
         docs += generate_title(component.__name__) + '\n'
-        docs += '.. code-block:: ' + '\n'
 
         try:
             docstring = str(component.__doc__)
+            if not docstring.startswith('rst'):
+                # docs += '.. code-block:: ' + '\n'
+                pass
+            else:
+                docstring = docstring[3:]
         except TypeError:
             continue  # TODO: Remove after complete doc strings for all components.
             raise MissingDocstring(component.__name__)
 
         lines = docstring.splitlines(True)
+        lines = [remove_trailing_whitespaces(line) for line in lines]
         if len(lines) == 1:
             docs += '\n\t' + docstring
         else:
-            docs += '\t'.join(lines)
+            docs += ''.join(lines)
         docs += '\n\n'
 
     return docs
@@ -166,6 +183,14 @@ def generate_docs(csv=False):
     internal += prepare_csv_table(internal_data, header=not csv) + '\n\n'
 
     return tasks + '\n\n' + platforms + '\n\n' + internal
+
+
+def remove_trailing_whitespaces(line):
+    # s = re.search(r'[ \t]+(.*)', line)
+    s = re.search(r'    (.*)', line)
+    if s:
+        return s.group(1) + '\n'
+    return line
 
 
 if __name__ == '__main__':

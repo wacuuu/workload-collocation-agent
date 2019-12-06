@@ -106,7 +106,7 @@ def _build_allocations_from_rules(tasks_data: TasksData, rules):
 
 @dataclass
 class StaticAllocator(Allocator):
-    """
+    """rst
     Simple allocator based on rules defining relation between task labels
     and allocation definition (set of concrete values).
 
@@ -116,6 +116,7 @@ class StaticAllocator(Allocator):
     input file for StaticAllocator.
 
     A rule is an object with three fields:
+
     - name,
     - labels (optional),
     - allocations.
@@ -128,6 +129,16 @@ class StaticAllocator(Allocator):
     matching tasks.
 
     If there are multiple matching rules then the rules' allocations are merged and applied.
+
+    Arguments:
+
+    - ``rules``: **List[dict]** = *None*
+
+        Direct way to pass rules.
+
+    - ``config``: **Path** = *None*
+
+        Filepath of yaml config file with rules.
     """
 
     # Direct way to pass rules.

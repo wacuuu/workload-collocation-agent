@@ -167,12 +167,13 @@ class SetEffectiveRootUid:
 
 @dataclass
 class SSL:
-    """
+    """rst
+
     Common configuration for SSL communication.
 
-    * server_verify: Union[bool, Path(absolute=True, mode=os.R_OK)] = True
-    * client_cert_path: Optional[Path(absolute=True, mode=os.R_OK)] = None
-    * client_key_path: Optional[Path(absolute=True, mode=os.R_OK)] = None
+    - ``server_verify``: **Union[bool, Path(absolute=True, mode=os.R_OK)]** = *True*
+    - ``client_cert_path``: **Optional[Path(absolute=True, mode=os.R_OK)]** = *None*
+    - ``client_key_path``: **Optional[Path(absolute=True, mode=os.R_OK)]** = *None*
 
     """
     server_verify: Union[bool, Path(absolute=True, mode=os.R_OK)] = True
