@@ -49,6 +49,10 @@ and store them in metrics_storage component.
     Perf counters to monitor.
     (defaults to not collect perf counters - empty list of events)
 
+- ``perf_aggregate_cpus``: **bool** = `True`,
+    Should perf events collected for cgroups be aggregated (sum) by CPUs.
+    (defaults to true, to limit number of exposed metrics)
+
 - ``enable_derived_metrics``: **bool** = *False*
 
     Enable derived metrics ips, ipc and cache_hit_ratio.
