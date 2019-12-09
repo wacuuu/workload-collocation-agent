@@ -18,10 +18,10 @@ import os
 from wca.config import load_config
 from wca import logger
 
-from k8s_scheluder_extender.config import validate_config
+from k8s_scheduler_extender.config import validate_config
 
 
-DEFAULT_MODULE = 'k8s_scheluder_extender'
+DEFAULT_MODULE = 'k8s_scheduler_extender'
 
 log = logging.getLogger(DEFAULT_MODULE + '.main')
 
