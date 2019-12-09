@@ -15,13 +15,11 @@ import argparse
 import logging
 import os
 
-from wca.config import load_config
+from wca.config import load_config, ConfigLoadError
 from wca import logger
 
-from k8s_scheduler_extender.config import validate_config
 
-
-DEFAULT_MODULE = 'k8s_scheduler_extender'
+DEFAULT_MODULE = 'scheduler'
 
 log = logging.getLogger(DEFAULT_MODULE + '.main')
 
@@ -34,7 +32,7 @@ def main():
     parser.add_argument(
         '-l',
         '--log-level',
-        help='Log level for modules (by default for k8s_scheduler_extender) in [module:]level form,'
+        help='Log level for modules (by default for scheduler) in [module:]level form,'
              'where level can be one of: CRITICAL,ERROR,WARNING,INFO,DEBUG,TRACE'
              'Example -l debug -l example:debug. Defaults to k8s_scheduler_extender:INFO.'
              'Can be overridden at runtime with config.yaml "loggers" section.',
@@ -53,16 +51,34 @@ def main():
 
     log.warning('This software is pre-production and should not be deployed to production servers.')
     log.debug('started PID=%r', os.getpid())
-    log.info('Starting WCA k8s scheduler extender!')
+    log.info('Starting K8s scheduler extender for Workload Collocation Agent!')
 
     # Initialize all necessary objects.
     try:
-        config = load_config(args.config)
-    except config.ConfigLoadError as e:
+        configuration = load_config(args.config)
+    except ConfigLoadError as e:
         log.error('Error: Cannot load config file! : %s', e)
         exit(1)
 
-    validate_config(config)
+    # Configure loggers using configuration file.
+    if 'loggers' in configuration:
+        log_levels_config = configuration['loggers']
+        if not isinstance(log_levels, dict):
+            log.error('Loggers configuration error: log levels are mapping from logger name to'
+                      'log level!')
+            exit(1)
+        # Merge config from cmd line and config file.
+        # Overwrite config file values with values provided from command line.
+        log_levels = dict(log_levels_config, **log_levels)
+        logger.configure_loggers_from_dict(log_levels)
+
+    port = configuration.get('port', '12345')
+    prometheus_ip = configuration.get('prometheus_ip', 'localhost:30900')
+    k8s_namespace = configuration.get('k8s_namespace', 'default')
+
+    log.debug(port)
+    log.info(prometheus_ip)
+    log.info(k8s_namespace)
 
 
 if __name__ == '__main__':

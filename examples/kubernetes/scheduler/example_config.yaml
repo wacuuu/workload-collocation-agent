@@ -1,0 +1,5 @@
+loggers:
+  'k8s_scheduler_extender.main': debug  
+port: 8080
+prometheus_ip: 1.1
+k8s_namespace: default
