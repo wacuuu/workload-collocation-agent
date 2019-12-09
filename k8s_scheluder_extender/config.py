@@ -11,7 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
+
+from wca.config import assure_type
+
+log = logging.getLogger(__name__)
+
+FIELDS = {
+    'port': int,
+    'prometheus': str,
+    'namespace': str
+        }
 
 
 def validate_config(config):
-    pass
+    for field in config:
+        if field not in FIELDS:
+            log.error("Improper field: %r in config file!", field)
+            exit(1)
+        assure_type(field, FIELDS[field])

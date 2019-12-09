@@ -21,9 +21,9 @@ from wca import logger
 from k8s_scheluder_extender.config import validate_config
 
 
-log = logging.getLogger(__name__)
+DEFAULT_MODULE = 'k8s_scheluder_extender'
 
-DEFAULT_MODULE = 'k8s_scheduler_extender'
+log = logging.getLogger(DEFAULT_MODULE + '.main')
 
 
 def main():
@@ -53,7 +53,7 @@ def main():
 
     log.warning('This software is pre-production and should not be deployed to production servers.')
     log.debug('started PID=%r', os.getpid())
-    log.info('WCA k8s scheduler extender')
+    log.info('Starting WCA k8s scheduler extender!')
 
     # Initialize all necessary objects.
     try:
