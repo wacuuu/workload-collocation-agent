@@ -18,6 +18,7 @@ import os
 from wca.config import load_config, ConfigLoadError
 from wca import logger
 
+from scheduler.server import Server
 
 DEFAULT_MODULE = 'scheduler'
 
@@ -72,13 +73,8 @@ def main():
         log_levels = dict(log_levels_config, **log_levels)
         logger.configure_loggers_from_dict(log_levels)
 
-    port = configuration.get('port', '12345')
-    prometheus_ip = configuration.get('prometheus_ip', 'localhost:30900')
-    k8s_namespace = configuration.get('k8s_namespace', 'default')
-
-    log.debug(port)
-    log.info(prometheus_ip)
-    log.info(k8s_namespace)
+    server = Server(configuration)
+    server.run()
 
 
 if __name__ == '__main__':
