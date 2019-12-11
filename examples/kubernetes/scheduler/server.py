@@ -38,6 +38,8 @@ class Server:
         self.prometheus_ip = configuration.get('prometheus_ip', 'localhost:30900')
         self.k8s_namespace = configuration.get('k8s_namespace', 'default')
         self.risk_threshold = configuration.get('risk_threshold', 0.3)
+        self.risk_query = configuration.get('risk_query')
+        self.lookback = configuration.get('lookback')
 
         @app.route('/api/scheduler/test')
         def hello():
@@ -55,15 +57,18 @@ class Server:
     def run(self):
         self.app.run(host=self.host, port=self.port, debug=True)
 
-    def _get_risk(self, app, nodes):
+    def _get_risk(self, app, nodes, risk_query, lookback):
+        """ in range 0 - 1 from query """
+        risks = {}
+        query = risk_query % (app, lookback)
         return {}
 
-    def _filter_logic(self, app, nodes, namespace):
+    def _filter_logic(self, app, nodes, namespace, risk_query, lookback):
         if namespace != self.k8s_namespace:
             log.debug('Ignoring pods not from %r namespace (got %r)', self.k8s_namespace, namespace)
             return nodes
 
-        risks = self._get_risk(app, nodes)
+        risks = self._get_risk(app, nodes, risk_query, lookback)
         if len(risks) == 0:
             log.debug('"%s" risks not found - ignoring', app)
             return nodes
@@ -84,7 +89,7 @@ class Server:
                 )
 
     def _prioritize(self):
-        return str(self.port)
+        return None
 
     def _extract_common_input(self, extender_args):
         nodes = extender_args.NodeNames
