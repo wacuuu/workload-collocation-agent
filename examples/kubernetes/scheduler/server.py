@@ -16,10 +16,7 @@ import logging
 from flask import Flask, request
 from typing import Dict
 
-from scheduler.algorithms.test_algorithms import TestAlgorithms
 from scheduler.utils import ExtenderArgs
-
-from wca.config import register
 
 
 app = Flask('k8s scheduler extender')
@@ -52,7 +49,3 @@ class Server:
 
     def run(self):
         self.app.run(host=self.host, port=self.port, debug=True)
-
-
-def register_algorithms():
-    register(TestAlgorithms)
