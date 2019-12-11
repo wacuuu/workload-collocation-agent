@@ -4,7 +4,7 @@ port: 8080
 prometheus_ip: 1.1
 k8s_namespace: default
 
-algorithm: !TestAlgorithm
+algorithms: !TestAlgorithms
   lookback: '2m'
   risk_threshold: 0.3 
   risk_query: 'avg_over_time(app__contention_risk_on_node{app="%s"}[%s])'

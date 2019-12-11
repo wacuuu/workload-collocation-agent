@@ -15,10 +15,11 @@ import argparse
 import logging
 import os
 
-from wca.config import load_config, ConfigLoadError
+from wca.config import load_config, ConfigLoadError, register
 from wca import logger
 
 from scheduler.server import Server
+from scheduler.algorithms.test_algorithms import TestAlgorithms
 
 DEFAULT_MODULE = 'scheduler'
 
@@ -55,6 +56,8 @@ def main():
     log.info('Starting K8s scheduler extender for Workload Collocation Agent!')
 
     # Initialize all necessary objects.
+    register_algorithms()
+
     try:
         configuration = load_config(args.config)
     except ConfigLoadError as e:
@@ -75,6 +78,10 @@ def main():
 
     server = Server(configuration)
     server.run()
+
+
+def register_algorithms():
+    register(TestAlgorithms)
 
 
 if __name__ == '__main__':
