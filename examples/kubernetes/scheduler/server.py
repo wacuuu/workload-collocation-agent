@@ -30,9 +30,7 @@ class Server:
         self.app = app
         self.host = configuration.get('host', 'localhost')
         self.port = configuration.get('port', '12345')
-        self.prometheus_ip = configuration.get('prometheus_ip', 'localhost:30900')
-        self.k8s_namespace = configuration.get('k8s_namespace', 'default')
-        self._algorithms = configuration['algorithms']
+        self.algorithm = configuration['algorithm']
 
         @app.route('/api/scheduler/test')
         def hello():
@@ -46,7 +44,7 @@ class Server:
         @app.route('/api/scheduler/prioritize', methods=['POST'])
         def prioritize():
             extender_args = ExtenderArgs(**request.get_json())
-            return self._algorithms.prioritize(extender_args)
+            return self.algorithm.prioritize(extender_args)
 
     def run(self):
-        self.app.run(host=self.host, port=self.port, debug=True)
+        self.app.run(host=self.host, port=self.port)

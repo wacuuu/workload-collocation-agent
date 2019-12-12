@@ -1,5 +1,9 @@
+loggers:
+  # Flask logger
+  werkzeug: ERROR
+host: 'localhost'
 port: 8080
-algorithms: !TestAlgorithms
+algorithm: !ExampleAlgorithm
   k8s_namespace: default
   lookback: '2m'
   risk_threshold: 0.3 

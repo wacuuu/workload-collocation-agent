@@ -19,7 +19,7 @@ from wca.config import load_config, ConfigLoadError, register
 from wca import logger
 
 from scheduler.server import Server
-from scheduler.algorithms.test_algorithms import TestAlgorithms
+from scheduler.algorithms.example_algorithm import ExampleAlgorithm
 
 DEFAULT_MODULE = 'scheduler'
 
@@ -81,7 +81,7 @@ def main():
 
 
 def register_algorithms():
-    register(TestAlgorithms)
+    register(ExampleAlgorithm)
 
 
 if __name__ == '__main__':

@@ -15,7 +15,7 @@
 from abc import ABC, abstractmethod
 
 
-class Algorithms(ABC):
+class Algorithm(ABC):
 
     @abstractmethod
     def filter():
