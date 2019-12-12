@@ -7,7 +7,7 @@ pipeline {
       booleanParam defaultValue: true, description: 'E2E for Mesos.', name: 'E2E_MESOS'
       booleanParam defaultValue: true, description: 'E2E for Kubernetes.', name: 'E2E_K8S'
       booleanParam defaultValue: true, description: 'E2E for Kubernetes as Daemonset.', name: 'E2E_K8S_DS'
-      string defaultValue: '121', description: 'Sleep time for E2E tests', name: 'SLEEP_TIME'
+      string defaultValue: '200', description: 'Sleep time for E2E tests', name: 'SLEEP_TIME'
     }
     environment {
         DOCKER_REPOSITORY_URL = '100.64.176.12:80'
@@ -178,12 +178,26 @@ pipeline {
                     '''
                     }
                 }
+                // Sysbench
                 stage("Build and push Sysbench Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/sysbench:${GIT_COMMIT}
                     IMAGE_DIR=${WORKSPACE}/examples/workloads/sysbench
+                    cp -r dist ${IMAGE_DIR}
+                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
+                    docker push ${IMAGE_NAME}
+                    '''
+                    }
+                }
+                // Mutilate
+                stage("Build and push Mutilate Docker image") {
+                    when {expression{return params.BUILD_IMAGES}}
+                    steps {
+                    sh '''
+                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/mutilate:${GIT_COMMIT}
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/mutilate
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
@@ -239,10 +253,7 @@ pipeline {
                 LABELS="{additional_labels: {build_number: \"${BUILD_NUMBER}\", build_node_name: \"${NODE_NAME}\", build_commit: \"${GIT_COMMIT}\"}}"
                 RUN_WORKLOADS_SLEEP_TIME = "${params.SLEEP_TIME}"
                 INVENTORY="tests/e2e/demo_scenarios/common/inventory.yaml"
-                // JUST ONE WORKLOAD
-                TAGS = "stress_ng"
-                // ALL SET OF WORKLOADS
-                // TAGS = "redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,twemcache_mutilate,specjbb,stress_ng"
+                TAGS = "stress_ng,redis_rpc_perf,twemcache_rpc_perf,twemcache_mutilate,specjbb"
             }
             failFast false
             parallel {
@@ -366,10 +377,7 @@ def kustomize_wca_and_workloads_check() {
     sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_WORKLOAD}"
 
     print('Scale up workloads...')
-    // JUST ONE WORKLOAD
-    def list = ["stress-stream-small"]
-    // FULL SET OF WORKLOADS
-    //def list = ["stress-stream-small","redis-small","memtier-small","sysbench-memory-small"]
+    def list = ["stress-stream-small", "redis-small", "memtier-small", "sysbench-memory-small", "memcached-small", "mutilate-small"]
     for(item in list){
         sh "kubectl scale --replicas=1 statefulset $item"
     }
