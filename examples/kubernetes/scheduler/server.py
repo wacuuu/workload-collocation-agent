@@ -41,11 +41,12 @@ class Server:
         @app.route('/api/scheduler/filter', methods=['POST'])
         def filter():
             extender_args = ExtenderArgs(**request.get_json())
-            return self._algorithms.filter(extender_args, self.k8s_namespace)
+            return self._algorithms.filter(extender_args)
 
-        @app.route('/api/scheduler/prioritize')
+        @app.route('/api/scheduler/prioritize', methods=['POST'])
         def prioritize():
-            return self._algorithms.prioritize()
+            extender_args = ExtenderArgs(**request.get_json())
+            return self._algorithms.prioritize(extender_args)
 
     def run(self):
         self.app.run(host=self.host, port=self.port, debug=True)
