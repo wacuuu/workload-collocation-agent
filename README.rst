@@ -233,6 +233,7 @@ Further reading
 - `Detection API <docs/detection.rst>`_
 - `Allocation API <docs/allocation.rst>`_
 - `Metrics list <docs/metrics.rst>`_
+- `Metrics sources <docs/metrics_sources.rst>`_
 - `Development guide <docs/development.rst>`_
 - `External detector example <docs/external_detector_example.rst>`_
 - `Wrappers guide <docs/wrappers.rst>`_

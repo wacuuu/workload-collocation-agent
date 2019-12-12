@@ -5,18 +5,53 @@ Available metrics
 
 **This software is pre-production and should not be deployed to production servers.**
 
-For searchable list of metrics `metrics as csv file <metrics.csv>`_ .
-
-The "Enabled" describes if metric is enabled by default and in brackets there is information which 
-option in MeasurementRunner is responsible for configuring it.
 
 .. contents:: Table of Contents
 
+For searchable list of metrics `metrics as csv file <metrics.csv>`_ .
 
-Metrics sources
-===============
+Common labels
+=============
 
-Check out `metrics sources documentation <metrics_sources.rst>`_  to learn how measurement them.
+Because all WCA metrics are collected in context of single physical machine (host), all metrics
+will have ``host`` label attached representing the hostname::
+
+    platform_topology_cpus{host="node37"} 40
+
+There are also other common labels that can be enabled with ``MesurementRunner`` in ``include_optional_labels`` boolean field:
+
+- ``sockets`` - topology information: number of sockets
+- ``cores`` - topology information:  number of physical cores
+- ``cpus`` - topology information: number of logical CPUs (threads)
+- ``cpu_model`` - verbose name of processor of the host as presented by /proc/cpuinfo "model name" field
+- ``cpu_model_number`` -  Processor model of the host as presented by /proc/cpuinfo "model" field
+- ``wca_version`` - WCA build information e.g. 2.0.0a1-gxxx
+
+Legend
+==============
+
+- **Name**: is the name of metric that will be exported to Prometheus by using Prometheus exposition format but also
+  the name of the key in ``Measurements`` dict-like type used in ``Detector`` and ``Allocator`` plugins,
+- **Help**: information what metric represents and some details how metric was collected and known problems or limitations,
+- **Unit**: unit of the metric (usually seconds or bytes),
+- **Type**: only possible types are `gauge` and `counter` as described in `Prometheus metric types <https://prometheus.io/docs/concepts/metric_types/>`_.
+- **Source**: short description about mechanics that was used to collect metric,
+  for more detailed information check out `Metric sources documenation <metric_sources.rst>`_.
+- **Enabled** - column describes if metric is enabled by default and how to enable (option in ``MeasurementRunner`` responsible for configuring it. Please refer to `metrics sources documentation <metrics_sources.rst>`_
+  for more details.)
+- **Levels/Labels** - some metrics have additional dimensions (more granularity than just ``Task`` or ``Platform``) e.g. ``task_mem_numa_pages`` can be collected per NUMA node - in this case
+  this metrics have attached additional label like ``numa_node=0`` which creates new series in
+  Prometheus nomenclature and represents more granular information about source of metric. When used in python API in ``Detector`` or
+  ``Allocator`` classes this will be represented by nested dicts where each level have keys corresponding to "level" (order is important).
+  For example doubly nested perf uncore metrics like: ``platform_cas_count_reads`` have two levels: `socket` and `pmu_type` (which physically represents memory controller) will be encoded as::
+
+    platform_cas_count_reads{socket=0, pmu_type=17} 12345
+
+  and represented in Python API as::
+
+    measurements = {'platform_cas_count_reads': {0: {17: 12345}}}
+
+
 
 Task's metrics
 ==============
