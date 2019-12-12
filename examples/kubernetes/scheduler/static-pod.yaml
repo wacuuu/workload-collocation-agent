@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: static-scheduler-extender
+  labels:
+
+spec:
+  containers:
+    - name: scheduler-extender
+      image: wca-scheduler-extender
+      ports:
+        - name: scheduler-extender
+          containerPort: 12345
+          protocol: TCP
