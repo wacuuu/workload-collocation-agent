@@ -25,6 +25,12 @@ log = logging.getLogger(__name__)
 
 class ExampleAlgorithm(algorithms.Algorithm):
 
+    def __str__(self):
+        return "ExampleAlgorithm"
+
+    def __repr__(self):
+        return "ExampleAlgorithm"
+
     def __init__(self,
                  risk_threshold: float,
                  risk_query: str,

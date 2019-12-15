@@ -25,6 +25,15 @@ _PROMETHEUS_RANGE_TPL = '&start={start}&end={end}&step=1s'
 _PROMETHEUS_TIME_TPL = '&time={time}'
 _PROMETHEUS_TAG_TPL = '{key}="{value}"'
 
+_SESSION_TIMEOUT = 1
+
+
+prometheus_adapter = requests.adapters.HTTPAdapter(max_retries=1)
+
+
+class PrometheusException(Exception):
+    pass
+
 
 def _build_raw_query(prometheus, query, time=None):
     path = _PROMETHEUS_QUERY_PATH
@@ -42,9 +51,16 @@ def _build_raw_query(prometheus, query, time=None):
 
 def do_raw_query(prometheus_ip, query, result_tag, time):
     url = _build_raw_query(prometheus_ip, query, time)
-    response = requests.get(url)
-    response = response.json()
+    session = requests.Session()
+    session.mount(url, prometheus_adapter)
 
+    try:
+        response = session.get(url, timeout=_SESSION_TIMEOUT)
+    except requests.exceptions.ConnectTimeout as e:
+        raise PrometheusException(
+                'Cannot connect to Prometheus ("%s")!: %s' % (url, e))
+
+    response = response.json()
     if response['status'] == 'error':
         raise Exception(response['error'])
 

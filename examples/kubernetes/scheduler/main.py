@@ -42,6 +42,9 @@ def main():
         action='append',
         dest='levels',
     )
+    parser.add_argument(
+        '-v', '--version', action='version', version='0.1',
+        help="Show version")
 
     args = parser.parse_args()
 

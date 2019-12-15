@@ -146,3 +146,9 @@ tester:
 generate_docs:
 	@echo Generate documentation.
 	pipenv run env PYTHONPATH=. python util/docs.py
+
+wca_extender_scheduler_package:
+	@echo Building wca extender scheduler pex file.
+	-sh -c 'rm -f .pex-build/*scheduler.pex'
+	pipenv run env $(ENV_UNSAFE) pex . -D examples/kubernetes/ $(PEX_OPTIONS) -o dist/scheduler.pex -m scheduler.main:main
+	./dist/scheduler.pex -v

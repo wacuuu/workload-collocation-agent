@@ -11,22 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import logging
 
-from wca.config import assure_type
+FROM centos:7
 
-log = logging.getLogger(__name__)
+RUN yum -y update && yum -y install epel-release
+RUN yum -y install nginx
+RUN yum -y install python36
 
-FIELDS = {
-    'port': int,
-    'prometheus': str,
-    'namespace': str
-        }
+WORKDIR scheduler
 
-
-def validate_config(config):
-    for field in config:
-        if field not in FIELDS:
-            log.error("Improper field: %r in config file!", field)
-            exit(1)
-        assure_type(field, FIELDS[field])
+# Adding Scheduler extender.
+COPY /dist/scheduler.pex /usr/bin/scheduler.pex

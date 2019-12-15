@@ -39,12 +39,23 @@ class Server:
         @app.route('/api/scheduler/filter', methods=['POST'])
         def filter():
             extender_args = ExtenderArgs(**request.get_json())
-            return self._algorithms.filter(extender_args)
+            try:
+                filtered = self._algorithms.filter(extender_args)
+            except Exception as e:
+                log.warning('Cannot filter nodes with %r: %s', self.algorithm.__repr__(), e)
+                filtered = {'Error': str(e)}
+
+            return filtered
 
         @app.route('/api/scheduler/prioritize', methods=['POST'])
         def prioritize():
             extender_args = ExtenderArgs(**request.get_json())
-            return self.algorithm.prioritize(extender_args)
+            try:
+                prioritize = self.algorithm.prioritize(extender_args)
+            except Exception as e:
+                log.warning('Cannot prioritize nodes with %r: %s', self.algorithm.__repr__(), e)
+                prioritize = {'Error': str(e)}
+            return prioritize
 
     def run(self):
         self.app.run(host=self.host, port=self.port)
