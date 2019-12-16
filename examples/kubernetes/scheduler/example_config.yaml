@@ -9,5 +9,5 @@ algorithm: !ExampleAlgorithm
   risk_threshold: 0.3 
   risk_query: 'avg_over_time(app__contention_risk_on_node{app="%s"}[%s])'
   time: '1569479280'
-  prometheus_ip: 'http://100.64.176.36:30900'
+  prometheus_ip: 'http://100.64.176.36:30901'
   fit_query: 'avg_over_time(fit_avg{app="%s"}[%s])'

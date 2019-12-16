@@ -11,15 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from dataclasses import dataclass
-from typing import Dict, List
-
-
-@dataclass
-class ExtenderArgs:
-    Nodes: List[Dict]
-    Pod: dict
-    NodeNames: List[str]
+from scheduler.kubernetes import ExtenderArgs
 
 
 def extract_common_input(extender_args: ExtenderArgs):

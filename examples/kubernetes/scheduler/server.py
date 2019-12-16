@@ -11,12 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from dataclasses import asdict
 import logging
 
 from flask import Flask, request
 from typing import Dict
 
-from scheduler.utils import ExtenderArgs
+from scheduler.kubernetes import ExtenderArgs
 
 
 app = Flask('k8s scheduler extender')
@@ -39,23 +40,12 @@ class Server:
         @app.route('/api/scheduler/filter', methods=['POST'])
         def filter():
             extender_args = ExtenderArgs(**request.get_json())
-            try:
-                filtered = self._algorithms.filter(extender_args)
-            except Exception as e:
-                log.warning('Cannot filter nodes with %r: %s', self.algorithm.__repr__(), e)
-                filtered = {'Error': str(e)}
-
-            return filtered
+            return asdict(self.algorithm.filter(extender_args))
 
         @app.route('/api/scheduler/prioritize', methods=['POST'])
         def prioritize():
             extender_args = ExtenderArgs(**request.get_json())
-            try:
-                prioritize = self.algorithm.prioritize(extender_args)
-            except Exception as e:
-                log.warning('Cannot prioritize nodes with %r: %s', self.algorithm.__repr__(), e)
-                prioritize = {'Error': str(e)}
-            return prioritize
+            return self.algorithm.prioritize(extender_args)
 
     def run(self):
         self.app.run(host=self.host, port=self.port)

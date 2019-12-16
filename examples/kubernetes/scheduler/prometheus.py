@@ -56,14 +56,15 @@ def do_raw_query(prometheus_ip, query, result_tag, time):
 
     try:
         response = session.get(url, timeout=_SESSION_TIMEOUT)
-    except requests.exceptions.ConnectTimeout as e:
-        raise PrometheusException(
-                'Cannot connect to Prometheus ("%s")!: %s' % (url, e))
+        response.raise_for_status()
+    except Exception as e:
+        raise PrometheusException(e)
 
     response = response.json()
-    if response['status'] == 'error':
-        raise Exception(response['error'])
 
     assert response['data']['resultType'] == 'vector'
     result = response['data']['result']
-    return {pair['metric'][result_tag]: float(pair['value'][1]) for pair in result}
+    return {
+            pair['metric'][result_tag]: float(pair['value'][1])
+            for pair in result
+            }

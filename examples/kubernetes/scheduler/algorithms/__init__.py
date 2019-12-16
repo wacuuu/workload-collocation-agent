@@ -14,13 +14,16 @@
 
 from abc import ABC, abstractmethod
 
+from kubernetes import ExtenderArgs, ExtenderFilterResult, HostPriority
+from typing import List
+
 
 class Algorithm(ABC):
 
     @abstractmethod
-    def filter():
+    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         pass
 
     @abstractmethod
-    def prioritize():
+    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
         pass
