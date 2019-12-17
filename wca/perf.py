@@ -393,7 +393,8 @@ class PerfCgroupDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
             max_depth = len(METRICS_METADATA[MetricName.TASK_INSTRUCTIONS].levels)
 
             if max_depth == 0:
-                measurements[MetricName.TASK_IPC] = float(inst_delta) / cycles_delta
+                if cycles_delta > 0:
+                    measurements[MetricName.TASK_IPC] = float(inst_delta) / cycles_delta
                 if time_delta > 0:
                     measurements[MetricName.TASK_IPS] = rate(inst_delta)
             else:
