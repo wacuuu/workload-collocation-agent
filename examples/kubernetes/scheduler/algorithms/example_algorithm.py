@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from json import dumps
+from dataclasses import asdict
 import logging
 import math
 from typing import List
@@ -70,7 +71,7 @@ class ExampleAlgorithm(algorithms.Algorithm):
         for d in priorities:
             assert isinstance(d.Score, int), 'will be silently discarded!'
 
-        return dumps(priorities)
+        return priorities
 
     def _prioritize_logic(self, app, nodes, namespace):
         if namespace != self._k8s_namespace:

@@ -11,10 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from dataclasses import asdict
 import logging
-import json
-from flask import Flask, request, make_response
+from dataclasses import asdict
+from flask import Flask, request, jsonify
 from typing import Dict
 
 from scheduler.kubernetes import ExtenderArgs
@@ -40,14 +39,14 @@ class Server:
         @app.route('/api/scheduler/filter', methods=['POST'])
         def filter():
             extender_args = ExtenderArgs(**request.get_json())
-            r = make_response(self.algorithm.filter(extender_args))
-            r.mimetype = 'application/json'
-            return r
+            return jsonify(asdict(self.algorithm.filter(extender_args)))
 
         @app.route('/api/scheduler/prioritize', methods=['POST'])
         def prioritize():
             extender_args = ExtenderArgs(**request.get_json())
-            return self.algorithm.prioritize(extender_args)
+            priorities = [asdict(host)
+                          for host in self.algorithm.prioritize(extender_args)]
+            return jsonify(priorities)
 
     def run(self):
         self.app.run(host=self.host, port=self.port)
