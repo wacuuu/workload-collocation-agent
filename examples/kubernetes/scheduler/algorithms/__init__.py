@@ -14,7 +14,7 @@
 
 from abc import ABC, abstractmethod
 
-from kubernetes import ExtenderArgs, ExtenderFilterResult, HostPriority
+from scheduler.kubernetes import ExtenderArgs, ExtenderFilterResult, HostPriority
 from typing import List
 
 

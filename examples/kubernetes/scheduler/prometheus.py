@@ -57,7 +57,7 @@ def do_raw_query(prometheus_ip, query, result_tag, time):
     try:
         response = session.get(url, timeout=_SESSION_TIMEOUT)
         response.raise_for_status()
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         raise PrometheusException(e)
 
     response = response.json()

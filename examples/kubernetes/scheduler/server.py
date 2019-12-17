@@ -29,7 +29,7 @@ class Server:
     def __init__(self, configuration: Dict[str, str]):
         app = Flask('k8s scheduler extender')
         self.app = app
-        self.host = configuration.get('host', 'localhost')
+        self.host = configuration.get('host', '127.0.0.1')
         self.port = configuration.get('port', '12345')
         self.algorithm = configuration['algorithm']
 

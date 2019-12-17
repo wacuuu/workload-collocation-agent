@@ -152,3 +152,9 @@ wca_extender_scheduler_package:
 	-sh -c 'rm -f .pex-build/*scheduler.pex'
 	pipenv run env $(ENV_UNSAFE) pex . -D examples/kubernetes/ $(PEX_OPTIONS) -o dist/scheduler.pex -m scheduler.main:main
 	./dist/scheduler.pex -v
+
+wca_extender_scheduler_docker_image:
+	@echo Building wca scheduler docker image.
+	-sh -c 'sudo docker build -t wca-extender-scheduler:0.1 -f examples/kubernetes/scheduler/Dockerfile .'
+	-sh -c 'sudo docker save -o dist/scheduler.tar wca-extender-scheduler:0.1'
+	-sh -c 'sudo chmod 777 dist/scheduler.tar'

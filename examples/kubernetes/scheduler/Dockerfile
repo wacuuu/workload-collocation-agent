@@ -18,7 +18,10 @@ RUN yum -y update && yum -y install epel-release
 RUN yum -y install nginx
 RUN yum -y install python36
 
-WORKDIR scheduler
+WORKDIR /
 
 # Adding Scheduler extender.
-COPY /dist/scheduler.pex /usr/bin/scheduler.pex
+COPY dist/scheduler.pex  /usr/bin/scheduler.pex
+COPY examples/kubernetes/scheduler/example_config.yaml /etc/wca_scheduler/config.yaml
+
+ENTRYPOINT ["scheduler.pex", "-c", "/etc/wca_scheduler/config.yaml"]
