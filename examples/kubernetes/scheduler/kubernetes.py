@@ -20,7 +20,7 @@ from typing import Dict, List
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L299
 @dataclass
 class ExtenderFilterResult():
-    Nodes: List[str] = field(default_factory=lambda: [])
+    Nodes = None
     NodeNames: List[str] = field(default_factory=lambda: [])
     FailedNodes: Dict[str, str] = field(default_factory=lambda: {})
     Error: str = ''
