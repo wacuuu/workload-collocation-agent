@@ -13,8 +13,8 @@
 # limitations under the License.
 from dataclasses import asdict
 import logging
-
-from flask import Flask, request
+import json
+from flask import Flask, request, make_response
 from typing import Dict
 
 from scheduler.kubernetes import ExtenderArgs
@@ -40,7 +40,9 @@ class Server:
         @app.route('/api/scheduler/filter', methods=['POST'])
         def filter():
             extender_args = ExtenderArgs(**request.get_json())
-            return asdict(self.algorithm.filter(extender_args))
+            r = make_response(self.algorithm.filter(extender_args))
+            r.mimetype = 'application/json'
+            return r
 
         @app.route('/api/scheduler/prioritize', methods=['POST'])
         def prioritize():
