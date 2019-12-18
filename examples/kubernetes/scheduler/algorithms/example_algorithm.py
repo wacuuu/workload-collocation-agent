@@ -104,9 +104,10 @@ class ExampleAlgorithm(algorithms.Algorithm):
         return priorities
 
     def _filter_logic(self, app, nodes, namespace):
+        error = ''
         if namespace != self.k8s_namespace:
             log.debug('Ignoring pods not from %r namespace (got %r)', self.k8s_namespace, namespace)
-            return nodes
+            return nodes, error
 
         risks, error = self._get_risk(app, nodes)
         if len(risks) == 0:
@@ -122,9 +123,9 @@ class ExampleAlgorithm(algorithms.Algorithm):
     def _get_risk(self, app, nodes):
         """ in range 0 - 1 from query """
         risks = {}
+        error = ''
         query = self.risk_query % (app, self.lookback)
 
-        error = ''
         try:
             nodes_risk = do_raw_query(self.prometheus_ip, query, 'node', self.time)
         except PrometheusException as e:
