@@ -67,9 +67,7 @@ def _fetch_metrics(url):
 
 
 @pytest.mark.parametrize('workload_name', [
-    'cassandra_stress',
     'stress_ng',
-    'cassandra_ycsb',
     'specjbb',
     'twemcache_mutilate',
     'twemcache_rpc_perf',
