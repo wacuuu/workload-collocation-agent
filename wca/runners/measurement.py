@@ -217,9 +217,11 @@ class MeasurementRunner(Runner):
         # We had the modify levels for all metrics
         # The set proper levels based on perf_aggregate_cpus value
         if not perf_aggregate_cpus:
-            log.debug('Enabling "cpu" level for PERF_SUBSYSTEM_WITH_CGROUPS metrics.')
+            log.debug('Enabling "cpu" level for PERF_SUBSYSTEM_WITH_CGROUPS and derived metrics.')
             for metric_metadata in METRICS_METADATA.values():
                 if metric_metadata.source == MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS:
+                    metric_metadata.levels = ['cpu']
+                if metric_metadata.source == MetricSource.DERIVED_PERF_WITH_CGROUPS:
                     metric_metadata.levels = ['cpu']
 
         self._enable_derived_metrics = enable_derived_metrics
