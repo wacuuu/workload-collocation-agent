@@ -11,8 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from json import dumps
-from dataclasses import asdict
+from dataclasses import dataclass
 import logging
 import math
 from typing import List
@@ -26,29 +25,21 @@ from scheduler.utils import extract_common_input
 log = logging.getLogger(__name__)
 
 
+@dataclass
 class ExampleAlgorithm(algorithms.Algorithm):
+    risk_threshold: float
+    risk_query: str
+    lookback: str
+    time: str
+    k8s_namespace: str
+    prometheus_ip: str
+    fit_query: str
 
     def __str__(self):
         return "ExampleAlgorithm"
 
     def __repr__(self):
         return "ExampleAlgorithm"
-
-    def __init__(self,
-                 risk_threshold: float,
-                 risk_query: str,
-                 lookback: str,
-                 time: str,
-                 k8s_namespace: str,
-                 prometheus_ip: str,
-                 fit_query: str):
-        self._risk_threshold = risk_threshold
-        self._risk_query = risk_query
-        self._lookback = lookback
-        self._time = time
-        self._k8s_namespace = k8s_namespace
-        self._prometheus_ip = prometheus_ip
-        self._fit_query = fit_query
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         log.debug('Pod: \n%s:', extender_args.Pod)
@@ -74,15 +65,15 @@ class ExampleAlgorithm(algorithms.Algorithm):
         return priorities
 
     def _prioritize_logic(self, app, nodes, namespace):
-        if namespace != self._k8s_namespace:
+        if namespace != self.k8s_namespace:
             log.debug('ignoring pods not from %r namespace (got %r)',
-                      self._k8s_namespace, namespace)
+                      self.k8s_namespace, namespace)
             return {}
 
         unweighted_priorities = self._get_priorities(app, nodes)
 
         priorities = [
-            HostPriority(node, (priority * self._weight_multiplier))
+            HostPriority(node, (priority * self.weight_multiplier))
             for node, priority in unweighted_priorities.items()
                 ]
 
@@ -91,9 +82,9 @@ class ExampleAlgorithm(algorithms.Algorithm):
     def _get_priorities(self, app, nodes):
         """ in range 0 - 1 from query """
         priorities = {}
-        query = self._fit_query % (app, self._lookback)
+        query = self.fit_query % (app, self.lookback)
         try:
-            nodes_fit = do_raw_query(self._prometheus_ip, query, 'node', self._time)
+            nodes_fit = do_raw_query(self.prometheus_ip, query, 'node', self.time)
         except PrometheusException as e:
             log.warning(e)
             nodes_fit = []
@@ -113,7 +104,7 @@ class ExampleAlgorithm(algorithms.Algorithm):
         return priorities
 
     def _filter_logic(self, app, nodes, namespace):
-        if namespace != self._k8s_namespace:
+        if namespace != self.k8s_namespace:
             log.debug('Ignoring pods not from %r namespace (got %r)', self.k8s_namespace, namespace)
             return nodes
 
@@ -131,11 +122,11 @@ class ExampleAlgorithm(algorithms.Algorithm):
     def _get_risk(self, app, nodes):
         """ in range 0 - 1 from query """
         risks = {}
-        query = self._risk_query % (app, self._lookback)
+        query = self.risk_query % (app, self.lookback)
 
         error = ''
         try:
-            nodes_risk = do_raw_query(self._prometheus_ip, query, 'node', self._time)
+            nodes_risk = do_raw_query(self.prometheus_ip, query, 'node', self.time)
         except PrometheusException as e:
             log.warning(e)
             error = str(e)
