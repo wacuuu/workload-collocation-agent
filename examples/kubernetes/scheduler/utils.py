@@ -16,8 +16,9 @@ from scheduler.kubernetes import ExtenderArgs
 
 def extract_common_input(extender_args: ExtenderArgs):
     nodes = extender_args.NodeNames
-    labels = extender_args.Pod['metadata']['labels']
-    name = extender_args.Pod['metadata']['name']
-    namespace = extender_args.Pod['metadata']['namespace']
+    metadata = extender_args.Pod.get('metadata', {})
+    labels = metadata.get('labels', {})
+    name = metadata.get('name', '')
+    namespace = metadata.get('namespace', '')
     app = labels.get('app', None)
     return app, nodes, namespace, name
