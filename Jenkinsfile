@@ -51,9 +51,14 @@ pipeline {
                   export WCA_TAG=${GIT_COMMIT}
                   make wca_package_in_docker
                   docker push $WCA_IMAGE:$WCA_TAG
+                  # tag with branch name and push
+                  docker tag $WCA_IMAGE:$WCA_TAG $WCA_IMAGE:${GIT_BRANCH}
+                  docker push $WCA_IMAGE:${GIT_BRANCH}
 
                   # Just for completeness (not used later)
+                  export WCA_TAG=${GIT_BRANCH}-devel 
                   make _wca_docker_devel
+                  docker push $WCA_IMAGE:$WCA_TAG
                 '''
             }
         }
@@ -285,7 +290,7 @@ pipeline {
                 INVENTORY="tests/e2e/demo_scenarios/common/inventory.yaml"
                 TAGS = "stress_ng,redis_rpc_perf,twemcache_rpc_perf,twemcache_mutilate,specjbb"
             }
-            failFast false
+            failFast true
             parallel {
                 stage('WCA Daemonset E2E for Kubernetes') {
                     when {expression{return params.E2E_K8S_DS}}
