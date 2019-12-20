@@ -139,6 +139,8 @@ cpuacct or memory.
 
 Those metrics cause minimal overhead so cannot be disabled.
 
+Metrics are summed when there are multiple containers in a task.
+
 /proc/ or /sys/ filesystems based
 ---------------------------------------
 
@@ -156,7 +158,7 @@ Derived
 
 Those metrics are calculated by WCA by some equations hardcode in WCA code.
 
-All those metrics and be enabled or disabled by ``enable_derived_metrics`` option.
+All those metrics can be enabled or disabled by ``enable_derived_metrics`` option.
 
 Orchestrator
 ---------------------------------------

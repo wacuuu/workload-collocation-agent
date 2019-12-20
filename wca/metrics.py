@@ -611,7 +611,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_UP:
         MetricMetadata(
-            'Always returns 1.',
+            'Always returns 1 for running task.',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.INTERNAL,
