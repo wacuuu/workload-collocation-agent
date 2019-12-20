@@ -37,9 +37,7 @@ pipeline {
         stage("Generate documentation") {
             when {expression{return params.PRECHECKS}}
             steps {
-                sh '''
-                  make generate_docs
-                '''
+                generate_docs()
             }
         }
         stage("Build WCA pex (in docker and images)") {
@@ -584,4 +582,14 @@ def if_perform_e2e() {
         print(result)
         return result == ""
     }
+}
+
+def generate_docs() {
+    sh '''cp docs/metrics.rst docs/metrics.tmp.rst
+          cp docs/metrics.csv docs/metrics.tmp.csv
+          make generate_docs
+          diff docs/metrics.csv docs/metrics.tmp.csv
+          diff docs/metrics.rst docs/metrics.tmp.rst
+          rm docs/metrics.tmp.rst
+          rm docs/metrics.tmp.csv'''
 }
