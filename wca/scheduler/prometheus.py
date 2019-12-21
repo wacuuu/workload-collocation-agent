@@ -16,16 +16,14 @@ import requests
 
 log = logging.getLogger(__name__)
 
+QUERY_PATH = "/api/v1/query"
+QUERY_RANGE_PATH = "/api/v1/query_range"
+URL_TPL = '{prometheus}{path}?query={name}'
+RANGE_TPL = '&start={start}&end={end}&step=1s'
+TIME_TPL = '&time={time}'
+TAG_TPL = '{key}="{value}"'
 
-# CONSTANTS
-_PROMETHEUS_QUERY_PATH = "/api/v1/query"
-_PROMETHEUS_QUERY_RANGE_PATH = "/api/v1/query_range"
-_PROMETHEUS_URL_TPL = '{prometheus}{path}?query={name}'
-_PROMETHEUS_RANGE_TPL = '&start={start}&end={end}&step=1s'
-_PROMETHEUS_TIME_TPL = '&time={time}'
-_PROMETHEUS_TAG_TPL = '{key}="{value}"'
-
-_SESSION_TIMEOUT = 1
+SESSION_TIMEOUT = 1
 
 
 prometheus_adapter = requests.adapters.HTTPAdapter(max_retries=1)
@@ -36,14 +34,14 @@ class PrometheusException(Exception):
 
 
 def _build_raw_query(prometheus, query, time=None):
-    path = _PROMETHEUS_QUERY_PATH
-    url = _PROMETHEUS_URL_TPL.format(
+    path = QUERY_PATH
+    url = URL_TPL.format(
         prometheus=prometheus,
         path=path,
         name=query,)
 
     if time:
-        url += _PROMETHEUS_TIME_TPL.format(time=time)
+        url += TIME_TPL.format(time=time)
 
     log.debug('Full url: %s', url)
     return url
@@ -55,7 +53,7 @@ def do_raw_query(prometheus_ip, query, result_tag, time):
     session.mount(url, prometheus_adapter)
 
     try:
-        response = session.get(url, timeout=_SESSION_TIMEOUT)
+        response = session.get(url, timeout=SESSION_TIMEOUT)
         response.raise_for_status()
     except requests.exceptions.RequestException as e:
         raise PrometheusException(e)

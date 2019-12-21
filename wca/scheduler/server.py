@@ -46,6 +46,3 @@ class Server:
             priorities = [asdict(host)
                           for host in self.algorithm.prioritize(extender_args)]
             return jsonify(priorities)
-
-    def run(self, *args, **kwargs):
-        self.app.run(*args, **kwargs)

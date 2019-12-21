@@ -26,7 +26,7 @@ DEFAULT_MODULE = 'wca.scheduler'
 log = logging.getLogger(DEFAULT_MODULE + '.main')
 
 
-def main(config=None):
+def main(config):
     # Initialize logging subsystem.
     log_levels = {}
     log_levels.setdefault(DEFAULT_MODULE, 'info')
@@ -64,7 +64,3 @@ def main(config=None):
 def register_algorithms():
     register(FitRiskAlgorithm)
     register(NOPAlgorithm)
-
-
-if __name__ == '__main__':
-    main()

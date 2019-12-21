@@ -19,3 +19,4 @@ Index of documents
 - `Extending WCA <extending.rst>`_
 - `Secure transport guide <ssl.rst>`_
 - `Workload Collocation Agent API <api.rst>`_
+- `wca-scheduler <wca-scheduler.rst>`_
