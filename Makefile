@@ -149,11 +149,16 @@ generate_docs:
 
 wca_scheduler_package:
 	@echo Building wca scheduler pex file.
+	# Cleaning.
 	-sh -c 'rm -f .pex-build/*wca-scheduler.pex'
+	# Trick to include entire module in pex file.
 	-sh -c 'mkdir -p /tmp/wca-scheduler/wca/'
 	-sh -c 'cp -a $$(pwd)/wca/. /tmp/wca-scheduler/wca/'
+	# Prepare pex.
 	pipenv run env PYTHONPATH=. pex . -D /tmp/wca-scheduler -v -R component-licenses -o dist/wca-scheduler.pex --disable-cache -c gunicorn
+	# Cleaning.
 	-sh -c 'sudo rm -rf /tmp/wca-scheduler'
+	# Checking.
 	./dist/wca-scheduler.pex -v
 
 wca_scheduler_docker_image:
