@@ -1,6 +1,6 @@
-========================
-WCA - Extender Scheduler
-========================
+=============
+wca-scheduler
+=============
 
 .. contents:: Table of Contents
 
@@ -18,7 +18,7 @@ Getting started
 bla bla bla
 
 
-Deploy
-======
+Deploy as k8s pod
+=================
 
 bla bla bla

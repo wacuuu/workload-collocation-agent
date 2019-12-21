@@ -11,19 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from abc import ABC, abstractmethod
-
-from scheduler.kubernetes import ExtenderArgs, ExtenderFilterResult, HostPriority
-from typing import List
+from wca.scheduler.types import ExtenderArgs
 
 
-class Algorithm(ABC):
-
-    @abstractmethod
-    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
-        pass
-
-    @abstractmethod
-    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
-        pass
+def extract_common_input(extender_args: ExtenderArgs):
+    nodes = extender_args.NodeNames
+    metadata = extender_args.Pod.get('metadata', {})
+    labels = metadata.get('labels', {})
+    name = metadata.get('name', '')
+    namespace = metadata.get('namespace', '')
+    app = labels.get('app', None)
+    return app, nodes, namespace, name

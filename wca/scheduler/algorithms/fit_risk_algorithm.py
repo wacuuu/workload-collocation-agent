@@ -16,17 +16,20 @@ import logging
 import math
 from typing import List
 
-from scheduler import algorithms
-from scheduler.kubernetes import ExtenderFilterResult, HostPriority, ExtenderArgs
-from scheduler.prometheus import do_raw_query, PrometheusException
-from scheduler.utils import extract_common_input
+from wca.scheduler.algorithms import Algorithm
+from wca.scheduler.prometheus import do_raw_query, PrometheusException
+from wca.scheduler.utils import extract_common_input
+from wca.scheduler.types import ExtenderFilterResult, HostPriority, ExtenderArgs
 
 
 log = logging.getLogger(__name__)
 
 
 @dataclass
-class ExampleAlgorithm(algorithms.Algorithm):
+class FitRiskAlgorithm(Algorithm):
+    """rst
+    Fit and risk algorithm.
+    """
     risk_threshold: float
     risk_query: str
     lookback: str
@@ -36,10 +39,10 @@ class ExampleAlgorithm(algorithms.Algorithm):
     fit_query: str
 
     def __str__(self):
-        return "ExampleAlgorithm"
+        return "FitRiskAlgorithm"
 
     def __repr__(self):
-        return "ExampleAlgorithm"
+        return "FitRiskAlgorithm"
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         log.debug('Pod: \n%s:', extender_args.Pod)

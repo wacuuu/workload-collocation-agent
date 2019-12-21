@@ -16,7 +16,7 @@ from dataclasses import asdict
 from flask import Flask, request, jsonify
 from typing import Dict
 
-from scheduler.kubernetes import ExtenderArgs
+from wca.scheduler.types import ExtenderArgs
 
 
 app = Flask('k8s scheduler extender')
@@ -28,12 +28,11 @@ class Server:
     def __init__(self, configuration: Dict[str, str]):
         app = Flask('k8s scheduler extender')
         self.app = app
-        self.host = configuration.get('host', '127.0.0.1')
-        self.port = configuration.get('port', '12345')
         self.algorithm = configuration['algorithm']
 
         @app.route('/api/scheduler/test')
         def hello():
+            log.info("['/api/scheduler/test'] -> passed")
             return "Hello World"
 
         @app.route('/api/scheduler/filter', methods=['POST'])
@@ -48,5 +47,5 @@ class Server:
                           for host in self.algorithm.prioritize(extender_args)]
             return jsonify(priorities)
 
-    def run(self):
-        self.app.run(host=self.host, port=self.port)
+    def run(self, *args, **kwargs):
+        self.app.run(*args, **kwargs)

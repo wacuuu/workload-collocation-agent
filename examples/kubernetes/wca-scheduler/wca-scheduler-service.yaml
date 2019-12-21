@@ -12,16 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 apiVersion: v1
-kind: Pod
+kind: Service
 metadata:
-  name: static-scheduler-extender
+  name: wca-scheduler-service
+  namespace: kube-system
   labels:
-
+    name: wca-scheduler-nodeport
 spec:
-  containers:
-    - name: scheduler-extender
-      image: wca-scheduler-extender
-      ports:
-        - name: scheduler-extender
-          containerPort: 12345
-          protocol: TCP
+  selector:
+    app: wca-scheduler
+  type: NodePort
+  ports:
+      - port: 30180
+        nodePort: 30180
+        name: http

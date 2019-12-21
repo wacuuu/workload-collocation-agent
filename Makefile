@@ -147,14 +147,15 @@ generate_docs:
 	@echo Generate documentation.
 	pipenv run env PYTHONPATH=. python util/docs.py
 
-wca_extender_scheduler_package:
-	@echo Building wca extender scheduler pex file.
-	-sh -c 'rm -f .pex-build/*scheduler.pex'
-	pipenv run env $(ENV_UNSAFE) pex . -D examples/kubernetes/ $(PEX_OPTIONS) -o dist/scheduler.pex -m scheduler.main:main
-	./dist/scheduler.pex -v
+wca_scheduler_package:
+	@echo Building wca scheduler pex file.
+	-sh -c 'rm -f .pex-build/*wca-scheduler.pex'
+	-sh -c 'mkdir -p /tmp/wca-scheduler/wca/'
+	-sh -c 'cp -a $$(pwd)/wca/. /tmp/wca-scheduler/wca/'
+	pipenv run env PYTHONPATH=. pex . -D /tmp/wca-scheduler -v -R component-licenses -o dist/wca-scheduler.pex --disable-cache -c gunicorn
+	-sh -c 'sudo rm -rf /tmp/wca-scheduler'
+	./dist/wca-scheduler.pex -v
 
-wca_extender_scheduler_docker_image:
+wca_scheduler_docker_image:
 	@echo Building wca scheduler docker image.
-	-sh -c 'sudo docker build -t wca-extender-scheduler:0.1 -f examples/kubernetes/scheduler/Dockerfile .'
-	-sh -c 'sudo docker save -o dist/scheduler.tar wca-extender-scheduler:0.1'
-	-sh -c 'sudo chmod 777 dist/scheduler.tar'
+	-sh -c 'sudo docker build -t wca-scheduler:latest -f examples/kubernetes/wca-scheduler/Dockerfile --no-cache .'

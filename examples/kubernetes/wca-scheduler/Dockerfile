@@ -14,14 +14,22 @@
 
 FROM centos:7
 
-RUN yum -y update && yum -y install epel-release
-RUN yum -y install nginx
-RUN yum -y install python36
-
 WORKDIR /
 
-# Adding Scheduler extender.
-COPY dist/scheduler.pex  /usr/bin/scheduler.pex
-COPY examples/kubernetes/scheduler/example_config.yaml /etc/wca_scheduler/config.yaml
+# Install dependencies.
+RUN yum -y update && yum -y install epel-release
+RUN yum -y install python36
 
-ENTRYPOINT ["scheduler.pex", "-c", "/etc/wca_scheduler/config.yaml"]
+# Prepare configuration directories.
+RUN mkdir -p /etc/wca-scheduler.d
+RUN mkdir -p /usr/src/wca-scheduler
+
+# Prepare wca-scheduler and configuration.
+COPY dist/wca-scheduler.pex  /usr/bin/wca-scheduler.pex
+COPY examples/kubernetes/wca-scheduler/wca-scheduler.conf /etc/wca-scheduler.d/wca-scheduler.conf
+
+# Prepare NGINX server configuration.
+COPY examples/kubernetes/wca-scheduler/wca-scheduler-server.conf /etc/wca-scheduler.d/wca-scheduler-server.conf
+
+# Run wca-scheduler.
+ENTRYPOINT ["wca-scheduler.pex", "wca.scheduler.main:main(\"/etc/wca-scheduler.d/wca-scheduler.conf\")", "-b unix:/usr/src/wca-scheduler/wca-scheduler.sock"]
