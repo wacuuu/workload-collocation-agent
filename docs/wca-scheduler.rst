@@ -35,7 +35,8 @@ Prepare docker image.
 
 Push image to repository.
 
-``docker tag wca-scheduler:latest 100.64.176.12:80/wca-scheduler:latest
+``docker tag wca-scheduler:latest 100.64.176.12:80/wca-scheduler:latest``
+
 ``docker push 100.64.176.12:80/wca-scheduler:latest``
 
 Prepare wca-scheduler service which expose ``31800`` port to communicate with wca-scheduler NGINX server.
