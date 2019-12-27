@@ -23,4 +23,8 @@ On kubernetes master node prepare service which expose ``31800`` port to communi
 
 ``kubectl apply -f wca-scheduler-service.yaml``
 
-and copy ``wca-scheduler-pod.yaml`` to ``/etc/kubernetes/manifests`` where pods would be automatically deploy.
+and copy ``wca-scheduler-pod.yaml`` to ``/etc/kubernetes/manifests`` where pods are automatically deployed.
+
+Check if wca-scheduler pod is running:
+
+``kubectl get pods -n kube-system``
