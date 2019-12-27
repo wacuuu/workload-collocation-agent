@@ -65,4 +65,4 @@ To implement your algorithm you need only to use inferace below:
 
 Example deployment
 ==================
-Check documentation of `example deployment <examples/kubernetes/wca-scheduler/README.rst>`_
+Check documentation of `example deployment <../examples/kubernetes/wca-scheduler/README.rst>`_
