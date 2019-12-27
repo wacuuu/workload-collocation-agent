@@ -23,7 +23,7 @@ You can configure scheduler in following way in ``config.yaml``:
 
 Algorithms
 ==========
-To implement your algorithm you need only to use inferace below:
+Implement new algorithm with interface below: 
 
 .. code-block:: python
 
@@ -62,6 +62,9 @@ To implement your algorithm you need only to use inferace below:
             @abstractmethod
             def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
                 pass
+
+Register new component in ``wca/scheduler/components.py``.
+
 
 Example deployment
 ==================

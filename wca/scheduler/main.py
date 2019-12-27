@@ -15,10 +15,9 @@ import logging
 import os
 
 from wca import logger
-from wca.config import load_config, ConfigLoadError, register
+from wca.config import load_config, ConfigLoadError
+from wca.scheduler.components import register_algorithms
 from wca.scheduler.server import Server
-from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
-from wca.scheduler.algorithms.fit_risk_algorithm import FitRiskAlgorithm
 
 
 DEFAULT_MODULE = 'wca.scheduler'
@@ -59,8 +58,3 @@ def main(config):
     server = Server(configuration)
 
     return server.app
-
-
-def register_algorithms():
-    register(FitRiskAlgorithm)
-    register(NOPAlgorithm)
