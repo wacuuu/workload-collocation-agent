@@ -157,7 +157,7 @@ wca_scheduler_package:
 	# Prepare pex
 	pipenv run env PYTHONPATH=. pex . -D /tmp/wca-scheduler -v -R component-licenses -o dist/wca-scheduler.pex --disable-cache -c gunicorn
 	# Clean
-	-sh -c 'sudo rm -rf /tmp/wca-scheduler'
+	-sh -c 'rm -rf /tmp/wca-scheduler'
 	# Check
 	./dist/wca-scheduler.pex -v
 
