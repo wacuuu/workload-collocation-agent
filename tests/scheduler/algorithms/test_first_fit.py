@@ -12,29 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from wca.scheduler.algorithms.first_fit import FirstFit
-from wca.scheduler.types import ExtenderArgs
 from tests.scheduler.algorithms.simulator import Simulator
-from tests.scheduler.algorithms.node import Node
+from tests.scheduler.algorithms.node import (create_apache_pass_node,
+                                             create_standard_node)
 
 
 def test():
     simulator = Simulator(
         tasks=[],
-        nodes=[Node.create_apache_pass(), Node.create_standard()],
+        nodes=[create_apache_pass_node(), create_standard_node()],
         algorithm=FirstFit()
     )
 
-    extender_args = ExtenderArgs(
-            Nodes={
+    pod = {}
 
-
-                },
-            Pod={
-
-                },
-            NodeNames={
-
-                }
-            )
-
-    simulator.run(extender_args)
+    simulator.schedule_pod(pod)

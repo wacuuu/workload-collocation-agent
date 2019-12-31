@@ -16,6 +16,8 @@ from tests.scheduler.algorithms.resources import Resources
 GB = 1000 ** 3
 MB = 1000 ** 2
 
+node_number = 0
+
 
 class Node:
     def __init__(self, name, resources):
@@ -46,8 +48,17 @@ class Node:
                 self.real.substract(task.real)
                 self.unassigned.substract(task.initial)
 
-    def create_apache_pass():
-        return Node('0', Resources(96, 1000 * GB, 50 * GB))
 
-    def create_standard():
-        return Node('1', Resources(96, 150 * GB, 150 * GB))
+def get_node_name():
+    global node_number
+    node_name = 'node%d' % node_number
+    node_number += 1
+    return node_name
+
+
+def create_apache_pass_node(node_name=get_node_name(), resources=Resources(96, 1000 * GB, 50 * GB)):
+    return Node(node_name, resources)
+
+
+def create_standard_node(node_name=get_node_name(), resources=Resources(96, 150 * GB, 150 * GB)):
+    return Node(node_name, resources)

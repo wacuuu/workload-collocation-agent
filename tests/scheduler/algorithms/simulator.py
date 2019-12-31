@@ -90,13 +90,13 @@ class Simulator:
                         }
                     )
 
-    def run(self, pod):
+    def schedule_pod(self, pod):
         extender_args = self.prepare_extender_args(pod)
 
         extender_filter_result = self.algorithm.filter(extender_args)
         host_priority = self.algorithm.prioritize(extender_args)
 
-        self.schedule(extender_filter_result, host_priority)
+        self._schedule(extender_filter_result, host_priority)
 
-    def schedule(self, extender_filter_result, host_priority):
+    def _schedule(self, extender_filter_result, host_priority):
         pass
