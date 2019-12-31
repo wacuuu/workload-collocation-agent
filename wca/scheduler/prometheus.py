@@ -47,7 +47,7 @@ def _build_raw_query(prometheus, query, time=None):
     return url
 
 
-def do_raw_query(prometheus_ip, query, result_tag, time):
+def do_raw_query(prometheus_ip, query, result_tag=None, time=None):
     url = _build_raw_query(prometheus_ip, query, time)
     session = requests.Session()
     session.mount(url, prometheus_adapter)
@@ -66,3 +66,19 @@ def do_raw_query(prometheus_ip, query, result_tag, time):
             pair['metric'][result_tag]: float(pair['value'][1])
             for pair in result
             }
+
+
+def do_query(prometheus_ip, query):
+    url = _build_raw_query(prometheus_ip, query)
+    session = requests.Session()
+    session.mount(url, prometheus_adapter)
+
+    try:
+        response = session.get(url, timeout=SESSION_TIMEOUT)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        raise PrometheusException(e)
+
+    response = response.json()
+
+    return response['data']['result']
