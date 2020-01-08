@@ -16,13 +16,17 @@ from dataclasses import dataclass, field
 
 from typing import Dict, List
 
+# Kubernetes
+
+NodeName = str
+FailureMessage = str
 
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L299
 @dataclass
 class ExtenderFilterResult():
     Nodes: List[Dict] = None
-    NodeNames: List[str] = field(default_factory=lambda: [])
-    FailedNodes: Dict[str, str] = field(default_factory=lambda: {})
+    NodeNames: List[NodeName] = field(default_factory=lambda: [])
+    FailedNodes: Dict[NodeName, FailureMessage] = field(default_factory=lambda: {})
     Error: str = ''
 
 

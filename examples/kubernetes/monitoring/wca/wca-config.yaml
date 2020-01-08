@@ -25,3 +25,4 @@ runner: !MeasurementRunner
   event_names:
     - task_cycles # do not remove: USED BY E2E tests
   wss_reset_interval: 1
+  gather_hw_mm_topology: True

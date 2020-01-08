@@ -23,30 +23,15 @@ class Node:
     def __init__(self, name, resources):
         self.name = name
         self.initial = resources
-        self.real = resources.copy()
+        self.usage = Resources(0, 0, 0)
         self.unassigned = resources.copy()
 
     def __repr__(self):
         return "(name: {}, unassigned: {}, initial: {}, real: {})".format(
                 self.name, str(self.unassigned), str(self.initial), str(self.real))
 
-    def validate_assignment(self, tasks, new_task):
-        """if unassigned > free_not_unassigned"""
-        unassigned = self.initial.copy()
-        for task in tasks:
-            if task.assignment == self:
-                unassigned.substract(task.initial)
-        unassigned.substract(new_task.initial)
-
-        return bool(unassigned)
-
-    def update(self, tasks):
-        self.real = self.initial.copy()
-        self.unassigned = self.initial.copy()
-        for task in tasks:
-            if task.assignment == self:
-                self.real.substract(task.real)
-                self.unassigned.substract(task.initial)
+    def run_task(self, task):
+        pass
 
 
 def get_node_name():

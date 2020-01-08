@@ -13,7 +13,6 @@ confluent-kafka = "==1.0.0rc1"        # 2018.11.31  - cannot be upgraded to 1.0.
 kazoo = "==2.6.1"                     # 2019.01.22
 flask = "==1.1.1"		      # 2019.12.15
 gunicorn = "==20.0.4"		      # 2019.12.18
-numpy = "*"
 
 [dev-packages]
 pex = "==1.6.11"                      # 2019.09.18
