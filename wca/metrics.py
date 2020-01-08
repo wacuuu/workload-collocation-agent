@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from operator import sub
 
+
 log = logging.getLogger(__name__)
 
 
@@ -37,6 +38,7 @@ class MetricName(str, Enum):
         'task_offcore_requests_outstanding_l3_miss_demand_data_rd'
     TASK_MEM_LOAD_RETIRED_LOCAL_PMM = 'task_mem_load_retired_local_pmm'
     TASK_MEM_LOAD_RETIRED_LOCAL_DRAM = 'task_mem_load_retired_local_dram'
+    TASK_MEM_LOAD_RETIRED_REMOTE_DRAM = 'task_mem_load_retired_remote_dram'
     TASK_MEM_INST_RETIRED_LOADS = 'task_mem_inst_retired_loads'
     TASK_MEM_INST_RETIRED_STORES = 'task_mem_inst_retired_stores'
     TASK_DTLB_LOAD_MISSES = 'task_dtlb_load_misses'
@@ -186,7 +188,8 @@ class MetricSource(str, Enum):
     PROCFS = '/proc filesystem'
     SYSFS = '/sys filesystem'
     INTERNAL = 'internal'
-    DERIVED = 'derived'
+    DERIVED_PERF_WITH_CGROUPS = 'derived from perf subsystem with cgroups'
+    DERIVED_PERF_UNCORE = 'derived from perf uncore'
     ORCHESTRATOR = 'orchestrator'
     LSHW_BINARY = 'lshw binary output'
     IPMCTL_BINARY = 'ipmctl binary output'
@@ -217,7 +220,9 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
     # --- Perf subsystem with cgroups
     MetricName.TASK_INSTRUCTIONS:
         MetricMetadata(
-            'Hardware PMU counter for number of instructions.',
+            'Hardware PMU counter for number of instructions (PERF_COUNT_HW_INSTRUCTIONS). '
+            'Fixed counter. '
+            'Predefined perf PERF_TYPE_HARDWARE. Please man perf_event_open for more details.',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -227,7 +232,9 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_CYCLES:
         MetricMetadata(
-            'Hardware PMU counter for number of cycles.',
+            'Hardware PMU counter for number of cycles (PERF_COUNT_HW_CPU_CYCLES). '
+            'Fixed counter. '
+            'Predefined perf PERF_TYPE_HARDWARE. Please man perf_event_open for more details.',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -237,7 +244,8 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_CACHE_MISSES:
         MetricMetadata(
-            'Hardware counter for cache-misses.',
+            'Hardware PMU counter for cache-misses (PERF_COUNT_HW_CACHE_MISSES).'
+            'Predefined perf PERF_TYPE_HARDWARE. Please man perf_event_open for more details.',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -247,7 +255,8 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_CACHE_REFERENCES:
         MetricMetadata(
-            'Hardware counter for number of cache references.',
+            'Hardware PMU counter for number of cache references (PERF_COUNT_HW_CACHE_REFERENCES).'
+            'Predefined perf PERF_TYPE_HARDWARE. Please man perf_event_open for more details.',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -257,7 +266,9 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_STALLED_MEM_LOADS:
         MetricMetadata(
-            'TBD: Mem stalled loads.',
+            'Execution stalls while memory subsystem has an outstanding load.'
+            'CYCLE_ACTIVITY.STALLS_MEM_ANY'
+            'Intel SDM October 2019 19-24 Vol. 3B, Table 19-3',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -268,7 +279,11 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
     MetricName.TASK_OFFCORE_REQUESTS_L3_MISS_DEMAND_DATA_RD:
         MetricMetadata(
             'Increment each cycle of the number of offcore outstanding demand data read '
-            'requests from SQ that missed L3.',
+            'requests from SQ that missed L3.'
+            'Counts number of Offcore outstanding Demand Data Read requests '
+            'that miss L3 cache in the superQ every cycle.'
+            'OFFCORE_REQUESTS_OUTSTANDING.L3_MISS_DEMAND_DATA_RD'
+            'Intel SDM October 2019 19-24 Vol. 3B, Table 19-3',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -278,7 +293,9 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_OFFCORE_REQUESTS_OUTSTANDING_L3_MISS_DEMAND_DATA_RD:
         MetricMetadata(
-            'Demand data read requests that missed L3.',
+            'Demand Data Read requests who miss L3 cache. '
+            'OFFCORE_REQUESTS.L3_MISS_DEMAND_DATA_RD.'
+            'Intel SDM October 2019 19-24 Vol. 3B, Table 19-3',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -288,7 +305,11 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_MEM_LOAD_RETIRED_LOCAL_PMM:
         MetricMetadata(
-            'TBD mem_load_retired_local_pmm__rd180',
+            'Retired load instructions with '
+            'local Intel® Optane™ DC persistent memory as the data source and the data'
+            'request missed L3 (AppDirect or Memory Mode), and DRAM cache (Memory Mode). '
+            'MEM_LOAD_RETIRED.LOCAL_PMM (Mnemonic) '
+            'For CLX, Intel SDM October 2019 19-24 Vol. 3B, Table 19-4',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -298,7 +319,23 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_MEM_LOAD_RETIRED_LOCAL_DRAM:
         MetricMetadata(
-            'TBD task__mem_load_retired_local_dram__rd301',
+            'Retired load instructions which '
+            'data sources missed L3 but serviced from local DRAM.'
+            'MEM_LOAD_L3_MISS_RETIRED.LOCAL_DRAM '
+            'Intel SDM October 2019 Chapters 19-24 Vol. 3B Table 19-3',
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC,
+            MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
+            MetricGranularity.TASK,
+            [],
+            'no (event_names)',
+        ),
+    MetricName.TASK_MEM_LOAD_RETIRED_REMOTE_DRAM:
+        MetricMetadata(
+            'Retired load instructions '
+            'which data sources missed L3 but serviced from remote dram. '
+            'MEM_LOAD_L3_MISS_RETIRED.REMOTE_DRAM'
+            'Intel SDM October 2019 Chapters 19-24 Vol. 3B Table 19-3',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -308,7 +345,9 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_MEM_INST_RETIRED_LOADS:
         MetricMetadata(
-            'TBD mem_load_retired_local_pmm__rd180',
+            'MEM_INST_RETIRED.ALL_LOADS '
+            'All retired load instructions. '
+            'Intel SDM October 2019 Chapters 19-24 Vol. 3B Table 19-3',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -318,7 +357,9 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_MEM_INST_RETIRED_STORES:
         MetricMetadata(
-            'TBD',
+            'MEM_INST_RETIRED.ALL_STORES '
+            'All retired store instructions. '
+            'Intel SDM October 2019 Chapters 19-24 Vol. 3B Table 19-3',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -328,7 +369,12 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_DTLB_LOAD_MISSES:
         MetricMetadata(
-            'TBD',
+            'DTLB_LOAD_MISSES.WALK_COMPLETED'
+            'Counts demand data loads that caused a completed'
+            'page walk of any page size (4K/2M/4M/1G). This implies'
+            'it missed in all TLB levels. The page walk can end with'
+            'or without a fault'
+            'Intel SDM October 2019 Chapters 19-24 Vol. 3B Table 19-3',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
@@ -339,23 +385,25 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
     # Perf subsystem meta metrics (errors)
     MetricName.TASK_SCALING_FACTOR_AVG:
         MetricMetadata(
-            'Perf subsystem metric scaling factor, max value of all perf per task metrics.',
+            'Perf subsystem metric scaling factor, averaged value of all events and cpus '
+            '(value 1.0 is the best, meaning that there is no scaling at all for any metric).',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
             [],
-            'yes',
+            'auto (depending on event_names)',
         ),
     MetricName.TASK_SCALING_FACTOR_MAX:
         MetricMetadata(
-            'Perf subsystem metric scaling factor, max value of all perf per task metrics.',
+            'Perf subsystem metric scaling factor, maximum value of all events and cpus '
+            '(value 1.0 is the best, meaning that there is no scaling at all for any metric).',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
             MetricSource.PERF_SUBSYSTEM_WITH_CGROUPS,
             MetricGranularity.TASK,
             [],
-            'yes',
+            'auto (depending on event_names)',
         ),
     # perf per task derived
     MetricName.TASK_IPS:
@@ -363,7 +411,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Instructions per second.',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_WITH_CGROUPS,
             MetricGranularity.TASK,
             [],
             'no (enable_derived_metrics)',
@@ -373,7 +421,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Instructions per cycle.',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_WITH_CGROUPS,
             MetricGranularity.TASK,
             [],
             'no (enable_derived_metrics)',
@@ -383,7 +431,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Cache hit ratio, based on cache-misses and cache-references.',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_WITH_CGROUPS,
             MetricGranularity.TASK,
             [],
             'no (enable_derived_metrics)',
@@ -393,7 +441,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Cache misses per kilo instructions.',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_WITH_CGROUPS,
             MetricGranularity.TASK,
             [],
             'no (enable_derived_metrics)',
@@ -563,7 +611,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         ),
     MetricName.TASK_UP:
         MetricMetadata(
-            'Always returns 1.',
+            'Always returns 1 for running task.',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
             MetricSource.INTERNAL,
@@ -806,7 +854,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'TBD',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_UNCORE,
             MetricGranularity.PLATFORM,
             ['socket', 'pmu_type'],
             'no (enable_perf_uncore and enable_derived_metrics)',
@@ -816,7 +864,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'TBD',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_UNCORE,
             MetricGranularity.PLATFORM,
             ['socket', 'pmu_type'],
             'no (enable_perf_uncore and enable_derived_metrics)',
@@ -826,7 +874,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'TBD',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_UNCORE,
             MetricGranularity.PLATFORM,
             ['socket', 'pmu_type'],
             'no (enable_perf_uncore and enable_derived_metrics)',
@@ -836,7 +884,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'TBD',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_UNCORE,
             MetricGranularity.PLATFORM,
             ['socket', 'pmu_type'],
             'no (enable_perf_uncore and enable_derived_metrics)',
@@ -846,7 +894,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'TBD',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_UNCORE,
             MetricGranularity.PLATFORM,
             ['socket', 'pmu_type'],
             'no (enable_perf_uncore and enable_derived_metrics)',
@@ -856,7 +904,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'TBD',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_UNCORE,
             MetricGranularity.PLATFORM,
             ['socket', 'pmu_type'],
             'no (enable_perf_uncore and enable_derived_metrics)',
@@ -866,7 +914,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'TBD',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_UNCORE,
             MetricGranularity.PLATFORM,
             ['socket', 'pmu_type'],
             'no (enable_perf_uncore and enable_derived_metrics)',
@@ -876,7 +924,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'TBD',
             MetricType.COUNTER,
             MetricUnit.NUMERIC,
-            MetricSource.DERIVED,
+            MetricSource.DERIVED_PERF_UNCORE,
             MetricGranularity.PLATFORM,
             ['socket', 'pmu_type'],
             'no (enable_perf_uncore and enable_derived_metrics)',
@@ -1071,13 +1119,14 @@ def _operation_on_leveled_metric(aggregated_metric, operation, max_depth,
 def _operation_on_leveled_dicts(a, b, operation, max_depth, depth=0):
     """Performing declared operation on two leveled hierarchical metrics.
     The result will be returned as new object."""
+    from wca.logger import TRACE
     operation_result = {}
     for key, value in a.items():
         if depth == max_depth - 1:
             try:
                 operation_result[key] = operation(a[key], b[key])
             except ZeroDivisionError:
-                log.debug('Division by zero. Ignoring!')
+                log.log(TRACE, 'Merging op Division by zero. Ignoring! for key=%s', key)
         else:
             operation_result[key] = _operation_on_leveled_dicts(
                 a[key], b[key], operation, max_depth, depth + 1)

@@ -7,7 +7,7 @@ pipeline {
       booleanParam defaultValue: true, description: 'E2E for Mesos.', name: 'E2E_MESOS'
       booleanParam defaultValue: true, description: 'E2E for Kubernetes.', name: 'E2E_K8S'
       booleanParam defaultValue: true, description: 'E2E for Kubernetes as Daemonset.', name: 'E2E_K8S_DS'
-      string defaultValue: '121', description: 'Sleep time for E2E tests', name: 'SLEEP_TIME'
+      string defaultValue: '200', description: 'Sleep time for E2E tests', name: 'SLEEP_TIME'
     }
     environment {
         DOCKER_REPOSITORY_URL = '100.64.176.12:80'
@@ -37,9 +37,7 @@ pipeline {
         stage("Generate documentation") {
             when {expression{return params.PRECHECKS}}
             steps {
-                sh '''
-                  make generate_docs
-                '''
+                generate_docs()
             }
         }
         stage("Build WCA pex (in docker and images)") {
@@ -51,8 +49,14 @@ pipeline {
                   export WCA_TAG=${GIT_COMMIT}
                   make wca_package_in_docker
                   docker push $WCA_IMAGE:$WCA_TAG
+                  # tag with branch name and push
+                  docker tag $WCA_IMAGE:$WCA_TAG $WCA_IMAGE:${GIT_BRANCH}
+                  docker push $WCA_IMAGE:${GIT_BRANCH}
+
                   # Just for completeness (not used later)
-                  make wca_docker_devel
+                  export WCA_TAG=${GIT_BRANCH}-devel 
+                  make _wca_docker_devel
+                  docker push $WCA_IMAGE:$WCA_TAG
                 '''
             }
         }
@@ -63,7 +67,7 @@ pipeline {
                   # speed up pex wrapper build time
                   # requieres .pex-build already filled with requirments
                   #export ADDITIONAL_PEX_OPTIONS='--no-index --cache-ttl=604800'
-                  make wrapper_package
+                  make _unsafe_wrapper_package
                 '''
                 archiveArtifacts(artifacts: "dist/**")
             }
@@ -93,9 +97,12 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/redis:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/redis:${GIT_BRANCH}
                     IMAGE_DIR=${WORKSPACE}/examples/workloads/redis
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -105,10 +112,13 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/memtier_benchmark:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/memtier_benchmark:${GIT_BRANCH}
                     IMAGE_DIR=${WORKSPACE}/examples/workloads/memtier_benchmark
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -118,10 +128,13 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/stress_ng:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/stress_ng:${GIT_BRANCH}
                     IMAGE_DIR=${WORKSPACE}/examples/workloads/stress_ng
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -131,10 +144,13 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/rpc_perf:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/rpc_perf:${GIT_BRANCH}
                     IMAGE_DIR=${WORKSPACE}/examples/workloads/rpc_perf
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -144,10 +160,13 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/twemcache:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/twemcache:${GIT_BRANCH}
                     IMAGE_DIR=${WORKSPACE}/examples/workloads/twemcache
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -157,10 +176,13 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/ycsb:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/ycsb:${GIT_BRANCH}
                     IMAGE_DIR=${WORKSPACE}/examples/workloads/ycsb
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -170,22 +192,45 @@ pipeline {
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/cassandra_stress:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/cassandra_stress:${GIT_BRANCH}
                     IMAGE_DIR=${WORKSPACE}/examples/workloads/cassandra_stress
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
+                // Sysbench
                 stage("Build and push Sysbench Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
                     sh '''
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/sysbench:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/sysbench:${GIT_BRANCH}
                     IMAGE_DIR=${WORKSPACE}/examples/workloads/sysbench
                     cp -r dist ${IMAGE_DIR}
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
+                    '''
+                    }
+                }
+                // Mutilate
+                stage("Build and push Mutilate Docker image") {
+                    when {expression{return params.BUILD_IMAGES}}
+                    steps {
+                    sh '''
+                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/mutilate:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/mutilate:${GIT_BRANCH}
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/mutilate
+                    cp -r dist ${IMAGE_DIR}
+                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
+                    docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -196,12 +241,15 @@ pipeline {
                         withCredentials([file(credentialsId: 'specjbb', variable: 'SPECJBB_TAR')]) {
                             sh '''
                             IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/specjbb:${GIT_COMMIT}
+                            BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/specjbb:${GIT_BRANCH}
                             IMAGE_DIR=${WORKSPACE}/examples/workloads/specjbb
                             cp ${SPECJBB_TAR} ${IMAGE_DIR}
                             tar -xC ${IMAGE_DIR} -f ${IMAGE_DIR}/specjbb.tar.bz2
                             cp -r dist ${IMAGE_DIR}
                             docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
                             docker push ${IMAGE_NAME}
+                            docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                            docker push ${BRANCH_IMAGE_NAME}
                             '''
                         }
                     }
@@ -238,12 +286,9 @@ pipeline {
                 LABELS="{additional_labels: {build_number: \"${BUILD_NUMBER}\", build_node_name: \"${NODE_NAME}\", build_commit: \"${GIT_COMMIT}\"}}"
                 RUN_WORKLOADS_SLEEP_TIME = "${params.SLEEP_TIME}"
                 INVENTORY="tests/e2e/demo_scenarios/common/inventory.yaml"
-                // JUST ONE WORKLOAD
-                TAGS = "stress_ng"
-                // ALL SET OF WORKLOADS
-                // TAGS = "redis_rpc_perf,cassandra_stress,cassandra_ycsb,twemcache_rpc_perf,twemcache_mutilate,specjbb,stress_ng"
+                TAGS = "stress_ng,redis_rpc_perf,twemcache_rpc_perf,twemcache_mutilate,specjbb"
             }
-            failFast false
+            failFast true
             parallel {
                 stage('WCA Daemonset E2E for Kubernetes') {
                     when {expression{return params.E2E_K8S_DS}}
@@ -365,10 +410,7 @@ def kustomize_wca_and_workloads_check() {
     sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_WORKLOAD}"
 
     print('Scale up workloads...')
-    // JUST ONE WORKLOAD
-    def list = ["stress-stream-small"]
-    // FULL SET OF WORKLOADS
-    //def list = ["stress-stream-small","redis-small","memtier-small","sysbench-memory-small"]
+    def list = ["stress-stream-small", "redis-small", "memtier-small", "sysbench-memory-small", "memcached-small", "mutilate-small"]
     for(item in list){
         sh "kubectl scale --replicas=1 statefulset $item"
     }
@@ -540,4 +582,14 @@ def if_perform_e2e() {
         print(result)
         return result == ""
     }
+}
+
+def generate_docs() {
+    sh '''cp docs/metrics.rst docs/metrics.tmp.rst
+          cp docs/metrics.csv docs/metrics.tmp.csv
+          make generate_docs
+          diff docs/metrics.csv docs/metrics.tmp.csv
+          diff docs/metrics.rst docs/metrics.tmp.rst
+          rm docs/metrics.tmp.rst
+          rm docs/metrics.tmp.csv'''
 }
