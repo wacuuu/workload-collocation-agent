@@ -164,3 +164,6 @@ wca_scheduler_package:
 wca_scheduler_docker_image:
 	@echo Building wca scheduler docker image.
 	-sh -c 'sudo docker build -t wca-scheduler:latest -f examples/kubernetes/wca-scheduler/Dockerfile --no-cache .'
+
+wca_scheduler_docker_devel:
+	@echo "Preparing development wca scheduler container (only source code without pex)"
