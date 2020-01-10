@@ -1,0 +1,13 @@
+namespace: wca-scheduler
+resources:
+  - wca-scheduler-deployment.yaml
+configMapGenerator:
+
+  - name: wca-scheduler-server
+    files:
+      - wca-scheduler-server.conf
+
+  - name: wca-scheduler-config
+    files:
+      - wca-scheduler-config.yaml
+

@@ -160,6 +160,7 @@ _unsafe_wrapper_package:
 	pipenv run $(ENV_UNSAFE) pex . -D examples/workloads/wrapper $(PEX_OPTIONS) -o dist/stress_ng_wrapper.pex -m wrapper.parser_stress_ng
 	pipenv run $(ENV_UNSAFE) pex . -D examples/workloads/wrapper $(PEX_OPTIONS) -o dist/memtier_benchmark_wrapper.pex -m wrapper.parser_memtier
 	./dist/wrapper.pex --help >/dev/null
+
 #-----------------------------------------------------------------------------------------------
 
 check: flake8 unit bandit check_outdated
@@ -181,24 +182,3 @@ tester:
 generate_docs:
 	@echo Generate documentation.
 	pipenv run env PYTHONPATH=. python util/docs.py
-
-wca_scheduler_package:
-	@echo Building wca scheduler pex file.
-	# Clean
-	-sh -c 'rm -f .pex-build/*wca-scheduler.pex'
-	# Trick to include entire module in pex file
-	-sh -c 'mkdir -p /tmp/wca-scheduler/wca/'
-	-sh -c 'cp -a $$(pwd)/wca/. /tmp/wca-scheduler/wca/'
-	# Prepare pex
-	pipenv run env PYTHONPATH=. pex . -D /tmp/wca-scheduler -v -R component-licenses -o dist/wca-scheduler.pex --disable-cache -c gunicorn
-	# Clean
-	-sh -c 'rm -rf /tmp/wca-scheduler'
-	# Check
-	./dist/wca-scheduler.pex -v
-
-wca_scheduler_docker_image:
-	@echo Building wca scheduler docker image.
-	-sh -c 'sudo docker build -t wca-scheduler:latest -f examples/kubernetes/wca-scheduler/Dockerfile --no-cache .'
-
-wca_scheduler_docker_devel:
-	@echo "Preparing development wca scheduler container (only source code without pex)"

@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,22 +14,20 @@
 
 FROM centos:7
 
-WORKDIR /
+WORKDIR /wca-scheduler
 
 # Install dependencies.
-RUN yum -y update && yum -y install epel-release
-RUN yum -y install python36
+RUN yum -y install python36 python-pip which
+RUN pip3.6 install pipenv
 
-# Prepare configuration directories.
-RUN mkdir -p /etc/wca-scheduler.d
-RUN mkdir -p /usr/src/wca-scheduler
+# Prepare Python environment.
+COPY Pipfile Pipfile
+COPY Pipfile.lock Pipfile.lock
+ENV LANG=en_US.UTF-8
+ENV LC_ALL=en_US.UTF-8
+RUN pipenv install
+ENV PYTHONPATH=/wca-scheduler
 
-# Prepare wca-scheduler and configuration.
-COPY dist/wca-scheduler.pex  /usr/bin/wca-scheduler.pex
-COPY examples/kubernetes/wca-scheduler/wca-scheduler.conf /etc/wca-scheduler.d/wca-scheduler.conf
-
-# Prepare NGINX server configuration.
-COPY examples/kubernetes/wca-scheduler/wca-scheduler-server.conf /etc/wca-scheduler.d/wca-scheduler-server.conf
-
-# Run wca-scheduler.
-ENTRYPOINT ["wca-scheduler.pex", "wca.scheduler.main:main(\"/etc/wca-scheduler.d/wca-scheduler.conf\")", "-b unix:/usr/src/wca-scheduler/wca-scheduler.sock"]
+# Prepare wca-scheduler files.
+RUN mkdir /var/run/wca
+COPY wca ./wca
