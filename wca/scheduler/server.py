@@ -19,28 +19,24 @@ from typing import Dict
 from wca.scheduler.types import ExtenderArgs
 
 
-app = Flask('k8s scheduler extender')
-
 log = logging.getLogger(__name__)
 
 
 class Server:
     def __init__(self, configuration: Dict[str, str]):
-        app = Flask('k8s scheduler extender')
-        self.app = app
+        self.app = Flask('k8s scheduler extender')
         self.algorithm = configuration['algorithm']
 
-        @app.route('/api/scheduler/test')
-        def hello():
-            log.info("['/api/scheduler/test'] -> passed")
-            return "Hello World"
+        @self.app.route('/status')
+        def status():
+            return jsonify('running')
 
-        @app.route('/api/scheduler/filter', methods=['POST'])
+        @self.app.route('/filter', methods=['POST'])
         def filter():
             extender_args = ExtenderArgs(**request.get_json())
             return jsonify(asdict(self.algorithm.filter(extender_args)))
 
-        @app.route('/api/scheduler/prioritize', methods=['POST'])
+        @self.app.route('/prioritize', methods=['POST'])
         def prioritize():
             extender_args = ExtenderArgs(**request.get_json())
             priorities = [asdict(host)
