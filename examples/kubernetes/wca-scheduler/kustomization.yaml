@@ -10,4 +10,3 @@ configMapGenerator:
   - name: wca-scheduler-config
     files:
       - wca-scheduler-config.yaml
-
