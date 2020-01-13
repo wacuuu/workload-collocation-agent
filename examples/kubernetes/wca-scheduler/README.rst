@@ -8,13 +8,13 @@ Lets assume that:
 kube-scheduler configuration
 ----------------------------
 
-Apply wca-scheduler-policy config map:
+Add new policy as config map:
 
-``kubectl apply -f wca-scheduler-policy.yaml``
+``kubectl apply -f scheduler-policy.yaml``
 
 Give access to read configmaps for kube-scheduler:
 
-``kubectl apply -f wca-scheduler-policy-role.yaml``
+``kubectl apply -f scheduler-policy-role.yaml``
 
 Edit kube-scheduler pod manifest (``/etc/kubernetes/manifests/kube-scheduler.yaml``) to use policy with external scheduler.
 
