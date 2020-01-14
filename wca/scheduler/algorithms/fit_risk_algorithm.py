@@ -78,7 +78,7 @@ class FitRiskAlgorithm(Algorithm):
         priorities = [
             HostPriority(node, (priority * self.weight_multiplier))
             for node, priority in unweighted_priorities.items()
-                ]
+        ]
 
         return priorities
 

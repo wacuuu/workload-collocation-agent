@@ -16,18 +16,18 @@ from typing import Dict
 from wca.scheduler.utils import extract_common_input
 from wca.scheduler.types import ExtenderArgs
 
-FIXTURE = 'tests/fixtures/kube-scheduler-request.json'
+# FIXTURE = 'tests/fixtures/kube-scheduler-request.json'
 
-extender_args = None
+# extender_args = None
 
-with open(FIXTURE) as f:
-    response: Dict = f.read()
+# with open(FIXTURE) as f:
+#     response: Dict = f.read()
 
-    extender_args = ExtenderArgs(
-        Nodes=response.get('Nodes', []),
-        Pod=response.get('Pod', {}),
-        NodeNames=response.get('NodeNames', []))
+#     extender_args = ExtenderArgs(
+#         Nodes=response.get('Nodes', []),
+#         Pod=response.get('Pod', {}),
+#         NodeNames=response.get('NodeNames', []))
 
 
-def test_extract_common_input(extender_args, expected):
-    assert expected == extract_common_input(extender_args)
+# def test_extract_common_input(extender_args, expected):
+#     assert expected == extract_common_input(extender_args)
