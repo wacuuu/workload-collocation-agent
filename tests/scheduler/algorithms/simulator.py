@@ -1,6 +1,8 @@
 from typing import Dict, List, Tuple
 from pprint import pprint
 
+from dataclasses import dataclass
+
 # for testing, temporarily, do not want to bring new dependency
 from numpy.random import normal as np_normal
 
@@ -8,6 +10,8 @@ from wca.allocators import AllocationType
 from wca.detectors import TaskData, TasksData, TaskResource
 from wca.metrics import MetricName, MetricValue
 from wca.platforms import Platform
+
+from wca.scheduler.types import ExtenderArgs
 
 
 GB = 1000 ** 3
@@ -24,20 +28,20 @@ class Resources:
         self.mem = mem
         self.membw = membw
 
-    def __repr__(self):
-        return str({'cpu': self.cpu, 'mem': float(self.mem)/float(GB), 'membw': float(self.membw)/float(GB)})
-
     @staticmethod
     def create_empty():
         return Resources(0,0,0)
+
+    def __repr__(self):
+        return str({'cpu': self.cpu, 'mem': float(self.mem)/float(GB), 'membw': float(self.membw)/float(GB)})
+
+    def __bool__(self):
+        return self.cpu >= 0 and self.mem >= 0 and self.membw >= 0
 
     def substract(self, b):
         self.cpu -= b.cpu
         self.mem -= b.mem
         self.membw -= b.membw
-
-    def __bool__(self):
-        return self.cpu >= 0 and self.mem >= 0 and self.membw >= 0
 
     def copy(self):
         return Resources(self.cpu, self.mem, self.membw)
@@ -51,7 +55,8 @@ class Node:
         self.unassigned = resources.copy()
 
     def __repr__(self):
-        return "(name: {}, unassigned: {}, initial: {}, real: {})".format(self.name, str(self.unassigned), str(self.initial), str(self.real))
+        return "(name: {}, unassigned: {}, initial: {}, real: {})".format(
+                self.name, str(self.unassigned), str(self.initial), str(self.real))
 
     def validate_assignment(self, tasks, new_task):
         """if unassigned > free_not_unassigned"""
@@ -70,14 +75,6 @@ class Node:
                 self.real.substract(task.real)
                 self.unassigned.substract(task.initial)
 
-    @staticmethod
-    def create_apache_pass():
-        return Node('0', Resources(96, 1000 * GB, 50 * GB))
-
-    @staticmethod
-    def create_standard():
-        return Node('1', Resources(96, 150 * GB, 150 * GB))
-
 
 class Task:
     def __init__(self, name, initial, assignment=None):
@@ -93,23 +90,6 @@ class Task:
         # Here simply just if, life_time > 0 assign all
         self.real = self.initial.copy()
 
-    @staticmethod
-    def create_stressng(i, assignment=None):
-        r = Resources(8, 10 * GB, 10 * GB)
-        t = Task('stress_ng_{}'.format(i), r)
-        return t
-
-    @staticmethod
-    def create_random_stressng(i, assignment=None):
-        def normal_random(loc, scale):
-            r = int(np_normal(loc, scale))
-            return r if r >= 1 else 1
-
-        r = Resources(normal_random(8,5),
-                      normal_random(10, 8) * GB,
-                      normal_random(10, 8) * GB)
-        t = Task('stress_ng_{}'.format(i), r)
-        return t
 
     @staticmethod
     def create_deterministic_stressng(i):
@@ -123,10 +103,22 @@ class Task:
 
 class Simulator:
     def __init__(self, tasks, nodes, scheduler):
-        self.tasks = tasks
-        self.nodes = nodes
-        self.scheduler = scheduler
+        self.tasks: List[Task] = tasks
+        self.nodes: List[Node] = nodes
+        self.scheduler: Algorithm = scheduler
         self.time = 0
+
+    def get_task_by_name(self, task_name: str) -> Task:
+        for task in self.tasks:
+            if task.name == task_name:
+                return task
+        return None
+
+    def get_node_by_name(self, node_name: str) -> Task:
+        for node in self.nodes:
+            if node.name == node_name:
+                return node 
+        return None
 
     def reset(self):
         self.tasks = []
@@ -159,6 +151,22 @@ class Simulator:
                     assigned_count += 1
         return assigned_count
 
+    def call_scheduler(self, new_task: str):
+        """To map simulator structure into required by scheduler.Algorithm interace."""
+
+        node_names = [node.name for node in self.nodes]
+        pod = {'metadata': {'labels': {'app': new_task.name}, 'name': new_task.name, 'namespace': 'default'}}
+        extender_args = ExtenderArgs([], pod, node_names)
+
+        extender_filter_result = self.scheduler.filter(extender_args)
+        filtered_nodes = [node for node in extender_args.NodeNames 
+                          if node not in extender_filter_result.FailedNodes]
+        priorities = self.scheduler.prioritize(extender_args)
+
+        if len(filtered_nodes) == 0:
+            return {}
+        return {new_task.name: self.get_node_by_name(filtered_nodes[0])}
+
     def iterate(self, delta_time: int, changes: Tuple[List[Task], List[Task]]) -> int:
         self.time += delta_time
         self.update_tasks_usage(delta_time)
@@ -167,8 +175,7 @@ class Simulator:
         # Update state after deleting tasks.
         self.calculate_new_state()
 
-        assignments = self.scheduler.schedule(self.nodes, [task for task in self.tasks if task.assignment is None])
-        pprint("Assignments: {}".format({task_name: node.name for task_name, node in assignments.items()}))
+        assignments = self.call_scheduler(changes[1][0])
         assigned_count = self.perform_assignments(assignments)
 
         # Recalculating state after assignments being performed.
@@ -176,81 +183,5 @@ class Simulator:
 
         return assigned_count
 
-
-class Scheduler:
-    def schedule(self, nodes: List[Node], tasks: List[Task]) -> Assignments:
-        pass
-
-
-class FillFirstCpuOnlyScheduler(Scheduler):
-    def schedule(self, nodes: List[Node], unassigned: List[Task]) -> Assignments:
-        assignments = {}
-
-        # only looks at cpu
-        for task in sorted(unassigned, key=lambda task: task.initial.cpu, reverse=True):
-            max_free_cpu_node = sorted(nodes, key=lambda node: node.unassigned.cpu, reverse=True)[0]
-            assignments[task.name] = max_free_cpu_node
-
-        return assignments
-
-
-class FillFirst3DScheduler(Scheduler):
-    def _3d_to_1d(resources) -> int:
-        return resources.cpu * resources.mem * resources.membw
-
-    def schedule(self, nodes: List[Node], unassigned: List[Task]) -> Assignments:
-        assignments = {}
-
-        if len(unassigned) == 0:
-            return {}
-        assert len(unassigned) == 1
-
-        unassigned = unassigned[0]
-
-        for node in nodes:
-            pass
-
-        return assignments
-
-
-def log_state(iteration, symulator):
-    print()
-    pprint("Iteration {}".format(iteration))
-    pprint("Nodes: ")
-    pprint(symulator.nodes)
-    pprint("Tasks: ")
-    pprint(symulator.tasks)
-
-def single_stress_ng(iteration):
-    return [Task.create_stressng(iteration+1)]
-def random_stress_ng(iteration):
-    return [Task.create_random_stressng(iteration+1)]
-
-def test_symulator():
-    symulator = Simulator(
-        tasks = [],
-        nodes = [Node.create_apache_pass(), Node.create_standard()],
-        scheduler = FillFirstCpuOnlyScheduler()
-    )
-
-    for scheduler in (
-            # FillFirstCpuOnlyScheduler(),
-            FillFirst3DScheduler(),
-        ):
-        symulator.scheduler = scheduler
-        symulator.reset()
-        for task_creation_fun in (
-                single_stress_ng,
-                # random_stress_ng,
-            ):
-            all_assigned_count = 0
-            assigned_count = -1
-            iteration = 0
-            while assigned_count != 0:
-                log_state(iteration, symulator)
-                changes = ([], task_creation_fun(iteration))
-                assigned_count = symulator.iterate(delta_time=1, changes=changes)
-                all_assigned_count += assigned_count
-                iteration += 1
-            print("scheduler: {}, task_creation_fun: {}, assigned_count: {}".format(
-                scheduler, task_creation_fun, all_assigned_count))
+    def iterate_single_task(self, new_task: Task):
+        return self.iterate(delta_time=1, changes=([], [new_task]))
