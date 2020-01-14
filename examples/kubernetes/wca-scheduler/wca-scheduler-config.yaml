@@ -1,10 +1,5 @@
 loggers:
   scheduler.main: DEBUG
-algorithm: !FitRiskAlgorithm
-  k8s_namespace: default
-  lookback: '2m'
-  risk_threshold: 0.3 
-  risk_query: 'avg_over_time(app__contention_risk_on_node{app="%s"}[%s])'
-  time: '1569479280'
+algorithm: !CreatoneAlgorithm
+  namespace: default
   prometheus_ip: 'http://100.64.176.36:30900'
-  fit_query: 'avg_over_time(fit_avg{app="%s"}[%s])'

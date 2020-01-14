@@ -15,8 +15,10 @@
 from wca.config import register
 from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
 from wca.scheduler.algorithms.fit_risk_algorithm import FitRiskAlgorithm
+from wca.scheduler.algorithms.creatone_algorithm import CreatoneAlgorithm
 
 
 def register_algorithms():
     register(FitRiskAlgorithm)
     register(NOPAlgorithm)
+    register(CreatoneAlgorithm)

@@ -15,10 +15,8 @@ from dataclasses import dataclass
 import logging
 from typing import List
 
-from wca.metrics import MetricName
 
 from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.prometheus import do_query
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority
 
 log = logging.getLogger(__name__)
@@ -32,6 +30,7 @@ class FAILURE_MESSAGE:
 
 @dataclass
 class CreatoneAlgorithm(Algorithm):
+    namespace: str
     prometheus_ip: str
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
@@ -66,14 +65,16 @@ class CreatoneAlgorithm(Algorithm):
             log.warning(message)
             return host_priorities
 
+        #host_priorities.append(HostPriority('node40', 10))
+
         return host_priorities
 
 
 def _pmm_available(prometheus_ip, node):
     # TODO: Implementation.
-    return False
+    return True
 
 
 def _mb_acceptable(prometheus_ip, node):
     # TODO: Implementation.
-    return False
+    return True
