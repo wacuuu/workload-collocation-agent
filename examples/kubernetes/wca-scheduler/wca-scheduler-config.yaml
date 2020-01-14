@@ -1,0 +1,5 @@
+loggers:
+  scheduler.main: DEBUG
+algorithm: !CreatoneAlgorithm
+  namespace: default
+  prometheus_ip: 'http://100.64.176.36:30900'

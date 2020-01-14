@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: scheduler-policy
+  namespace: kube-system
+data:
+  policy.cfg: |
+    {
+      "AlwaysCheckAllPredicates": true,
+      "ExtenderConfigs": [
+        {
+          "URLPrefix": "http://100.64.176.36:30180/",
+          "FilterVerb": "filter",
+          "PrioritizeVerb": "prioritize",
+          "Weight": 1,
+          "EnableHTTPS": false,
+          "Ignorable": true,
+          "NodeCacheCapable": true
+        }
+      ]
+    }
