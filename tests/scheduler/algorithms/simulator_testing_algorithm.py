@@ -44,29 +44,4 @@ class FFDGeneric(Algorithm):
     def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
         app, nodes, namespace, name = extract_common_input(extender_args)
         # choose node which has the most free resources
-        # @TODO
-        return []
-
-
-@dataclass
-class SampleAPIAlgorithm(Algorithm):
-    free_space_for_resource: Callable[[ResourceType, str], int] = None
-    requested_resource_for_app: Callable[[ResourceType, str], int] = None
-
-    def __init__(self):
-        pass
-
-    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
-        app, nodes, namespace, name = extract_common_input(extender_args)
-        extender_filter_result = ExtenderFilterResult()
-
-        assert self.free_space_for_resource is not None
-        assert self.requested_resource_for_app is not None
-
-        print(self.free_space_for_resource(ResourceType.CPU, '0'))
-
-        return extender_filter_result
-
-    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
-        app, nodes, namespace, name = extract_common_input(extender_args)
         return []
