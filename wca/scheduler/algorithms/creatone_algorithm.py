@@ -65,7 +65,7 @@ class CreatoneAlgorithm(Algorithm):
             log.warning(message)
             return host_priorities
 
-        #host_priorities.append(HostPriority('node40', 10))
+        # host_priorities.append(HostPriority('node40', 10))
 
         return host_priorities
 

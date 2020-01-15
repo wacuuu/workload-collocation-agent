@@ -22,7 +22,8 @@ class Resources:
         return Resources(0, 0, 0)
 
     def __repr__(self):
-        return str({'cpu': self.cpu, 'mem': float(self.mem) / float(GB), 'membw': float(self.membw) / float(GB)})
+        return str({'cpu': self.cpu, 'mem': float(self.mem) / float(GB),
+                    'membw': float(self.membw) / float(GB)})
 
     def __bool__(self):
         return self.cpu >= 0 and self.mem >= 0 and self.membw >= 0
@@ -54,7 +55,7 @@ class Node:
             if task.assignment == self:
                 unassigned.substract(task.initial)
         unassigned.substract(new_task.initial)
-        return bool(unassigned) == True
+        return bool(unassigned)
 
     def update(self, tasks):
         self.real = self.initial.copy()
@@ -143,13 +144,15 @@ class Simulator:
         """To map simulator structure into required by scheduler.Algorithm interace."""
 
         node_names = [node.name for node in self.nodes]
-        pod = {'metadata': {'labels': {'app': new_task.name}, 'name': new_task.name, 'namespace': 'default'}}
+        pod = {'metadata': {'labels': {'app': new_task.name},
+               'name': new_task.name, 'namespace': 'default'}}
         extender_args = ExtenderArgs([], pod, node_names)
 
         extender_filter_result = self.scheduler.filter(extender_args)
         filtered_nodes = [node for node in extender_args.NodeNames
                           if node not in extender_filter_result.FailedNodes]
-        priorities = self.scheduler.prioritize(extender_args)
+        # priorities = self.scheduler.prioritize(extender_args)
+        # @TODO take into consideration priorities
 
         if len(filtered_nodes) == 0:
             return {}

@@ -25,7 +25,7 @@ class FFDGeneric(Algorithm):
                                       ResourceType.MEMBW,)
 
     def app_fit_node(self, app, node):
-        return all([self.requested_resource_for_app(resource, app) < \
+        return all([self.requested_resource_for_app(resource, app) <
                     self.free_space_for_resource(resource, node)
                     for resource in self.resources])
 
