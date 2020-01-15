@@ -11,11 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import logging
 from typing import List
 
 
+from wca.storage import Storage, DEFAULT_STORAGE
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority
 
@@ -30,9 +31,34 @@ class FAILURE_MESSAGE:
 
 
 @dataclass
+class NodeType:
+    DRAM = "DRAM"
+    PMM = "PMM"
+
+
+@dataclass
 class CreatoneAlgorithm(Algorithm):
     namespace: str
     prometheus_ip: str
+    metrics_storage: Storage = DEFAULT_STORAGE
+    _cache: dict = field(default_factory=dict)
+
+    def _classify_app(self, app: str):
+        # TODO
+        # Get memory usage.
+        pass
+        # Get memory bandwidth.
+        pass
+        # Get cpu usage.
+        pass
+        # Consider if it is PMM workload.
+        pass
+
+        return NodeType.DRAM
+
+    def _acceptable_memory_bandwidth(self, node: str, app: str) -> bool:
+        # TODO
+        return True
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         extender_filter_result = ExtenderFilterResult()
@@ -46,29 +72,27 @@ class CreatoneAlgorithm(Algorithm):
             return extender_filter_result
 
         # Check if we already have any information about this kind of pod.
-        app_label = extender_args.Pod['metadata'].get('labels', {}).get('app', None)
-        if app_label:
-            # TODO
-            pass
+        app = extender_args.Pod['metadata'].get('labels', {}).get('app', None)
+        if app:
+            needed_node_type = self._clasiffy_app(app)
+
+            # Check which nodes acceptable criteria.
+            for node in extender_args.NodeNames:
+
+                if needed_node_type != self._get_node_type(node):
+                    continue
+
+                if not _available_node(node, needed_node_type):
+                    extender_filter_result.FailedNodes[node] = FAILURE_MESSAGE.NOT_AVAILABLE
+                    continue
+
+                if not self._acceptable_memory_bandwidth(node, app):
+                    continue
+
+                extender_filter_result.NodeNames.append(node)
         else:
             log.warning('No app label!')
             return extender_filter_result
-
-        # Check which nodes acceptable criteria.
-        for node_name in extender_args.NodeNames:
-            if not _available_node(node_name):
-                extender_filter_result.FailedNodes[node_name] = FAILURE_MESSAGE.NOT_AVAILABLE
-                continue
-
-            if not _pmm_available(self.prometheus_ip, node_name):
-                extender_filter_result.FailedNodes[node_name] = FAILURE_MESSAGE.NOT_PMM_NODE
-                continue
-
-            if not _mb_acceptable(self.prometheus_ip, node_name):
-                extender_filter_result.FailedNodes[node_name] = FAILURE_MESSAGE.NOT_ACCEPTABLE_MB
-                continue
-
-            extender_filter_result.NodeNames.append(node_name)
 
         return extender_filter_result
 
@@ -87,8 +111,9 @@ class CreatoneAlgorithm(Algorithm):
 
 
 def _available_node(node):
-    if node == 'node37':
+    if node in ['node37', 'node39']:
         return False
+
     return True
 
 
