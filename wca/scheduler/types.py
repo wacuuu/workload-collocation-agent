@@ -14,7 +14,7 @@
 
 from dataclasses import dataclass, field
 
-from typing import Dict, List
+from typing import Dict, List, Any
 
 # Kubernetes
 
@@ -44,5 +44,5 @@ class HostPriority():
 @dataclass
 class ExtenderArgs:
     Nodes: List[Dict]
-    Pod: Dict[str, str]
+    Pod: Dict[str, Any]
     NodeNames: List[str]
