@@ -52,7 +52,7 @@ def main(config):
                       'log level!')
             exit(1)
 
-        log_levels = dict(log_levels_config, **log_levels)
+        log_levels = dict(log_levels, **log_levels_config)
         logger.configure_loggers_from_dict(log_levels)
 
     server = Server(configuration)

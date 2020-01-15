@@ -29,16 +29,19 @@ class Server:
 
         @self.app.route('/status')
         def status():
+            log.debug('[Status]')
             return jsonify('running')
 
         @self.app.route('/filter', methods=['POST'])
         def filter():
             extender_args = ExtenderArgs(**request.get_json())
+            log.debug('[Filter] : %r ' % extender_args)
             return jsonify(asdict(self.algorithm.filter(extender_args)))
 
         @self.app.route('/prioritize', methods=['POST'])
         def prioritize():
             extender_args = ExtenderArgs(**request.get_json())
+            log.debug('[Prioritize] : %r ' % extender_args)
             priorities = [asdict(host)
                           for host in self.algorithm.prioritize(extender_args)]
             return jsonify(priorities)

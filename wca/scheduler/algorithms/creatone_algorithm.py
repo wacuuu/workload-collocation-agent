@@ -24,6 +24,7 @@ log = logging.getLogger(__name__)
 
 @dataclass
 class FAILURE_MESSAGE:
+    NOT_AVAILABLE = "Not available node."
     NOT_PMM_NODE = "Not PMM node."
     NOT_ACCEPTABLE_MB = "Not acceptable memory bandwidth."
 
@@ -34,23 +35,40 @@ class CreatoneAlgorithm(Algorithm):
     prometheus_ip: str
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
-        metadata = extender_args.Pod.get('metadata', {})
-        pod_namespace = metadata.get('namespace', None)
-
         extender_filter_result = ExtenderFilterResult()
 
+        # Check if Pod is from our namespace.
+        pod_namespace = extender_args.Pod['metadata']['namespace']
         if pod_namespace != self.namespace:
             message = 'Different k8s namespace! ( %r != %r )'.format(pod_namespace, self.namespace)
             log.warning(message)
             extender_filter_result.Error = message
             return extender_filter_result
 
+        # Check if we already have any information about this kind of pod.
+        app_label = extender_args.Pod['metadata'].get('labels', {}).get('app', None)
+        if app_label:
+            # TODO
+            pass
+        else:
+            log.warning('No app label!')
+            return extender_filter_result
+
+        # Check which nodes acceptable criteria.
         for node_name in extender_args.NodeNames:
+            if not _available_node(node_name):
+                extender_filter_result.FailedNodes[node_name] = FAILURE_MESSAGE.NOT_AVAILABLE
+                continue
+
             if not _pmm_available(self.prometheus_ip, node_name):
                 extender_filter_result.FailedNodes[node_name] = FAILURE_MESSAGE.NOT_PMM_NODE
+                continue
 
             if not _mb_acceptable(self.prometheus_ip, node_name):
                 extender_filter_result.FailedNodes[node_name] = FAILURE_MESSAGE.NOT_ACCEPTABLE_MB
+                continue
+
+            extender_filter_result.NodeNames.append(node_name)
 
         return extender_filter_result
 
@@ -65,9 +83,13 @@ class CreatoneAlgorithm(Algorithm):
             log.warning(message)
             return host_priorities
 
-        #host_priorities.append(HostPriority('node40', 10))
-
         return host_priorities
+
+
+def _available_node(node):
+    if node == 'node37':
+        return False
+    return True
 
 
 def _pmm_available(prometheus_ip, node):
