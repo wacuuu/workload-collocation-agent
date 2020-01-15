@@ -40,7 +40,6 @@ class FFDGeneric(Algorithm):
 
         return extender_filter_result
 
-
     def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
         app, nodes, namespace, name = extract_common_input(extender_args)
         # choose node which has the most free resources

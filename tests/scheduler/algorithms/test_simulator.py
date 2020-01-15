@@ -2,37 +2,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 from dataclasses import dataclass
 
-from tests.scheduler.algorithms.simulator import Simulator, Node, Resources, GB, Task
-from tests.scheduler.algorithms.simulator_testing_algorithm import FFDGeneric, SampleAPIAlgorithm, ResourceType
-from tests.scheduler.algorithms.simulator_testing_algorithm import ResourceType as rt
-
-
-
-@dataclass
-class SimulatorDataProvider():
-    simulator: Simulator
-
-    def get_free_space_for_resource(self, resource_name: ResourceType, node: str) -> int:
-        node = self.simulator.get_node_by_name(node)
-        if node is None:
-            raise Exception('no such node')
-        if resource_name == ResourceType.CPU:
-            return node.unassigned.cpu
-        if resource_name == ResourceType.MEMBW:
-            return node.unassigned.membw
-        if resource_name == ResourceType.MEM:
-            return node.unassigned.mem
-
-    def get_requested_resource_for_app(self, resource_name: ResourceType, app: str) -> int:
-        task = self.simulator.get_task_by_name(app)
-        if task is None:
-            raise Exception('no such task')
-        if resource_name == ResourceType.CPU:
-            return task.initial.cpu
-        if resource_name == ResourceType.MEMBW:
-            return task.initial.membw
-        if resource_name == ResourceType.MEM:
-            return task.initial.mem
+from wca.scheduler.algorithms.simulator import Simulator, Node, Resources, GB, Task
+from wca.scheduler.algorithms.data_proxy import SimulatorDataProxy
+from wca.scheduler.algorithms.ffd_generic import FFDGeneric, ResourceType
 
 
 def create_stressng(i, assignment=None):
@@ -63,8 +35,8 @@ def create_standard():
 
 @pytest.mark.parametrize('scheduler_dimensions, expected_all_assigned_count', 
     (
-        ((rt.CPU, rt.MEM), 9),
-        ((rt.CPU, rt.MEM, rt.MEMBW), 9),
+        ((ResourceType.CPU, ResourceType.MEM), 9),
+        ((ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW), 9),
     )
 )
 def test_simulator(scheduler_dimensions, expected_all_assigned_count):
@@ -73,7 +45,7 @@ def test_simulator(scheduler_dimensions, expected_all_assigned_count):
         nodes = [create_apache_pass(), create_standard()],
         scheduler = FFDGeneric())
 
-    data_provider = SimulatorDataProvider(simulator)
+    data_provider = SimulatorDataProxy(simulator)
     free_space_for_resource = data_provider.get_free_space_for_resource
     requested_resource_for_app = data_provider.get_requested_resource_for_app
 
