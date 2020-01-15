@@ -1,18 +1,7 @@
-from typing import Dict, List, Tuple
-from pprint import pprint
+from typing import Dict, List, Tuple, Optional
 
-from dataclasses import dataclass
-
-# for testing, temporarily, do not want to bring new dependency
-from numpy.random import normal as np_normal
-
-from wca.allocators import AllocationType
-from wca.detectors import TaskData, TasksData, TaskResource
-from wca.metrics import MetricName, MetricValue
-from wca.platforms import Platform
-
+from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.types import ExtenderArgs
-
 
 GB = 1000 ** 3
 MB = 1000 ** 2
@@ -30,10 +19,11 @@ class Resources:
 
     @staticmethod
     def create_empty():
-        return Resources(0,0,0)
+        return Resources(0, 0, 0)
 
     def __repr__(self):
-        return str({'cpu': self.cpu, 'mem': float(self.mem)/float(GB), 'membw': float(self.membw)/float(GB)})
+        return str({'cpu': self.cpu, 'mem': float(self.mem) / float(GB),
+                    'membw': float(self.membw) / float(GB)})
 
     def __bool__(self):
         return self.cpu >= 0 and self.mem >= 0 and self.membw >= 0
@@ -56,7 +46,7 @@ class Node:
 
     def __repr__(self):
         return "(name: {}, unassigned: {}, initial: {}, real: {})".format(
-                self.name, str(self.unassigned), str(self.initial), str(self.real))
+            self.name, str(self.unassigned), str(self.initial), str(self.real))
 
     def validate_assignment(self, tasks, new_task):
         """if unassigned > free_not_unassigned"""
@@ -65,7 +55,7 @@ class Node:
             if task.assignment == self:
                 unassigned.substract(task.initial)
         unassigned.substract(new_task.initial)
-        return bool(unassigned) == True
+        return bool(unassigned)
 
     def update(self, tasks):
         self.real = self.initial.copy()
@@ -90,15 +80,14 @@ class Task:
         # Here simply just if, life_time > 0 assign all
         self.real = self.initial.copy()
 
-
     @staticmethod
     def create_deterministic_stressng(i):
         pass
 
     def __repr__(self):
         return "(name: {}, assignment: {}, initial: {}, real: {})".format(
-                self.name, 'None' if self.assignment is None else self.assignment.name,
-                str(self.initial), str(self.real))
+            self.name, 'None' if self.assignment is None else self.assignment.name,
+            str(self.initial), str(self.real))
 
 
 class Simulator:
@@ -108,16 +97,16 @@ class Simulator:
         self.scheduler: Algorithm = scheduler
         self.time = 0
 
-    def get_task_by_name(self, task_name: str) -> Task:
+    def get_task_by_name(self, task_name: str) -> Optional[Task]:
         for task in self.tasks:
             if task.name == task_name:
                 return task
         return None
 
-    def get_node_by_name(self, node_name: str) -> Task:
+    def get_node_by_name(self, node_name: str) -> Optional[Node]:
         for node in self.nodes:
             if node.name == node_name:
-                return node 
+                return node
         return None
 
     def reset(self):
@@ -151,17 +140,19 @@ class Simulator:
                     assigned_count += 1
         return assigned_count
 
-    def call_scheduler(self, new_task: str):
+    def call_scheduler(self, new_task: Task):
         """To map simulator structure into required by scheduler.Algorithm interace."""
 
         node_names = [node.name for node in self.nodes]
-        pod = {'metadata': {'labels': {'app': new_task.name}, 'name': new_task.name, 'namespace': 'default'}}
+        pod = {'metadata': {'labels': {'app': new_task.name},
+               'name': new_task.name, 'namespace': 'default'}}
         extender_args = ExtenderArgs([], pod, node_names)
 
         extender_filter_result = self.scheduler.filter(extender_args)
-        filtered_nodes = [node for node in extender_args.NodeNames 
+        filtered_nodes = [node for node in extender_args.NodeNames
                           if node not in extender_filter_result.FailedNodes]
-        priorities = self.scheduler.prioritize(extender_args)
+        # priorities = self.scheduler.prioritize(extender_args)
+        # @TODO take into consideration priorities
 
         if len(filtered_nodes) == 0:
             return {}
