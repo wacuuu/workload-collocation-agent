@@ -1,12 +1,11 @@
-from abc import ABC
+from typing import List, Tuple, Callable
+
 import enum
-from typing import Dict, List, Tuple, Callable
 from dataclasses import dataclass
 
 from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.prometheus import do_raw_query, PrometheusException
-from wca.scheduler.utils import extract_common_input
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority
+from wca.scheduler.utils import extract_common_input
 
 
 class ResourceType(enum.Enum):
@@ -27,13 +26,13 @@ class FFDGeneric(Algorithm):
 
     def app_fit_node(self, app, node):
         return all([self.requested_resource_for_app(resource, app) < \
-                      self.free_space_for_resource(resource, node) 
+                    self.free_space_for_resource(resource, node)
                     for resource in self.resources])
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         app, nodes, namespace, name = extract_common_input(extender_args)
         extender_filter_result = ExtenderFilterResult()
-        
+
         for i, node in enumerate(nodes):
             if not self.app_fit_node(app, node):
                 extender_filter_result.FailedNodes[node] = "Not enough resources."
