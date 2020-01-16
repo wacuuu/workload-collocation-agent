@@ -13,11 +13,11 @@
 # limitations under the License.
 
 from dataclasses import dataclass, field
+from enum import Enum
 
 from typing import Dict, List, Any
 
 # Kubernetes
-
 NodeName = str
 FailureMessage = str
 
@@ -46,3 +46,10 @@ class ExtenderArgs:
     Nodes: List[Dict]
     Pod: Dict[str, Any]
     NodeNames: List[str]
+
+
+# Internal
+class ResourceType(Enum):
+    MEM = 'mem'
+    CPU = 'cpu'
+    MEMBW = 'membw'

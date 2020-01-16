@@ -1,8 +1,10 @@
 import pytest
 
-from wca.scheduler.algorithms.data_proxy import SimulatorDataProxy
-from wca.scheduler.algorithms.ffd_generic import FFDGeneric, ResourceType
-from wca.scheduler.algorithms.simulator import Simulator, Node, Resources, GB, Task
+from wca.scheduler.algorithms.ffd_generic import FFDGeneric
+from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, GB, Task
+from wca.scheduler.data_providers.cluster_simulator_data_provider import (
+        ClusterSimulatorDataProvider)
+from wca.scheduler.types import ResourceType
 
 
 def create_stressng(i):
@@ -39,17 +41,12 @@ def create_standard():
     )
 )
 def test_simulator(scheduler_dimensions, expected_all_assigned_count):
-    simulator = Simulator(
+    simulator = ClusterSimulator(
         tasks=[],
         nodes=[create_apache_pass(), create_standard()],
-        scheduler=FFDGeneric())
+        scheduler=None)
 
-    data_provider = SimulatorDataProxy(simulator)
-    free_space_for_resource = data_provider.get_free_space_for_resource
-    requested_resource_for_app = data_provider.get_requested_resource_for_app
-
-    simulator.scheduler.free_space_for_resource = free_space_for_resource
-    simulator.scheduler.requested_resource_for_app = requested_resource_for_app
+    simulator.scheduler = FFDGeneric(data_provider=ClusterSimulatorDataProvider(simulator))
 
     simulator.reset()
     all_assigned_count = 0

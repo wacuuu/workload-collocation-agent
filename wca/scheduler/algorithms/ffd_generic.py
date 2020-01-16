@@ -1,33 +1,27 @@
-from typing import List, Tuple, Callable
+from typing import List, Tuple
 
-import enum
 from dataclasses import dataclass
 
 from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority
+from wca.scheduler.data_providers import DataProvider
+from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, ResourceType
 from wca.scheduler.utils import extract_common_input
-
-
-class ResourceType(enum.Enum):
-    MEM = 'mem'
-    CPU = 'cpu'
-    MEMBW = 'membw'
 
 
 @dataclass
 class FFDGeneric(Algorithm):
     """Fit first decreasing; supports as many dimensions as needed."""
 
-    free_space_for_resource: Callable[[ResourceType, str], int] = None
-    requested_resource_for_app: Callable[[ResourceType, str], int] = None
-
+    data_provider: DataProvider
     resources: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM,
                                       ResourceType.MEMBW,)
 
     def app_fit_node(self, app, node):
-        return all([self.requested_resource_for_app(resource, app) <
-                    self.free_space_for_resource(resource, node)
-                    for resource in self.resources])
+        return all([
+            self.data_provider.get_app_requested_resource(app, resource)
+            <
+            self.data_provider.get_node_free_space_resource(node, resource)
+            for resource in self.resources])
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         app, nodes, namespace, name = extract_common_input(extender_args)

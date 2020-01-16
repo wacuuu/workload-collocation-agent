@@ -90,7 +90,7 @@ class Task:
             str(self.initial), str(self.real))
 
 
-class Simulator:
+class ClusterSimulator:
     def __init__(self, tasks, nodes, scheduler):
         self.tasks: List[Task] = tasks
         self.nodes: List[Node] = nodes
