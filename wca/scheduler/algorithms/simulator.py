@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional
 
 from wca.scheduler.algorithms import Algorithm
@@ -37,6 +38,27 @@ class Resources:
         return Resources(self.cpu, self.mem, self.membw)
 
 
+class Task:
+    def __init__(self, name, initial, assignment=None):
+        self.name = name
+        self.initial = initial
+        self.assignment = assignment
+
+        self.real = Resources.create_empty()
+        self.life_time = 0
+
+    def update(self, delta_time):
+        """Update state of task when it becomes older by delta_time."""
+        self.life_time += delta_time
+        # Here simply just if, life_time > 0 assign all
+        self.real = self.initial.copy()
+
+    def __repr__(self):
+        return "(name: {}, assignment: {}, initial: {}, real: {})".format(
+            self.name, 'None' if self.assignment is None else self.assignment.name,
+            str(self.initial), str(self.real))
+
+
 class Node:
     def __init__(self, name, resources):
         self.name = name
@@ -58,6 +80,7 @@ class Node:
         return bool(unassigned)
 
     def update(self, tasks):
+        """Update usages of resources."""
         self.real = self.initial.copy()
         self.unassigned = self.initial.copy()
         for task in tasks:
@@ -66,35 +89,14 @@ class Node:
                 self.unassigned.substract(task.initial)
 
 
-class Task:
-    def __init__(self, name, initial, assignment=None):
-        self.name = name
-        self.initial = initial
-        self.assignment = assignment
-
-        self.real = Resources.create_empty()
-        self.life_time = 0
-
-    def update(self, delta_time):
-        self.life_time += delta_time
-        # Here simply just if, life_time > 0 assign all
-        self.real = self.initial.copy()
-
-    @staticmethod
-    def create_deterministic_stressng(i):
-        pass
-
-    def __repr__(self):
-        return "(name: {}, assignment: {}, initial: {}, real: {})".format(
-            self.name, 'None' if self.assignment is None else self.assignment.name,
-            str(self.initial), str(self.real))
-
-
+@dataclass
 class Simulator:
-    def __init__(self, tasks, nodes, scheduler):
-        self.tasks: List[Task] = tasks
-        self.nodes: List[Node] = nodes
-        self.scheduler: Algorithm = scheduler
+    tasks: List[Task]
+    nodes: List[Node]
+    scheduler: Algorithm
+    allow_rough_assignment: bool = False
+
+    def __post_init__(self):
         self.time = 0
 
     def get_task_by_name(self, task_name: str) -> Optional[Task]:
@@ -114,6 +116,7 @@ class Simulator:
         self.time = 0
 
     def update_tasks_usage(self, delta_time):
+        """It may be simulated that task usage changed across its lifetime."""
         for task in self.tasks:
             task.update(delta_time)
 
@@ -124,7 +127,7 @@ class Simulator:
             new.assignment = None
             self.tasks.append(new)
 
-    def calculate_new_state(self):
+    def update_nodes_state(self):
         for node in self.nodes:
             node.update(self.tasks)
 
@@ -135,7 +138,7 @@ class Simulator:
         assigned_count = 0
         for task in self.tasks:
             if task.name in assignments:
-                if self.validate_assignment(task, assignments[task.name]):
+                if self.validate_assignment(task, assignments[task.name]) or self.allow_rough_assignment:
                     task.assignment = assignments[task.name]
                     assigned_count += 1
         return assigned_count
@@ -164,13 +167,13 @@ class Simulator:
         self.update_tasks_list(changes)
 
         # Update state after deleting tasks.
-        self.calculate_new_state()
+        self.update_nodes_state()
 
         assignments = self.call_scheduler(changes[1][0])
         assigned_count = self.perform_assignments(assignments)
 
         # Recalculating state after assignments being performed.
-        self.calculate_new_state()
+        self.update_nodes_state()
 
         return assigned_count
 
