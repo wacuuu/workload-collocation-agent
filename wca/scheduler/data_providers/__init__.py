@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from abc import ABC, abstractmethod
+from wca.scheduler.types import ResourceType
 
 
-def test_do_raw_query():
-    assert True
+class DataProvider(ABC):
+
+    @abstractmethod
+    def get_node_free_space_resource(self, node: str, resource_type: ResourceType) -> float:
+        pass
+
+    @abstractmethod
+    def get_app_requested_resource(self, app: str, resource_type: ResourceType) -> float:
+        pass

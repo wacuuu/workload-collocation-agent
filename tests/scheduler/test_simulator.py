@@ -1,12 +1,14 @@
 import pytest
 
-from wca.scheduler.algorithms.data_proxy import SimulatorDataProxy
-from wca.scheduler.algorithms.ffd_generic import FFDGeneric, ResourceType
-from wca.scheduler.algorithms.simulator import Simulator, Node, Resources, GB, Task
+from wca.scheduler.algorithms.ffd_generic import FFDGeneric
+from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, GB, Task
+from wca.scheduler.data_providers.cluster_simulator_data_provider import (
+        ClusterSimulatorDataProvider)
+from wca.scheduler.types import ResourceType
 
 
 def create_stressng(i):
-    r = Resources(cpu=8, ram=10*GB, membw=20*GB)
+    r = Resources(cpu=8, mem=10*GB, membw=20*GB)
     t = Task('stress_ng_{}'.format(i), r)
     return t
 
@@ -31,15 +33,6 @@ def create_standard():
     return Node('1', Resources(96, 150 * GB, 150 * GB))
 
 
-def set_data_proxy(simulator):
-    data_provider = SimulatorDataProxy(simulator)
-    free_space_for_resource = data_provider.get_free_space_for_resource
-    requested_resource_for_app = data_provider.get_requested_resource_for_app
-    # ---
-    simulator.scheduler.free_space_for_resource = free_space_for_resource
-    simulator.scheduler.requested_resource_for_app = requested_resource_for_app
-    
-
 @pytest.mark.parametrize(
     'scheduler_dimensions, expected_all_assigned_count',
     (
@@ -48,12 +41,12 @@ def set_data_proxy(simulator):
     )
 )
 def test_simulator(scheduler_dimensions, expected_all_assigned_count):
-    simulator = Simulator(
+    simulator = ClusterSimulator(
         tasks=[],
         nodes=[create_apache_pass(), create_standard()],
-        scheduler=FFDGeneric())
+        scheduler=None)
 
-    set_data_proxy(simulator)
+    simulator.scheduler = FFDGeneric(data_provider=ClusterSimulatorDataProvider(simulator))
 
     simulator.reset()
     all_assigned_count = 0
@@ -70,12 +63,12 @@ def test_simulator(scheduler_dimensions, expected_all_assigned_count):
 
 def perform_experiment():
     """Compare standard algorithm with the algorithm which looks also at MEMBW"""
-    simulator=Simulator(
+    simulator=ClusterSimulator(
         tasks=[],
         nodes=[create_apache_pass(), create_standard()],
-        scheduler=FFDGeneric(),
+        scheduler=None,
         allow_rough_assignment=True)        
-    set_data_proxy(simulator)
+    simulator.scheduler = FFDGeneric(data_provider=ClusterSimulatorDataProvider(simulator))
 
     for dimensions in ((ResourceType.CPU, ResourceType.MEM),
                        (ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW)):
@@ -90,9 +83,7 @@ def perform_experiment():
             assigned_count = simulator.iterate_single_task(create_stressng(iteration))
             all_assigned_count += assigned_count
             iteration += 1
-        import ipdb; ipdb.set_trace()
 
 
 def test_perform_experiment():
     perform_experiment()
-

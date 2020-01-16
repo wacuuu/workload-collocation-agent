@@ -89,8 +89,32 @@ class Node:
                 self.unassigned.substract(task.initial)
 
 
+class Task:
+    def __init__(self, name, initial, assignment=None):
+        self.name = name
+        self.initial = initial
+        self.assignment = assignment
+
+        self.real = Resources.create_empty()
+        self.life_time = 0
+
+    def update(self, delta_time):
+        self.life_time += delta_time
+        # Here simply just if, life_time > 0 assign all
+        self.real = self.initial.copy()
+
+    @staticmethod
+    def create_deterministic_stressng(i):
+        pass
+
+    def __repr__(self):
+        return "(name: {}, assignment: {}, initial: {}, real: {})".format(
+            self.name, 'None' if self.assignment is None else self.assignment.name,
+            str(self.initial), str(self.real))
+
+
 @dataclass
-class Simulator:
+class ClusterSimulator:
     tasks: List[Task]
     nodes: List[Node]
     scheduler: Algorithm
