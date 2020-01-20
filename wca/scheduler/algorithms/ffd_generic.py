@@ -13,7 +13,7 @@ class FFDGeneric(Algorithm):
     """Fit first decreasing; supports as many dimensions as needed."""
 
     data_provider: DataProvider
-    resources: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM,
+    dimensions: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM,
                                       ResourceType.MEMBW,)
 
     def app_fit_node(self, app, node):
@@ -21,7 +21,7 @@ class FFDGeneric(Algorithm):
             self.data_provider.get_app_requested_resource(app, resource)
             <
             self.data_provider.get_node_free_space_resource(node, resource)
-            for resource in self.resources])
+            for resource in self.dimensions])
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         app, nodes, namespace, name = extract_common_input(extender_args)

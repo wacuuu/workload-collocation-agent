@@ -1,16 +1,11 @@
 import pytest
+from pprint import pprint
 
 from wca.scheduler.algorithms.ffd_generic import FFDGeneric
 from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, GB, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
         ClusterSimulatorDataProvider)
 from wca.scheduler.types import ResourceType
-
-
-def create_stressng(i):
-    r = Resources(cpu=8, mem=10*GB, membw=20*GB)
-    t = Task('stress_ng_{}'.format(i), r)
-    return t
 
 
 # def create_random_stressng(i, assignment=None):
@@ -25,65 +20,66 @@ def create_stressng(i):
 #     return t
 
 
-def create_apache_pass():
-    return Node('0', Resources(96, 1000 * GB, 50 * GB))
+def prepare_NxM_nodes(apache_pass_count, dram_only_count):
+    apache_pass = {ResourceType.CPU: 96, ResourceType.MEM: 1000, ResourceType.MEMBW: 50}
+    dram_only = {ResourceType.CPU: 96, ResourceType.MEM: 320, ResourceType.MEMBW: 150}
+
+    inode = 0
+    nodes = []
+    for i in range(apache_pass_count):
+        node = Node(str(inode), available_resources=Resources(apache_pass))
+        nodes.append(node)
+        inode += 1
+    for i in range(dram_only_count):
+        node = Node(str(inode), available_resources=Resources(dram_only))
+        nodes.append(node)
+        inode += 1
+    return nodes
 
 
-def create_standard():
-    return Node('1', Resources(96, 150 * GB, 150 * GB))
+def single_run(nodes, tasks_for_iterations, extra_simulator_args, scheduler_class, extra_scheduler_kwargs):
+    """Compare standard algorithm with the algorithm which looks also at MEMBW"""
+    pprint(locals())
+    tasks = []
 
-
-@pytest.mark.parametrize(
-    'scheduler_dimensions, expected_all_assigned_count',
-    (
-        ((ResourceType.CPU, ResourceType.MEM), 9),
-        ((ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW), 9),
-    )
-)
-def test_simulator(scheduler_dimensions, expected_all_assigned_count):
-    simulator = ClusterSimulator(
+    simulator=ClusterSimulator(
         tasks=[],
-        nodes=[create_apache_pass(), create_standard()],
-        scheduler=None)
+        nodes=nodes,
+        scheduler=None,
+        **extra_simulator_args)        
+    data_proxy = ClusterSimulatorDataProvider(simulator)
+    simulator.scheduler = scheduler_class(data_provider=data_proxy, **extra_scheduler_kwargs)
 
-    simulator.scheduler = FFDGeneric(data_provider=ClusterSimulatorDataProvider(simulator))
-
-    simulator.reset()
     all_assigned_count = 0
     assigned_count = -1
     iteration = 0
 
     while assigned_count != 0:
-        assigned_count = simulator.iterate_single_task(create_stressng(iteration))
+        assigned_count = simulator.iterate_single_task(tasks_for_iterations[iteration])
         all_assigned_count += assigned_count
         iteration += 1
 
-    assert all_assigned_count == expected_all_assigned_count
-
-
-def perform_experiment():
-    """Compare standard algorithm with the algorithm which looks also at MEMBW"""
-    simulator=ClusterSimulator(
-        tasks=[],
-        nodes=[create_apache_pass(), create_standard()],
-        scheduler=None,
-        allow_rough_assignment=True)        
-    simulator.scheduler = FFDGeneric(data_provider=ClusterSimulatorDataProvider(simulator))
-
-    for dimensions in ((ResourceType.CPU, ResourceType.MEM),
-                       (ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW)):
-        simulator.reset()
-        simulator.scheduler.resources = dimensions
-
-        all_assigned_count = 0
-        assigned_count = -1
-        iteration = 0
-
-        while assigned_count != 0:
-            assigned_count = simulator.iterate_single_task(create_stressng(iteration))
-            all_assigned_count += assigned_count
-            iteration += 1
+    return (simulator.nodes, simulator.tasks,)
 
 
 def test_perform_experiment():
-    perform_experiment()
+    simulator_dimensions = set([ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW,])
+    nodes = prepare_NxM_nodes(1, 1)
+    def create_task(identifier):
+        r = Resources({ResourceType.CPU: 8, ResourceType.MEM: 10, ResourceType.MEMBW: 10})
+        t = Task('stress_ng_{}'.format(identifier), r)
+        return t
+    tasks_for_iterations = [
+        create_task(iteration) for iteration in range(30)
+    ]
+    extra_simulator_args = {"allow_rough_assignment": True,
+                            "dimensions": simulator_dimensions}
+    scheduler_class = FFDGeneric
+    extra_scheduler_kwargs = {"dimensions": set([ResourceType.CPU, ResourceType.MEM])}
+
+    nodes, tasks = single_run(nodes, tasks_for_iterations, extra_simulator_args, scheduler_class, extra_scheduler_kwargs)
+    assert len(tasks) == 23
+    assert len([node for node in nodes if node.unassigned.data[ResourceType.MEMBW] < 0]) == 1
+
+if __name__ == "__main__":
+    perform__nodes_membw_contended()

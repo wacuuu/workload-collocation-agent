@@ -9,6 +9,9 @@ from wca.scheduler.types import ResourceType
 
 @dataclass
 class ClusterSimulatorDataProvider(DataProvider):
+    def __repr__(self):
+        return "ClusterSimulatorDataProvider"
+
     simulator: ClusterSimulator
 
     def get_node_free_space_resource(self, node: str, resource_type: ResourceType) -> float:
@@ -18,11 +21,11 @@ class ClusterSimulatorDataProvider(DataProvider):
             raise Exception('no such node')
 
         if resource_type == ResourceType.CPU:
-            return node.unassigned.cpu
-        if resource_type == ResourceType.MEMBW:
-            return node.unassigned.membw
+            return node.unassigned.data[ResourceType.CPU]
         if resource_type == ResourceType.MEM:
-            return node.unassigned.mem
+            return node.unassigned.data[ResourceType.MEM]
+        if resource_type == ResourceType.MEMBW:
+            return node.unassigned.data[ResourceType.MEMBW]
 
     def get_app_requested_resource(self, app: str, resource_type: ResourceType) -> float:
         task = self.simulator.get_task_by_name(app)
@@ -31,8 +34,8 @@ class ClusterSimulatorDataProvider(DataProvider):
             raise Exception('no such task')
 
         if resource_type == ResourceType.CPU:
-            return task.initial.cpu
+            return task.requested.data[ResourceType.CPU]
         if resource_type == ResourceType.MEMBW:
-            return task.initial.membw
+            return task.requested.data[ResourceType.MEM]
         if resource_type == ResourceType.MEM:
-            return task.initial.mem
+            return task.requested.data[ResourceType.MEMBW]

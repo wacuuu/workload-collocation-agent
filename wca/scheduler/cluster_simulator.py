@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Set
 
 from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.types import ExtenderArgs
+from wca.scheduler.types import ExtenderArgs, ResourceType
 
 GB = 1000 ** 3
 MB = 1000 ** 2
@@ -13,71 +13,72 @@ Assignments = Dict[TaskId, NodeId]
 
 
 class Resources:
-    def __init__(self, cpu, mem, membw):
-        self.cpu = cpu
-        self.mem = mem
-        self.membw = membw
+    def __init__(self, resources):
+        self.data = resources
 
     @staticmethod
-    def create_empty():
-        return Resources(0, 0, 0)
+    def create_empty(dimensions):
+        return Resources({d: 0 for d in dimensions})
 
     def __repr__(self):
-        return str({'cpu': self.cpu, 'mem': float(self.mem) / float(GB),
-                    'membw': float(self.membw) / float(GB)})
+        return str(self.data)
 
     def __bool__(self):
-        return self.cpu >= 0 and self.mem >= 0 and self.membw >= 0
+        return all([val > 0 for val in self.data.values()])
 
     def substract(self, b):
-        self.cpu -= b.cpu
-        self.mem -= b.mem
-        self.membw -= b.membw
+        assert set(self.data.keys()) == set(b.data.keys())
+        for key in self.data.keys():
+            self.data[key] -= b.data[key]
 
     def copy(self):
-        return Resources(self.cpu, self.mem, self.membw)
+        r = Resources({})
+        r.data = self.data.copy()
+        return r
 
 
 class Task:
-    def __init__(self, name, initial, assignment=None):
-        self.name = name
-        self.initial = initial
-        self.assignment = assignment
-
-        self.real = Resources.create_empty()
-        self.life_time = 0
+    def __init__(self, name, requested, assignment=None):
+        self.name: str = name
+        self.assignment: Node = assignment
+        self.requested: Resource = requested  # == requested
+        self.real: Resource = Resources.create_empty(requested.data.keys())
+        self.life_time: int = 0
 
     def update(self, delta_time):
         """Update state of task when it becomes older by delta_time."""
         self.life_time += delta_time
         # Here simply just if, life_time > 0 assign all
-        self.real = self.initial.copy()
+        self.real = self.requested.copy()
 
     def __repr__(self):
-        return "(name: {}, assignment: {}, initial: {}, real: {})".format(
+        return "(name: {}, assignment: {}, requested: {}, real: {})".format(
             self.name, 'None' if self.assignment is None else self.assignment.name,
-            str(self.initial), str(self.real))
+            str(self.requested), str(self.real))
 
 
 class Node:
-    def __init__(self, name, resources):
+    def __init__(self, name, available_resources):
         self.name = name
-        self.initial = resources
-        self.real = resources.copy()
-        self.unassigned = resources.copy()
+        self.initial = available_resources
+        self.real = available_resources.copy()
+        self.unassigned = available_resources.copy()
+        # initial - all available
+        # real - free real memory
+        # unassigned - free/unassigned memory
 
     def __repr__(self):
-        return "(name: {}, unassigned: {}, initial: {}, real: {})".format(
-            self.name, str(self.unassigned), str(self.initial), str(self.real))
+        return "(name: {}, initial: {}, real: {}, unassigned: {})".format(
+            self.name, str(self.initial), str(self.real), str(self.unassigned))
 
     def validate_assignment(self, tasks, new_task):
         """if unassigned > free_not_unassigned"""
-        unassigned = self.initial.copy()
+        tmp_unassigned = self.initial.copy()
         for task in tasks:
             if task.assignment == self:
-                unassigned.substract(task.initial)
-        unassigned.substract(new_task.initial)
-        return bool(unassigned)
+                tmp_unassigned.substract(task.requested)
+        tmp_unassigned.substract(new_task.requested)
+        return bool(tmp_unassigned)
 
     def update(self, tasks):
         """Update usages of resources."""
@@ -86,31 +87,7 @@ class Node:
         for task in tasks:
             if task.assignment == self:
                 self.real.substract(task.real)
-                self.unassigned.substract(task.initial)
-
-
-class Task:
-    def __init__(self, name, initial, assignment=None):
-        self.name = name
-        self.initial = initial
-        self.assignment = assignment
-
-        self.real = Resources.create_empty()
-        self.life_time = 0
-
-    def update(self, delta_time):
-        self.life_time += delta_time
-        # Here simply just if, life_time > 0 assign all
-        self.real = self.initial.copy()
-
-    @staticmethod
-    def create_deterministic_stressng(i):
-        pass
-
-    def __repr__(self):
-        return "(name: {}, assignment: {}, initial: {}, real: {})".format(
-            self.name, 'None' if self.assignment is None else self.assignment.name,
-            str(self.initial), str(self.real))
+                self.unassigned.substract(task.requested)
 
 
 @dataclass
@@ -119,21 +96,20 @@ class ClusterSimulator:
     nodes: List[Node]
     scheduler: Algorithm
     allow_rough_assignment: bool = False
+    dimensions: Set[ResourceType] = (ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW,)
 
     def __post_init__(self):
         self.time = 0
+        all([set(node.initial.data.keys()) == self.dimensions for node in self.nodes])
+        all([set(task.requested.data.keys()) == self.dimensions for task in self.tasks])
 
     def get_task_by_name(self, task_name: str) -> Optional[Task]:
-        for task in self.tasks:
-            if task.name == task_name:
-                return task
-        return None
+        filtered = [task for task in self.tasks if task.name == task_name]
+        return filtered[0] if filtered else None
 
     def get_node_by_name(self, node_name: str) -> Optional[Node]:
-        for node in self.nodes:
-            if node.name == node_name:
-                return node
-        return None
+        filtered = [node for node in self.nodes if node.name == node_name]
+        return filtered[0] if filtered else None
 
     def reset(self):
         self.tasks = []
@@ -169,6 +145,8 @@ class ClusterSimulator:
 
     def call_scheduler(self, new_task: Task):
         """To map simulator structure into required by scheduler.Algorithm interace."""
+
+        assert set(new_task.requested.data.keys()) == self.dimensions, '{} {}'.format(set(new_task.requested.data.keys()), self.dimensions)
 
         node_names = [node.name for node in self.nodes]
         pod = {'metadata': {'labels': {'app': new_task.name},
