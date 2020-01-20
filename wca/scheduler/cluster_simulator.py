@@ -26,10 +26,35 @@ class Resources:
     def __bool__(self):
         return all([val > 0 for val in self.data.values()])
 
+    def __sub__(self, other):
+        me = self.copy()
+        me.substract(other)
+        return me
+
+    def __add__(self, other):
+        me = self.copy()
+        me.add(other)
+        return me
+
+    def __truediv__(self, other):
+        me = self.copy()
+        me.divide(other)
+        return me
+
     def substract(self, b):
         assert set(self.data.keys()) == set(b.data.keys())
         for key in self.data.keys():
             self.data[key] -= b.data[key]
+
+    def add(self, b):
+        assert set(self.data.keys()) == set(b.data.keys())
+        for key in self.data.keys():
+            self.data[key] += b.data[key]
+
+    def divide(self, b):
+        assert set(self.data.keys()) == set(b.data.keys())
+        for key in self.data.keys():
+            self.data[key] /= b.data[key]
 
     def copy(self):
         r = Resources({})
@@ -102,6 +127,7 @@ class ClusterSimulator:
         self.time = 0
         all([set(node.initial.data.keys()) == self.dimensions for node in self.nodes])
         all([set(task.requested.data.keys()) == self.dimensions for task in self.tasks])
+        self.rough_assignments_per_node: Dict[Node, int] = {node:0 for node in self.nodes}
 
     def get_task_by_name(self, task_name: str) -> Optional[Task]:
         filtered = [task for task in self.tasks if task.name == task_name]
@@ -110,6 +136,18 @@ class ClusterSimulator:
     def get_node_by_name(self, node_name: str) -> Optional[Node]:
         filtered = [node for node in self.nodes if node.name == node_name]
         return filtered[0] if filtered else None
+
+    def per_node_resource_usage(self, if_percentage: bool = False):
+        """if_percentage: if output in percentage or original resource units"""
+        if if_percentage:
+            return [(node.initial - node.unassigned)/node.initial for node in nodes]
+        return [node.initial - node.unassigned for node in nodes]
+
+    def cluster_resource_usage(self, if_percentage: bool = False):
+        r = sum([node.initial for node in nodes]) - sum([node.unassigned for node in nodes])
+        if if_percentage:
+            r = r / sum([node.initial for node in nodes])
+        return r
 
     def reset(self):
         self.tasks = []
@@ -138,9 +176,13 @@ class ClusterSimulator:
         assigned_count = 0
         for task in self.tasks:
             if task.name in assignments:
-                if self.validate_assignment(task, assignments[task.name]) or self.allow_rough_assignment:
+                # taking all dimensions supported by Simulator whether the app fit the node.
+                if_app_fit_to_node = self.validate_assignment(task, assignments[task.name])
+                if if_app_fit_to_node or self.allow_rough_assignment:
                     task.assignment = assignments[task.name]
                     assigned_count += 1
+                    if not if_app_fit_to_node:
+                        self.rough_assignments_per_node[task.assignment] += 1
         return assigned_count
 
     def call_scheduler(self, new_task: Task):
