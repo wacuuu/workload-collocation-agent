@@ -14,20 +14,30 @@ class PrometheusDataProviderException(Exception):
     pass
 
 
-FREE_RESOURCES_QUERY_MAPPING: Dict[ResourceType, str] = {
-        ResourceType.CPU: 'sum(platform_topology_cores) by (nodename) - '
-        'sum(task_requested_cpus) by (nodename) or sum(platform_topology_cores) by (nodename)',
-        ResourceType.MEM: 'sum(node_memory_MemTotal_bytes) by (nodename) - '
-        'sum(task_requested_mem_bytes) by (nodename) or sum(node_memory_MemTotal_bytes) '
-        'by (nodename)',
-        ResourceType.MEMBW: '',
-        ResourceType.MEMORY_BANDWIDTH_READS: '',
-        ResourceType.MEMORY_BANDWIDTH_WRITES: ''
-        }
+NODE_FREE_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
+    ResourceType.CPU: 'sum(platform_topology_cores) by (nodename) - '
+    'sum(task_requested_cpus) by (nodename) or sum(platform_topology_cores) by (nodename)',
+    ResourceType.MEM: 'sum(node_memory_MemTotal_bytes) by (nodename) - '
+    'sum(task_requested_mem_bytes) by (nodename) or sum(node_memory_MemTotal_bytes) '
+    'by (nodename)',
+    ResourceType.MEMORY_BANDWIDTH_READS: 'sum(platform_nvdimm_read_bandwidth_bytes_per_second) '
+    'by (nodename) - sum(platform_pmm_bandwidth_reads) by (nodename) or '
+    'sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename)',
+    ResourceType.MEMORY_BANDWIDTH_WRITES: 'sum(platform_nvdimm_write_bandwidth_bytes_per_'
+    'second) by (nodename) - sum(platform_pmm_bandwidth_writes) by (nodename) or '
+    'sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename)'
+}
+
+APP_REQUESTED_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
+        ResourceType.CPU: 'task_requested_cpus',
+        ResourceType.MEM: 'task_requested_mem_bytes',
+        ResourceType.MEMORY_BANDWIDTH_READS: 'task_mem_bandwidth_bytes',
+        ResourceType.MEMORY_BANDWIDTH_WRITES: 'task_mem_bandwidth_bytes'
+}
 
 
 @dataclass
-class PrometheusDataProvider():
+class PrometheusDataProvider(DataProvider):
     ip: str
     ssl: SSL = None
 
@@ -36,12 +46,12 @@ class PrometheusDataProvider():
         prometheus_adapter = requests.adapters.HTTPAdapter(max_retries=1)
         self.session.mount(self.ip, prometheus_adapter)
 
-    def get_free_resources(
+    def get_node_free_resources(
             self, resources: List[ResourceType]) -> Dict[str, Dict[ResourceType, float]]:
 
         free_resources = {}
         for resource in resources:
-            results = self._do_query(FREE_RESOURCES_QUERY_MAPPING[resource])
+            results = self._do_query(NODE_FREE_RESOURCES_QUERY_MAP[resource])
             for result in results:
                 node = result['metric']['nodename']
                 value = result['value'][1]
@@ -53,9 +63,19 @@ class PrometheusDataProvider():
 
         return free_resources
 
-    def get_requested_resources(
+    def get_app_requested_resources(
             self, app: str, resources: List[ResourceType]) -> Dict[ResourceType, float]:
-        pass
+
+        requested_resources = {}
+        query_label = '{app=%r}' % app
+        for resource in resources:
+            results = self._do_query(APP_REQUESTED_RESOURCES_QUERY_MAP[resource] + query_label)
+            for result in results:
+                value = result['value'][1]
+
+                requested_resources[resource] = value
+
+        return requested_resources
 
     def _do_query(self, query: str):
         url = URL_TPL.format(
