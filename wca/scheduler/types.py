@@ -53,3 +53,5 @@ class ResourceType(Enum):
     MEM = 'mem'
     CPU = 'cpu'
     MEMBW = 'membw'
+    MEMORY_BANDWIDTH_READS = 'memory_bandwidth_reads'
+    MEMORY_BANDWIDTH_WRITES = 'memory_bandwidth_writes'

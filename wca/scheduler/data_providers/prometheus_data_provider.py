@@ -14,13 +14,15 @@ class PrometheusDataProviderException(Exception):
     pass
 
 
-QUERY_MAPPING: Dict[ResourceType, str] = {
+FREE_RESOURCES_QUERY_MAPPING: Dict[ResourceType, str] = {
         ResourceType.CPU: 'sum(platform_topology_cores) by (nodename) - '
         'sum(task_requested_cpus) by (nodename) or sum(platform_topology_cores) by (nodename)',
         ResourceType.MEM: 'sum(node_memory_MemTotal_bytes) by (nodename) - '
         'sum(task_requested_mem_bytes) by (nodename) or sum(node_memory_MemTotal_bytes) '
         'by (nodename)',
         ResourceType.MEMBW: '',
+        ResourceType.MEMORY_BANDWIDTH_READS: '',
+        ResourceType.MEMORY_BANDWIDTH_WRITES: ''
         }
 
 
@@ -39,7 +41,7 @@ class PrometheusDataProvider():
 
         free_resources = {}
         for resource in resources:
-            results = self._do_query(QUERY_MAPPING[resource])
+            results = self._do_query(FREE_RESOURCES_QUERY_MAPPING[resource])
             for result in results:
                 node = result['metric']['nodename']
                 value = result['value'][1]
