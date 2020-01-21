@@ -1,26 +1,15 @@
+from collections import Counter
+from dataclasses import dataclass
 import pytest
 from pprint import pprint
-from dataclasses import dataclass
+import random
 from typing import Dict, List
-from collections import Counter
 
 from wca.scheduler.algorithms.ffd_generic import FFDGeneric
 from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, GB, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
         ClusterSimulatorDataProvider)
 from wca.scheduler.types import ResourceType
-
-
-# def create_random_stressng(i, assignment=None):
-#     def normal_random(loc, scale):
-#         r = int(np_normal(loc, scale))
-#         return r if r >= 1 else 1
-#
-#     r = Resources(normal_random(8,5),
-#                   normal_random(10, 8) * GB,
-#                   normal_random(10, 8) * GB)
-#     t = Task('stress_ng_{}'.format(i), r)
-#     return t
 
 
 def prepare_NxM_nodes(apache_pass_count, dram_only_count):
@@ -126,7 +115,6 @@ tasks__2lm_contention_demo = [
 
 
 def randonly_choose_from_taskset(taskset, size, seed):
-    import random
     random.seed(seed)
     r = []
     for i in range(size):
@@ -170,12 +158,14 @@ def experiment__nodes_membw_contended():
                            iteration_finished_callback)
 
     def create_report(title, iterations_data: List[IterationData]):
-        import ipdb; ipdb.set_trace()
-        # only for report generation imports
-        import matplotlib.pyplot as plt
-        import numpy as np
-        plt.style.use('ggplot')
+        try:
+            import matplotlib.pyplot as plt
+            import numpy as np
+        except ImportError:
+            # No installed packages required for report generation.
+            return
 
+        plt.style.use('ggplot')
         iterd = iterations_data
 
         iterations = np.arange(0, len(iterd))
