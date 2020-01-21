@@ -53,3 +53,7 @@ class ResourceType(Enum):
     MEM = 'mem'
     CPU = 'cpu'
     MEMBW = 'membw'
+    WSS = 'wss'
+
+    def __repr__(self):
+        return self.value

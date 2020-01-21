@@ -51,6 +51,13 @@ class Resources:
         for key in self.data.keys():
             self.data[key] += b.data[key]
 
+    @staticmethod
+    def sum(array):
+        r = Resources.create_empty(list(array[0].data.keys()))
+        for el in array:
+            r = r + el
+        return r
+
     def divide(self, b):
         assert set(self.data.keys()) == set(b.data.keys())
         for key in self.data.keys():
@@ -70,6 +77,13 @@ class Task:
         self.real: Resource = Resources.create_empty(requested.data.keys())
         self.life_time: int = 0
 
+    CORE_NAME_SEP = '___'
+
+    def get_core_name(self):
+        if self.CORE_NAME_SEP in self.name:
+            return self.name[:self.name.find(self.CORE_NAME_SEP)]
+        return self.name
+
     def update(self, delta_time):
         """Update state of task when it becomes older by delta_time."""
         self.life_time += delta_time
@@ -80,6 +94,9 @@ class Task:
         return "(name: {}, assignment: {}, requested: {}, real: {})".format(
             self.name, 'None' if self.assignment is None else self.assignment.name,
             str(self.requested), str(self.real))
+
+    def copy(self):
+        return Task(self.name, self.requested.copy(), None)
 
 
 class Node:
@@ -140,13 +157,13 @@ class ClusterSimulator:
     def per_node_resource_usage(self, if_percentage: bool = False):
         """if_percentage: if output in percentage or original resource units"""
         if if_percentage:
-            return [(node.initial - node.unassigned)/node.initial for node in nodes]
+            return [(node.initial - node.unassigned)/node.initial for node in self.nodes]
         return [node.initial - node.unassigned for node in nodes]
 
     def cluster_resource_usage(self, if_percentage: bool = False):
-        r = sum([node.initial for node in nodes]) - sum([node.unassigned for node in nodes])
+        r = Resources.sum([node.initial for node in self.nodes]) - Resources.sum([node.unassigned for node in self.nodes])
         if if_percentage:
-            r = r / sum([node.initial for node in nodes])
+            r = r / Resources.sum([node.initial for node in self.nodes])
         return r
 
     def reset(self):
@@ -188,7 +205,8 @@ class ClusterSimulator:
     def call_scheduler(self, new_task: Task):
         """To map simulator structure into required by scheduler.Algorithm interace."""
 
-        assert set(new_task.requested.data.keys()) == self.dimensions, '{} {}'.format(set(new_task.requested.data.keys()), self.dimensions)
+        assert self.dimensions.issubset(set(new_task.requested.data.keys())), \
+                '{} {}'.format(set(new_task.requested.data.keys()), self.dimensions)
 
         node_names = [node.name for node in self.nodes]
         pod = {'metadata': {'labels': {'app': new_task.name},
