@@ -29,10 +29,12 @@ NODE_FREE_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
 }
 
 APP_REQUESTED_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
-        ResourceType.CPU: 'task_requested_cpus',
-        ResourceType.MEM: 'task_requested_mem_bytes',
-        ResourceType.MEMORY_BANDWIDTH_READS: 'task_mem_bandwidth_bytes',
-        ResourceType.MEMORY_BANDWIDTH_WRITES: 'task_mem_bandwidth_bytes'
+        ResourceType.CPU: 'task_requested_cpus{app=%r}',
+        ResourceType.MEM: 'task_requested_mem_bytes{app=%r}',
+        ResourceType.MEMORY_BANDWIDTH_READS: 'max_over_time'
+        '(delta(task_mb_reads__rB001{app=%r}[5s])[24h:5s])',
+        ResourceType.MEMORY_BANDWIDTH_WRITES: 'max_over_time'
+        '(delta(task_mb_writes__rB004{app=%r}[5s])[24h:5s])'
 }
 
 
@@ -67,9 +69,8 @@ class PrometheusDataProvider(DataProvider):
             self, app: str, resources: List[ResourceType]) -> Dict[ResourceType, float]:
 
         requested_resources = {}
-        query_label = '{app=%r}' % app
         for resource in resources:
-            results = self._do_query(APP_REQUESTED_RESOURCES_QUERY_MAP[resource] + query_label)
+            results = self._do_query(APP_REQUESTED_RESOURCES_QUERY_MAP[resource] % app)
             for result in results:
                 value = result['value'][1]
 
