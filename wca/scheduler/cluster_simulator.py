@@ -77,6 +77,11 @@ class Task:
         self.real: Resource = Resources.create_empty(requested.data.keys())
         self.life_time: int = 0
 
+    def remove_dimension(self, resource_type: ResourceType):
+        """post creation removal of one of dimension"""
+        for resources_ in (self.requested, self.real):
+            del resources_.data[resource_type]
+
     CORE_NAME_SEP = '___'
 
     def get_core_name(self):
@@ -87,7 +92,7 @@ class Task:
     def update(self, delta_time):
         """Update state of task when it becomes older by delta_time."""
         self.life_time += delta_time
-        # Here simply just if, life_time > 0 assign all
+        # Here simply just if, life_time > 0 assign all.
         self.real = self.requested.copy()
 
     def __repr__(self):
@@ -194,6 +199,7 @@ class ClusterSimulator:
         for task in self.tasks:
             if task.name in assignments:
                 # taking all dimensions supported by Simulator whether the app fit the node.
+                print("Trying to assign task {}".format(task))
                 if_app_fit_to_node = self.validate_assignment(task, assignments[task.name])
                 if if_app_fit_to_node or self.allow_rough_assignment:
                     task.assignment = assignments[task.name]
@@ -232,6 +238,11 @@ class ClusterSimulator:
         self.update_nodes_state()
 
         assignments = self.call_scheduler(changes[1][0])
+        print("Changes:")
+        print(changes)
+        print("Assignments performed:")
+        print(assignments)
+        print('')
         assigned_count = self.perform_assignments(assignments)
 
         # Recalculating state after assignments being performed.

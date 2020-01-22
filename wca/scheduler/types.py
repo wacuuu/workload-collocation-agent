@@ -53,6 +53,8 @@ class ResourceType(Enum):
     MEM = 'mem'
     CPU = 'cpu'
     MEMBW = 'membw'
+    MEMBW_WRITE = 'membw_write'
+    MEMBW_READ = 'membw_read'
     WSS = 'wss'
 
     def __repr__(self):

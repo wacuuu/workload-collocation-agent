@@ -35,7 +35,7 @@ class ClusterSimulatorDataProvider(DataProvider):
 
         if resource_type == ResourceType.CPU:
             return task.requested.data[ResourceType.CPU]
-        if resource_type == ResourceType.MEMBW:
-            return task.requested.data[ResourceType.MEM]
         if resource_type == ResourceType.MEM:
+            return task.requested.data[ResourceType.MEM]
+        if resource_type == ResourceType.MEMBW:
             return task.requested.data[ResourceType.MEMBW]
