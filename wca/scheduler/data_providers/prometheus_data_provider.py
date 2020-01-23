@@ -43,12 +43,12 @@ NODE_FREE_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
 }
 
 APP_REQUESTED_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
-        ResourceType.CPU: 'task_requested_cpus{app=%r}',
-        ResourceType.MEM: 'task_requested_mem_bytes{app=%r}',
+        ResourceType.CPU: 'max_over_time(task_requested_cpus{app=%r}[24h:5s])',
+        ResourceType.MEM: 'max_over_time(task_requested_mem_bytes{app=%r}[24h:5s])',
         ResourceType.MEMORY_BANDWIDTH_READS: 'max_over_time'
-        '(delta(task_mb_reads__rB001{app=%r}[5s])[24h:5s])',
+        '(task_mb_reads_bytes_per_second{app="r"}[24h:5s])',
         ResourceType.MEMORY_BANDWIDTH_WRITES: 'max_over_time'
-        '(delta(task_mb_writes__rB004{app=%r}[5s])[24h:5s])'
+        '(task_mb_writes_bytes_per_second{app="r"}[24h:5s])'
 }
 
 

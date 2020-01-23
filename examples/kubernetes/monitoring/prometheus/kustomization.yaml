@@ -6,6 +6,7 @@ resources:
   - prometheus.yaml
   - prometheus_rule.wca.yaml
   - prometheus_rule.16-compatibility-rules-new-to-old.yaml
+  - prometheus_rule.wca-scheduler.yaml
   - service_account.yaml
   - service.yaml
   - operator/deployment.yaml
