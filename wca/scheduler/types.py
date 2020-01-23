@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,9 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Dict, List
 
-from typing import Dict, List, Any
+from wca.config import assure_type
 
 # Kubernetes
 NodeName = str
@@ -44,8 +45,13 @@ class HostPriority():
 @dataclass
 class ExtenderArgs:
     Nodes: List[Dict]
-    Pod: Dict[str, Any]
+    Pod: Dict[str, str]
     NodeNames: List[str]
+
+    def __post_init__(self):
+        assure_type(self.Nodes, List[Dict])
+        assure_type(self.Pod, Dict[str, str])
+        assure_type(self.NodeNames, List[str])
 
 
 # Internal
