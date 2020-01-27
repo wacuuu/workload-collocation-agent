@@ -16,9 +16,11 @@ from dataclasses import asdict
 from flask import Flask, request, jsonify
 from typing import Dict
 
-from wca.scheduler.types import ExtenderArgs
+from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult
 
 log = logging.getLogger(__name__)
+
+DEFAULT_NAMESPACE = 'default'
 
 
 class Server:
@@ -34,13 +36,25 @@ class Server:
         @self.app.route('/filter', methods=['POST'])
         def filter():
             extender_args = ExtenderArgs(**request.get_json())
-            log.debug('[Filter] : %r ' % extender_args)
-            return jsonify(asdict(self.algorithm.filter(extender_args)))
+            log.debug('[Filter] %r ' % extender_args)
+
+            if DEFAULT_NAMESPACE == extender_args.Pod['metadata']['namespace']:
+                return jsonify(asdict(self.algorithm.filter(extender_args)))
+            else:
+                log.info('[Filter] Ignoring Pod %r : Different namespace!' %
+                         extender_args.Pod['metadata']['name'])
+                return jsonify(ExtenderFilterResult(NodeNames=extender_args.NodeNames))
 
         @self.app.route('/prioritize', methods=['POST'])
         def prioritize():
             extender_args = ExtenderArgs(**request.get_json())
-            log.debug('[Prioritize] : %r ' % extender_args)
-            priorities = [asdict(host)
-                          for host in self.algorithm.prioritize(extender_args)]
-            return jsonify(priorities)
+            log.debug('[Prioritize] %r ' % extender_args)
+
+            if DEFAULT_NAMESPACE == extender_args.Pod['metadata']['namespace']:
+                priorities = [asdict(host)
+                              for host in self.algorithm.prioritize(extender_args)]
+                return jsonify(priorities)
+            else:
+                log.info('[Prioritize] Ignoring Pod %r : Different namespace!' %
+                         extender_args.Pod['metadata']['name'])
+                return jsonify([])
