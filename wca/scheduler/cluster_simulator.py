@@ -13,15 +13,21 @@ Assignments = Dict[TaskId, NodeId]
 
 
 class Resources:
-    def __init__(self, resources):
+    def __init__(self, resources, membw_ratio=1):
+        """membw_ratio: ratio of MEMBW_READ / MEMBW_WRITE."""
         self.data = resources
+
+    def __repr__(self):
+        return str(self.data)
 
     @staticmethod
     def create_empty(dimensions):
         return Resources({d: 0 for d in dimensions})
 
-    def __repr__(self):
-        return str(self.data)
+    def copy(self):
+        r = Resources({})
+        r.data = self.data.copy()
+        return r
 
     def __bool__(self):
         return all([val > 0 for val in self.data.values()])
@@ -31,22 +37,36 @@ class Resources:
         me.substract(other)
         return me
 
+    def substract(self, b):
+        """simply loops over all dimensions and use - operator"""
+        assert set(self.data.keys()) == set(b.data.keys())
+        for key in self.data.keys():
+            self.data[key] -= b.data[key]
+
+    def substract_aep_aware(self, b, membw_read_write_ratio):
+        """Mutates self. """
+        assert ResourceType.MEMBW_READ in data and ResourceType.MEMBW_WRITE in data
+        assert set(self.data.keys()) == set(b.data.keys())
+        for key in self.data.keys():
+            if key == ResourceType.MEMBW_READ or key == ResourceType.MEMBW_WRITE:
+                continue
+            self.data[key] -= b.data[key]
+
+        # Special case for MEMBW
+        READ = ResourceType.MEMBW_READ
+        WRITE = ResourceType.MEMBW_WRITE
+        x = self.data
+        y = b.data
+        x[READ] = x[READ] - y[READ] - y[WRITE] * membw_read_write_ratio
+        x[WRITE] = x[WRITE] - y[WRITE] - y[READ] * membw_read_write_ratio
+
     def __add__(self, other):
         me = self.copy()
         me.add(other)
         return me
 
-    def __truediv__(self, other):
-        me = self.copy()
-        me.divide(other)
-        return me
-
-    def substract(self, b):
-        assert set(self.data.keys()) == set(b.data.keys())
-        for key in self.data.keys():
-            self.data[key] -= b.data[key]
-
     def add(self, b):
+        """simply loops over all dimensions and use + operator"""
         assert set(self.data.keys()) == set(b.data.keys())
         for key in self.data.keys():
             self.data[key] += b.data[key]
@@ -58,15 +78,15 @@ class Resources:
             r = r + el
         return r
 
+    def __truediv__(self, other):
+        me = self.copy()
+        me.divide(other)
+        return me
+
     def divide(self, b):
         assert set(self.data.keys()) == set(b.data.keys())
         for key in self.data.keys():
             self.data[key] /= b.data[key]
-
-    def copy(self):
-        r = Resources({})
-        r.data = self.data.copy()
-        return r
 
 
 class Task:
@@ -78,7 +98,7 @@ class Task:
         self.life_time: int = 0
 
     def remove_dimension(self, resource_type: ResourceType):
-        """post creation removal of one of dimension"""
+        """Post-creation removal of one of the dimensions."""
         for resources_ in (self.requested, self.real):
             del resources_.data[resource_type]
 
@@ -92,7 +112,7 @@ class Task:
     def update(self, delta_time):
         """Update state of task when it becomes older by delta_time."""
         self.life_time += delta_time
-        # Here simply just if, life_time > 0 assign all.
+        # Here simply just if, life_time > 0 assign all requested.
         self.real = self.requested.copy()
 
     def __repr__(self):
@@ -106,34 +126,39 @@ class Task:
 
 class Node:
     def __init__(self, name, available_resources):
-        self.name = name
-        self.initial = available_resources
-        self.real = available_resources.copy()
-        self.unassigned = available_resources.copy()
         # initial - all available
         # real - free real memory
         # unassigned - free/unassigned memory
+        self.name = name
+        self.initial = available_resources
+        self.free = available_resources.copy()
+        self.unassigned = available_resources.copy()
 
     def __repr__(self):
-        return "(name: {}, initial: {}, real: {}, unassigned: {})".format(
-            self.name, str(self.initial), str(self.real), str(self.unassigned))
+        return "(name: {}, initial: {}, free: {}, unassigned: {})".format(
+            self.name, str(self.initial), str(self.free), str(self.unassigned))
 
     def validate_assignment(self, tasks, new_task):
-        """if unassigned > free_not_unassigned"""
+        """Check if there is enough resources on the node for a >>new_task<<."""
         tmp_unassigned = self.initial.copy()
         for task in tasks:
             if task.assignment == self:
-                tmp_unassigned.substract(task.requested)
+                if ResourceType.MEMBW_READ in self.initial.data:
+                    d_ = self.initial.data
+                    membw_read_write_ratio = d_[ResourceType.MEMBW_READ] / d_[ResourceType.MEMBW_WRITE]
+                    tmp_unassigned.substract_aep_aware(task.requested, membw_read_write_ratio)
+                else:
+                    tmp_unassigned.substract(task.requested)
         tmp_unassigned.substract(new_task.requested)
         return bool(tmp_unassigned)
 
     def update(self, tasks):
-        """Update usages of resources."""
-        self.real = self.initial.copy()
+        """Update usages of resources (recalculate self.free and self.unassigned)"""
+        self.free = self.initial.copy()
         self.unassigned = self.initial.copy()
         for task in tasks:
             if task.assignment == self:
-                self.real.substract(task.real)
+                self.free.substract(task.real)
                 self.unassigned.substract(task.requested)
 
 
@@ -166,7 +191,8 @@ class ClusterSimulator:
         return [node.initial - node.unassigned for node in nodes]
 
     def cluster_resource_usage(self, if_percentage: bool = False):
-        r = Resources.sum([node.initial for node in self.nodes]) - Resources.sum([node.unassigned for node in self.nodes])
+        r = Resources.sum([node.initial for node in self.nodes]) - \
+            Resources.sum([node.unassigned for node in self.nodes])
         if if_percentage:
             r = r / Resources.sum([node.initial for node in self.nodes])
         return r

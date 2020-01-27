@@ -43,18 +43,34 @@ class FFDGeneric_AEP(Algorithm):
 
     data_provider: DataProvider
     dimensions: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW,)
-    checks_list: List[Callable[List[int], List[int] -> bool]] = 
-
-    def __post_init__(self):
-        self.checks_list.append(self.basic_check)
 
     @staticmethod
     def basic_check(app_requested: Dict[ResourceType, int], node_free_space: Dict[ResourceType, int]) -> bool:
         return all([app_requested[resource] < node_free_space[resource] for resource in self.dimensions])
 
     @staticmethod
-    def aep_memory_bandwidth(app_requested: Dict[ResourceType, int], node_free_space: Dict[ResourceType, int]) -> bool:
-        assert ResourceType.MEMBW_WRITE ResourceType.MEMBW_READ
+    def membw_check(app_requested: Dict[ResourceType, int],
+                    node_free_space: Dict[ResourceType, int],
+                    node_membw_read_write_ratio: float) -> bool:
+        """
+        read/write ratio, e.g. 40GB/s / 10GB/s = 4,
+        what means reading is 4 time faster
+        """
+
+        # Assert that required dimensions are available.
+        for resource in (ResourceType.MEMBW_WRITE, ResourceType.MEMBW_READ,):
+            for source in (app_requested, node_free_space, node_max_aep_bandwidth):
+                assert resource in source
+
+        # To shorten the notation.
+        WRITE = ResourceType.MEMBW_WRITE
+        READ = ResourceType.MEMBW_READ
+        requested = app_requested
+        node = node_free_space
+        ratio = node_membw_read_write_ratio
+
+        return (node[READ] - requested[READ] - requested[WRITE] * ratio) > 0 and \
+               (node[WRITE] - requested[WRITE] - requested[READ] / ratio) > 0
 
     def app_fit_node(self, app, node):
         dp = self.data_provider
@@ -64,7 +80,12 @@ class FFDGeneric_AEP(Algorithm):
         node_free_space = {resource: self.data_provider.get_node_free_space_resource(node, resource) 
                            for resource in self.dimensions}
 
-        return all([check(app_requested, node_free_space) for check in self.checks_list])
+        if not basic_check(app_requested, node_free_space):
+            return False
+
+        node_membw_read_write_ratio = self.data_provider.get_membw_read_write_ratio()
+
+        return membw_check(app_requested, node_free_space, node_membw_read_write_ratio)
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         app, nodes, namespace, name = extract_common_input(extender_args)
