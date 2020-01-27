@@ -14,17 +14,17 @@
 from abc import ABC, abstractmethod
 from typing import Dict, List
 
-from wca.scheduler.types import ResourceType
+from wca.scheduler.types import ResourceType, NodeName, Resources
 
 
 class DataProvider(ABC):
 
     @abstractmethod
     def get_node_free_resources(
-            self, resources: List[ResourceType]) -> Dict[str, Dict[ResourceType, float]]:
+            self, resources: List[ResourceType]) -> Dict[NodeName, Resources]:
         pass
 
     @abstractmethod
     def get_app_requested_resources(
-            self, app: str, resources: List[ResourceType]) -> Dict[ResourceType, float]:
+            self, app: str, resources: List[ResourceType]) -> Resources:
         pass

@@ -13,12 +13,13 @@
 # limitations under the License.
 
 from wca.config import register
-from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
-from wca.scheduler.algorithms.fit_risk_algorithm import FitRiskAlgorithm
-from wca.scheduler.algorithms.creatone_algorithm import CreatoneAlgorithm
+from wca.scheduler.algorithms.ffd_generic import FFDGeneric
+from wca.scheduler.data_providers.prometheus_data_provider import PrometheusDataProvider
 
 
 def register_algorithms():
-    register(FitRiskAlgorithm)
-    register(NOPAlgorithm)
-    register(CreatoneAlgorithm)
+    register(FFDGeneric)
+
+
+def register_dataproviders():
+    register(PrometheusDataProvider)

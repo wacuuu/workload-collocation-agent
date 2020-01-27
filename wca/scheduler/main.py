@@ -16,7 +16,7 @@ import os
 
 from wca import logger
 from wca.config import load_config, ConfigLoadError
-from wca.scheduler.components import register_algorithms
+from wca.scheduler.components import register_algorithms, register_dataproviders
 from wca.scheduler.server import Server
 
 
@@ -37,6 +37,7 @@ def main(config):
 
     # Initialize all necessary objects.
     register_algorithms()
+    register_dataproviders()
 
     try:
         configuration = load_config(config)

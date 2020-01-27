@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ from flask import Flask, request, jsonify
 from typing import Dict
 
 from wca.scheduler.types import ExtenderArgs
-
 
 log = logging.getLogger(__name__)
 

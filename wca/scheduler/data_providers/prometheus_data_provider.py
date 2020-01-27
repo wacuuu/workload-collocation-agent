@@ -11,14 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import logging
 import requests
 from dataclasses import dataclass
 from typing import List, Dict, Optional
 
 from wca.config import Numeric
 from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.types import ResourceType
+from wca.scheduler.types import ResourceType, NodeName, Resources
 from wca.security import SSL, HTTPSAdapter
+
+log = logging.getLogger(__name__)
 
 QUERY_PATH = "/api/v1/query"
 URL_TPL = '{prometheus_ip}{path}?query={name}'
@@ -35,10 +38,10 @@ NODE_FREE_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
     'sum(task_requested_mem_bytes) by (nodename) or sum(node_memory_MemTotal_bytes) '
     'by (nodename)',
     ResourceType.MEMORY_BANDWIDTH_READS: 'sum(platform_nvdimm_read_bandwidth_bytes_per_second) '
-    'by (nodename) - sum(platform_pmm_bandwidth_reads) by (nodename) or '
+    'by (nodename) - sum(delta(platform_pmm_bandwidth_reads[5s])*64) by (nodename) or '
     'sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename)',
     ResourceType.MEMORY_BANDWIDTH_WRITES: 'sum(platform_nvdimm_write_bandwidth_bytes_per_'
-    'second) by (nodename) - sum(platform_pmm_bandwidth_writes) by (nodename) or '
+    'second) by (nodename) - sum(delta(platform_pmm_bandwidth_writes[5s])*64) by (nodename) or '
     'sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename)'
 }
 
@@ -46,9 +49,9 @@ APP_REQUESTED_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
         ResourceType.CPU: 'max_over_time(task_requested_cpus{app=%r}[24h:5s])',
         ResourceType.MEM: 'max_over_time(task_requested_mem_bytes{app=%r}[24h:5s])',
         ResourceType.MEMORY_BANDWIDTH_READS: 'max_over_time'
-        '(task_mb_reads_bytes_per_second{app="r"}[24h:5s])',
+        '(task_mb_reads_bytes_per_second{app=%r}[24h:5s])',
         ResourceType.MEMORY_BANDWIDTH_WRITES: 'max_over_time'
-        '(task_mb_writes_bytes_per_second{app="r"}[24h:5s])'
+        '(task_mb_writes_bytes_per_second{app=%r}[24h:5s])'
 }
 
 
@@ -59,10 +62,10 @@ class PrometheusDataProvider(DataProvider):
     ssl: Optional[SSL] = None
 
     def get_node_free_resources(
-            self, resources: List[ResourceType]) -> Dict[str, Dict[ResourceType, float]]:
+            self, resources_types: List[ResourceType]) -> Dict[NodeName, Resources]:
 
         free_resources = {}
-        for resource in resources:
+        for resource in resources_types:
             results = self._do_query(NODE_FREE_RESOURCES_QUERY_MAP[resource])
             for result in results:
                 node = result['metric']['nodename']
@@ -73,18 +76,22 @@ class PrometheusDataProvider(DataProvider):
 
                 free_resources[node][resource] = value
 
+        log.debug('Free resources: {}'.format(free_resources))
+
         return free_resources
 
     def get_app_requested_resources(
-            self, app: str, resources: List[ResourceType]) -> Dict[ResourceType, float]:
+            self, app: str, resources_types: List[ResourceType]) -> Resources:
 
-        requested_resources = {}
-        for resource in resources:
+        requested_resources = {resource: 0.0 for resource in resources_types}
+        for resource in resources_types:
             results = self._do_query(APP_REQUESTED_RESOURCES_QUERY_MAP[resource] % app)
             for result in results:
                 value = result['value'][1]
 
                 requested_resources[resource] = value
+
+        log.debug('Requested resources: {}'.format(requested_resources))
 
         return requested_resources
 

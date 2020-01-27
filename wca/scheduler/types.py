@@ -14,7 +14,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from wca.config import assure_type
 
@@ -44,13 +44,18 @@ class HostPriority():
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L284
 @dataclass
 class ExtenderArgs:
-    Nodes: List[Dict]
-    Pod: Dict[str, str]
+    Nodes: Optional[List[dict]]
+    Pod: Optional[dict]
     NodeNames: List[str]
 
     def __post_init__(self):
-        assure_type(self.Nodes, List[Dict])
-        assure_type(self.Pod, Dict[str, str])
+
+        if self.Nodes:
+            assure_type(self.Nodes, List[dict])
+
+        if self.Pod:
+            assure_type(self.Pod, dict)
+
         assure_type(self.NodeNames, List[str])
 
 
@@ -60,3 +65,6 @@ class ResourceType(Enum):
     CPU = 'cpu'
     MEMORY_BANDWIDTH_READS = 'memory_bandwidth_reads'
     MEMORY_BANDWIDTH_WRITES = 'memory_bandwidth_writes'
+
+
+Resources = Dict[ResourceType, float]
