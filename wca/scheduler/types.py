@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,8 +14,9 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import Dict, List, Optional
 
-from typing import Dict, List, Any
+from wca.config import assure_type
 
 # Kubernetes
 NodeName = str
@@ -43,9 +44,19 @@ class HostPriority():
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L284
 @dataclass
 class ExtenderArgs:
-    Nodes: List[Dict]
-    Pod: Dict[str, Any]
-    NodeNames: List[str]
+    Nodes: Optional[List[Dict]]
+    Pod: Optional[Dict]
+    NodeNames: List[Dict]
+
+    def __post_init__(self):
+
+        if self.Nodes:
+            assure_type(self.Nodes, List[dict])
+
+        if self.Pod:
+            assure_type(self.Pod, dict)
+
+        assure_type(self.NodeNames, List[str])
 
 
 # Internal
@@ -59,3 +70,5 @@ class ResourceType(Enum):
 
     def __repr__(self):
         return self.value
+
+Resources = Dict[ResourceType, int]

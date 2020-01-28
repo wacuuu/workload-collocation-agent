@@ -1,5 +1,8 @@
 loggers:
-  scheduler.main: DEBUG
-algorithm: !CreatoneAlgorithm
-  namespace: default
-  prometheus_ip: 'http://100.64.176.36:30900'
+  wca: INFO
+  # wca.scheduler.server: DEBUG
+  # wca.scheduler.algorithms.ffd_generic: WARNING
+  # wca.scheduler.data_providers.prometheus_data_provider: DEBUG
+algorithm: !FFDGeneric
+  data_provider: !PrometheusDataProvider
+    ip: 'http://100.64.176.36:30900'

@@ -1,0 +1,14 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    role: prometheus-rules
+  name: prometheus-rules-wca-scheduler
+spec:
+  groups:
+    - name: FFD
+      rules:
+        - record: task_mb_reads_bytes_per_second
+          expr: delta(task_mb_reads__rB001[5s]) * 64 / 5
+        - record: task_mb_writes_bytes_per_second
+          expr: delta(task_mb_writes__rB004[5s]) * 64 / 5 

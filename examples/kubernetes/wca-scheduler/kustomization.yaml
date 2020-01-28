@@ -1,6 +1,7 @@
 namespace: wca-scheduler
 resources:
   - wca-scheduler-deployment.yaml
+  - pod_monitor.yaml
 configMapGenerator:
 
   - name: wca-scheduler-server

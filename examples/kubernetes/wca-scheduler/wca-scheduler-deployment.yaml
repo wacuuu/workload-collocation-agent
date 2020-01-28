@@ -51,6 +51,10 @@ spec:
             - unix:/var/run/wca/wca-scheduler.sock
         - name: nginx
           image: nginx:latest
+          ports:
+            - name: wca-scheduler
+              containerPort: 30180
+              hostPort: 30180
           volumeMounts:
             - name: wca-scheduler-socket
               mountPath: /var/run/wca

@@ -12,17 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import ABC, abstractmethod
-from wca.scheduler.types import ResourceType
+from typing import Dict, List
+
+from wca.scheduler.types import ResourceType, NodeName, Resources
 
 
 class DataProvider(ABC):
 
     @abstractmethod
-    def get_node_free_space_resource(self, node: str, resource_type: ResourceType) -> float:
+    def get_node_free_resources(
+            self, resources: List[ResourceType]) -> Dict[NodeName, Resources]:
         pass
 
     @abstractmethod
-    def get_app_requested_resource(self, app: str, resource_type: ResourceType) -> float:
+    def get_app_requested_resources(
+            self, app: str, resources: List[ResourceType]) -> Resources:
         pass
 
     @abstractmethod

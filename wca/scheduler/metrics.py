@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,15 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-from wca.config import register
-from wca.scheduler.algorithms.ffd_generic import FFDGeneric
-from wca.scheduler.data_providers.prometheus_data_provider import PrometheusDataProvider
+from enum import Enum
 
 
-def register_algorithms():
-    register(FFDGeneric)
+PREFIX = 'wca_scheduler_'
 
 
-def register_dataproviders():
-    register(PrometheusDataProvider)
+class MetricName(str, Enum):
+    POD_IGNORE_FILTER = PREFIX + 'pod_ignore_filter'
+    POD_IGNORE_PRIORITIZE = PREFIX + 'pod_ignore_prioritize'
+    FILTER = PREFIX + 'filter'
+    PRIORITIZE = PREFIX + 'prioritize'
+
+    def __repr__(self):
+        return repr(self.value)
