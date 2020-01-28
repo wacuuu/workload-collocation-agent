@@ -16,6 +16,7 @@ from typing import List, Tuple
 
 from dataclasses import dataclass, field
 
+from wca.metrics import Metric
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.types import (ExtenderArgs, ExtenderFilterResult,
@@ -50,7 +51,8 @@ class FFDGeneric(Algorithm):
 
         return (True, '')
 
-    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
+    def filter(self, extender_args: ExtenderArgs) -> Tuple[
+            ExtenderFilterResult, List[Metric]]:
         app, nodes, namespace, name = extract_common_input(extender_args)
         extender_filter_result = ExtenderFilterResult()
 
@@ -58,8 +60,6 @@ class FFDGeneric(Algorithm):
         log.debug('ExtenderArgs: %r' % extender_args)
 
         requested_resources = self.data_provider.get_app_requested_resources(app, self.resources)
-        # 'wca_scheduler_requested_pod_resources' { 'app' 'resource' } value
-        # 'wca_scheduler_node_free_resources' { 'node', 'resource' } value
         node_free_resources = self.data_provider.get_node_free_resources(self.resources)
 
         log.debug('Checking nodes.')
@@ -76,9 +76,10 @@ class FFDGeneric(Algorithm):
 
         log.debug('Results: {}'.format(extender_filter_result))
 
-        return extender_filter_result
+        return extender_filter_result, []
 
-    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
+    def prioritize(self, extender_args: ExtenderArgs) -> Tuple[
+            List[HostPriority], List[Metric]]:
         nodes = sorted(extender_args.NodeNames)
         log.info('[Prioritize] Nodes: %r' % nodes)
 
@@ -95,4 +96,4 @@ class FFDGeneric(Algorithm):
                 priorities.append(HostPriority(node, 0))
             priorities[0].Score = 100
 
-        return priorities
+        return priorities, []
