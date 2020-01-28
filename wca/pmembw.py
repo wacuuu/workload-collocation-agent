@@ -139,27 +139,40 @@ def get_bandwidth() -> Measurements:
                     MetricName.PLATFORM_NVDIMM_WRITE_BANDWIDTH_BYTES_PER_SECOND: {}}
     avg_power_per_nvdimm, capacity_per_nvdimm, socket_nvdimms = _get_ipmctl_dimm_info(ipmctl_dimm)
     regions = _get_ipmctl_region_info(ipmctl_region)
-    GB = 10e9
+    GB = 1e9
     capacity_per_nvdimm_in_gigabytes = capacity_per_nvdimm / GB
+
+    def socket_to_label(socket):
+        """
+        Convert socket representation from hex to decimal.
+        example: '0x003' -> '3'
+        """
+        return str(int(socket, 16))
 
     for region in regions:
         nvdimm_count = len(regions[region][DIMM])
         rwt = _calculate_bandwidth(avg_power_per_nvdimm, nvdimm_count,
                                    capacity_per_nvdimm_in_gigabytes)
+
+        socket_label = socket_to_label(regions[region][SOCKET])
+
         measurements[MetricName.PLATFORM_NVDIMM_READ_BANDWIDTH_BYTES_PER_SECOND].update(
-            {regions[region][SOCKET]: rwt[0] * GB})
+            {socket_label: rwt[0] * GB})
         measurements[MetricName.PLATFORM_NVDIMM_WRITE_BANDWIDTH_BYTES_PER_SECOND].update(
-            {regions[region][SOCKET]: rwt[1] * GB})
+            {socket_label: rwt[1] * GB})
 
     if not regions:
         for socket in socket_nvdimms:
             rwt = _calculate_bandwidth(avg_power_per_nvdimm,
                                        socket_nvdimms[socket],
                                        capacity_per_nvdimm_in_gigabytes)
+
+            socket_label = socket_to_label(socket)
+
             measurements[MetricName.PLATFORM_NVDIMM_READ_BANDWIDTH_BYTES_PER_SECOND].update(
-                {socket: rwt[0] * GB})
+                {socket_label: rwt[0] * GB})
             measurements[MetricName.PLATFORM_NVDIMM_WRITE_BANDWIDTH_BYTES_PER_SECOND].update(
-                {socket: rwt[1] * GB})
+                {socket_label: rwt[1] * GB})
 
     measurements[MetricName.PLATFORM_CAPACITY_PER_NVDIMM_BYTES] = capacity_per_nvdimm
     measurements[MetricName.PLATFORM_AVG_POWER_PER_NVDIMM_WATTS] = avg_power_per_nvdimm
