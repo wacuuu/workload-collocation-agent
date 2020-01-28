@@ -24,3 +24,7 @@ class DataProvider(ABC):
     @abstractmethod
     def get_app_requested_resource(self, app: str, resource_type: ResourceType) -> float:
         pass
+
+    @abstractmethod
+    def get_membw_read_write_ratio(self, node: str) -> float:
+        pass

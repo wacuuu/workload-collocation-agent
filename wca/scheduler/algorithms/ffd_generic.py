@@ -45,8 +45,7 @@ class FFDGeneric_AsymetricMembw(Algorithm):
     dimensions: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM,
                                        ResourceType.MEMBW_WRITE, ResourceType.MEMBW_READ)
 
-    @staticmethod
-    def basic_check(app_requested: Dict[ResourceType, int], node_free_space: Dict[ResourceType, int]) -> bool:
+    def basic_check(self, app_requested: Dict[ResourceType, int], node_free_space: Dict[ResourceType, int]) -> bool:
         return all([app_requested[resource] < node_free_space[resource] for resource in self.dimensions])
 
     @staticmethod
@@ -60,7 +59,7 @@ class FFDGeneric_AsymetricMembw(Algorithm):
 
         # Assert that required dimensions are available.
         for resource in (ResourceType.MEMBW_WRITE, ResourceType.MEMBW_READ,):
-            for source in (app_requested, node_free_space, node_max_aep_bandwidth):
+            for source in (app_requested, node_free_space):
                 assert resource in source
 
         # To shorten the notation.
@@ -74,19 +73,17 @@ class FFDGeneric_AsymetricMembw(Algorithm):
                (node[WRITE] - requested[WRITE] - requested[READ] / ratio) > 0
 
     def app_fit_node(self, app, node):
-        dp = self.data_provider
-
         app_requested   = {resource: self.data_provider.get_app_requested_resource(app, resource) 
                            for resource in self.dimensions}
         node_free_space = {resource: self.data_provider.get_node_free_space_resource(node, resource) 
                            for resource in self.dimensions}
 
-        if not basic_check(app_requested, node_free_space):
+        if not self.basic_check(app_requested, node_free_space):
             return False
 
-        node_membw_read_write_ratio = self.data_provider.get_membw_read_write_ratio()
+        node_membw_read_write_ratio = self.data_provider.get_membw_read_write_ratio(node)
 
-        return membw_check(app_requested, node_free_space, node_membw_read_write_ratio)
+        return self.membw_check(app_requested, node_free_space, node_membw_read_write_ratio)
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         app, nodes, namespace, name = extract_common_input(extender_args)

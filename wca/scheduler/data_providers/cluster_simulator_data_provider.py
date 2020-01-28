@@ -16,26 +16,16 @@ class ClusterSimulatorDataProvider(DataProvider):
 
     def get_node_free_space_resource(self, node: str, resource_type: ResourceType) -> float:
         node = self.simulator.get_node_by_name(node)
-
         if node is None:
             raise Exception('no such node')
-
-        if resource_type == ResourceType.CPU:
-            return node.unassigned.data[ResourceType.CPU]
-        if resource_type == ResourceType.MEM:
-            return node.unassigned.data[ResourceType.MEM]
-        if resource_type == ResourceType.MEMBW:
-            return node.unassigned.data[ResourceType.MEMBW]
+        return node.unassigned.data[resource_type]
 
     def get_app_requested_resource(self, app: str, resource_type: ResourceType) -> float:
         task = self.simulator.get_task_by_name(app)
-
         if task is None:
             raise Exception('no such task')
+        return task.requested.data[resource_type]
 
-        if resource_type == ResourceType.CPU:
-            return task.requested.data[ResourceType.CPU]
-        if resource_type == ResourceType.MEM:
-            return task.requested.data[ResourceType.MEM]
-        if resource_type == ResourceType.MEMBW:
-            return task.requested.data[ResourceType.MEMBW]
+    def get_membw_read_write_ratio(self, node: str) -> float:
+        node = self.simulator.get_node_by_name(node)
+        return node.initial.data[ResourceType.MEMBW_READ] / node.initial.data[ResourceType.MEMBW_WRITE]
