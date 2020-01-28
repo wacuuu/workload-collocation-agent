@@ -31,8 +31,9 @@ class Server:
     def __init__(self, configuration: Dict[str, str]):
         self.app = Flask('k8s scheduler extender')
         self.algorithm = configuration['algorithm']
-        self.metrics_storage: List[Metric] = []
 
+        # Metrics.
+        self.metrics_storage: List[Metric] = []
         self.filter_metrics: List[Metric] = []
         self.prioritize_metrics: List[Metric] = []
 
@@ -45,21 +46,19 @@ class Server:
 
         @self.app.route('/metrics')
         def metrics():
+            metrics = []
             for name, counter in self.internal_counters.items():
-                self.metrics_storage.append(Metric(name, float(counter)))
+                metrics.append(Metric(name, float(counter)))
 
-            self.metrics_storage.append(self.filter_metrics)
-            self.metrics_storage.append(self.prioritize_metrics)
+            metrics.extend(self.filter_metrics)
+            metrics.extend(self.prioritize_metrics)
 
-            if is_convertable_to_prometheus_exposition_format(self.metrics_storage):
-                prometheus_exposition = convert_to_prometheus_exposition_format(
-                        self.metrics_storage)
-                self.metrics_storage = []
+            if is_convertable_to_prometheus_exposition_format(metrics):
+                prometheus_exposition = convert_to_prometheus_exposition_format(metrics)
                 return prometheus_exposition
             else:
                 log.warning('[Metrics] Cannot convert internal metrics '
                             'to prometheus exposition format!')
-                self.metrics_storage = []
                 return jsonify([])
 
         @self.app.route('/filter', methods=['POST'])
