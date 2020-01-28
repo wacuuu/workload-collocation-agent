@@ -50,9 +50,9 @@ def test_get_ipmctl_region_info():
                open('tests/fixtures/bandwidth_ipmctl_dimm.txt').read()))
 def test_get_bandwidth(*mock):
     measurements = {'platform_nvdimm_read_bandwidth_bytes_per_second':
-                    {'0x0000': 136000000000, '0x0001': 136000000000},
+                    {'0': 13600000000.0, '1': 13600000000.0},
                     'platform_nvdimm_write_bandwidth_bytes_per_second':
-                    {'0x0000': 37000000000, '0x0001': 37000000000},
+                    {'0': 3700000000.0, '1': 3700000000.0},
                     'platform_capacity_per_nvdimm_bytes': 100000000000,
                     'platform_avg_power_per_nvdimm_watts': 15.0}
     assert measurements == get_bandwidth()
