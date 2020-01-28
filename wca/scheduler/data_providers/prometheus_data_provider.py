@@ -74,7 +74,7 @@ class PrometheusDataProvider(DataProvider):
                 if node not in free_resources:
                     free_resources[node] = {}
 
-                free_resources[node][resource] = value
+                free_resources[node][resource] = float(value)
 
         log.debug('Free resources: {}'.format(free_resources))
 
@@ -89,7 +89,7 @@ class PrometheusDataProvider(DataProvider):
             for result in results:
                 value = result['value'][1]
 
-                requested_resources[resource] = value
+                requested_resources[resource] = float(value)
 
         log.debug('Requested resources: {}'.format(requested_resources))
 

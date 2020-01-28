@@ -12,6 +12,10 @@ spec:
     any: true
   serviceMonitorSelector:
     any: true
+  podMonitorNamespaceSelector:
+    any: true
+  podMonitorSelector:
+    any: true
   ruleSelector:
     any: true
   ruleNamespaceSelector:

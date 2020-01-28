@@ -1,0 +1,12 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: wca-scheduler
+spec:
+  selector:
+    matchLabels:
+      app: wca-scheduler
+  podMetricsEndpoints:
+    - path: /metrics
+      port: wca-scheduler
+      interval: 1s
