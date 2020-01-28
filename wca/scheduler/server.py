@@ -33,7 +33,6 @@ class Server:
         self.algorithm = configuration['algorithm']
 
         # Metrics.
-        self.metrics_storage: List[Metric] = []
         self.filter_metrics: List[Metric] = []
         self.prioritize_metrics: List[Metric] = []
 
@@ -47,9 +46,8 @@ class Server:
         @self.app.route('/metrics')
         def metrics():
             metrics = []
-            for name, counter in self.internal_counters.items():
-                metrics.append(Metric(name, float(counter)))
 
+            metrics.extend(_make_internal_metrics(self.internal_counters))
             metrics.extend(self.filter_metrics)
             metrics.extend(self.prioritize_metrics)
 
@@ -118,3 +116,10 @@ def _prepare_internal_counters() -> Dict[MetricName, int]:
         MetricName.FILTER: 0,
         MetricName.PRIORITIZE: 0
             }
+
+
+def _make_internal_metrics(internal_counters: Dict[MetricName, int]) -> List[Metric]:
+    metrics = []
+    for name, counter in internal_counters.items():
+        metrics.append(Metric(name, float(counter)))
+    return metrics
