@@ -33,6 +33,9 @@ class Server:
         self.algorithm = configuration['algorithm']
         self.metrics_storage: List[Metric] = []
 
+        self.filter_metrics: List[Metric] = []
+        self.prioritize_metrics: List[Metric] = []
+
         # Internal counters.
         self.internal_counters: Dict[MetricName, int] = _prepare_internal_counters()
 
@@ -44,6 +47,9 @@ class Server:
         def metrics():
             for name, counter in self.internal_counters.items():
                 self.metrics_storage.append(Metric(name, float(counter)))
+
+            self.metrics_storage.append(self.filter_metrics)
+            self.metrics_storage.append(self.prioritize_metrics)
 
             if is_convertable_to_prometheus_exposition_format(self.metrics_storage):
                 prometheus_exposition = convert_to_prometheus_exposition_format(
@@ -66,10 +72,12 @@ class Server:
 
             if DEFAULT_NAMESPACE == pod_namespace:
                 log.info('[Filter] Trying to filter nodes for Pod %r' % pod_name)
-                filter_result = self.algorithm.filter(extender_args)
-                log.info('[Filter] Result: %r' % filter_result)
+                result, metrics = self.algorithm.filter(extender_args)
+                log.info('[Filter] Result: %r' % result)
+
+                self.filter_metrics = metrics
                 self.internal_counters[MetricName.FILTER] += 1
-                return jsonify(asdict(filter_result))
+                return jsonify(asdict(result))
             else:
                 self.internal_counters[MetricName.POD_IGNORE_FILTER] += 1
                 log.info('[Filter] Ignoring Pod %r : Different namespace!' %
@@ -87,11 +95,14 @@ class Server:
             if DEFAULT_NAMESPACE == pod_namespace:
                 log.info('[Prioritize] Trying to prioritize nodes for Pod %r' % pod_name)
 
+                result, metrics = self.algorithm.prioritize(extender_args)
+
                 priorities = [asdict(host)
-                              for host in self.algorithm.prioritize(extender_args)]
+                              for host in result]
 
                 log.info('[Prioritize] Result: %r ' % priorities)
 
+                self.prioritize_metrics = metrics
                 self.internal_counters[MetricName.PRIORITIZE] += 1
                 return jsonify(priorities)
             else:

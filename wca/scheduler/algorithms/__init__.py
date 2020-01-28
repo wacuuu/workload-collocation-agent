@@ -15,15 +15,18 @@
 from abc import ABC, abstractmethod
 from typing import List
 
+from wca.metrics import Metric
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority
 
 
 class Algorithm(ABC):
 
     @abstractmethod
-    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
+    def filter(self, extender_args: ExtenderArgs) -> (
+            ExtenderFilterResult, List[Metric]):
         pass
 
     @abstractmethod
-    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
+    def prioritize(self, extender_args: ExtenderArgs) -> (
+            List[HostPriority], List[Metric]):
         pass
