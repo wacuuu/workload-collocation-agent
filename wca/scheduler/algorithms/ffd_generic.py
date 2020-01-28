@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, ResourceType
+from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, ResourceType, Dict
 from wca.scheduler.utils import extract_common_input
 
 
@@ -38,11 +38,12 @@ class FFDGeneric(Algorithm):
 
 
 @dataclass
-class FFDGeneric_AEP(Algorithm):
+class FFDGeneric_AsymetricMembw(Algorithm):
     """Fit first decreasing; supports as many dimensions as needed."""
 
     data_provider: DataProvider
-    dimensions: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW,)
+    dimensions: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM,
+                                       ResourceType.MEMBW_WRITE, ResourceType.MEMBW_READ)
 
     @staticmethod
     def basic_check(app_requested: Dict[ResourceType, int], node_free_space: Dict[ResourceType, int]) -> bool:

@@ -45,7 +45,6 @@ class Resources:
 
     def substract_aep_aware(self, b, membw_read_write_ratio):
         """Mutates self. """
-        assert ResourceType.MEMBW_READ in data and ResourceType.MEMBW_WRITE in data
         assert set(self.data.keys()) == set(b.data.keys())
         for key in self.data.keys():
             if key == ResourceType.MEMBW_READ or key == ResourceType.MEMBW_WRITE:
@@ -53,12 +52,13 @@ class Resources:
             self.data[key] -= b.data[key]
 
         # Special case for MEMBW
-        READ = ResourceType.MEMBW_READ
-        WRITE = ResourceType.MEMBW_WRITE
-        x = self.data
-        y = b.data
-        x[READ] = x[READ] - y[READ] - y[WRITE] * membw_read_write_ratio
-        x[WRITE] = x[WRITE] - y[WRITE] - y[READ] * membw_read_write_ratio
+        if ResourceType.MEMBW_READ in self.data and ResourceType.MEMBW_WRITE in self.data:
+            READ = ResourceType.MEMBW_READ
+            WRITE = ResourceType.MEMBW_WRITE
+            x = self.data
+            y = b.data
+            x[READ] = x[READ] - y[READ] - y[WRITE] * membw_read_write_ratio
+            x[WRITE] = x[WRITE] - y[WRITE] - y[READ] * membw_read_write_ratio
 
     def __add__(self, other):
         me = self.copy()
@@ -138,18 +138,19 @@ class Node:
         return "(name: {}, initial: {}, free: {}, unassigned: {})".format(
             self.name, str(self.initial), str(self.free), str(self.unassigned))
 
+    def get_membw_read_write_ratio(self):
+        d_ = self.initial.data
+        if ResourceType.MEMBW_READ in d_ and ResourceType.MEMBW_WRITE in d_:
+            return d_[ResourceType.MEMBW_READ] / d_[ResourceType.MEMBW_WRITE]
+        return 1
+
     def validate_assignment(self, tasks, new_task):
         """Check if there is enough resources on the node for a >>new_task<<."""
         tmp_unassigned = self.initial.copy()
         for task in tasks:
             if task.assignment == self:
-                if ResourceType.MEMBW_READ in self.initial.data:
-                    d_ = self.initial.data
-                    membw_read_write_ratio = d_[ResourceType.MEMBW_READ] / d_[ResourceType.MEMBW_WRITE]
-                    tmp_unassigned.substract_aep_aware(task.requested, membw_read_write_ratio)
-                else:
-                    tmp_unassigned.substract(task.requested)
-        tmp_unassigned.substract(new_task.requested)
+                tmp_unassigned.substract_aep_aware(task.requested, self.get_membw_read_write_ratio())
+        tmp_unassigned.substract_aep_aware(new_task.requested, self.get_membw_read_write_ratio())
         return bool(tmp_unassigned)
 
     def update(self, tasks):
@@ -158,8 +159,8 @@ class Node:
         self.unassigned = self.initial.copy()
         for task in tasks:
             if task.assignment == self:
-                self.free.substract(task.real)
-                self.unassigned.substract(task.requested)
+                self.free.substract_aep_aware(task.real, self.get_membw_read_write_ratio())
+                self.unassigned.substract_aep_aware(task.requested, self.get_membw_read_write_ratio())
 
 
 @dataclass
@@ -186,13 +187,21 @@ class ClusterSimulator:
 
     def per_node_resource_usage(self, if_percentage: bool = False):
         """if_percentage: if output in percentage or original resource units"""
+        node_resource_usage = {node: Resources.create_empty(self.dimensions) for node in self.nodes}
+        for task in self.tasks:
+            if task.assignment is None:
+                continue
+            node_resource_usage[task.assignment] += task.requested
+
         if if_percentage:
-            return [(node.initial - node.unassigned)/node.initial for node in self.nodes]
-        return [node.initial - node.unassigned for node in nodes]
+            return {node: node_resource_usage[node]/node.initial 
+                    for node in node_resource_usage.keys()}
+        return node_resource_usage
 
     def cluster_resource_usage(self, if_percentage: bool = False):
-        r = Resources.sum([node.initial for node in self.nodes]) - \
-            Resources.sum([node.unassigned for node in self.nodes])
+        node_resource_usage = self.per_node_resource_usage()
+
+        r = Resources.sum([usage for usage in node_resource_usage.values()])
         if if_percentage:
             r = r / Resources.sum([node.initial for node in self.nodes])
         return r
@@ -202,7 +211,7 @@ class ClusterSimulator:
         self.time = 0
 
     def update_tasks_usage(self, delta_time):
-        """It may be simulated that task usage changed across its lifetime."""
+        """It may be simulated that task usage changes across its lifetime."""
         for task in self.tasks:
             task.update(delta_time)
 
