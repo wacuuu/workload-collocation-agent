@@ -19,7 +19,7 @@ spec:
       terminationGracePeriodSeconds: 0
       containers:
         - name: memtier
-          image: memtier_benchmark
+          image: redislabs/memtier_benchmark
           envFrom:
             - configMapRef:
                 name: memtier
