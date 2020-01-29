@@ -6,3 +6,8 @@ bases:
 commonLabels:
   fit: 2lm
   workload: memcached-mutilate
+
+images:
+- name: mutilate
+  newName: 100.64.176.12:80/wca/mutilate
+  newTag: master

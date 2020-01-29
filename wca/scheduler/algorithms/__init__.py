@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Tuple
 
 from wca.metrics import Metric
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority
@@ -22,11 +22,11 @@ from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority
 class Algorithm(ABC):
 
     @abstractmethod
-    def filter(self, extender_args: ExtenderArgs) -> (
-            ExtenderFilterResult, List[Metric]):
+    def filter(self, extender_args: ExtenderArgs) -> Tuple[
+            ExtenderFilterResult, List[Metric]]:
         pass
 
     @abstractmethod
-    def prioritize(self, extender_args: ExtenderArgs) -> (
-            List[HostPriority], List[Metric]):
+    def prioritize(self, extender_args: ExtenderArgs) -> Tuple[
+            List[HostPriority], List[Metric]]:
         pass
