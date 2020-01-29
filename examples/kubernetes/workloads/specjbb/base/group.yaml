@@ -134,6 +134,9 @@ spec:
             requests:
               cpu: 1
               memory: 2G
+          envFrom:
+            - configMapRef:
+                name: specjbb-injector
           command:
             - sh
             - -c
@@ -142,9 +145,6 @@ spec:
               source /var/prepare_names/env
 
               java
-              -Xmx2G
-              -Xms2G
-              -Xmn1800m
               $java
               -Dspecjbb.controller.host=$target
               $specjbb_extra

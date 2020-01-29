@@ -23,6 +23,7 @@ runner: !MeasurementRunner
     node: !Env HOSTNAME
   event_names:
     - task_cycles # do not remove: USED BY E2E tests
+    - task_instructions
   enable_derived_metrics: True
 
   wss_reset_interval: 1
