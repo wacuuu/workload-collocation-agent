@@ -40,6 +40,7 @@ class DataProvider(ABC):
     def get_app_requested_resources(self, resources: Iterable[ResourceType], app: str) -> Resources:
         """Returns for >>app<< requested resources; if a dimension cannot be read from kubernetes metadata,
            use some kind of approximation for maximal value needed for a dimension."""
+        pass
 
     @abstractmethod
     def get_node_membw_read_write_ratio(self, node: str) -> float:
