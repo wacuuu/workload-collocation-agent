@@ -11,15 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Dict
 
 from dataclasses import dataclass, field
 
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.types import (ExtenderArgs, ExtenderFilterResult,
-                                 HostPriority, ResourceType, Resources)
+                                 HostPriority, ResourceType, Resources, TaskName)
 from wca.scheduler.utils import extract_common_input
 
 log = logging.getLogger(__name__)
@@ -30,25 +31,24 @@ class FFDGeneric(Algorithm):
     """Fit first decreasing; supports as many dimensions as needed."""
 
     data_provider: DataProvider
-    resources: List[ResourceType] = field(default_factory=lambda: [
-            ResourceType.CPU, ResourceType.MEM,
-            ResourceType.MEMORY_BANDWIDTH_READS, ResourceType.MEMORY_BANDWIDTH_WRITES])
+    dimensions: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM,
+                                      ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE)
 
-    def app_fit_node(self, requested_resources: Resources,
-                     node_free_resources: Resources) -> Tuple[bool, str]:
+    def app_fit_node(self, requested: Resources, used: Resources, capacity: Resources) -> Tuple[bool, str]:
+        """requested - requested by app; free - free on the node"""
+        broken_capacities = [r for r in self.dimensions if not requested[r] < capacity[r] - used[r]]
+        if not broken_capacities:
+            return True, ''
+        else:
+            broken_capacities_str = ','.join([str(e) for e in broken_capacities])
+            return False, 'Could not fit node for dimensions: ({}).'.format(broken_capacities_str)
 
-        for resource in self.resources:
-
-            requested = requested_resources[resource]
-            free = node_free_resources[resource]
-
-            if requested < free:
-                continue
-            else:
-                return (False,
-                        'Not enough %r ( requested: %r | free: %r )' % (resource, requested, free))
-
-        return (True, '')
+    def used_resources_on_node(self, tasks: Dict[TaskName, Resources]) -> Resources:
+        used = {resource: 0 for resource in self.dimensions}
+        for task, task_resources in tasks:
+            for resource in self.dimensions:
+                used[resource] += task_resources[resource]
+        return used
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         app, nodes, namespace, name = extract_common_input(extender_args)
@@ -57,25 +57,25 @@ class FFDGeneric(Algorithm):
         log.debug('Getting app requested and node free resources.')
         log.debug('ExtenderArgs: %r' % extender_args)
 
-        requested_resources = self.data_provider.get_app_requested_resources(app, self.resources)
-        # 'wca_scheduler_requested_pod_resources' { 'app' 'resource' } value
-        # 'wca_scheduler_node_free_resources' { 'node', 'resource' } value
-        node_free_resources = self.data_provider.get_node_free_resources(self.resources)
+        assigned_tasks = self.data_provider.get_assigned_tasks_requested_resources(self.dimensions, nodes)
+        node_capacities = self.data_provider.get_nodes_capacities(self.dimensions)
+        app_requested_resources = self.data_provider.get_app_requested_resources(self.dimensions)
 
-        log.debug('Checking nodes.')
+        log.debug('Iterating through nodes.')
         for node in nodes:
-            if node in node_free_resources:
-                passed, message = self.app_fit_node(requested_resources, node_free_resources[node])
-                if not passed:
-                    extender_filter_result.FailedNodes[node] = message
-                else:
-                    extender_filter_result.NodeNames.append(node)
-            else:
+            if node not in node_capacities:
                 log.warning('Missing Node %r information!' % node)
+                extender_filter_result.NodeNames.append(node)
+                break
+
+            node_used_resources = self.used_resources_on_node(assigned_tasks[node])
+            passed, message = self.app_fit_node(app_requested_resources, node_used_resources, node_capacities[node])
+            if not passed:
+                extender_filter_result.FailedNodes[node] = message
+            else:
                 extender_filter_result.NodeNames.append(node)
 
         log.debug('Results: {}'.format(extender_filter_result))
-
         return extender_filter_result
 
     def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
@@ -99,19 +99,11 @@ class FFDGeneric(Algorithm):
 
 
 @dataclass
-class FFDGeneric_AsymetricMembw(Algorithm):
-    """Fit first decreasing; supports as many dimensions as needed."""
-
-    data_provider: DataProvider
-    dimensions: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM,
-                                       ResourceType.MEMBW_WRITE, ResourceType.MEMBW_READ)
-
-    def basic_check(self, app_requested: Dict[ResourceType, int], node_free_space: Dict[ResourceType, int]) -> bool:
-        return all([app_requested[resource] < node_free_space[resource] for resource in self.dimensions])
+class FFDGenericAsymmetricMembw(FFDGeneric):
+    """Supports asymmetric membw speed for write/read"""
 
     @staticmethod
-    def membw_check(app_requested: Dict[ResourceType, int],
-                    node_free_space: Dict[ResourceType, int],
+    def membw_check(requested: Resources, used: Resources, capacity: Resources,
                     node_membw_read_write_ratio: float) -> bool:
         """
         read/write ratio, e.g. 40GB/s / 10GB/s = 4,
@@ -120,43 +112,24 @@ class FFDGeneric_AsymetricMembw(Algorithm):
 
         # Assert that required dimensions are available.
         for resource in (ResourceType.MEMBW_WRITE, ResourceType.MEMBW_READ,):
-            for source in (app_requested, node_free_space):
+            for source in (requested, used):
                 assert resource in source
 
         # To shorten the notation.
         WRITE = ResourceType.MEMBW_WRITE
         READ = ResourceType.MEMBW_READ
-        requested = app_requested
-        node = node_free_space
-        ratio = node_membw_read_write_ratio
+        R = node_membw_read_write_ratio
 
-        return (node[READ] - requested[READ] - requested[WRITE] * ratio) > 0 and \
-               (node[WRITE] - requested[WRITE] - requested[READ] / ratio) > 0
+        return used[READ] + R * used[WRITE] < capacity[READ]
 
-    def app_fit_node(self, app, node):
-        app_requested   = {resource: self.data_provider.get_app_requested_resource(app, resource)
-                           for resource in self.dimensions}
-        node_free_space = {resource: self.data_provider.get_node_free_space_resource(node, resource)
-                           for resource in self.dimensions}
+    def app_fit_node(self, requested: Resources, used: Resources, capacity: Resources) -> Tuple[bool, str]:
+        """requested - requested by app; free - free on the node"""
+        broken_capacities = set([r for r in self.dimensions if not requested[r] < capacity[r] - used[r]])
+        if not self.membw_check(requested, used, capacity, self.data_provider.get_node_membw_read_write_ratio()):
+            broken_capacities.update((ResourceType.MEMBW_READ, ResourceType.MEMBW_READ,))
+        broken_capacities_str = ','.join([str(e) for e in broken_capacities])
 
-        if not self.basic_check(app_requested, node_free_space):
-            return False
-
-        node_membw_read_write_ratio = self.data_provider.get_membw_read_write_ratio(node)
-
-        return self.membw_check(app_requested, node_free_space, node_membw_read_write_ratio)
-
-    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
-        app, nodes, namespace, name = extract_common_input(extender_args)
-        extender_filter_result = ExtenderFilterResult()
-
-        for i, node in enumerate(nodes):
-            if not self.app_fit_node(app, node):
-                extender_filter_result.FailedNodes[node] = "Not enough resources."
-
-        return extender_filter_result
-
-    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
-        app, nodes, namespace, name = extract_common_input(extender_args)
-        # choose node which has the most free resources
-        return []
+        if not broken_capacities:
+            return True, ''
+        else:
+            return False, 'Could not fit node for dimensions: ({}).'.format(broken_capacities_str)

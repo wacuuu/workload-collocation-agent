@@ -12,23 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import ABC, abstractmethod
-from typing import Dict, List
+from typing import Dict, List, Iterable
 
-from wca.scheduler.types import ResourceType, NodeName, Resources
+from wca.scheduler.types import ResourceType, NodeName, Resources, TaskName
 
 
 class DataProvider(ABC):
-
     @abstractmethod
-    def get_node_free_resources(
-            self, resources: List[ResourceType]) -> Dict[NodeName, Resources]:
+    def get_nodes_capacities(self, resources: Iterable[ResourceType]) -> Dict[NodeName, Resources]:
+        """Returns for >>nodes<< maximal capacities for >>resources<<"""
         pass
 
     @abstractmethod
-    def get_app_requested_resources(
-            self, app: str, resources: List[ResourceType]) -> Resources:
+    def get_assigned_tasks_requested_resources(
+            self, resources: Iterable[ResourceType], nodes: Iterable[NodeName]) -> Dict[NodeName, Dict[TaskName, Resources]]:
+        """Return for all >>nodes<< all tasks requested >>resources<< assigned to them."""
         pass
 
-    @abstractmethod
-    def get_membw_read_write_ratio(self, node: str) -> float:
+    def get_app_requested_resources(self, resources: Iterable[ResourceType], app: str) -> Resources:
+        """Returns for >>app<< requested resources; if a dimension cannot be read from kubernetes metadata,
+           use some kind of approximation for maximal value needed for a dimension."""
+
+    def get_node_membw_read_write_ratio(self, node: str) -> float:
+        """For DRAM only node should return 1."""
         pass
