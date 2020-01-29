@@ -72,4 +72,5 @@ class ResourceType(Enum):
     def __repr__(self):
         return self.value
 
+
 Resources = Dict[ResourceType, int]

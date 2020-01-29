@@ -15,12 +15,13 @@
 import logging
 from typing import List, Tuple, Dict
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.types import (ExtenderArgs, ExtenderFilterResult,
-                                 HostPriority, ResourceType, Resources, TaskName)
+                                 HostPriority, Resources, TaskName)
+from wca.scheduler.types import ResourceType as rt
 from wca.scheduler.utils import extract_common_input
 
 log = logging.getLogger(__name__)
@@ -31,10 +32,11 @@ class FFDGeneric(Algorithm):
     """Fit first decreasing; supports as many dimensions as needed."""
 
     data_provider: DataProvider
-    dimensions: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM,
-                                      ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE)
+    dimensions: Tuple[rt] = (rt.CPU, rt.MEM,
+                             rt.MEMBW_READ, rt.MEMBW_WRITE)
 
-    def app_fit_node(self, node_name: str, requested: Resources, used: Resources, capacity: Resources) -> Tuple[bool, str]:
+    def app_fit_node(self, node_name: str, requested: Resources,
+                     used: Resources, capacity: Resources) -> Tuple[bool, str]:
         """requested - requested by app; free - free on the node"""
         broken_capacities = [r for r in self.dimensions if not requested[r] < capacity[r] - used[r]]
         if not broken_capacities:
@@ -57,9 +59,10 @@ class FFDGeneric(Algorithm):
         log.debug('Getting app requested and node free resources.')
         log.debug('ExtenderArgs: %r' % extender_args)
 
-        assigned_tasks = self.data_provider.get_assigned_tasks_requested_resources(self.dimensions, nodes)
-        node_capacities = self.data_provider.get_nodes_capacities(self.dimensions)
-        app_requested_resources = self.data_provider.get_app_requested_resources(self.dimensions, app)
+        dp = self.data_provider
+        assigned_tasks = dp.get_assigned_tasks_requested_resources(self.dimensions, nodes)
+        node_capacities = dp.get_nodes_capacities(self.dimensions)
+        app_requested_resources = dp.get_app_requested_resources(self.dimensions, app)
 
         log.debug('Iterating through nodes.')
         for node in nodes:
@@ -69,7 +72,7 @@ class FFDGeneric(Algorithm):
                 break
 
             node_used_resources = self.used_resources_on_node(assigned_tasks[node])
-            passed, message = self.app_fit_node(node, app_requested_resources, 
+            passed, message = self.app_fit_node(node, app_requested_resources,
                                                 node_used_resources, node_capacities[node])
             if not passed:
                 extender_filter_result.FailedNodes[node] = message
@@ -112,22 +115,25 @@ class FFDGenericAsymmetricMembw(FFDGeneric):
         """
 
         # Assert that required dimensions are available.
-        for resource in (ResourceType.MEMBW_WRITE, ResourceType.MEMBW_READ,):
+        for resource in (rt.MEMBW_WRITE, rt.MEMBW_READ,):
             for source in (requested, used):
                 assert resource in source
 
         # To shorten the notation.
-        WRITE = ResourceType.MEMBW_WRITE
-        READ = ResourceType.MEMBW_READ
+        WRITE = rt.MEMBW_WRITE
+        READ = rt.MEMBW_READ
         R = node_membw_read_write_ratio
 
         return used[READ] + R * used[WRITE] < capacity[READ]
 
-    def app_fit_node(self, node_name: str, requested: Resources, used: Resources, capacity: Resources) -> Tuple[bool, str]:
+    def app_fit_node(self, node_name: str, requested: Resources, used: Resources,
+                     capacity: Resources) -> Tuple[bool, str]:
         """requested - requested by app; free - free on the node"""
-        broken_capacities = set([r for r in self.dimensions if not requested[r] < capacity[r] - used[r]])
-        if not self.membw_check(requested, used, capacity, self.data_provider.get_node_membw_read_write_ratio(node_name)):
-            broken_capacities.update((ResourceType.MEMBW_READ, ResourceType.MEMBW_READ,))
+        broken_capacities = set([r for r in self.dimensions
+                                 if not requested[r] < capacity[r] - used[r]])
+        if not self.membw_check(requested, used, capacity,
+                                self.data_provider.get_node_membw_read_write_ratio(node_name)):
+            broken_capacities.update((rt.MEMBW_READ, rt.MEMBW_READ,))
         broken_capacities_str = ','.join([str(e) for e in broken_capacities])
 
         if not broken_capacities:

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import ABC, abstractmethod
-from typing import Dict, List, Iterable
+from typing import Dict, Iterable
 
 from wca.scheduler.types import ResourceType, NodeName, Resources, TaskName
 
@@ -25,12 +25,15 @@ class DataProvider(ABC):
 
     @abstractmethod
     def get_assigned_tasks_requested_resources(
-            self, resources: Iterable[ResourceType], nodes: Iterable[NodeName]) -> Dict[NodeName, Dict[TaskName, Resources]]:
+            self, resources: Iterable[ResourceType],
+            nodes: Iterable[NodeName]) -> Dict[NodeName, Dict[TaskName, Resources]]:
         """Return for all >>nodes<< all tasks requested >>resources<< assigned to them."""
         pass
 
-    def get_assigned_apps_counts_on_nodes(self, nodes: Iterable[NodeName]) -> Dict[NodeName, Dict[TaskName, int]]:
-        """NOT YET USED. Returns structure like {'node_0': {'memcached_small': 3, 'stress_ng': 5}}"""
+    def get_assigned_apps_counts_on_nodes(self, nodes: Iterable[NodeName]) \
+            -> Dict[NodeName, Dict[TaskName, int]]:
+        """NOT YET USED. Returns structure like
+           {'node_0': {'memcached_small': 3, 'stress_ng': 5}}"""
         raise Exception('PROPOSAL FOR NEW API')
 
     @abstractmethod
@@ -42,4 +45,3 @@ class DataProvider(ABC):
     def get_node_membw_read_write_ratio(self, node: str) -> float:
         """For DRAM only node should return 1."""
         pass
-

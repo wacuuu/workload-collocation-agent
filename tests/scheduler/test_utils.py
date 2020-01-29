@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Dict
+# from typing import Dict
 
-from wca.scheduler.utils import extract_common_input
-from wca.scheduler.types import ExtenderArgs
+# from wca.scheduler.utils import extract_common_input
+# from wca.scheduler.types import ExtenderArgs
 
 # FIXTURE = 'tests/fixtures/kube-scheduler-request.json'
 

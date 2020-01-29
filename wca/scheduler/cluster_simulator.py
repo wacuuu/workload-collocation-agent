@@ -93,8 +93,8 @@ class Task:
     def __init__(self, name, requested, assignment=None):
         self.name: str = name
         self.assignment: Node = assignment
-        self.requested: Resource = requested  # == requested
-        self.real: Resource = Resources.create_empty(requested.data.keys())
+        self.requested: Resources = requested  # == requested
+        self.real: Resources = Resources.create_empty(requested.data.keys())
         self.life_time: int = 0
 
     def remove_dimension(self, resource_type: ResourceType):
@@ -149,7 +149,8 @@ class Node:
         tmp_unassigned = self.initial.copy()
         for task in tasks:
             if task.assignment == self:
-                tmp_unassigned.substract_aep_aware(task.requested, self.get_membw_read_write_ratio())
+                tmp_unassigned.substract_aep_aware(task.requested,
+                                                   self.get_membw_read_write_ratio())
         tmp_unassigned.substract_aep_aware(new_task.requested, self.get_membw_read_write_ratio())
         return bool(tmp_unassigned)
 
@@ -160,7 +161,8 @@ class Node:
         for task in tasks:
             if task.assignment == self:
                 self.free.substract_aep_aware(task.real, self.get_membw_read_write_ratio())
-                self.unassigned.substract_aep_aware(task.requested, self.get_membw_read_write_ratio())
+                self.unassigned.substract_aep_aware(task.requested,
+                                                    self.get_membw_read_write_ratio())
 
 
 @dataclass
@@ -175,7 +177,7 @@ class ClusterSimulator:
         self.time = 0
         all([set(node.initial.data.keys()) == self.dimensions for node in self.nodes])
         all([set(task.requested.data.keys()) == self.dimensions for task in self.tasks])
-        self.rough_assignments_per_node: Dict[Node, int] = {node:0 for node in self.nodes}
+        self.rough_assignments_per_node: Dict[Node, int] = {node: 0 for node in self.nodes}
 
     def get_task_by_name(self, task_name: str) -> Optional[Task]:
         filtered = [task for task in self.tasks if task.name == task_name]
@@ -194,7 +196,7 @@ class ClusterSimulator:
             node_resource_usage[task.assignment] += task.requested
 
         if if_percentage:
-            return {node: node_resource_usage[node]/node.initial 
+            return {node: node_resource_usage[node]/node.initial
                     for node in node_resource_usage.keys()}
         return node_resource_usage
 
@@ -247,7 +249,8 @@ class ClusterSimulator:
         """To map simulator structure into required by scheduler.Algorithm interace."""
 
         assert self.dimensions.issubset(set(new_task.requested.data.keys())), \
-                '{} {}'.format(set(new_task.requested.data.keys()), self.dimensions)
+            '{} {}'.format(set(new_task.requested.data.keys()),
+                           self.dimensions)
 
         node_names = [node.name for node in self.nodes]
         pod = {'metadata': {'labels': {'app': new_task.name},
