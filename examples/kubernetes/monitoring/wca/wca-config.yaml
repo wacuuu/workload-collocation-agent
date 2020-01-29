@@ -24,6 +24,8 @@ runner: !MeasurementRunner
   event_names:
     - task_cycles # do not remove: USED BY E2E tests
     - task_instructions
+    - task_mem_inst_retired_loads # required fro R/W characterization
+    - task_mem_inst_retired_stores
   enable_derived_metrics: True
 
   wss_reset_interval: 1
