@@ -67,7 +67,7 @@ spec:
               --key-pattern=G:G
               --key-maximum=$keymaximum
               --ratio $ratio
-              2>&1 | stdbuf -e0 -o0 awk ''BEGIN { RS = "\r" } { print $0; fflush(); system("") }''
+              2>&1 | stdbuf -e0 -o0 awk 'BEGIN { RS = "\r" } { print $0; fflush(); system("") }'
 
           volumeMounts:
             - name: var-log-wrapper

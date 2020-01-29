@@ -7,3 +7,8 @@ bases:
 commonLabels:
   fit: 1lm
   workload: sysbench-memory
+
+images:
+- name: sysbench
+  newName: 100.64.176.12:80/wca/sysbench
+  newTag: master
