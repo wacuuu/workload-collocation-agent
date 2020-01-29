@@ -34,7 +34,7 @@ class FFDGeneric(Algorithm):
     dimensions: Tuple[ResourceType] = (ResourceType.CPU, ResourceType.MEM,
                                       ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE)
 
-    def app_fit_node(self, requested: Resources, used: Resources, capacity: Resources) -> Tuple[bool, str]:
+    def app_fit_node(self, node_name: str, requested: Resources, used: Resources, capacity: Resources) -> Tuple[bool, str]:
         """requested - requested by app; free - free on the node"""
         broken_capacities = [r for r in self.dimensions if not requested[r] < capacity[r] - used[r]]
         if not broken_capacities:
@@ -45,7 +45,7 @@ class FFDGeneric(Algorithm):
 
     def used_resources_on_node(self, tasks: Dict[TaskName, Resources]) -> Resources:
         used = {resource: 0 for resource in self.dimensions}
-        for task, task_resources in tasks:
+        for task, task_resources in tasks.items():
             for resource in self.dimensions:
                 used[resource] += task_resources[resource]
         return used
@@ -59,7 +59,7 @@ class FFDGeneric(Algorithm):
 
         assigned_tasks = self.data_provider.get_assigned_tasks_requested_resources(self.dimensions, nodes)
         node_capacities = self.data_provider.get_nodes_capacities(self.dimensions)
-        app_requested_resources = self.data_provider.get_app_requested_resources(self.dimensions)
+        app_requested_resources = self.data_provider.get_app_requested_resources(self.dimensions, app)
 
         log.debug('Iterating through nodes.')
         for node in nodes:
@@ -69,7 +69,8 @@ class FFDGeneric(Algorithm):
                 break
 
             node_used_resources = self.used_resources_on_node(assigned_tasks[node])
-            passed, message = self.app_fit_node(app_requested_resources, node_used_resources, node_capacities[node])
+            passed, message = self.app_fit_node(node, app_requested_resources, 
+                                                node_used_resources, node_capacities[node])
             if not passed:
                 extender_filter_result.FailedNodes[node] = message
             else:
@@ -122,10 +123,10 @@ class FFDGenericAsymmetricMembw(FFDGeneric):
 
         return used[READ] + R * used[WRITE] < capacity[READ]
 
-    def app_fit_node(self, requested: Resources, used: Resources, capacity: Resources) -> Tuple[bool, str]:
+    def app_fit_node(self, node_name: str, requested: Resources, used: Resources, capacity: Resources) -> Tuple[bool, str]:
         """requested - requested by app; free - free on the node"""
         broken_capacities = set([r for r in self.dimensions if not requested[r] < capacity[r] - used[r]])
-        if not self.membw_check(requested, used, capacity, self.data_provider.get_node_membw_read_write_ratio()):
+        if not self.membw_check(requested, used, capacity, self.data_provider.get_node_membw_read_write_ratio(node_name)):
             broken_capacities.update((ResourceType.MEMBW_READ, ResourceType.MEMBW_READ,))
         broken_capacities_str = ','.join([str(e) for e in broken_capacities])
 

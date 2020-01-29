@@ -31,7 +31,7 @@ class ClusterSimulatorDataProvider(DataProvider):
                     r[node.name][task.name] = {r: task.requested.data[r] for r in resources}
         return r
 
-    def get_app_requested_resource(self, resources: Iterable[ResourceType], app: str) -> Resources:
+    def get_app_requested_resources(self, resources: Iterable[ResourceType], app: str) -> Resources:
         """Returns for >>app<< requested resources; if a dimension cannot be read from kubernetes metadata,
            use some kind of approximation for maximal value needed for a dimension."""
         task = self.simulator.get_task_by_name(app)
@@ -39,6 +39,6 @@ class ClusterSimulatorDataProvider(DataProvider):
             raise Exception('no such task')
         return {resource_type: task.requested.data[resource_type] for resource_type in resources}
 
-    def get_membw_read_write_ratio(self, node: str) -> float:
+    def get_node_membw_read_write_ratio(self, node: str) -> float:
         node = self.simulator.get_node_by_name(node)
         return node.initial.data[ResourceType.MEMBW_READ] / node.initial.data[ResourceType.MEMBW_WRITE]

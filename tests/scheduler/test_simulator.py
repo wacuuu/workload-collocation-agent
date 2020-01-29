@@ -5,7 +5,7 @@ from pprint import pprint
 import random
 from typing import Dict, List
 
-from wca.scheduler.algorithms.ffd_generic import FFDGeneric, FFDGeneric_AsymetricMembw
+from wca.scheduler.algorithms.ffd_generic import FFDGeneric, FFDGenericAsymmetricMembw
 from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, GB, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
         ClusterSimulatorDataProvider)
@@ -49,7 +49,7 @@ def test_single_run_membw_write_read():
              Node('1', Resources({ResourceType.CPU: 96, ResourceType.MEM: 320, ResourceType.MEMBW_READ: 150, ResourceType.MEMBW_WRITE: 150}))]
     extra_simulator_args = {"allow_rough_assignment": True,
                             "dimensions": simulator_dimensions}
-    scheduler_class = FFDGeneric_AsymetricMembw
+    scheduler_class = FFDGenericAsymmetricMembw
     extra_scheduler_kwargs = {}
 
     simulator = single_run(nodes, task_creation_fun_aep, extra_simulator_args,

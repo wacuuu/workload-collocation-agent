@@ -29,10 +29,17 @@ class DataProvider(ABC):
         """Return for all >>nodes<< all tasks requested >>resources<< assigned to them."""
         pass
 
+    def get_assigned_apps_counts_on_nodes(self, nodes: Iterable[NodeName]) -> Dict[NodeName, Dict[TaskName, int]]:
+        """NOT YET USED. Returns structure like {'node_0': {'memcached_small': 3, 'stress_ng': 5}}"""
+        raise Exception('PROPOSAL FOR NEW API')
+
+    @abstractmethod
     def get_app_requested_resources(self, resources: Iterable[ResourceType], app: str) -> Resources:
         """Returns for >>app<< requested resources; if a dimension cannot be read from kubernetes metadata,
            use some kind of approximation for maximal value needed for a dimension."""
 
+    @abstractmethod
     def get_node_membw_read_write_ratio(self, node: str) -> float:
         """For DRAM only node should return 1."""
         pass
+
