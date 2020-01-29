@@ -58,7 +58,7 @@ class Resources:
             x = self.data
             y = b.data
             x[READ] = x[READ] - y[READ] - y[WRITE] * membw_read_write_ratio
-            x[WRITE] = x[WRITE] - y[WRITE] - y[READ] * membw_read_write_ratio
+            x[WRITE] = x[WRITE] - y[WRITE] - y[READ] / membw_read_write_ratio
 
     def __add__(self, other):
         me = self.copy()
@@ -102,6 +102,11 @@ class Task:
         for resources_ in (self.requested, self.real):
             del resources_.data[resource_type]
 
+    def add_dimension(self, resource_type: ResourceType, requested_val):
+        """Post-creation addition of a dimension."""
+        self.requested.data[resource_type] = requested_val
+        self.real.data[resource_type] = 0
+
     CORE_NAME_SEP = '___'
 
     def get_core_name(self):
@@ -144,14 +149,35 @@ class Node:
             return d_[ResourceType.MEMBW_READ] / d_[ResourceType.MEMBW_WRITE]
         return 1
 
+    # @staticmethod
+    # def substract_resources(a: Resources, b: Resources):
+    #     """returns c = a - b"""
+    #     assert set(a.data.keys()) == set(b.data.keys())
+    #     c = a.copy()
+    #     for key in self.data.keys():
+    #         if key == ResourceType.MEMBW_READ or key == ResourceType.MEMBW_WRITE:
+    #             continue
+    #         c.data[key] -= b.data[key]
+    #     # Special case for MEMBW
+    #     if ResourceType.MEMBW_READ in c.data and ResourceType.MEMBW_WRITE in c.data:
+    #         READ = ResourceType.MEMBW_READ
+    #         WRITE = ResourceType.MEMBW_WRITE
+    #         x = c.data
+    #         y = b.data
+    #         x[READ] = x[READ] - y[READ] - y[WRITE] * membw_read_write_ratio
+    #         x[WRITE] = x[WRITE] - y[WRITE] - y[READ] / membw_read_write_ratio
+    #     return c
+
     def validate_assignment(self, tasks, new_task):
         """Check if there is enough resources on the node for a >>new_task<<."""
-        tmp_unassigned = self.initial.copy()
+        tmp_unassigned: Resources = self.initial.copy()
         for task in tasks:
             if task.assignment == self:
                 tmp_unassigned.substract_aep_aware(task.requested,
                                                    self.get_membw_read_write_ratio())
         tmp_unassigned.substract_aep_aware(new_task.requested, self.get_membw_read_write_ratio())
+        if not bool(tmp_unassigned):
+            import ipdb; ipdb.set_trace()
         return bool(tmp_unassigned)
 
     def update(self, tasks):
