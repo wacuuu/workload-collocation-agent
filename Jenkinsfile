@@ -434,14 +434,16 @@ def kustomize_wca_and_workloads_check() {
 }
 
 def kustomize_set_docker_image(workload, workload_image) {
-    file = "${WORKSPACE}/examples/kubernetes/workloads/${workload}/kustomization.yaml"
-    testing_image = "\nimages:\n" +
-    "  - name: ${workload_image}\n" +
-    "    newName: ${DOCKER_REPOSITORY_URL}/wca/${workload_image}\n" +
-    "    newTag: ${GIT_COMMIT}\n"
-    sh "echo '${testing_image}' >> ${file}"
-
     image_check("wca/${workload_image}")
+
+    contentReplace(
+    configs: [
+        fileContentReplaceConfig(
+            configs: [
+                fileContentReplaceItemConfig( search: 'newTag: master', replace: "newTag: ${GIT_COMMIT}", matchCount: 0),
+            ],
+            fileEncoding: 'UTF-8',
+            filePath: "${WORKSPACE}/examples/kubernetes/workloads/${workload}/kustomization.yaml")])
 }
 
 def kustomize_replace_commit_in_wca() {

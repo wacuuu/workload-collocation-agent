@@ -10,4 +10,4 @@ spec:
           resources:
             requests:
               cpu: 5
-              memory: 8G # Must be equation: 1.5*cpu = memory
+              memory: 8G
