@@ -1,32 +1,32 @@
-from collections import Counter
-from dataclasses import dataclass
 import datetime
 import itertools
-import pytest
+from collections import Counter
 from pprint import pprint
-import random
 from typing import Dict, List, Any, Callable
 
-from wca.scheduler.algorithms import Algorithm 
+import random
+from dataclasses import dataclass
+
+from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.ffd_generic import FFDGeneric
-from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, GB, Task
+from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
-        ClusterSimulatorDataProvider)
+    ClusterSimulatorDataProvider)
 from wca.scheduler.types import ResourceType
 
 
-def single_run(nodes: List[Node], task_creation_fun: Callable[[int], Task], 
-               extra_simulator_args: Dict, scheduler_class: Algorithm, 
-               extra_scheduler_kwargs: Dict, iteration_finished_callback: Callable=None):
+def single_run(nodes: List[Node], task_creation_fun: Callable[[int], Task],
+               extra_simulator_args: Dict, scheduler_class: Algorithm,
+               extra_scheduler_kwargs: Dict, iteration_finished_callback: Callable = None):
     """Compare standard algorithm with the algorithm which looks also at MEMBW"""
     pprint(locals())
     tasks = []
 
-    simulator=ClusterSimulator(
+    simulator = ClusterSimulator(
         tasks=[],
         nodes=nodes,
         scheduler=None,
-        **extra_simulator_args)        
+        **extra_simulator_args)
     data_proxy = ClusterSimulatorDataProvider(simulator)
     simulator.scheduler = scheduler_class(data_provider=data_proxy, **extra_scheduler_kwargs)
 
@@ -42,13 +42,13 @@ def single_run(nodes: List[Node], task_creation_fun: Callable[[int], Task],
 # taken from 2lm contention demo slides:
 # wca_load_balancing_multidemnsional_2lm_v0.2
 tasks__2lm_contention_demo = [
-    Task(name='memcached_big', 
+    Task(name='memcached_big',
          requested=Resources({ResourceType.CPU: 2, ResourceType.MEM: 28,
                               ResourceType.MEMBW: 1.3, ResourceType.WSS: 1.7})),
-    Task(name='memcached_medium', 
+    Task(name='memcached_medium',
          requested=Resources({ResourceType.CPU: 2, ResourceType.MEM: 12,
                               ResourceType.MEMBW: 1.0, ResourceType.WSS: 1.0})),
-    Task(name='memcached_small', 
+    Task(name='memcached_small',
          requested=Resources({ResourceType.CPU: 2, ResourceType.MEM: 2.5,
                               ResourceType.MEMBW: 0.4, ResourceType.WSS: 0.4})),
     # ---
@@ -88,7 +88,7 @@ def randonly_choose_from_taskset(taskset, size, seed):
     random.seed(seed)
     r = []
     for i in range(size):
-        random_idx = random.randint(0, len(taskset)-1)
+        random_idx = random.randint(0, len(taskset) - 1)
         task = taskset[random_idx].copy()
         task.name += "___" + str(i)
         r.append(task)
@@ -96,7 +96,7 @@ def randonly_choose_from_taskset(taskset, size, seed):
 
 
 def randonly_choose_from_taskset_single(taskset, dimensions, name_sufix):
-    random_idx = random.randint(0, len(taskset)-1)
+    random_idx = random.randint(0, len(taskset) - 1)
     task = taskset[random_idx].copy()
     task.name += "___" + str(name_sufix)
 
@@ -117,10 +117,10 @@ def prepare_NxMxK_nodes__demo_configuration(apache_pass_count, dram_only_v1_coun
 
     # Filter only dimensions required.
     for i, node_spec in enumerate(nodes_spec):
-        nodes_spec[i] = {dim:val for dim,val in node_spec.items() if dim in dimensions}
+        nodes_spec[i] = {dim: val for dim, val in node_spec.items() if dim in dimensions}
 
     inode = 0
-    nodes = [] 
+    nodes = []
     for i_node_type, node_type_count in enumerate((apache_pass_count, dram_only_v1_count, dram_only_v2_count,)):
         for i in range(node_type_count):
             node = Node(str(inode), available_resources=Resources(nodes_spec[i_node_type]))
@@ -147,6 +147,7 @@ def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
         iterations_data.append(IterationData(
             cluster_resource_usage, per_node_resource_usage,
             broken_assignments, tasks_types_count))
+
     return iteration_finished_callback
 
 
@@ -167,7 +168,7 @@ def create_report(title: str, header: Dict[str, Any], iterations_data: List[Iter
     # ---
     axs[0].set_title(str(header))
     # ---
-    axs[0].set_xlim( iterations.min() - 1, iterations.max() + 1 )
+    axs[0].set_xlim(iterations.min() - 1, iterations.max() + 1)
     axs[0].set_ylim(0, 1)
 
     broken_assignments = np.array([sum(list(iter_.broken_assignments.values())) for iter_ in iterd])
@@ -175,11 +176,11 @@ def create_report(title: str, header: Dict[str, Any], iterations_data: List[Iter
     axs[1].legend(['broken assignments'])
     axs[1].set_xlabel('iteration')
     axs[1].set_ylabel('')
-    axs[1].set_xlim( iterations.min() - 1, iterations.max() + 1 )
-    axs[1].set_ylim( broken_assignments.min()-1, broken_assignments.max()+1)
+    axs[1].set_xlim(iterations.min() - 1, iterations.max() + 1)
+    axs[1].set_ylim(broken_assignments.min() - 1, broken_assignments.max() + 1)
 
     t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
-    fig.savefig('experiments_results/{}__{}.png'.format( title.replace(' ', '_'), t_) )
+    fig.savefig('experiments_results/{}__{}.png'.format(title.replace(' ', '_'), t_))
 
     print(len(iterations_data))
     print(iterations_data[-1].tasks_types_count)
@@ -188,11 +189,11 @@ def create_report(title: str, header: Dict[str, Any], iterations_data: List[Iter
 def experiment__nodes_membw_contended():
     # looping around this:
     nodes__ = (
-        (3, 4, 2), 
+        (3, 4, 2),
         (5, 15, 10),
     )
     scheduler_dimensions__ = (
-        ([ResourceType.CPU, ResourceType.MEM,]), 
+        ([ResourceType.CPU, ResourceType.MEM, ]),
         ([ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW]),
     )
 
@@ -200,16 +201,18 @@ def experiment__nodes_membw_contended():
         # reset seed
         random.seed(300)
 
-        simulator_dimensions = set([ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW])
+        simulator_dimensions = {ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW}
 
         # instead of 3 should be 2, but then results are less visible
         nodes = prepare_NxMxK_nodes__demo_configuration(
-            apache_pass_count=run_params[0][0], dram_only_v1_count=run_params[0][1], dram_only_v2_count=run_params[0][2],
+            apache_pass_count=run_params[0][0], dram_only_v1_count=run_params[0][1],
+            dram_only_v2_count=run_params[0][2],
             dimensions=simulator_dimensions)
 
         extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
         scheduler_class = FFDGeneric
         extra_scheduler_kwargs = {"dimensions": set(run_params[1])}
+
         def task_creation_fun(index):
             return randonly_choose_from_taskset_single(tasks__2lm_contention_demo,
                                                        simulator_dimensions, index)
@@ -219,7 +222,7 @@ def experiment__nodes_membw_contended():
                                extra_simulator_args, scheduler_class, extra_scheduler_kwargs,
                                wrapper_iteration_finished_callback(iterations_data))
 
-        header = { 'nodes': run_params[0], 'scheduler_dimensions': run_params[1] }
+        header = {'nodes': run_params[0], 'scheduler_dimensions': run_params[1]}
         create_report('experiment membw contention {}'.format(ir), header, iterations_data)
 
 

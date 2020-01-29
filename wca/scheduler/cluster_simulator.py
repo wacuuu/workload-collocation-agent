@@ -167,7 +167,7 @@ class Node:
 class ClusterSimulator:
     tasks: List[Task]
     nodes: List[Node]
-    scheduler: Algorithm
+    scheduler: Optional[Algorithm]
     allow_rough_assignment: bool = False
     dimensions: Set[ResourceType] = (ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW,)
 
