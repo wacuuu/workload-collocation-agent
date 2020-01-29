@@ -103,7 +103,7 @@ class FFDGeneric(Algorithm):
 
 
 @dataclass
-class FFDGenericAsymmetricMembw(FFDGeneric):
+class FFDAsymmetricMembw(FFDGeneric):
     """Supports asymmetric membw speed for write/read"""
 
     @staticmethod

@@ -8,7 +8,7 @@ import random
 from dataclasses import dataclass
 
 from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.algorithms.ffd_generic import FFDGeneric
+from wca.scheduler.algorithms.ffd_generic import FFDGeneric, FFDAsymmetricMembw
 from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
     ClusterSimulatorDataProvider)
@@ -84,6 +84,19 @@ tasks__2lm_contention_demo = [
 ]
 
 
+def extend_membw_dimensions_to_write_read(taskset):
+    """replace dimensions rt.MEMBW with rt.MEMBW_WRITE and rt.MEMBW_READ"""
+    new_taskset = []
+    for task in taskset:
+        task_ = task.copy()
+        membw = task_.requested.data[rt.MEMBW]
+        task_.remove_dimension(rt.MEMBW)
+        task_.add_dimension(rt.MEMBW_READ, membw)
+        task_.add_dimension(rt.MEMBW_WRITE, 0)
+        new_taskset.append(task_)
+    return new_taskset
+
+
 def randonly_choose_from_taskset(taskset, size, seed):
     random.seed(seed)
     r = []
@@ -111,9 +124,12 @@ def randonly_choose_from_taskset_single(taskset, dimensions, name_sufix):
 def prepare_NxMxK_nodes__demo_configuration(apache_pass_count, dram_only_v1_count,
                                             dram_only_v2_count, dimensions):
     """Taken from WCA team real cluster."""
-    apache_pass = {rt.CPU: 80, rt.MEM: 1000, rt.MEMBW: 40, rt.WSS: 256}
-    dram_only_v1 = {rt.CPU: 96, rt.MEM: 192, rt.MEMBW: 150, rt.WSS: 192}
-    dram_only_v2 = {rt.CPU: 80, rt.MEM: 394, rt.MEMBW: 200, rt.WSS: 394}
+    apache_pass = {rt.CPU: 80, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ:40,
+                   rt.MEMBW_WRITE:10, rt.WSS: 256}
+    dram_only_v1 = {rt.CPU: 96, rt.MEM: 192, rt.MEMBW: 150, rt.MEMBW_READ:150,
+                    rt.MEMBW_WRITE: 150, rt.WSS: 192}
+    dram_only_v2 = {rt.CPU: 80, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ:200,
+                    rt.MEMBW_WRITE:200, rt.WSS: 394}
     nodes_spec = [apache_pass, dram_only_v1, dram_only_v2]
 
     # Filter only dimensions required.
@@ -160,15 +176,20 @@ def create_report(title: str, header: Dict[str, Any], iterations_data: List[Iter
     iterations = np.arange(0, len(iterd))
     cpu_usage = np.array([iter_.cluster_resource_usage.data[rt.CPU] for iter_ in iterd])
     mem_usage = np.array([iter_.cluster_resource_usage.data[rt.MEM] for iter_ in iterd])
-    membw_usage = np.array([iter_.cluster_resource_usage.data[rt.MEMBW] for iter_ in iterd])
+
+    if rt.MEMBW_READ in iterd[0].cluster_resource_usage.data:
+        membw_usage = np.array([iter_.cluster_resource_usage.data[rt.MEMBW_READ] for iter_ in iterd])
+    else:
+        membw_usage = np.array([iter_.cluster_resource_usage.data[rt.MEMBW] for iter_ in iterd])
     # ---
     fig, axs = plt.subplots(2)
+    fig.set_size_inches(11,11)
     axs[0].plot(iterations, cpu_usage, 'r--')
     axs[0].plot(iterations, mem_usage, 'b--')
     axs[0].plot(iterations, membw_usage, 'g--')
     axs[0].legend(['cpu usage', 'mem usage', 'membw usage'])
     # ---
-    axs[0].set_title(str(header))
+    axs[0].set_title(str(header), fontsize=10)
     # ---
     axs[0].set_xlim(iterations.min() - 1, iterations.max() + 1)
     axs[0].set_ylim(0, 1)
@@ -184,8 +205,9 @@ def create_report(title: str, header: Dict[str, Any], iterations_data: List[Iter
     t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
     fig.savefig('experiments_results/{}__{}.png'.format(title.replace(' ', '_'), t_))
 
-    print(len(iterations_data))
-    print(iterations_data[-1].tasks_types_count)
+    print("Iterations: {}".format(len(iterations_data)))
+    print("Assigned tasks: {}".format(iterations_data[-1].tasks_types_count))
+    print("Broken assignments: {}".format(sum(iterations_data[-1].broken_assignments.values())))
 
 
 def experiment__nodes_membw_contended():
@@ -228,6 +250,45 @@ def experiment__nodes_membw_contended():
         create_report('experiment membw contention {}'.format(ir), header, iterations_data)
 
 
+def experiment__ffdassymetricmembw__tco():
+    # looping around this:
+    nodes__ = (
+        (3, 4, 2),
+        (5, 15, 10),
+    )
+    scheduler_dimensions__ = (
+        ([rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE]),
+    )
+
+    for ir, run_params in enumerate(itertools.product(nodes__, scheduler_dimensions__)):
+        # reset seed
+        random.seed(300)
+
+        simulator_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
+
+        # Instead of 3 should be 2, but then results are less visible.
+        nodes = prepare_NxMxK_nodes__demo_configuration(
+            apache_pass_count=run_params[0][0], dram_only_v1_count=run_params[0][1],
+            dram_only_v2_count=run_params[0][2],
+            dimensions=simulator_dimensions)
+
+        extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
+        scheduler_class = FFDAsymmetricMembw
+        extra_scheduler_kwargs = {"dimensions": set(run_params[1])}
+
+        def task_creation_fun(index):
+            return randonly_choose_from_taskset_single(extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
+                                                       simulator_dimensions, index)
+
+        iterations_data: List[IterationData] = []
+        single_run(nodes, task_creation_fun,
+                   extra_simulator_args, scheduler_class, extra_scheduler_kwargs,
+                   wrapper_iteration_finished_callback(iterations_data))
+
+        header = {'nodes': run_params[0], 'scheduler_dimensions': run_params[1]}
+        create_report('experiment membw contention {}'.format(ir), header, iterations_data)
+
+
 if __name__ == "__main__":
     try:
         import matplotlib.pyplot as plt
@@ -235,4 +296,5 @@ if __name__ == "__main__":
     except ImportError:
         # No installed packages required for report generation.
         exit(1)
-    experiment__nodes_membw_contended()
+    # experiment__nodes_membw_contended()
+    experiment__ffdassymetricmembw__tco()
