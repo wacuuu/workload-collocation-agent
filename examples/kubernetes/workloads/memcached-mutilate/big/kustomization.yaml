@@ -10,7 +10,7 @@ configMapGenerator:
 - name: mutilate
   behavior: merge
   literals:
-  - value=25000      # 25k * 1M  = 25GB
+  - value=40000    # 40kB * 1M  <= 50GB
   - qps=20000      # 2M
 
 patchesStrategicMerge:

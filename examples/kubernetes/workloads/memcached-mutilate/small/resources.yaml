@@ -10,4 +10,4 @@ spec:
           resources:
             requests:
               cpu: 2
-              memory: 2G # valueSize*records = 10k * 1M = 2G
+              memory: 1G # valueSize*records = 0.8kB * 1M <= 1GB

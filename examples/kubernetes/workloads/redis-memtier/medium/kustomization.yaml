@@ -13,8 +13,8 @@ configMapGenerator:
   literals:
     - clients=50
     - threads=5
-    - keymaximum=15000000 # 15M
-    - datasize=512         # eff
+    - keymaximum=5000000   # 5M
+    - datasize=1024        # 5.5-6GB
 
 patchesStrategicMerge:
   - resources.yaml
