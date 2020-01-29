@@ -37,10 +37,10 @@ NODE_FREE_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
     ResourceType.MEM: 'sum(node_memory_MemTotal_bytes) by (nodename) - '
     'sum(task_requested_mem_bytes) by (nodename) or sum(node_memory_MemTotal_bytes) '
     'by (nodename)',
-    ResourceType.MEMORY_BANDWIDTH_READS: 'sum(platform_nvdimm_read_bandwidth_bytes_per_second) '
+    ResourceType.MEMBW_READ: 'sum(platform_nvdimm_read_bandwidth_bytes_per_second) '
     'by (nodename) - sum(delta(platform_pmm_bandwidth_reads[5s])*64) by (nodename) or '
     'sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename)',
-    ResourceType.MEMORY_BANDWIDTH_WRITES: 'sum(platform_nvdimm_write_bandwidth_bytes_per_'
+    ResourceType.MEMBW_WRITE: 'sum(platform_nvdimm_write_bandwidth_bytes_per_'
     'second) by (nodename) - sum(delta(platform_pmm_bandwidth_writes[5s])*64) by (nodename) or '
     'sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename)'
 }
@@ -48,9 +48,9 @@ NODE_FREE_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
 APP_REQUESTED_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
         ResourceType.CPU: 'max_over_time(task_requested_cpus{app=%r}[24h:5s])',
         ResourceType.MEM: 'max_over_time(task_requested_mem_bytes{app=%r}[24h:5s])',
-        ResourceType.MEMORY_BANDWIDTH_READS: 'max_over_time'
+        ResourceType.MEMBW_READ: 'max_over_time'
         '(task_mb_reads_bytes_per_second{app=%r}[24h:5s])',
-        ResourceType.MEMORY_BANDWIDTH_WRITES: 'max_over_time'
+        ResourceType.MEMBW_WRITE: 'max_over_time'
         '(task_mb_writes_bytes_per_second{app=%r}[24h:5s])'
 }
 
