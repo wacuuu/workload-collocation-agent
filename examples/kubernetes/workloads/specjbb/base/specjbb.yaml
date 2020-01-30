@@ -1,18 +1,18 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: specjbb-group
+  name: specjbb
 spec:
   replicas: 0
-  serviceName: specjbb-group
+  serviceName: specjbb
   podManagementPolicy: Parallel
   selector:
     matchLabels:
-      app: specjbb-group
+      app: specjbb
   template:
     metadata:
       labels:
-        app: specjbb-group
+        app: specjbb
     spec:
       nodeSelector:
         goal: service
@@ -63,7 +63,7 @@ spec:
               echo controller_identifier: $controller_identifier;
               echo controller_identifier=$controller_identifier >> /var/prepare_names/env;
 
-              target=specjbb-controller-${name_suffix}-${controller_identifier}.specjbb-controller-${name_suffix};
+              target='127.0.0.1';
               echo target: $target;
               echo target=$target >> /var/prepare_names/env
 
@@ -157,9 +157,51 @@ spec:
             - name: prepare-names-volume
               mountPath: /var/prepare_names
 
+        - name: controller
+          envFrom:
+            - configMapRef:
+                name: specjbb
+            - configMapRef:
+                name: specjbb-controller
+          env:
+            - name: PODNAME
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+          image: specjbb
+          command:
+            - sh
+            - -c
+            - >
+              target='127.0.0.1';
+              echo targeting: $target;
+
+              set -x;
+
+              java
+              $java
+              -Dspecjbb.group.count=$(specjbb.group.count)
+              -Dspecjbb.txi.pergroup.count=$(specjbb.txi.pergroup.count)
+              -Dspecjbb.controller.rtcurve.warmup.step=$(specjbb.controller.rtcurve.warmup.step)
+              -Dspecjbb.controller.rtcurve.step=$(specjbb.controller.rtcurve.step)
+              -Dspecjbb.controller.type=$(specjbb.controller.type)
+              -Dspecjbb.controller.host=$target
+              $specjbb_extra
+              -jar /home/specjbb/specjbb2015.jar
+              -m MULTICONTROLLER
+              -l 0
+
+               mv /home/specjbb/result/specjbb2015-* /home/result/${PODNAME}_$(date +%s)
+
+          volumeMounts:
+            - name: results
+              mountPath: /home/result/
+
+
       volumes:
         - name: prepare-names-volume
           emptyDir: {}
+        - name: results
+          hostPath:
+            path: /tmp/specjbb-results/
 
   # required for workaround bug with kustomize https://github.com/kubernetes-sigs/kustomize/issues/504
   # when using commonLabels

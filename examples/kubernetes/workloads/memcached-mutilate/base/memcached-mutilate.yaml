@@ -1,23 +1,47 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: memcached-mutilate
+spec:
+  clusterIP: None
+  selector:
+    app: memcached-mutilate
+
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: mutilate
+  name: memcached-mutilate
 spec:
   replicas: 0
-  serviceName: memcached
+  serviceName: memcached-mutilate
   podManagementPolicy: Parallel
   selector:
     matchLabels:
-      app: mutilate
+      app: memcached-mutilate
   template:
     metadata:
       labels:
-        app: mutilate
+        app: memcached-mutilate
     spec:
-      nodeSelector:
-        goal: load_generator
       terminationGracePeriodSeconds: 0
+      nodeSelector:
+        goal: service
       containers:
+        - name: memcached
+          image: memcached
+          envFrom:
+            - configMapRef:
+                name: memcached
+          command:
+            - sh
+            - -c
+            - >
+              memcached
+              -t $threads
+              -m $memory
+              -u root
+              $extra
         - name: mutilate
           image: mutilate
           envFrom:
@@ -34,8 +58,7 @@ spec:
               sleep 30;
               shopt -s extglob;
               identifier=${podname#mutilate-};
-              service=${identifier%-+([[:digit:]])};
-              target=memcached-${identifier}.memcached-${service};
+              target='127.0.0.1';
               echo targeting: $target;
 
               echo loading;
