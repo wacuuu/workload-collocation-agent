@@ -1,6 +1,5 @@
 resources:
-- redis.yaml
-- memtier.yaml
+- redis-memtier.yaml
 
 configMapGenerator:
 - name: redis

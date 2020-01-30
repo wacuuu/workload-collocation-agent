@@ -420,12 +420,10 @@ def kustomize_wca_and_workloads_check() {
     sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_WORKLOAD}"
 
     print('Scale up workloads...')
-    def list = ["stress-stream-small", "redis-small", "memtier-small", "sysbench-memory-small", "memcached-small", "mutilate-small"]
+    def list = ["stress-stream-small", "redis-memtier-small", "sysbench-memory-small", "memcached-mutilate-small", "specjbb-preset-small"]
     for(item in list){
         sh "kubectl scale --replicas=1 statefulset $item"
     }
-
-    sh "kubectl scale --replicas=1 statefulset specjbb-controller-preset-small specjbb-group-preset-small"
 
     print('Sleep while workloads are running...')
     sleep RUN_WORKLOADS_SLEEP_TIME

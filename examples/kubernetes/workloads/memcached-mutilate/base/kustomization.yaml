@@ -1,6 +1,5 @@
 resources:
-- memcached.yaml
-- mutilate.yaml
+- memcached-mutilate.yaml
 
 configMapGenerator:
 - name: memcached

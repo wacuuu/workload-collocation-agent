@@ -1,23 +1,51 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-memtier
+spec:
+  clusterIP: None
+  selector:
+    app: redis-memtier
+
+---
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: memtier
+  name: redis-memtier
 spec:
   replicas: 0
-  serviceName: redis
+  serviceName: redis-memtier
   podManagementPolicy: Parallel
   selector:
     matchLabels:
-      app: memtier
+      app: redis-memtier
   template:
     metadata:
       labels:
-        app: memtier
+        app: redis-memtier
     spec:
-      nodeSelector:
-        goal: load_generator
       terminationGracePeriodSeconds: 0
+      nodeSelector:
+        goal: service
       containers:
+        - name: redis
+          image: redis
+          envFrom:
+            - configMapRef:
+                name: redis
+          env:
+            - name: podname
+              valueFrom: {fieldRef: {fieldPath: metadata.name}}
+          command:
+            - sh
+            - -c
+            - >
+              redis-server
+              --save ''
+              --loglevel
+              notice
+              --databases 1
+              $redis_extra
         - name: memtier
           image: memtier_benchmark
           envFrom:
@@ -36,7 +64,7 @@ spec:
               shopt -s extglob;
               identifier=${podname#memtier-};
               service=${identifier%-+([[:digit:]])};
-              target=redis-${identifier}.redis-${service};
+              target='127.0.0.1';
               echo targeting: $target;
 
               echo preparing data...;

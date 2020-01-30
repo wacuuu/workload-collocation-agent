@@ -3,7 +3,7 @@ bases:
 - ../base
 
 commonLabels:
-  app: memcached-big
+  app: memcached-mutilate-big
   size: big
 
 configMapGenerator:

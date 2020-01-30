@@ -15,9 +15,9 @@ spec:
         - record: apm_mutilate_latency
           expr: avg_over_time(apm_mutilate_scan_read_p99[60s]) and apm_mutilate_alive
         - record: apm_memcached_latency  # ms p99
-          expr: ((label_replace(apm_mutilate_latency, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task_last_seen/task_last_seen)) / 1e3
+          expr: apm_mutilate_latency * on(task_name) group_right() task_up / 1e3
         - record: apm_memcached_qps
-          expr: (label_replace(apm_mutilate_qps, "task_name", "$1/memcached-$2", "task_name", "(.*)/mutilate-(.*)")) * on(task_name) group_right() (task_last_seen/task_last_seen)
+          expr: apm_mutilate_qps * on(task_name) group_right() task_up 
         # T & L
         - record: apm_throughput
           expr: apm_memcached_qps
@@ -34,9 +34,9 @@ spec:
           expr: avg_over_time(apm_memtier_scan_latency[1m]) and apm_memtier_alive
         # common apm metrics
         - record: apm_redis_latency  # msec latency
-          expr: (label_replace(apm_memtier_latency, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() task_up
+          expr: apm_memtier_latency * on(task_name) group_right() task_up
         - record: apm_redis_qps
-          expr: (label_replace(apm_memtier_ops, "task_name", "$1/redis-$2", "task_name", "(.*)/memtier-(.*)")) * on(task_name) group_right() task_up
+          expr: apm_memtier_ops * on(task_name) group_right() task_up
         # T & L per app
         - record: apm_throughput
           expr: apm_redis_qps
@@ -62,7 +62,7 @@ spec:
         - record: apm_sysbench_mbps    # MiB/sec
           expr: avg_over_time(apm_sysbench_qps[90s]) and apm_sysbench_alive
         - record: apm_sysbench_mbps_per_task
-          expr: apm_sysbench_mbps  * on(task_name) group_right() task_up
+          expr: apm_sysbench_mbps * on(task_name) group_right() task_up
           # T & L
         - record: apm_throughput       # MiB/sec (group_right to get labels from tasks)
           expr: apm_sysbench_mbps_per_task
@@ -83,9 +83,9 @@ spec:
           expr: apm_specjbb_latency * on(task_name) group_right() task_up
         # common apm metrics
         - record: apm_specjbb_latency_per_task
-          expr: (label_replace(apm_specjbb_ops, "task_name", "$1/specjbb-group-$2", "task_name", "(.*)/specjbb-controller-(.*)")) * on(task_name) group_right() task_up
+          expr: apm_specjbb_ops * on(task_name) group_right() task_up
         - record: apm_specjbb_ops_per_task
-          expr: (label_replace(apm_specjbb_latency, "task_name", "$1/specjbb-group-$2", "task_name", "(.*)/specjbb-controller-(.*)")) * on(task_name) group_right() task_up
+          expr: apm_specjbb_latency * on(task_name) group_right() task_up
           # T & L
         - record: apm_throughput
           expr: apm_specjbb_ops_per_task
@@ -100,14 +100,14 @@ spec:
           expr: apm_throughput
         #--------------------------------------- Targets for Latency [msecs]
         # Memcached latency goal
-        - {record: apm_slo, labels: {app: memcached-big},    expr: "8.0" }
-        - {record: apm_slo, labels: {app: memcached-medium}, expr: "3.0" }
-        - {record: apm_slo, labels: {app: memcached-small},  expr: "1.0" }
+        - {record: apm_slo, labels: {app: memcached-mutilate-big},    expr: "8.0" }
+        - {record: apm_slo, labels: {app: memcached-mutilate-medium}, expr: "3.0" }
+        - {record: apm_slo, labels: {app: memcached-mutilate-small},  expr: "1.0" }
 
         # Redis latency goal
-        - {record: apm_slo, labels: {app: redis-big},        expr: "14"}
-        - {record: apm_slo, labels: {app: redis-medium},     expr: "10"}
-        - {record: apm_slo, labels: {app: redis-small},      expr: "5"}
+        - {record: apm_slo, labels: {app: redis-memtier-big},        expr: "14"}
+        - {record: apm_slo, labels: {app: redis-memtier-medium},     expr: "10"}
+        - {record: apm_slo, labels: {app: redis-memtier-small},      expr: "5"}
 
         # Stress average duration for one bogus operation (maximum)
         - {record: apm_slo, labels: {app: stress-stream-big},    expr: "1500"}      #  4 threads
@@ -119,16 +119,16 @@ spec:
         - {record: apm_slo, labels: {app: sysbench-memory-medium}, expr: "200"}
         - {record: apm_slo, labels: {app: sysbench-memory-small}, expr: "380"}
 
-        #--------------------------------------- Targets for Throughtpu [msecs]
+        #--------------------------------------- Targets for Throughput [msecs]
         # Memcached QPS goal
-        - {record: apm_slo2, labels: {app: memcached-big},    expr: "20000" }
-        - {record: apm_slo2, labels: {app: memcached-medium}, expr: "40000" }
-        - {record: apm_slo2, labels: {app: memcached-small},  expr: "50000" }
+        - {record: apm_slo2, labels: {app: memcached-mutilate-big},    expr: "20000" }
+        - {record: apm_slo2, labels: {app: memcached-mutilate-medium}, expr: "40000" }
+        - {record: apm_slo2, labels: {app: memcached-mutilate-small},  expr: "50000" }
 
         # Redis QPS goal
-        - {record: apm_slo2, labels: {app: redis-big},        expr: "60000"}
-        - {record: apm_slo2, labels: {app: redis-medium},     expr: "60000"}
-        - {record: apm_slo2, labels: {app: redis-small},      expr: "70000"}
+        - {record: apm_slo2, labels: {app: redis-memtier-big},        expr: "60000"}
+        - {record: apm_slo2, labels: {app: redis-memtier-medium},     expr: "60000"}
+        - {record: apm_slo2, labels: {app: redis-memtier-small},      expr: "70000"}
 
         # Number of bogs per seconds
         - {record: apm_slo2, labels: {app: stress-stream-big},    expr: "1000"}

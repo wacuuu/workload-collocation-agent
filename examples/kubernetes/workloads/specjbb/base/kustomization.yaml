@@ -1,6 +1,5 @@
 resources:
-  - controller.yaml
-  - group.yaml
+  - specjbb.yaml
 
 configMapGenerator:
     # worker_size # used as instances of grp tasks
