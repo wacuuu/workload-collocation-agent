@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.ffd_generic import FFDGeneric, FFDAsymmetricMembw
+from wca.scheduler.algorithms.bar_3d import BARGeneric
 from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
     ClusterSimulatorDataProvider)
@@ -289,6 +290,50 @@ def experiment__ffdassymetricmembw__tco():
         create_report('experiment membw contention {}'.format(ir), header, iterations_data)
 
 
+def experiment__bar3d():
+    """Compare standard kubernetes BAR 2d, with our 3D version 
+       taking into consideration also (MEMBW_WRITE, MEMBW_READ)"""
+    # looping around this:
+    nodes__ = (
+        # (3, 4, 2),
+        (0, 20, 10),
+    )
+    scheduler_dimensions__ = (
+        ([rt.CPU, rt.MEM]),
+        ([rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE]),
+    )
+
+    for ir, run_params in enumerate(itertools.product(nodes__, scheduler_dimensions__)):
+        # reset seed
+        random.seed(300)
+
+        simulator_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
+
+        # Instead of 3 should be 2, but then results are less visible.
+        nodes = prepare_NxMxK_nodes__demo_configuration(
+            apache_pass_count=run_params[0][0], dram_only_v1_count=run_params[0][1],
+            dram_only_v2_count=run_params[0][2],
+            dimensions=simulator_dimensions)
+
+        extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
+        scheduler_class = BARGeneric
+        extra_scheduler_kwargs = {"dimensions": set(run_params[1])}
+
+        def task_creation_fun(index):
+            return randonly_choose_from_taskset_single(extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
+                                                       simulator_dimensions, index)
+
+        iterations_data: List[IterationData] = []
+        single_run(nodes, task_creation_fun,
+                   extra_simulator_args, scheduler_class, extra_scheduler_kwargs,
+                   wrapper_iteration_finished_callback(iterations_data))
+
+        header = {'nodes': run_params[0], 'scheduler_dimensions': run_params[1]}
+        create_report('experiment membw contention {}'.format(ir), header, iterations_data)
+
+
+
+
 if __name__ == "__main__":
     try:
         import matplotlib.pyplot as plt
@@ -297,4 +342,5 @@ if __name__ == "__main__":
         # No installed packages required for report generation.
         exit(1)
     # experiment__nodes_membw_contended()
-    experiment__ffdassymetricmembw__tco()
+    # experiment__ffdassymetricmembw__tco()
+    experiment__bar3d()

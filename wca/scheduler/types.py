@@ -21,6 +21,7 @@ from wca.config import assure_type
 # Kubernetes
 NodeName = str
 TaskName = str
+AppName = str
 FailureMessage = str
 
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L299
@@ -47,7 +48,7 @@ class HostPriority():
 class ExtenderArgs:
     Nodes: Optional[List[Dict]]
     Pod: Optional[Dict]
-    NodeNames: List[str]
+    NodeNames: List[NodeName]
 
     def __post_init__(self):
 

@@ -176,8 +176,6 @@ class Node:
                 tmp_unassigned.substract_aep_aware(task.requested,
                                                    self.get_membw_read_write_ratio())
         tmp_unassigned.substract_aep_aware(new_task.requested, self.get_membw_read_write_ratio())
-        if not bool(tmp_unassigned):
-            import ipdb; ipdb.set_trace()
         return bool(tmp_unassigned)
 
     def update(self, tasks):

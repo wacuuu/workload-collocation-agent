@@ -117,7 +117,8 @@ class FFDAsymmetricMembw(FFDGeneric):
         # Assert that required dimensions are available.
         for resource in (rt.MEMBW_WRITE, rt.MEMBW_READ,):
             for source in (requested, used):
-                assert resource in source
+                if not resource in source:
+                    return True
 
         # To shorten the notation.
         WRITE = rt.MEMBW_WRITE

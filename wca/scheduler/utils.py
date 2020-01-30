@@ -14,7 +14,8 @@
 from wca.scheduler.types import ExtenderArgs
 
 
-def extract_common_input(extender_args: ExtenderArgs):
+def extract_common_input(extender_args: ExtenderArgs) \
+        -> Tuple[AppName, List[NodeName], str, TaskName]:
     nodes = extender_args.NodeNames
     metadata = extender_args.Pod.get('metadata', {})
     labels = metadata.get('labels', {})

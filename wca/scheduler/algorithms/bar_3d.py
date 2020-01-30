@@ -13,10 +13,12 @@
 # limitations under the License.
 
 from typing import List, Tuple, Union
+from typing import Dict, List, Any, Callable
 
 from wca.metrics import Metric
 from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, ResourceType
+from wca.scheduler.algorithms.ffd_generic import FFDAsymmetricMembw
+from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, ResourceType, Resources
 
 
 class Bar3D(Algorithm):
@@ -63,7 +65,13 @@ class Bar3D(Algorithm):
         variance = variance / 3
 
 
-class BARGeneric(FFDGeneric):
+def fraction_of_capacity(requested: Union[int, float], capacity: Union[int, float]) -> float:
+    if capacity == 0:
+        return 1.0
+    return float(requested) / float(capacity)
+
+
+class BARGeneric(FFDAsymmetricMembw):
     def calculate_node_free_resources(self, capacity, used) -> Resources:
         free = capacity.copy()
         for dimension in self.dimensions:
@@ -78,7 +86,7 @@ class BARGeneric(FFDGeneric):
         fractions = {}
         for dimension in self.dimensions:
             if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
-                fractions[dimension] = float(requested[dimension]) / float(free[dimension]])
+                fractions[dimension] = float(requested[dimension]) / float(free[dimension])
         fractions[rt.MEMBW_FLAT] = (requested[rt.MEMBW_READ] + 4*requested[rt.MEMBW_WRITE]) / (free[rt.MEMBW_READ] + 4*free[rt.MEMBW_WRITE])
         return fractions
 
@@ -101,7 +109,7 @@ class BARGeneric(FFDGeneric):
                 break
 
             node_used_resources = self.used_resources_on_node(assigned_tasks[node])
-            node_free_resources = calculate_node_free_resources(capacity, used)  # allocable
+            node_free_resources = self.calculate_node_free_resources(capacity, used)  # allocable
 
             app_requested_fraction = calculacte_app_requested_fraction()
             mean = sum([v for v in app_requested_fraction.values()])/len(app_requested_fraction)
@@ -113,10 +121,3 @@ class BARGeneric(FFDGeneric):
             priorities.append(HostPriority(node, score))
 
         return priorities
-
-
-
-def fraction_of_capacity(requested: Union[int, float], capacity: Union[int, float]) -> float:
-    if capacity == 0:
-        return 1.0
-    return float(requested) / float(capacity)
