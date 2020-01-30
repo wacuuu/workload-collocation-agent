@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from abc import ABC, abstractmethod
-from typing import Dict, Iterable
+from typing import Dict, Iterable, Tuple
 
-from wca.scheduler.types import ResourceType, NodeName, Resources, TaskName
+from wca.scheduler.types import ResourceType, NodeName, Resources, AppName
 
 
 class DataProvider(ABC):
@@ -23,15 +23,7 @@ class DataProvider(ABC):
         """Returns for >>nodes<< maximal capacities for >>resources<<"""
         pass
 
-    # Removed 30.01.2020, replaced with get_assigned_apps_counts_on_nodes, get_apps_requested_resources
-    # @abstractmethod
-    # def get_assigned_tasks_requested_resources(
-    #         self, resources: Iterable[ResourceType],
-    #         nodes: Iterable[NodeName]) -> Dict[NodeName, Dict[TaskName, Resources]]:
-    #     """Return for all >>nodes<< all tasks requested >>resources<< assigned to them."""
-    #     pass
-
-    def get_apps_counts(self, nodes: Iterable[NodeName]) \
+    def get_apps_counts(self) \
             -> Tuple[Dict[NodeName, Dict[AppName, int]], Dict[AppName, int]]:
         """First tuple item assigned to nodes, second item unassigned yet
            {'node_0': {'memcached_small': 3, 'stress_ng': 5}}, {'memcached_big': 8}
@@ -39,21 +31,9 @@ class DataProvider(ABC):
         # from kube api
         raise Exception('PROPOSAL FOR NEW API')
 
-    # Removed 30.01.2020, replaced with get_apps_requested_resources
-    # @abstractmethod
-    # def get_app_requested_resources(self, resources: Iterable[ResourceType], app: str) -> Resources:
-    #     """Returns for >>app<< requested resources; if a dimension cannot be read from kubernetes metadata,
-    #        use some kind of approximation for maximal value needed for a dimension."""
-    #     pass
-
     @abstractmethod
-    def get_apps_requested_resources(self, resources: Iterable[ResourceType]) -> Dict[AppName, Resources]:
+    def get_apps_requested_resources(self, resources: Iterable[ResourceType]) \
+            -> Dict[AppName, Resources]:
         """Returns all apps definitions on the cluster"""
         # what if some of the resources are lacking???
         pass
-
-    # Remove 30.01.2020: not needed as read/write ration can be read from capacity
-    # @abstractmethod
-    # def get_node_membw_read_write_ratio(self, node: str) -> float:
-    #     """For DRAM only node should return 1."""
-    #     pass
