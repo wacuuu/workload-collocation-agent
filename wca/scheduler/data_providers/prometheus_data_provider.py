@@ -49,9 +49,9 @@ APP_REQUESTED_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = {
         ResourceType.CPU: 'max_over_time(task_requested_cpus{app=%r}[24h:5s])',
         ResourceType.MEM: 'max_over_time(task_requested_mem_bytes{app=%r}[24h:5s])',
         ResourceType.MEMBW_READ: 'max_over_time'
-        '(task_mb_reads_bytes_per_second{app=%r}[24h:5s])',
+        '(task_membw_reads_bytes_per_second{app=%r}[24h:5s])',
         ResourceType.MEMBW_WRITE: 'max_over_time'
-        '(task_mb_writes_bytes_per_second{app=%r}[24h:5s])'
+        '(task_membw_writes_bytes_per_second{app=%r}[24h:5s])'
 }
 
 
