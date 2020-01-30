@@ -14,7 +14,6 @@
 
 from wca.config import register
 from wca.scheduler.algorithms.ffd_generic import FFDGeneric
-from wca.scheduler.data_providers.prometheus_data_provider import PrometheusDataProvider
 from wca.scheduler.data_providers.cluster_data_provider import (
         ClusterDataProvider, Kubeapi, Prometheus)
 
@@ -24,7 +23,6 @@ def register_algorithms():
 
 
 def register_dataproviders():
-    register(PrometheusDataProvider)
     register(Kubeapi)
     register(Prometheus)
     register(ClusterDataProvider)

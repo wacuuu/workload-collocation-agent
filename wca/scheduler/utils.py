@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from wca.scheduler.types import ExtenderArgs
+from typing import Tuple, List
+from wca.scheduler.types import ExtenderArgs, AppName, NodeName, TaskName
 
 
 def extract_common_input(extender_args: ExtenderArgs) \

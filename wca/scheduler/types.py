@@ -62,7 +62,7 @@ class ExtenderArgs:
 
 
 # Internal
-class ResourceType(Enum):
+class ResourceType(str, Enum):
     MEM = 'mem'
     CPU = 'cpu'
     MEMBW = 'membw'
