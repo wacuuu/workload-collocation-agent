@@ -27,6 +27,7 @@ spec:
         app: wca-scheduler
     spec:
       hostNetwork: true
+      serviceAccountName: wca-scheduler
       terminationGracePeriodSeconds: 0
       nodeSelector:
         kubernetes.io/hostname: node36
