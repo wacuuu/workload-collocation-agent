@@ -27,6 +27,7 @@ from wca.scheduler.utils import extract_common_input
 log = logging.getLogger(__name__)
 
 
+
 @dataclass
 class FFDGeneric(Algorithm):
     """Fit first decreasing; supports as many dimensions as needed."""
@@ -35,9 +36,8 @@ class FFDGeneric(Algorithm):
     dimensions: Tuple[rt] = (rt.CPU, rt.MEM,
                              rt.MEMBW_READ, rt.MEMBW_WRITE)
 
-    def app_fit_node(self, node_name: str, requested: Resources,
-                     used: Resources, capacity: Resources) -> Tuple[bool, str]:
-        """requested - requested by app; free - free on the node"""
+    def app_fit_node(self, requested: Resources, used: Resources, capacity: Resources) \
+            -> Tuple[bool, str]:
         broken_capacities = [r for r in self.dimensions if not requested[r] < capacity[r] - used[r]]
         if not broken_capacities:
             return True, ''
@@ -45,19 +45,10 @@ class FFDGeneric(Algorithm):
             broken_capacities_str = ','.join([str(e) for e in broken_capacities])
             return False, 'Could not fit node for dimensions: ({}).'.format(broken_capacities_str)
 
-    def used_resources_on_node(self, tasks: Dict[TaskName, Resources]) -> Resources:
-        used = {resource: 0 for resource in self.dimensions}
-        for task, task_resources in tasks.items():
-            for resource in self.dimensions:
-                used[resource] += task_resources[resource]
-        return used
-
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
+        log.debug('ExtenderArgs: %r' % extender_args)
         app, nodes, namespace, name = extract_common_input(extender_args)
         extender_filter_result = ExtenderFilterResult()
-
-        log.debug('Getting app requested and node free resources.')
-        log.debug('ExtenderArgs: %r' % extender_args)
 
         dp = self.data_provider
         assigned_tasks = dp.get_assigned_tasks_requested_resources(self.dimensions, nodes)
@@ -71,7 +62,7 @@ class FFDGeneric(Algorithm):
                 extender_filter_result.NodeNames.append(node)
                 break
 
-            node_used_resources = self.used_resources_on_node(assigned_tasks[node])
+            node_used_resources = used_resources_on_node(self.dimensions, assigned_tasks[node])
             passed, message = self.app_fit_node(node, app_requested_resources,
                                                 node_used_resources, node_capacities[node])
             if not passed:

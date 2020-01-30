@@ -23,6 +23,7 @@ class DataProvider(ABC):
         """Returns for >>nodes<< maximal capacities for >>resources<<"""
         pass
 
+    @abstractmethod
     def get_apps_counts(self) \
             -> Tuple[Dict[NodeName, Dict[AppName, int]], Dict[AppName, int]]:
         """First tuple item assigned to nodes, second item unassigned yet
