@@ -124,11 +124,11 @@ def randonly_choose_from_taskset_single(taskset, dimensions, name_sufix):
 def prepare_NxMxK_nodes__demo_configuration(apache_pass_count, dram_only_v1_count,
                                             dram_only_v2_count, dimensions):
     """Taken from WCA team real cluster."""
-    apache_pass = {rt.CPU: 80, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ:40,
+    apache_pass = {rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ:40,
                    rt.MEMBW_WRITE:10, rt.WSS: 256}
-    dram_only_v1 = {rt.CPU: 96, rt.MEM: 192, rt.MEMBW: 150, rt.MEMBW_READ:150,
+    dram_only_v1 = {rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ:150,
                     rt.MEMBW_WRITE: 150, rt.WSS: 192}
-    dram_only_v2 = {rt.CPU: 80, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ:200,
+    dram_only_v2 = {rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ:200,
                     rt.MEMBW_WRITE:200, rt.WSS: 394}
     nodes_spec = [apache_pass, dram_only_v1, dram_only_v2]
 
@@ -253,8 +253,8 @@ def experiment__nodes_membw_contended():
 def experiment__ffdassymetricmembw__tco():
     # looping around this:
     nodes__ = (
-        (3, 4, 2),
-        (5, 15, 10),
+        # (3, 4, 2),
+        (0, 15, 10),
     )
     scheduler_dimensions__ = (
         ([rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE]),

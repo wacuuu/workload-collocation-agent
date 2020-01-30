@@ -140,3 +140,59 @@ class FFDAsymmetricMembw(FFDGeneric):
             return True, ''
         else:
             return False, 'Could not fit node for dimensions: ({}).'.format(broken_capacities_str)
+
+
+class BARGeneric(FFDGeneric):
+    def calculate_node_free_resources(self, capacity, used) -> Resources:
+        free = capacity.copy()
+        for dimension in self.dimensions:
+            if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
+                free[dimension] -= used[dimension]
+        free[rt.MEMBW_READ] = capacity[rt.MEMBW_READ] - (used[rt.MEMBW_READ] + used[rt.MEMBW_WRITE] * 4)
+        free[rt.MEMBW_WRITE] = capacity[rt.MEMBW_WRITE] - (used[rt.MEMBW_WRITE] + used[rt.READ] / 4)
+        return free
+
+    def calculacte_app_requested_fraction(self, requested, free) -> Dict[ResourceType, float]:
+        fractions = {}
+        for dimension in self.dimensions:
+            if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
+                fractions[dimension] = float(requested[dimension]) / float(free[dimension]])
+        fractions[rt.MEMBW_FLAT] = (requested[rt.MEMBW_READ] + 4*requested[rt.MEMBW_WRITE]) / (free[rt.MEMBW_READ] + 4*free[rt.MEMBW_WRITE])
+        return fractions
+
+    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
+        nodes = sorted(extender_args.NodeNames)
+        log.info('[Prioritize] Nodes: %r' % nodes)
+
+        priorities = []
+
+        dp = self.data_provider
+        assigned_tasks = dp.get_assigned_tasks_requested_resources(self.dimensions, nodes)
+        node_capacities = dp.get_nodes_capacities(self.dimensions)
+        app_requested = dp.get_app_requested_resources(self.dimensions, app)
+        
+        log.debug('Iterating through nodes.')
+        for node in nodes:
+            if node not in node_capacities:
+                log.warning('Missing Node %r information!' % node)
+                extender_filter_result.NodeNames.append(node)
+                break
+
+            node_used_resources = self.used_resources_on_node(assigned_tasks[node])
+            node_free_resources = calculate_node_free_resources(capacity, used)  # allocable
+
+            app_requested_fraction = calculacte_app_requested_fraction()
+            mean = sum([v for v in app_requested_fraction.values()])/len(app_requested_fraction)
+            if len(app_requested_fraction)
+            variance = sum([(fraction - mean)*(fraction - mean) for fraction in app_requested_fraction]) / len(app_requested_fraction)
+            score = int((1-variance) * self.get_max_node_score())
+            priorities.append(HostPriority(node, score))
+
+
+
+        if len(nodes) > 0:
+            for node in nodes:
+                priorities.append(HostPriority(node, 0))
+            priorities[0].Score = 100
+
+        return priorities
