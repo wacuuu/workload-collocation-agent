@@ -95,3 +95,23 @@ def free_resources_on_node(dimensions: Iterable[rt], capacity: Resources, used: 
     free[rt.MEMBW_READ] = capacity[rt.MEMBW_READ] - (used[rt.MEMBW_READ] + used[rt.MEMBW_WRITE] * 4)
     free[rt.MEMBW_WRITE] = capacity[rt.MEMBW_WRITE] - (used[rt.MEMBW_WRITE] + used[rt.READ] / 4)
     return free
+
+
+def membw_check(requested: Resources, used: Resources, capacity: Resources,
+                node_membw_read_write_ratio: float) -> bool:
+    """
+    read/write ratio, e.g. 40GB/s / 10GB/s = 4,
+    what means reading is 4 time faster
+    """
+    # Assert that required dimensions are available.
+    for resource in (rt.MEMBW_WRITE, rt.MEMBW_READ,):
+        for source in (requested, used):
+            if not resource in source:
+                return True
+
+    # To shorten the notation.
+    WRITE = rt.MEMBW_WRITE
+    READ = rt.MEMBW_READ
+    R = node_membw_read_write_ratio
+
+    return used[READ] + R * used[WRITE] < capacity[READ]
