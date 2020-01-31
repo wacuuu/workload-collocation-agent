@@ -92,6 +92,20 @@ spec:
         - record: apm_latency
           expr: apm_specjbb_latency_per_task
 
+    - name: mysql-hammerdb
+      rules:
+        - record: apm_hammerdb_alive
+          expr: ceil(rate(apm_hammerdb_stdout_lines[30s])>0)
+        - record: apm_hammerdb_ops
+          expr: avg_over_time(apm_hammerdb_tpm[90s]) and apm_hammerdb_alive
+        # common apm metrics
+        - record: apm_mysql_qps
+          expr: (label_replace(apm_hammerdb_ops, "task_name", "$1/mysql-$2", "task_name", "(.*)/hammerdb-(.*)")) * on(task_name) group_right() task_up
+        # T & L per app
+        - record: apm_throughput      # transaction per minute from mysql (get by script 'mysql_tpm_gauge.py')
+          expr: apm_mysql_qps
+        # no latency from hammerdb or mysql
+
     - name: apm-generic
       rules:
         - record: apm_sli          #  SLI based on latency

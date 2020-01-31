@@ -1,0 +1,18 @@
+nameSuffix: -small
+bases:
+- ../base
+
+commonLabels:
+  app: mysql-small
+  size: small
+
+configMapGenerator:
+  - name: hammerdb
+    behavior: merge
+    literals:
+      - number_runners=5
+      - count_ware=5
+      - worker_building_schema=5
+
+patchesStrategicMerge:
+  - resources.yaml

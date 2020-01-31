@@ -7,7 +7,7 @@ pipeline {
       booleanParam defaultValue: true, description: 'E2E for Mesos.', name: 'E2E_MESOS'
       booleanParam defaultValue: true, description: 'E2E for Kubernetes.', name: 'E2E_K8S'
       booleanParam defaultValue: true, description: 'E2E for Kubernetes as Daemonset.', name: 'E2E_K8S_DS'
-      string defaultValue: '200', description: 'Sleep time for E2E tests', name: 'SLEEP_TIME'
+      string defaultValue: '300', description: 'Sleep time for E2E tests', name: 'SLEEP_TIME'
     }
     environment {
         DOCKER_REPOSITORY_URL = '100.64.176.12:80'
@@ -234,6 +234,37 @@ pipeline {
                     '''
                     }
                 }
+                // HammerDB
+                stage("Build and push HammerDB Docker image") {
+                    when {expression{return params.BUILD_IMAGES}}
+                    steps {
+                    sh '''
+                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/hammerdb:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/hammerdb:${GIT_BRANCH}
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/hammerdb
+                    cp -r dist ${IMAGE_DIR}
+                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
+                    docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
+                    '''
+                    }
+                }
+                stage("Build and push mysql_tpm_gauge Docker image") {
+                    when {expression{return params.BUILD_IMAGES}}
+                    steps {
+                    sh '''
+                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/mysql_tpm_gauge:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/mysql_tpm_gauge:${GIT_BRANCH}
+                    IMAGE_DIR=${WORKSPACE}/examples/workloads/mysql_tpm_gauge
+                    cp -r dist ${IMAGE_DIR}
+                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
+                    docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
+                    '''
+                    }
+                }
                 // SpecJBB
                 stage("Build and push SpecJBB Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
@@ -395,23 +426,22 @@ def wca_and_workloads_check() {
 
 def kustomize_wca_and_workloads_check() {
     print('-kustomize_wca_and_workloads_check-')
-    image_check("wca")
-    // examaples/kubernetes workloads like: memcached, memtier, redis use official images
     sh "echo GIT_COMMIT=$GIT_COMMIT"
-    print('Configure wca and workloads...')
-    kustomize_replace_commit_in_wca()
-    kustomize_add_labels("memcached-mutilate")
-    kustomize_add_labels("redis-memtier")
-    kustomize_add_labels("stress")
-    kustomize_add_labels("sysbench-memory")
-    kustomize_add_labels("specjbb")
 
-    print('Configure images...')
-    kustomize_set_docker_image("memcached-mutilate", "mutilate")
-    kustomize_set_docker_image("redis-memtier", "memtier_benchmark")
-    kustomize_set_docker_image("stress", "stress_ng")
-    kustomize_set_docker_image("sysbench-memory", "sysbench")
-    kustomize_set_docker_image("specjbb", "specjbb")
+    print('Image checks wca and workloads...')
+    image_check("wca")
+    // examaples/kubernetes workloads like: mysql, memcached, memtier, redis use official images
+    def images = ["mutilate", "hammerdb", "mysql_tpm_gauge", "memtier_benchmark", "stress_ng", "sysbench", "specjbb"]
+    for(image in images){
+        image_check("wca/$image")
+    }
+
+    print('Configure workloads...')
+    kustomize_replace_commit_in_wca()
+    def workloads = ["memcached-mutilate", "mysql-hammerdb", "redis-memtier", "stress", "sysbench-memory", "specjbb"]
+    for(workload in workloads){
+        kustomize_configure_workload_to_test("$workload")
+    }
 
     print('Starting wca...')
     sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_MONITORING}"
@@ -420,28 +450,15 @@ def kustomize_wca_and_workloads_check() {
     sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_WORKLOAD}"
 
     print('Scale up workloads...')
-    def list = ["stress-stream-small", "redis-memtier-small", "sysbench-memory-small", "memcached-mutilate-small", "specjbb-preset-small"]
+    def list = ["mysql", "hammerdb", "stress-stream", "redis-memtier", "sysbench-memory", "memcached-mutilate", "specjbb-preset"]
     for(item in list){
-        sh "kubectl scale --replicas=1 statefulset $item"
+        sh "kubectl scale --replicas=1 statefulset $item-small"
     }
 
     print('Sleep while workloads are running...')
     sleep RUN_WORKLOADS_SLEEP_TIME
     print('Test kustomize metrics...')
     test_wca_metrics_kustomize()
-}
-
-def kustomize_set_docker_image(workload, workload_image) {
-    image_check("wca/${workload_image}")
-
-    contentReplace(
-    configs: [
-        fileContentReplaceConfig(
-            configs: [
-                fileContentReplaceItemConfig( search: 'newTag: master', replace: "newTag: ${GIT_COMMIT}", matchCount: 0),
-            ],
-            fileEncoding: 'UTF-8',
-            filePath: "${WORKSPACE}/examples/kubernetes/workloads/${workload}/kustomization.yaml")])
 }
 
 def kustomize_replace_commit_in_wca() {
@@ -455,7 +472,16 @@ def kustomize_replace_commit_in_wca() {
                 filePath: "${WORKSPACE}/examples/kubernetes/monitoring/wca/kustomization.yaml")])
 }
 
-def kustomize_add_labels(workload) {
+def kustomize_configure_workload_to_test(workload) {
+    contentReplace(
+    configs: [
+        fileContentReplaceConfig(
+            configs: [
+                fileContentReplaceItemConfig( search: 'newTag: master', replace: "newTag: ${GIT_COMMIT}", matchCount: 0),
+            ],
+            fileEncoding: 'UTF-8',
+            filePath: "${WORKSPACE}/examples/kubernetes/workloads/${workload}/kustomization.yaml")])
+
     contentReplace(
         configs: [
             fileContentReplaceConfig(
@@ -475,6 +501,7 @@ def kustomize_add_labels(workload) {
 
 def test_wca_metrics_kustomize() {
     sh "make venv; PYTHONPATH=. pipenv run pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomize --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v"
+    sh "make venv; PYTHONPATH=. pipenv run pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomize_throughput --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v"
 }
 
 def image_check(image_name) {

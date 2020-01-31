@@ -1,0 +1,18 @@
+resources:
+  - hammerdb.yaml
+  - mysql.yaml
+
+configMapGenerator:
+  - name: mysql-tpm-gauge-tcl-script
+    files:
+      - workload.tcl
+      - build_workload.tcl
+
+  - name: hammerdb
+    literals:
+      - number_runners=1
+      - count_ware=4
+      - worker_building_schema=4  # max 150, used only during build
+
+# https://www.hammerdb.com/blog/
+# https://www.hammerdb.com/document.html

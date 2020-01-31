@@ -81,7 +81,7 @@ def main(parse: ParseFunc = default_parse):
                                max_timeout_in_seconds=5.0,
                                topic=args.kafka_topic)
     else:
-        storage = LogStorage(args.storage_output_filename)
+        storage = LogStorage(args.storage_output_filename, overwrite=True, include_timestamp=False)
 
     t = threading.Thread(target=parse_loop, args=(parse, storage,
                                                   append_service_level_metrics_func))
