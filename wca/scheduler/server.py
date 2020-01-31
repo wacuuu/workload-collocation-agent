@@ -49,7 +49,13 @@ class Server:
 
             ass, unass = self.algorithm.data_provider.get_apps_counts()
 
-            return jsonify(dict(capacity=capacity, ass=ass, unass=unass))
+            apps = self.algorithm.data_provider.get_apps_requested_resources([
+                ResourceType.CPU,
+                ResourceType.MEM,
+                ResourceType.MEMBW_READ,
+                ResourceType.MEMBW_WRITE])
+
+            return jsonify(dict(capacity=capacity, ass=ass, unass=unass, apps=apps))
 
         @self.app.route('/metrics')
         def metrics():

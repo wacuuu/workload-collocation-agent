@@ -74,4 +74,4 @@ class ResourceType(str, Enum):
         return self.value
 
 
-Resources = Dict[ResourceType, int]
+Resources = Dict[ResourceType, float]
