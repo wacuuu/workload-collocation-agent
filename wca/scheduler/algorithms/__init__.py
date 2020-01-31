@@ -14,12 +14,12 @@
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import List, Tuple, Iterable, Dict, Any
+from typing import List, Tuple, Iterable, Any
 import logging
 
 from wca.metrics import Metric
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, \
-                                NodeName, TaskName, Resources
+                                NodeName, Resources
 from wca.scheduler.types import ResourceType as rt
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.utils import extract_common_input
@@ -44,10 +44,15 @@ class BaseAlgorithm(ABC):
     data_provider: DataProvider
     dimensions: Tuple[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE)
 
-    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
+    def filter(self, extender_args: ExtenderArgs) -> Tuple[
+            ExtenderFilterResult, List[Metric]]:
         log.debug('[Filter] ExtenderArgs: %r' % extender_args)
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
+
         extender_filter_result = ExtenderFilterResult()
+
+        # TODO: Fill this with metrics from algorithm.
+        metrics = []
 
         data_provider_queried = self.query_data_provider()
 
@@ -55,26 +60,31 @@ class BaseAlgorithm(ABC):
         for node_name in nodes_names:
             passed, message = self.app_fit_node(node_name, app_name, data_provider_queried)
             if not passed:
-                log.warning('Failed Node %r, %r' % (node_name, message,)) 
+                log.warning('Failed Node %r, %r' % (node_name, message,))
                 extender_filter_result.FailedNodes[node_name] = message
             else:
                 extender_filter_result.NodeNames.append(node_name)
 
         log.debug('Results: {}'.format(extender_filter_result))
-        return extender_filter_result
+        return extender_filter_result, metrics
 
-    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
-        log.info('[Prioritize] Nodes: %r' % nodes)
+    def prioritize(self, extender_args: ExtenderArgs) -> Tuple[
+            List[HostPriority], List[Metric]]:
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
+        log.info('[Prioritize] Nodes: %r' % nodes_names)
 
         data_provider_queried = self.query_data_provider()
 
         priorities = []
+
+        # TODO: Fill this with metrics from algorithm.
+        metrics = []
+
         log.debug('Iterating through nodes.')
         for node_name in sorted(nodes_names):
             priority = self.priority_for_node(node_name, app_name, data_provider_queried)
-            priorities.append(HostPriority(node, priority))
-        return priorities
+            priorities.append(HostPriority(node_name, priority))
+        return priorities, metrics
 
     @abstractmethod
     def app_fit_node(self, node_name: NodeName, app_name: str,
@@ -95,16 +105,17 @@ class BaseAlgorithm(ABC):
 
 
 def used_resources_on_node(dimensions, assigned_apps_counts, apps_spec) -> Resources:
-    used = {dim:0 for dim in dimensions}
+    used = {dim: 0 for dim in dimensions}
     for app, count in assigned_apps_counts.items():
         for dim in dimensions:
             used[dim] += apps_spec[app][dim] * count
     return used
 
 
-def free_resources_on_node(dimensions: Iterable[rt], capacity: Resources, used: Resources) -> Resources:
+def free_resources_on_node(
+        dimensions: Iterable[rt], capacity: Resources, used: Resources) -> Resources:
     free = capacity.copy()
-    for dimension in self.dimensions:
+    for dimension in dimensions:
         if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
             free[dimension] -= used[dimension]
     free[rt.MEMBW_READ] = capacity[rt.MEMBW_READ] - (used[rt.MEMBW_READ] + used[rt.MEMBW_WRITE] * 4)
@@ -120,7 +131,7 @@ def membw_check(requested: Resources, used: Resources, capacity: Resources) -> b
     # Assert that required dimensions are available.
     for resource in (rt.MEMBW_WRITE, rt.MEMBW_READ,):
         for source in (requested, used):
-            if not resource in source:
+            if resource not in source:
                 return True
 
     # To shorten the notation.

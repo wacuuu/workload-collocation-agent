@@ -41,6 +41,8 @@ class FitGeneric(BaseAlgorithm):
                                  if requested[r] > capacity[r] - used[r]])
         log.debug("Requested {} Capacity {} Used {}".format(requested, capacity, used))
         if not membw_check(requested, used, capacity):
+            for broken in broken_capacities:
+                log.error('Not enough resources! [%s]: %r' % (broken, ((capacity[broken] - used[broken] - requested[broken]) / 1e9)))
             broken_capacities.update((rt.MEMBW_READ, rt.MEMBW_READ,))
         broken_capacities_str = ','.join([str(e) for e in broken_capacities])
 
