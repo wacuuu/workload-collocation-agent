@@ -1,46 +1,45 @@
 """
 Module for providing.
 """
-from typing import Iterable, Dict
+from typing import Iterable, Dict, Tuple
 
 from dataclasses import dataclass
 from wca.scheduler.cluster_simulator import ClusterSimulator
 from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.types import Resources, NodeName, TaskName
-from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.types import Resources, NodeName, TaskName, AppsCount, ResourceType, AppName
 
 
 @dataclass
 class ClusterSimulatorDataProvider(DataProvider):
     simulator: ClusterSimulator
 
-    def get_nodes_capacities(self, resources: Iterable[rt]) -> Dict[NodeName, Resources]:
+    def get_nodes_capacities(self, resources: Iterable[ResourceType]) -> Dict[NodeName, Resources]:
         """Returns for >>nodes<< maximal capacities for >>resources<<"""
         r = {}
         for node in self.simulator.nodes:
             r[node.name] = {r: node.initial.data[r] for r in resources}
         return r
 
-    def get_assigned_tasks_requested_resources(
-            self, resources: Iterable[rt], nodes: Iterable[NodeName]) \
-            -> Dict[NodeName, Dict[TaskName, Resources]]:
-        """Return for all >>nodes<< all tasks requested >>resources<< assigned to them."""
-        r = {}
+    def get_apps_counts(self) -> Tuple[Dict[NodeName, AppsCount], AppsCount]:
+        apps_per_node = {}
         for node in self.simulator.nodes:
-            r[node.name] = {}
+            node_name = node.name
+            apps_per_node[node_name] = {}
             for task in self.simulator.tasks:
                 if task.assignment == node:
-                    r[node.name][task.name] = {r: task.requested.data[r] for r in resources}
-        return r
+                    app_name = task.get_core_name()
+                    if app_name in apps_per_node[node_name]:
+                        apps_per_node[node_name][app_name] += 1
+                    else:
+                        apps_per_node[node_name][app_name] = 1
+        # @TODO is it possible to simulate unassigned apps ?
+        return apps_per_node, {}
 
-    def get_app_requested_resources(self, resources: Iterable[rt], app: str) -> Resources:
-        """Returns for >>app<< requested resources; if a dimension cannot be read from kubernetes metadata,
-           use some kind of approximation for maximal value needed for a dimension."""
-        task = self.simulator.get_task_by_name(app)
-        if task is None:
-            raise Exception('no such task')
-        return {resource_type: task.requested.data[resource_type] for resource_type in resources}
-
-    def get_node_membw_read_write_ratio(self, node: str) -> float:
-        node = self.simulator.get_node_by_name(node)
-        return node.initial.data[rt.MEMBW_READ] / node.initial.data[rt.MEMBW_WRITE]
+    def get_apps_requested_resources(self, resources: Iterable[ResourceType]) \
+            -> Dict[AppName, Resources]:
+        apps_requested = {}
+        for node in self.simulator.nodes:
+            for task in self.simulator.tasks:
+                app_name = task.get_core_name()
+                apps_requested[app_name] = {r: task.requested.data[r] for r in resources}
+        return apps_requested

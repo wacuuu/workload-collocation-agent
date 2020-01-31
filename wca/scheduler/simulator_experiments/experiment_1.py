@@ -8,8 +8,8 @@ import random
 from dataclasses import dataclass
 
 from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.algorithms.ffd_generic import FFDGeneric, FFDAsymmetricMembw
-from wca.scheduler.algorithms.bar_3d import BARGeneric
+from wca.scheduler.algorithms.fit import FitGeneric
+from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
     ClusterSimulatorDataProvider)

@@ -75,3 +75,4 @@ class ResourceType(Enum):
 
 
 Resources = Dict[ResourceType, int]
+AppsCount = Dict[AppName, int]

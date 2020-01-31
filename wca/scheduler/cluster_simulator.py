@@ -1,8 +1,12 @@
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional, Set
+import logging
 
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.types import ExtenderArgs, ResourceType
+
+
+log = logging.getLogger(__name__)
 
 GB = 1000 ** 3
 MB = 1000 ** 2
@@ -260,7 +264,6 @@ class ClusterSimulator:
         for task in self.tasks:
             if task.name in assignments:
                 # taking all dimensions supported by Simulator whether the app fit the node.
-                print("Trying to assign task {}".format(task))
                 if_app_fit_to_node = self.validate_assignment(task, assignments[task.name])
                 if if_app_fit_to_node or self.allow_rough_assignment:
                     task.assignment = assignments[task.name]
@@ -292,6 +295,7 @@ class ClusterSimulator:
         return {new_task.name: self.get_node_by_name(filtered_nodes[0])}
 
     def iterate(self, delta_time: int, changes: Tuple[List[Task], List[Task]]) -> int:
+        log.debug("--- Iteration start ---")
         self.time += delta_time
         self.update_tasks_usage(delta_time)
         self.update_tasks_list(changes)
@@ -300,15 +304,15 @@ class ClusterSimulator:
         self.update_nodes_state()
 
         assignments = self.call_scheduler(changes[1][0])
-        print("Changes:")
-        print(changes)
-        print("Assignments performed:")
-        print(assignments)
-        print('')
+        log.debug("Changes: {}".format(changes))
+        log.debug("Assignments performed: {}".format(assignments))
+        log.debug("Tasks assigned count: {}".format(len([task for task in self.tasks if task.assignment is not None])))
         assigned_count = self.perform_assignments(assignments)
 
         # Recalculating state after assignments being performed.
         self.update_nodes_state()
+
+        log.debug("--- Iteration ends ---")
 
         return assigned_count
 

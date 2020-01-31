@@ -14,7 +14,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Iterable, Tuple
 
-from wca.scheduler.types import ResourceType, NodeName, Resources, AppName
+from wca.scheduler.types import ResourceType, NodeName, Resources, AppName, AppsCount
 
 
 class DataProvider(ABC):
@@ -24,17 +24,14 @@ class DataProvider(ABC):
         pass
 
     @abstractmethod
-    def get_apps_counts(self) \
-            -> Tuple[Dict[NodeName, Dict[AppName, int]], Dict[AppName, int]]:
+    def get_apps_counts(self) -> Tuple[Dict[NodeName, AppsCount], AppsCount]:
         """First tuple item assigned to nodes, second item unassigned yet
            {'node_0': {'memcached_small': 3, 'stress_ng': 5}}, {'memcached_big': 8}
         """
-        # from kube api
         raise Exception('PROPOSAL FOR NEW API')
 
     @abstractmethod
     def get_apps_requested_resources(self, resources: Iterable[ResourceType]) \
             -> Dict[AppName, Resources]:
         """Returns all apps definitions on the cluster"""
-        # what if some of the resources are lacking???
         pass
