@@ -62,7 +62,7 @@ class ExtenderArgs:
 
 
 # Internal
-class ResourceType(Enum):
+class ResourceType(str, Enum):
     MEM = 'mem'
     CPU = 'cpu'
     MEMBW = 'membw'
@@ -74,5 +74,5 @@ class ResourceType(Enum):
         return self.value
 
 
-Resources = Dict[ResourceType, int]
 AppsCount = Dict[AppName, int]
+Resources = Dict[ResourceType, float]

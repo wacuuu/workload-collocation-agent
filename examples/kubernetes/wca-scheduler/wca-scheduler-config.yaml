@@ -3,6 +3,12 @@ loggers:
   # wca.scheduler.server: DEBUG
   # wca.scheduler.algorithms.ffd_generic: WARNING
   # wca.scheduler.data_providers.prometheus_data_provider: DEBUG
+  wca.scheduler.data_providers.cluster_data_provider: DEBUG
 algorithm: !FFDGeneric
-  data_provider: !PrometheusDataProvider
-    ip: 'http://100.64.176.36:30900'
+  data_provider: !ClusterDataProvider
+    kubeapi: !Kubeapi
+      host: !Env KUBERNETES_SERVICE_HOST
+      port: !Env KUBERNETES_SERVICE_PORT
+    prometheus: !Prometheus
+      host: http://100.64.176.36
+      port: 30900

@@ -18,7 +18,7 @@ from typing import Dict, List
 
 from wca.metrics import Metric
 from wca.scheduler.metrics import MetricName
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult
+from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, ResourceType
 from wca.storage import (convert_to_prometheus_exposition_format,
                          is_convertable_to_prometheus_exposition_format)
 
@@ -41,7 +41,21 @@ class Server:
 
         @self.app.route('/status')
         def status():
-            return jsonify('running')
+            capacity = self.algorithm.data_provider.get_nodes_capacities([
+                ResourceType.CPU,
+                ResourceType.MEM,
+                ResourceType.MEMBW_READ,
+                ResourceType.MEMBW_WRITE])
+
+            ass, unass = self.algorithm.data_provider.get_apps_counts()
+
+            apps = self.algorithm.data_provider.get_apps_requested_resources([
+                ResourceType.CPU,
+                ResourceType.MEM,
+                ResourceType.MEMBW_READ,
+                ResourceType.MEMBW_WRITE])
+
+            return jsonify(dict(capacity=capacity, ass=ass, unass=unass, apps=apps))
 
         @self.app.route('/metrics')
         def metrics():

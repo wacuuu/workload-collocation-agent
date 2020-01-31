@@ -3,7 +3,7 @@ bases:
 - ../base
 
 commonLabels:
-  app: memcached-medium
+  app: memcached-mutilate-medium
   size: medium
 
 configMapGenerator:

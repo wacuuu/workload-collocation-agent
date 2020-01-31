@@ -3,7 +3,7 @@ bases:
 - ../base
 
 commonLabels:
-  app: redis-big
+  app: redis-memtier-big
   size: big
 
 configMapGenerator:

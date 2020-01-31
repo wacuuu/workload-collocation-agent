@@ -7,7 +7,7 @@ kubectl delete ds --all -n fluentd ; kubectl delete cm --all -n fluentd
 
 Creating fluentd daemonset and service. Observing daemonset rollout status:
 ```bash
-kubectl apply -k . -n fluentd ; k -n fluentd rollout status ds fluentd
+kubectl apply -k . -n fluentd ; kubectl -n fluentd rollout status ds fluentd
 ```
 
 Fluentd logs. Replace `$hostname` with your host:
