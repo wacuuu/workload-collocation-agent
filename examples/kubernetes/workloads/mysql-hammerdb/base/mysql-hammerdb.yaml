@@ -1,0 +1,130 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-hammerdb
+  labels:
+    app: mysql-hammerdb
+spec:
+  ports:
+  - name: mysql
+    port: 3306
+  selector:
+    app: mysql-hammerdb
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql-hammerdb
+spec:
+  replicas: 0
+  serviceName: mysql-hammerdb
+  podManagementPolicy: Parallel
+  selector:
+    matchLabels:
+      app: mysql-hammerdb
+  template:
+    metadata:
+      labels:
+        app: mysql-hammerdb
+    spec:
+      terminationGracePeriodSeconds: 0
+      nodeSelector:
+        goal: service
+      initContainers:
+      - name: change-config-workload
+        image: busybox
+        envFrom:
+          - configMapRef:
+              name: hammerdb
+        command:
+          - /bin/sh
+          - -c
+          - >
+            local_host='127.0.0.1'
+
+            sed
+            -e "s/MYSQL_HOST/${local_host}/"
+            -e "s/COUNT_WARE/${count_ware}/"
+            -e "s/VIRTUAL_USERS_BUILD/$virtual_users_build/"
+            -e "s/STORAGE_ENGINE/$storage_engine"
+            /etc/config/build_workload.tcl > /etc/hammerdb/config/build_workload.tcl
+
+            sed
+            -e "s/MYSQL_HOST/${local_host}/"
+            -e "s/VIRTUAL_USERS/$virtual_users/"
+            /etc/config/workload.tcl > /etc/hammerdb/config/workload.tcl;
+
+        volumeMounts:
+          - name: config-volume
+            mountPath: /etc/config
+          - name: changed-config-volume
+            mountPath: /etc/hammerdb/config
+
+      containers:
+      - name: hammerdb
+        image: hammerdb
+        command:
+          - bash
+          - -c
+          - >
+            local_host='127.0.0.1'
+
+            test=0;
+            until [ $test -eq 1 ];
+            do
+              test=$(mysqladmin -u testuser -h ${local_host} -ptestpassword ping | wc -l | tail -1);
+              echo $test;
+              sleep 5;
+            done
+
+            ./hammerdbcli auto /etc/hammerdb/config/build_workload.tcl
+
+            ./hammerdbcli auto /etc/hammerdb/config/workload.tcl
+
+        volumeMounts:
+          - name: changed-config-volume
+            mountPath: /etc/hammerdb/config
+
+      - name: mysql-tpm-gauge
+        image: mysql_tpm_gauge
+        command:
+          - bash
+          - -c
+          - >
+            local_host='127.0.0.1'
+
+            test=0;
+            until [ $test -eq 1 ];
+            do
+              test=$(mysqladmin -u testuser -h ${local_host} -ptestpassword ping | wc -l | tail -1);
+              echo $test;
+              sleep 5;
+            done
+
+            set -x;
+            python3 -u /mysql-tpm-gauge/mysql_tpm_gauge.py -s ${local_host}
+
+      - name: mysql
+        image: mysql:5.6
+        env:
+          - name: MYSQL_ROOT_PASSWORD
+            value: password
+          - name: MYSQL_USER
+            value: testuser
+          - name: MYSQL_PASSWORD
+            value: testpassword
+          - name: MYSQL_DATABASE
+            value: tpcc
+        ports:
+          - containerPort: 3306
+            name: mysql
+
+      volumes:
+      - name: config-volume
+        configMap:
+          name: mysql-tpm-gauge-tcl-script
+      - name: changed-config-volume
+        emptyDir: {}
+
+  volumeClaimTemplates: []

@@ -83,6 +83,7 @@ class MetricName(str, Enum):
     # Generic
     TASK_LAST_SEEN = 'task_last_seen'
     TASK_UP = 'task_up'
+    TASK_SUBCONTAINERS = 'task_subcontainers'
 
     # ----------------- Platform ----------------------
     # Static information
@@ -647,6 +648,16 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
         MetricMetadata(
             'Always returns 1 for running task.',
             MetricType.COUNTER,
+            MetricUnit.NUMERIC,
+            MetricSource.INTERNAL,
+            MetricGranularity.TASK,
+            [],
+            'yes',
+        ),
+    MetricName.TASK_SUBCONTAINERS:
+        MetricMetadata(
+            'Returns number of Kubernetes Pod Containers or 0 for others.',
+            MetricType.GAUGE,
             MetricUnit.NUMERIC,
             MetricSource.INTERNAL,
             MetricGranularity.TASK,

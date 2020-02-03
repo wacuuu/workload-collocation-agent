@@ -1,0 +1,16 @@
+bases:
+- small
+- medium
+- big
+
+commonLabels:
+  fit: 2lm
+  workload: mysql-hammerdb
+
+images:
+- name: hammerdb
+  newName: 100.64.176.12:80/wca/hammerdb
+  newTag: master
+- name: mysql_tpm_gauge
+  newName: 100.64.176.12:80/wca/mysql_tpm_gauge
+  newTag: master
