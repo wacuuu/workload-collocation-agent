@@ -30,6 +30,9 @@ RUN rpm -ivh mysql80-community-release-el7-3.noarch.rpm
 RUN wget https://repo.mysql.com/yum/mysql-5.7-community/el/7/x86_64/mysql-community-libs-5.7.24-1.el7.x86_64.rpm
 RUN yum install -y mysql-community-libs-5.7.24-1.el7.x86_64.rpm
 
+RUN wget https://repo.mysql.com/yum/mysql-5.7-community/el/7/x86_64/mysql-community-client-5.7.24-1.el7.x86_64.rpm
+RUN yum install -y mysql-community-client-5.7.24-1.el7.x86_64.rpm
+
 RUN echo 'export LD_LIBRARY_PATH=/usr/lib64/mysql/' >> ~/.bashrc
 RUN source ~/.bashrc
 

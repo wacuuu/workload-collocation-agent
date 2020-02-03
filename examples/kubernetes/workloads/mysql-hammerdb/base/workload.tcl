@@ -25,7 +25,7 @@ diset tpcc mysql_duration 60
 print dict
 
 loadscript
-vuset vu WORKER_NUMBER
+vuset vu VIRTUAL_USERS
 vucreate
 vurun
 runtimer 60000

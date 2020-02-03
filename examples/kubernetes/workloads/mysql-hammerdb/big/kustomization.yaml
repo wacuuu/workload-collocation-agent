@@ -3,16 +3,16 @@ bases:
 - ../base
 
 commonLabels:
-  app: mysql-big
+  app: mysql-hammerdb-big
   size: big
 
 configMapGenerator:
   - name: hammerdb
     behavior: merge
     literals:
-      - number_runners=300
+      - virtual_users=300
       - count_ware=300
-      - worker_building_schema=150
+      - virtual_users_build=150
 
 patchesStrategicMerge:
   - resources.yaml

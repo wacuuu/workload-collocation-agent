@@ -1,6 +1,5 @@
 resources:
-  - hammerdb.yaml
-  - mysql.yaml
+  - mysql-hammerdb.yaml
 
 configMapGenerator:
   - name: mysql-tpm-gauge-tcl-script
@@ -10,9 +9,10 @@ configMapGenerator:
 
   - name: hammerdb
     literals:
-      - number_runners=1
+      - virtual_users=1
       - count_ware=4
       - worker_building_schema=4  # max 150, used only during build
+      - storage_engine=memory #innodb
 
 # https://www.hammerdb.com/blog/
 # https://www.hammerdb.com/document.html

@@ -100,7 +100,7 @@ spec:
           expr: avg_over_time(apm_hammerdb_tpm[90s]) and apm_hammerdb_alive
         # common apm metrics
         - record: apm_mysql_qps
-          expr: (label_replace(apm_hammerdb_ops, "task_name", "$1/mysql-$2", "task_name", "(.*)/hammerdb-(.*)")) * on(task_name) group_right() task_up
+          expr: apm_hammerdb_ops * on(task_name) group_right() task_up
         # T & L per app
         - record: apm_throughput      # transaction per minute from mysql (get by script 'mysql_tpm_gauge.py')
           expr: apm_mysql_qps
