@@ -522,6 +522,7 @@ def _prepare_tasks_data(containers: Dict[Task, Container]) -> TasksData:
         # Extra internal metrics
         task_measurements[MetricName.TASK_UP.value] = 1
         task_measurements[MetricName.TASK_LAST_SEEN.value] = now
+        task_measurements[MetricName.TASK_SUBCONTAINERS.value] = len(task.subcgroups_paths)
 
         # Extra metrics from orchestrator about resources
         if TaskResource.CPUS in task.resources:
