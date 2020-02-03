@@ -29,8 +29,10 @@ class BARGeneric(FitGeneric):
         for dimension in self.dimensions:
             if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
                 fractions[dimension] = float(requested[dimension]) / float(free[dimension])
-        fractions[rt.MEMBW_FLAT] = (requested[rt.MEMBW_READ] + 4*requested[rt.MEMBW_WRITE]) \
-            / (free[rt.MEMBW_READ] + 4*free[rt.MEMBW_WRITE])
+        if rt.MEMBW_READ in self.dimensions:
+            assert rt.MEMBW_WRITE in self.dimensions
+            fractions[rt.MEMBW_FLAT] = (requested[rt.MEMBW_READ] + 4*requested[rt.MEMBW_WRITE]) \
+                / (free[rt.MEMBW_READ] + 4*free[rt.MEMBW_WRITE])
         return fractions
 
     def priority_for_node(self, node_name: str, app_name: str,
@@ -44,12 +46,18 @@ class BARGeneric(FitGeneric):
         mean = sum([v for v in app_requested_fraction.values()])/len(app_requested_fraction)
         if len(app_requested_fraction) > 2:
             variance = sum([(fraction - mean)*(fraction - mean)
-                            for fraction in app_requested_fraction]) \
+                            for fraction in app_requested_fraction.values()]) \
                        / len(app_requested_fraction)
+        elif len(app_requested_fraction) == 1:
+            variance = abs(app_requested_fraction[0] - app_requested_fraction[1])
         else:
-            variance = abs()
+            variance = 0
         score = int((1-variance) * self.get_max_node_score())
         return score
+
+    def get_max_node_score(self):
+        # @TODO should be defined as parameter
+        return 10
 
 
 def used_free_requested(

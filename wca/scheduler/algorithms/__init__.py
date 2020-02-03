@@ -116,8 +116,10 @@ def free_resources_on_node(
     for dimension in dimensions:
         if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
             free[dimension] -= used[dimension]
-    free[rt.MEMBW_READ] = capacity[rt.MEMBW_READ] - (used[rt.MEMBW_READ] + used[rt.MEMBW_WRITE] * 4)
-    free[rt.MEMBW_WRITE] = capacity[rt.MEMBW_WRITE] - (used[rt.MEMBW_WRITE] + used[rt.READ] / 4)
+    if rt.MEMBW_READ in dimensions:
+        assert rt.MEMBW_WRITE in dimensions
+        free[rt.MEMBW_READ] = capacity[rt.MEMBW_READ] - (used[rt.MEMBW_READ] + used[rt.MEMBW_WRITE] * 4)
+        free[rt.MEMBW_WRITE] = capacity[rt.MEMBW_WRITE] - (used[rt.MEMBW_WRITE] + used[rt.MEMBW_READ] / 4)
     return free
 
 
