@@ -56,7 +56,6 @@ class BaseAlgorithm(ABC):
 
         data_provider_queried = self.query_data_provider()
 
-        log.debug('Iterating through nodes.')
         for node_name in nodes_names:
             passed, message = self.app_fit_node(node_name, app_name, data_provider_queried)
             if not passed:
@@ -80,7 +79,6 @@ class BaseAlgorithm(ABC):
         # TODO: Fill this with metrics from algorithm.
         metrics = []
 
-        log.debug('Iterating through nodes.')
         for node_name in sorted(nodes_names):
             priority = self.priority_for_node(node_name, app_name, data_provider_queried)
             priorities.append(HostPriority(node_name, priority))

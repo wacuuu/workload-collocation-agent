@@ -13,12 +13,10 @@
 # limitations under the License.
 
 import logging
-from typing import List, Tuple, Dict
+from typing import List, Tuple
 
-from wca.scheduler.algorithms import Algorithm, BaseAlgorithm, used_resources_on_node, membw_check
-from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.types import (ExtenderArgs, ExtenderFilterResult,
-                                 HostPriority, Resources, TaskName, NodeName)
+from wca.scheduler.algorithms import BaseAlgorithm, used_resources_on_node, membw_check
+from wca.scheduler.types import (ExtenderArgs, HostPriority, NodeName)
 from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
@@ -42,7 +40,9 @@ class FitGeneric(BaseAlgorithm):
         log.debug("Requested {} Capacity {} Used {}".format(requested, capacity, used))
         if not membw_check(requested, used, capacity):
             for broken in broken_capacities:
-                log.error('Not enough resources! [%s]: %r' % (broken, ((capacity[broken] - used[broken] - requested[broken]) / 1e9)))
+                if broken in (rt.MEMBW, rt.MEMBW_READ, rt.MEMBW_WRITE):
+                    log.error('Not enough resources! [%s]: %r' %
+                              (broken, (capacity[broken] - used[broken] - requested[broken]) / 1e9))
             broken_capacities.update((rt.MEMBW_READ, rt.MEMBW_READ,))
         broken_capacities_str = ','.join([str(e) for e in broken_capacities])
 
@@ -63,6 +63,7 @@ class FitGenericTesting(FitGeneric):
     """with some testing cluster specific hacks"""
 
     def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
+        nodes = extender_args.NodeNames
         log.info('[Prioritize] Nodes: %r' % nodes)
         nodes = sorted(extender_args.NodeNames)
         return self.testing_prioritize(nodes)
@@ -78,7 +79,7 @@ class FitGenericTesting(FitGeneric):
             return priorities
 
         if len(nodes) > 0:
-            for node in sorted(nodes_names):
+            for node in sorted(nodes):
                 priorities.append(HostPriority(node, 0))
             priorities[0].Score = 100
         return priorities

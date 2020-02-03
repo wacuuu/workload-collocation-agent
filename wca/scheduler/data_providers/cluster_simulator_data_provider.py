@@ -6,7 +6,7 @@ from typing import Iterable, Dict, Tuple
 from dataclasses import dataclass
 from wca.scheduler.cluster_simulator import ClusterSimulator
 from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.types import Resources, NodeName, TaskName, AppsCount, ResourceType, AppName
+from wca.scheduler.types import Resources, NodeName, AppsCount, ResourceType, AppName
 
 
 @dataclass

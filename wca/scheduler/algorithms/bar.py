@@ -13,32 +13,32 @@
 # limitations under the License.
 
 import logging
-from typing import List, Tuple, Union, Dict, List, Any, Callable
+from typing import Tuple, Dict, Any
 
-from wca.metrics import Metric
-from wca.scheduler.algorithms import Algorithm
+from wca.scheduler.algorithms import used_resources_on_node, free_resources_on_node
 from wca.scheduler.algorithms.fit import FitGeneric
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, ResourceType, Resources
+from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
 
 
 class BARGeneric(FitGeneric):
-    def app_requested_fraction(self, requested, free) -> Dict[ResourceType, float]:
+    def app_requested_fraction(self, requested, free) -> Dict[rt, float]:
         """Flats MEMBW_WRITE and MEMBW_READ to single dimension MEMBW_FLAT"""
         fractions = {}
         for dimension in self.dimensions:
             if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
                 fractions[dimension] = float(requested[dimension]) / float(free[dimension])
         fractions[rt.MEMBW_FLAT] = (requested[rt.MEMBW_READ] + 4*requested[rt.MEMBW_WRITE]) \
-                                   / (free[rt.MEMBW_READ] + 4*free[rt.MEMBW_WRITE])
+            / (free[rt.MEMBW_READ] + 4*free[rt.MEMBW_WRITE])
         return fractions
 
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: Tuple[Any]) -> int:
         nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
 
-        used, free, requested = used_free_requested(node_name, self.dimensions, *data_provider_queried)
+        used, free, requested = used_free_requested(node_name, app_name, self.dimensions,
+                                                    *data_provider_queried)
 
         app_requested_fraction = self.app_requested_fraction(requested, free)
         mean = sum([v for v in app_requested_fraction.values()])/len(app_requested_fraction)
@@ -53,9 +53,9 @@ class BARGeneric(FitGeneric):
 
 
 def used_free_requested(
-        node_name, dimensions,
+        node_name, app_name, dimensions,
         nodes_capacities, assigned_apps_counts, apps_spec):
-    used = used_resources_on_node(self.dimensions, assigned_apps_counts[node_name], apps_spec)
-    free = free_resources_on_node(self.dimensions, nodes_capacities[node_name], used)  # allocable
+    used = used_resources_on_node(dimensions, assigned_apps_counts[node_name], apps_spec)
+    free = free_resources_on_node(dimensions, nodes_capacities[node_name], used)  # allocable
     requested = apps_spec[app_name]
     return used, free, requested
