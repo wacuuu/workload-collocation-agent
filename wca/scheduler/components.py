@@ -13,13 +13,15 @@
 # limitations under the License.
 
 from wca.config import register
-from wca.scheduler.algorithms.ffd_generic import FFDGeneric
+from wca.scheduler.algorithms.fit import FitGeneric
+from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.data_providers.cluster_data_provider import (
         ClusterDataProvider, Kubeapi, Prometheus)
 
 
 def register_algorithms():
-    register(FFDGeneric)
+    register(FitGeneric)
+    register(BARGeneric)
 
 
 def register_dataproviders():

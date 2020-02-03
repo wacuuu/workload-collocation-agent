@@ -1,8 +1,27 @@
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional, Set
+import logging
 
+from wca.logger import TRACE
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.types import ExtenderArgs, ResourceType
+
+
+log = logging.getLogger(__name__)
 
 GB = 1000 ** 3
 MB = 1000 ** 2
@@ -93,7 +112,7 @@ class Task:
     def __init__(self, name, requested, assignment=None):
         self.name: str = name
         self.assignment: Node = assignment
-        self.requested: Resources = requested  # == requested
+        self.requested: Resources = requested
         self.real: Resources = Resources.create_empty(requested.data.keys())
         self.life_time: int = 0
 
@@ -130,10 +149,12 @@ class Task:
 
 
 class Node:
+    """
+        initial - all available
+        real - free real memory
+        unassigned - free/unassigned memory
+    """
     def __init__(self, name, available_resources):
-        # initial - all available
-        # real - free real memory
-        # unassigned - free/unassigned memory
         self.name = name
         self.initial = available_resources
         self.free = available_resources.copy()
@@ -260,7 +281,6 @@ class ClusterSimulator:
         for task in self.tasks:
             if task.name in assignments:
                 # taking all dimensions supported by Simulator whether the app fit the node.
-                print("Trying to assign task {}".format(task))
                 if_app_fit_to_node = self.validate_assignment(task, assignments[task.name])
                 if if_app_fit_to_node or self.allow_rough_assignment:
                     task.assignment = assignments[task.name]
@@ -281,17 +301,29 @@ class ClusterSimulator:
                'name': new_task.name, 'namespace': 'default'}}
         extender_args = ExtenderArgs([], pod, node_names)
 
-        extender_filter_result = self.scheduler.filter(extender_args)
+        extender_filter_result, extender_filter_metrics = self.scheduler.filter(extender_args)
         filtered_nodes = [node for node in extender_args.NodeNames
                           if node not in extender_filter_result.FailedNodes]
-        # priorities = self.scheduler.prioritize(extender_args)
-        # @TODO take into consideration priorities
+        log.log(TRACE, "Nodes left after filtering: ({})".format(','.join(filtered_nodes)))
 
-        if len(filtered_nodes) == 0:
+        extender_args.NodeNames = filtered_nodes  # to prioritize pass only filtered nodes
+        extender_prioritize_result, extender_prioritize_metrics = \
+            self.scheduler.prioritize(extender_args)
+        priorities_str = ','.join(["{}:{}".format(el.Host, str(el.Score))
+                                   for el in extender_prioritize_result])
+        log.log(TRACE, "Priorities of nodes: ({})".format(priorities_str))
+        if extender_prioritize_result:
+            best_node = max(extender_prioritize_result, key=lambda el: el.Score).Host
+        else:
+            best_node = None
+        log.debug("Best node choosen in prioritize step: {}".format(best_node))
+
+        if best_node is None:
             return {}
-        return {new_task.name: self.get_node_by_name(filtered_nodes[0])}
+        return {new_task.name: self.get_node_by_name(best_node)}
 
     def iterate(self, delta_time: int, changes: Tuple[List[Task], List[Task]]) -> int:
+        log.debug("--- Iteration starts ---")
         self.time += delta_time
         self.update_tasks_usage(delta_time)
         self.update_tasks_list(changes)
@@ -300,15 +332,17 @@ class ClusterSimulator:
         self.update_nodes_state()
 
         assignments = self.call_scheduler(changes[1][0])
-        print("Changes:")
-        print(changes)
-        print("Assignments performed:")
-        print(assignments)
-        print('')
+        log.debug("Changes: {}".format(changes))
+        log.debug("Assignments performed: {}".format(assignments))
         assigned_count = self.perform_assignments(assignments)
 
         # Recalculating state after assignments being performed.
         self.update_nodes_state()
+
+        log.debug("Tasks assigned count: {}".format(
+            len([task for task in self.tasks if task.assignment is not None])))
+
+        log.debug("--- Iteration ends ---")
 
         return assigned_count
 

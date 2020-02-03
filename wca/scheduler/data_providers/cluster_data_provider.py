@@ -39,11 +39,29 @@ class PrometheusDataProviderException(Exception):
 
 
 @dataclass
+class Queries:
+    NODES_PMM_MEMORY_MODE: str = 'sum(platform_mem_mode_size_bytes) by (nodename) != 0'
+    MEMBW_CAPACITY_READ: str = 'sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename)'
+    MEMBW_CAPACITY_WRITE: str =\
+        'sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename)'
+
+    APP_REQUESTED_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = field(default_factory=lambda: {
+            ResourceType.CPU: 'max(max_over_time(task_requested_cpus[24h:5s])) by (app)',
+            ResourceType.MEM: 'max(max_over_time(task_requested_mem_bytes[24h:5s])) by (app)',
+            ResourceType.MEMBW_READ: 'max(max_over_time'
+            '(task_membw_reads_bytes_per_second[24h:5s])) by (app)',
+            ResourceType.MEMBW_WRITE: 'max(max_over_time'
+            '(task_membw_writes_bytes_per_second[24h:5s])) by (app)'
+    })
+
+
+@dataclass
 class Prometheus:
     host: str
     port: int
     timeout: Optional[Numeric(1, 60)] = 1.0
     ssl: Optional[SSL] = None
+    queries: Optional[Queries] = Queries()
 
     def do_query(self, query: str):
         url = URL_TPL.format(
@@ -110,8 +128,8 @@ class Kubeapi:
 
 
 # TODO: Consider if K8s return memory only in 'Ki' unit.
-def _convert_k8s_memory_capacity(memory: str) -> int:
-    return int(memory[:-2]) * _MEMORY_UNITS['Ki']
+def _convert_k8s_memory_capacity(memory: str) -> float:
+    return float(int(memory[:-2]) * _MEMORY_UNITS['Ki'])
 
 
 @dataclass
@@ -131,7 +149,7 @@ class ClusterDataProvider(DataProvider):
         # Get nodes names and basic resources.
         node_capacities = {
                 node['metadata']['name']: {
-                    ResourceType.CPU: int(node['status']['capacity']['cpu']),
+                    ResourceType.CPU: float(node['status']['capacity']['cpu']),
                     ResourceType.MEM: _convert_k8s_memory_capacity(
                         node['status']['capacity']['memory']),
                     }
@@ -145,8 +163,7 @@ class ClusterDataProvider(DataProvider):
             DRAM_MEMBW_WRITE_BYTES = 200 * 1e9
 
             # Check which nodes have PMM (in Memory Mode).
-            NODES_PMM_MEMORY_MODE_QUERY = 'sum(platform_mem_mode_size_bytes) by (nodename) != 0'
-            query_result = self.prometheus.do_query(NODES_PMM_MEMORY_MODE_QUERY)
+            query_result = self.prometheus.do_query(self.prometheus.queries.NODES_PMM_MEMORY_MODE)
             nodes_to_consider = []
 
             for row in query_result:
@@ -155,36 +172,34 @@ class ClusterDataProvider(DataProvider):
             # Every other should have only DRAM.
             for node, capacities in node_capacities.items():
                 if node not in nodes_to_consider:
-                    capacities[ResourceType.MEMBW_READ] = DRAM_MEMBW_READ_BYTES
-                    capacities[ResourceType.MEMBW_WRITE] = DRAM_MEMBW_WRITE_BYTES
+                    capacities[ResourceType.MEMBW_READ] = float(DRAM_MEMBW_READ_BYTES)
+                    capacities[ResourceType.MEMBW_WRITE] = float(DRAM_MEMBW_WRITE_BYTES)
 
             # Read Memory Bandwidth from PMM nodes.
             if len(nodes_to_consider) > 0:
 
-                MEMBW_READ_QUERY = \
-                    'sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename)'
-                query_result = self.prometheus.do_query(MEMBW_READ_QUERY)
+                query_result = self.prometheus.do_query(self.prometheus.queries.MEMBW_CAPACITY_READ)
 
                 for row in query_result:
                     node = row['metric']['nodename']
                     if node in nodes_to_consider:
-                        value = int(row['value'][1])
+                        value = float(row['value'][1])
                         node_capacities[node][ResourceType.MEMBW_READ] = value
                     else:
                         continue
 
-                MEMBW_WRITE_QUERY = \
-                    'sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename)'
-                query_result = self.prometheus.do_query(MEMBW_WRITE_QUERY)
+                query_result = self.prometheus.do_query(
+                    self.prometheus.queries.MEMBW_CAPACITY_WRITE)
+
                 for row in query_result:
                     node = row['metric']['nodename']
                     if node in nodes_to_consider:
-                        value = int(row['value'][1])
+                        value = float(row['value'][1])
                         node_capacities[node][ResourceType.MEMBW_WRITE] = value
                     else:
                         continue
 
-        log.debug('Node capacities: %r ' % node_capacities)
+        log.debug('Node capacities: %r' % node_capacities)
 
         return node_capacities
 
@@ -215,10 +230,25 @@ class ClusterDataProvider(DataProvider):
                 else:
                     assigned_apps[node][app] += 1
 
-        log.debug(assigned_apps)
+        log.debug('Assigned apps: %r' % assigned_apps)
+        log.debug('Unassigned apps: %r' % unassigned_apps)
 
         return assigned_apps, unassigned_apps
 
     def get_apps_requested_resources(self, resources: Iterable[ResourceType]) \
             -> Dict[AppName, Resources]:
-        pass
+
+        app_requested_resources = defaultdict(lambda: defaultdict(float))
+
+        for resource in resources:
+            query_result = self.prometheus.do_query(
+                    self.prometheus.queries.APP_REQUESTED_RESOURCES_QUERY_MAP[resource])
+            for result in query_result:
+                app = result['metric'].get('app')
+                value = float(result['value'][1])
+                if app:
+                    app_requested_resources[app][resource] = value
+
+        log.debug('Apps requested resources: %r' % app_requested_resources)
+
+        return app_requested_resources

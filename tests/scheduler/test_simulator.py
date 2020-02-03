@@ -1,14 +1,29 @@
 from wca.scheduler.simulator_experiments.experiment_1 import single_run
 
-from wca.scheduler.algorithms.ffd_generic import FFDGeneric, FFDGenericAsymmetricMembw
+from wca.scheduler.algorithms.fit import FitGeneric
 from wca.scheduler.cluster_simulator import Node, Resources, Task
 from wca.scheduler.types import ResourceType as rt
 
 
 def task_creation_fun(identifier):
-    r = Resources({rt.CPU: 8, rt.MEM: 10, rt.MEMBW: 10, })
+    r = Resources({rt.CPU: 8, rt.MEM: 10})
     t = Task('stress_ng_{}'.format(identifier), r)
     return t
+
+
+def test_single_run():
+    simulator_dimensions = {rt.CPU, rt.MEM}
+    nodes = [Node('0', Resources({rt.CPU: 96, rt.MEM: 1000})),
+             Node('1', Resources({rt.CPU: 96, rt.MEM: 320}))]
+    extra_simulator_args = {"allow_rough_assignment": False,
+                            "dimensions": simulator_dimensions}
+    scheduler_class = FitGeneric
+    extra_scheduler_kwargs = {"dimensions": {rt.CPU, rt.MEM}}
+
+    simulator = single_run(nodes, task_creation_fun, extra_simulator_args,
+                           scheduler_class, extra_scheduler_kwargs)
+    assert len(simulator.tasks) == 12
+    # assert len([node for node in simulator.nodes if node.unassigned.data[rt.MEMBW] < 0]) == 1
 
 
 def task_creation_fun_aep(identifier):
@@ -16,21 +31,6 @@ def task_creation_fun_aep(identifier):
                    rt.MEMBW_WRITE: 5, rt.MEMBW_READ: 5})
     t = Task('stress_ng_{}'.format(identifier), r)
     return t
-
-
-def test_single_run():
-    simulator_dimensions = {rt.CPU, rt.MEM, rt.MEMBW}
-    nodes = [Node('0', Resources({rt.CPU: 96, rt.MEM: 1000, rt.MEMBW: 50})),
-             Node('1', Resources({rt.CPU: 96, rt.MEM: 320, rt.MEMBW: 150}))]
-    extra_simulator_args = {"allow_rough_assignment": True,
-                            "dimensions": simulator_dimensions}
-    scheduler_class = FFDGeneric
-    extra_scheduler_kwargs = {"dimensions": {rt.CPU, rt.MEM}}
-
-    simulator = single_run(nodes, task_creation_fun, extra_simulator_args,
-                           scheduler_class, extra_scheduler_kwargs)
-    assert len(simulator.tasks) == 23
-    assert len([node for node in simulator.nodes if node.unassigned.data[rt.MEMBW] < 0]) == 1
 
 
 def test_single_run_membw_write_read():
@@ -42,9 +42,9 @@ def test_single_run_membw_write_read():
                                   rt.MEMBW_WRITE: 150}))]
     extra_simulator_args = {"allow_rough_assignment": True,
                             "dimensions": simulator_dimensions}
-    scheduler_class = FFDGenericAsymmetricMembw
+    scheduler_class = FitGeneric
     extra_scheduler_kwargs = {}
 
     simulator = single_run(nodes, task_creation_fun_aep, extra_simulator_args,
                            scheduler_class, extra_scheduler_kwargs)
-    assert len(simulator.tasks) == 13
+    assert len(simulator.tasks) == 15

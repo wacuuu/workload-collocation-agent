@@ -8,8 +8,8 @@ import random
 from dataclasses import dataclass
 
 from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.algorithms.ffd_generic import FFDGeneric, FFDAsymmetricMembw
-from wca.scheduler.algorithms.bar_3d import BARGeneric
+from wca.scheduler.algorithms.bar import BARGeneric
+from wca.scheduler.algorithms.fit import FitGeneric
 from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
     ClusterSimulatorDataProvider)
@@ -125,12 +125,12 @@ def randonly_choose_from_taskset_single(taskset, dimensions, name_sufix):
 def prepare_NxMxK_nodes__demo_configuration(apache_pass_count, dram_only_v1_count,
                                             dram_only_v2_count, dimensions):
     """Taken from WCA team real cluster."""
-    apache_pass = {rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ:40,
-                   rt.MEMBW_WRITE:10, rt.WSS: 256}
-    dram_only_v1 = {rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ:150,
+    apache_pass = {rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
+                   rt.MEMBW_WRITE: 10, rt.WSS: 256}
+    dram_only_v1 = {rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150,
                     rt.MEMBW_WRITE: 150, rt.WSS: 192}
-    dram_only_v2 = {rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ:200,
-                    rt.MEMBW_WRITE:200, rt.WSS: 394}
+    dram_only_v2 = {rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ: 200,
+                    rt.MEMBW_WRITE: 200, rt.WSS: 394}
     nodes_spec = [apache_pass, dram_only_v1, dram_only_v2]
 
     # Filter only dimensions required.
@@ -179,12 +179,13 @@ def create_report(title: str, header: Dict[str, Any], iterations_data: List[Iter
     mem_usage = np.array([iter_.cluster_resource_usage.data[rt.MEM] for iter_ in iterd])
 
     if rt.MEMBW_READ in iterd[0].cluster_resource_usage.data:
-        membw_usage = np.array([iter_.cluster_resource_usage.data[rt.MEMBW_READ] for iter_ in iterd])
+        membw_usage = np.array([iter_.cluster_resource_usage.data[rt.MEMBW_READ]
+                                for iter_ in iterd])
     else:
         membw_usage = np.array([iter_.cluster_resource_usage.data[rt.MEMBW] for iter_ in iterd])
     # ---
     fig, axs = plt.subplots(2)
-    fig.set_size_inches(11,11)
+    fig.set_size_inches(11, 11)
     axs[0].plot(iterations, cpu_usage, 'r--')
     axs[0].plot(iterations, mem_usage, 'b--')
     axs[0].plot(iterations, membw_usage, 'g--')
@@ -235,7 +236,7 @@ def experiment__nodes_membw_contended():
             dimensions=simulator_dimensions)
 
         extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
-        scheduler_class = FFDGeneric
+        scheduler_class = FitGeneric
         extra_scheduler_kwargs = {"dimensions": set(run_params[1])}
 
         def task_creation_fun(index):
@@ -274,12 +275,13 @@ def experiment__ffdassymetricmembw__tco():
             dimensions=simulator_dimensions)
 
         extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
-        scheduler_class = FFDAsymmetricMembw
+        scheduler_class = FitGeneric
         extra_scheduler_kwargs = {"dimensions": set(run_params[1])}
 
         def task_creation_fun(index):
-            return randonly_choose_from_taskset_single(extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
-                                                       simulator_dimensions, index)
+            return randonly_choose_from_taskset_single(
+                    extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
+                    simulator_dimensions, index)
 
         iterations_data: List[IterationData] = []
         single_run(nodes, task_creation_fun,
@@ -291,7 +293,7 @@ def experiment__ffdassymetricmembw__tco():
 
 
 def experiment__bar3d():
-    """Compare standard kubernetes BAR 2d, with our 3D version 
+    """Compare standard kubernetes BAR 2d, with our 3D version
        taking into consideration also (MEMBW_WRITE, MEMBW_READ)"""
     # looping around this:
     nodes__ = (
@@ -320,8 +322,9 @@ def experiment__bar3d():
         extra_scheduler_kwargs = {"dimensions": set(run_params[1])}
 
         def task_creation_fun(index):
-            return randonly_choose_from_taskset_single(extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
-                                                       simulator_dimensions, index)
+            return randonly_choose_from_taskset_single(
+                    extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
+                    simulator_dimensions, index)
 
         iterations_data: List[IterationData] = []
         single_run(nodes, task_creation_fun,
@@ -330,8 +333,6 @@ def experiment__bar3d():
 
         header = {'nodes': run_params[0], 'scheduler_dimensions': run_params[1]}
         create_report('experiment membw contention {}'.format(ir), header, iterations_data)
-
-
 
 
 if __name__ == "__main__":
