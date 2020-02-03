@@ -1,5 +1,7 @@
 import datetime
+import logging
 import itertools
+from functools import partial
 from collections import Counter
 from pprint import pprint
 from typing import Dict, List, Any, Callable
@@ -7,6 +9,7 @@ from typing import Dict, List, Any, Callable
 import random
 from dataclasses import dataclass
 
+from wca.logger import TRACE, init_logging
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.algorithms.fit import FitGeneric
@@ -14,6 +17,8 @@ from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, T
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
     ClusterSimulatorDataProvider)
 from wca.scheduler.types import ResourceType as rt
+
+log = logging.getLogger(__name__)
 
 
 def single_run(nodes: List[Node], task_creation_fun: Callable[[int], Task],
@@ -104,7 +109,7 @@ def randonly_choose_from_taskset(taskset, size, seed):
     for i in range(size):
         random_idx = random.randint(0, len(taskset) - 1)
         task = taskset[random_idx].copy()
-        task.name += "___" + str(i)
+        task.name += Task.CORE_NAME_SEP + str(i)
         r.append(task)
     return r
 
@@ -112,7 +117,7 @@ def randonly_choose_from_taskset(taskset, size, seed):
 def randonly_choose_from_taskset_single(taskset, dimensions, name_sufix):
     random_idx = random.randint(0, len(taskset) - 1)
     task = taskset[random_idx].copy()
-    task.name += "___" + str(name_sufix)
+    task.name += Task.CORE_NAME_SEP + str(name_sufix)
 
     task_dim = set(task.requested.data.keys())
     dim_to_remove = task_dim.difference(dimensions)
@@ -211,6 +216,16 @@ def create_report(title: str, header: Dict[str, Any], iterations_data: List[Iter
     print("Assigned tasks: {}".format(iterations_data[-1].tasks_types_count))
     print("Broken assignments: {}".format(sum(iterations_data[-1].broken_assignments.values())))
 
+    rounded_last_iter_resources = map( partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],) )
+    print("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})".format(*rounded_last_iter_resources))
+
+    for node, usages in iterations_data[-1].per_node_resource_usage.items():
+        rounded_last_iter_resources = map(
+            partial(round, ndigits=2),
+            (usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ],))
+        print("resource_usage_per_node(node={}, cpu, mem, membw_flat) = ({}, {}, {})".format(
+            node.name, *rounded_last_iter_resources))
+
 
 def experiment__nodes_membw_contended():
     # looping around this:
@@ -298,7 +313,8 @@ def experiment__bar3d():
     # looping around this:
     nodes__ = (
         # (3, 4, 2),
-        (0, 20, 10),
+        # (0, 20, 10),
+        (0, 3, 3),
     )
     scheduler_dimensions__ = (
         ([rt.CPU, rt.MEM]),
@@ -335,6 +351,10 @@ def experiment__bar3d():
         create_report('experiment membw contention {}'.format(ir), header, iterations_data)
 
 
+def experiment__generic(nodes, random_seed, task_creation_fun, scheduler_class, scheduler_kwargs):
+    scheduler
+
+
 if __name__ == "__main__":
     try:
         import matplotlib.pyplot as plt
@@ -344,4 +364,6 @@ if __name__ == "__main__":
         exit(1)
     # experiment__nodes_membw_contended()
     # experiment__ffdassymetricmembw__tco()
+    init_logging('trace', 'scheduler_extender_simulator')
+    logging.basicConfig(level=logging.ERROR)
     experiment__bar3d()

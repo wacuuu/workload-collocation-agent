@@ -297,7 +297,7 @@ class ClusterSimulator:
                            self.dimensions)
 
         node_names = [node.name for node in self.nodes]
-        pod = {'metadata': {'labels': {'app': new_task.name},
+        pod = {'metadata': {'labels': {'app': new_task.get_core_name()},
                'name': new_task.name, 'namespace': 'default'}}
         extender_args = ExtenderArgs([], pod, node_names)
 
