@@ -138,7 +138,7 @@ class MeasurementRunner(Runner):
         Enable derived metrics ips, ipc and cache_hit_ratio.
         (based on enabled_event names, default to False)
 
-    - ``enable_perf_uncore``: **bool** = *None*
+    - ``uncore_event_names``: **List[str]** = `[]`
 
         Enable perf event uncore metrics.
         (defaults to None - automatic, if available enable)
@@ -177,7 +177,7 @@ class MeasurementRunner(Runner):
             event_names: List[str] = [],
             perf_aggregate_cpus: bool = True,
             enable_derived_metrics: bool = False,
-            enable_perf_uncore: Optional[bool] = None,
+            uncore_event_names: List[str] = [],
             task_label_generators: Optional[Dict[str, TaskLabelGenerator]] = None,
             allocation_configuration: Optional[AllocationConfiguration] = None,
             wss_reset_interval: int = 0,
@@ -226,7 +226,7 @@ class MeasurementRunner(Runner):
                     metric_metadata.levels = ['cpu']
 
         self._enable_derived_metrics = enable_derived_metrics
-        self._enable_perf_uncore = enable_perf_uncore
+        self._uncore_event_names = uncore_event_names
 
         self._task_label_generators = task_label_generators or {}
 
@@ -348,40 +348,39 @@ class MeasurementRunner(Runner):
             perf_aggregate_cpus=self._perf_aggregate_cpus
         )
 
-        self._init_uncore_pmu(self._enable_derived_metrics, self._enable_perf_uncore, platform)
+        self._init_uncore_pmu(self._enable_derived_metrics, self._uncore_event_names, platform)
 
         return None
 
-    def _init_uncore_pmu(self, enable_derived_metrics, enable_perf_uncore,
+    def _init_uncore_pmu(self, enable_derived_metrics, uncore_event_names,
                          platform: platforms.Platform):
-        strict_mode = enable_perf_uncore is True
-        _enable_perf_uncore = enable_perf_uncore in (True, None)
+        _enable_perf_uncore = len(uncore_event_names) > 0
         self._uncore_pmu = None
         self._uncore_get_measurements = lambda: {}
         if _enable_perf_uncore:
             pmu_events = {}
+            imc_events = []
+            upi_events = []
+            for event in uncore_event_names:
+                if event in UNCORE_IMC_EVENTS:
+                    imc_events.append(UNCORE_IMC_EVENTS[event])
+                elif event in UNCORE_UPI_EVENTS:
+                    upi_events.append(UNCORE_UPI_EVENTS[event])
+                else:
+                    raise Exception('Unknown event name: {}'.format(event))
             try:
                 # Cpus and events for perf uncore imc
                 cpus_imc, pmu_events_imc = _discover_pmu_uncore_config(
-                    UNCORE_IMC_EVENTS, 'uncore_imc_')
+                    imc_events, 'uncore_imc_')
                 pmu_events.update(pmu_events_imc)
                 # Cpus and events for perf uncore upi
                 cpus_upi, pmu_events_upi = _discover_pmu_uncore_config(
-                    UNCORE_UPI_EVENTS, 'uncore_upi_')
+                    upi_events, 'uncore_upi_')
                 pmu_events.update(pmu_events_upi)
-
                 cpus = list(set(cpus_imc + cpus_upi))
-
-            except PMUNotAvailable as e:
-                self._uncore_pmu = None
-                self._uncore_get_measurements = lambda: {}
-                if strict_mode:
-                    raise
-                else:
-                    log.warning('Perf pmu metrics requested, but not available. '
-                                'Not collecting perf pmu metrics! '
-                                'error={}'.format(e))
-                    return
+            except PMUNotAvailable:
+                log.error('PMU metrics requested but PMU not available!')
+                raise
 
             # Prepare uncore object
             self._uncore_pmu = UncorePerfCounters(

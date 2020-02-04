@@ -173,18 +173,31 @@ class UncorePerfCounters:
                 raise OSError("Cannot enable perf counts")
 
 
-UNCORE_IMC_EVENTS = [
+UNCORE_IMC_EVENTS = {
     # https://github.com/opcm/pcm/blob/816dec444453c0e1253029e7faecfe1e024a071c/cpucounters.cpp#L3549
-    Event(name=MetricName.PLATFORM_PMM_BANDWIDTH_READS, event=0xe3),
-    Event(name=MetricName.PLATFORM_PMM_BANDWIDTH_WRITES, event=0xe7),
-    Event(name=MetricName.PLATFORM_CAS_COUNT_READS, event=0x04, umask=0x3),  # * 64 to get bytes
-    Event(name=MetricName.PLATFORM_CAS_COUNT_WRITES, event=0x04, umask=0xc),  # * 64 to get bytes
-]
+    MetricName.PLATFORM_PMM_BANDWIDTH_READS:
+        Event(name=MetricName.PLATFORM_PMM_BANDWIDTH_READS, event=0xe3),
+    MetricName.PLATFORM_PMM_BANDWIDTH_WRITES:
+        Event(name=MetricName.PLATFORM_PMM_BANDWIDTH_WRITES, event=0xe7),
+    MetricName.PLATFORM_CAS_COUNT_READS:
+        Event(name=MetricName.PLATFORM_CAS_COUNT_READS, event=0x04, umask=0x3),  # * 64 to get bytes
+    MetricName.PLATFORM_CAS_COUNT_WRITES:
+        Event(name=MetricName.PLATFORM_CAS_COUNT_WRITES,
+              event=0x04, umask=0xc),  # * 64 to get bytes
+    MetricName.PLATFORM_RPQ_OCCUPANCY:
+        Event(name=MetricName.PLATFORM_RPQ_OCCUPANCY, event=0x80),
+    MetricName.PLATFORM_RPQ_INSERTS:
+        Event(name=MetricName.PLATFORM_RPQ_INSERTS, event=0x10),
+    MetricName.PLATFORM_IMC_CLOCKTICKS:
+        Event(name=MetricName.PLATFORM_IMC_CLOCKTICKS, event=0x0)
+}
 
-UNCORE_UPI_EVENTS = [
-    Event(name=MetricName.PLATFORM_UPI_RXL_FLITS, event=0x3, umask=0xf),
-    Event(name=MetricName.PLATFORM_UPI_TXL_FLITS, event=0x2, umask=0xf),
-]
+UNCORE_UPI_EVENTS = {
+    MetricName.PLATFORM_UPI_RXL_FLITS:
+        Event(name=MetricName.PLATFORM_UPI_RXL_FLITS, event=0x3, umask=0xf),
+    MetricName.PLATFORM_UPI_TXL_FLITS:
+        Event(name=MetricName.PLATFORM_UPI_TXL_FLITS, event=0x2, umask=0xf),
+}
 
 
 class PMUNotAvailable(Exception):
@@ -217,36 +230,37 @@ def _discover_pmu_uncore_config(events, dir_prefix):
 class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
 
     def _derive(self, measurements, delta, available, time_delta):
-        # each CAS opreration is 64bytes long
+        # each CAS operation is 64bytes long
         SCALE = 64
 
         def rate(value):
             return value * SCALE / time_delta
 
         max_depth = len(METRICS_METADATA[MetricName.PLATFORM_PMM_BANDWIDTH_WRITES].levels)
-        # both CAS and PMM should have the same level and it dervied metrics
+        # both CAS and PMM should have the same level and it derived metrics
         # levels are cpu and pmu
         assert max_depth == len(METRICS_METADATA[MetricName.PLATFORM_CAS_COUNT_READS].levels)
         assert max_depth == len(
             METRICS_METADATA[MetricName.PLATFORM_PMM_TOTAL_BYTES_PER_SECOND].levels)
 
         # DRAM
-        dram_read, dram_write = delta(MetricName.PLATFORM_CAS_COUNT_READS,
-                                      MetricName.PLATFORM_CAS_COUNT_WRITES)
+        if available(MetricName.PLATFORM_CAS_COUNT_READS, MetricName.PLATFORM_CAS_COUNT_WRITES):
+            dram_read, dram_write = delta(MetricName.PLATFORM_CAS_COUNT_READS,
+                                          MetricName.PLATFORM_CAS_COUNT_WRITES)
 
-        # DRAM R/W bps
-        _operation_on_leveled_metric(dram_read, rate, max_depth)
-        measurements[MetricName.PLATFORM_DRAM_READS_BYTES_PER_SECOND] = dram_read
+            # DRAM R/W bps
+            _operation_on_leveled_metric(dram_read, rate, max_depth)
+            measurements[MetricName.PLATFORM_DRAM_READS_BYTES_PER_SECOND] = dram_read
 
-        _operation_on_leveled_metric(dram_write, rate, max_depth)
-        measurements[MetricName.PLATFORM_DRAM_WRITES_BYTES_PER_SECOND] = dram_write
+            _operation_on_leveled_metric(dram_write, rate, max_depth)
+            measurements[MetricName.PLATFORM_DRAM_WRITES_BYTES_PER_SECOND] = dram_write
 
-        # DRAM total bps
-        total_dram_bps = _operation_on_leveled_dicts(
-            dram_read,
-            dram_write,
-            add, max_depth)
-        measurements[MetricName.PLATFORM_DRAM_TOTAL_BYTES_PER_SECOND] = total_dram_bps
+            # DRAM total bps
+            total_dram_bps = _operation_on_leveled_dicts(
+                dram_read,
+                dram_write,
+                add, max_depth)
+            measurements[MetricName.PLATFORM_DRAM_TOTAL_BYTES_PER_SECOND] = total_dram_bps
 
         # PMM
         if available(MetricName.PLATFORM_PMM_BANDWIDTH_WRITES,
@@ -306,10 +320,32 @@ class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
                                          MetricName.PLATFORM_UPI_TXL_FLITS)
 
             def rate_for_upi(value):
-                return (value / time_delta / 9 * 64)
+                return value / time_delta / 9 * 64
 
             max_depth = len(METRICS_METADATA[MetricName.PLATFORM_UPI_TXL_FLITS].levels)
             bandwidth = _operation_on_leveled_dicts(rxl_flits, txl_flits, lambda x, y: x + y,
                                                     max_depth)
             _operation_on_leveled_metric(bandwidth, rate_for_upi, max_depth)
             measurements[MetricName.PLATFORM_UPI_BANDWIDTH_BYTES_PER_SECOND] = bandwidth
+
+        # IMC RPQ
+        if available(MetricName.PLATFORM_RPQ_INSERTS,
+                     MetricName.PLATFORM_RPQ_OCCUPANCY,
+                     MetricName.PLATFORM_IMC_CLOCKTICKS):
+            measurements[MetricName.PLATFORM_RPQ_READ_LATENCY_SECONDS] = {}
+            for socket in measurements[MetricName.PLATFORM_RPQ_OCCUPANCY]:
+                number_of_channels = len(measurements[MetricName.PLATFORM_RPQ_OCCUPANCY][socket])
+                occupancy = 0
+                inserts = 0
+                clockticks = 0
+                for channel in measurements[MetricName.PLATFORM_RPQ_OCCUPANCY][socket]:
+                    occupancy += \
+                        measurements[MetricName.PLATFORM_RPQ_OCCUPANCY][socket][channel]
+                    inserts += \
+                        measurements[MetricName.PLATFORM_RPQ_INSERTS][socket][channel]
+                    clockticks += \
+                        measurements[MetricName.PLATFORM_IMC_CLOCKTICKS][socket][channel]
+                rpq_read_latency = (occupancy / inserts) / \
+                                   (clockticks / number_of_channels)
+                measurements[MetricName.PLATFORM_RPQ_READ_LATENCY_SECONDS].update(
+                    {socket: rpq_read_latency})
