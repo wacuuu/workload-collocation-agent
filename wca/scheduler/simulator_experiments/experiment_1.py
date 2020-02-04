@@ -1,15 +1,16 @@
+import os
 import datetime
 import logging
 import itertools
 from functools import partial
 from collections import Counter
 from pprint import pprint
-from typing import Dict, List, Any, Callable
+from typing import Dict, List, Any, Callable, Tuple
 
 import random
 from dataclasses import dataclass
 
-from wca.logger import TRACE, init_logging
+from wca.logger import init_logging
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.algorithms.fit import FitGeneric
@@ -175,7 +176,8 @@ def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
     return iteration_finished_callback
 
 
-def create_report(title: str, header: Dict[str, Any], iterations_data: List[IterationData]):
+def create_report(title: str, subtitle: str,
+                  header: Dict[str, Any], iterations_data: List[IterationData]):
     plt.style.use('ggplot')
     iterd = iterations_data
 
@@ -196,7 +198,7 @@ def create_report(title: str, header: Dict[str, Any], iterations_data: List[Iter
     axs[0].plot(iterations, membw_usage, 'g--')
     axs[0].legend(['cpu usage', 'mem usage', 'membw usage'])
     # ---
-    axs[0].set_title(str(header), fontsize=10)
+    axs[0].set_title('{} {}'.format(title, subtitle), fontsize=10)
     # ---
     axs[0].set_xlim(iterations.min() - 1, iterations.max() + 1)
     axs[0].set_ylim(0, 1)
@@ -209,22 +211,25 @@ def create_report(title: str, header: Dict[str, Any], iterations_data: List[Iter
     axs[1].set_xlim(iterations.min() - 1, iterations.max() + 1)
     axs[1].set_ylim(broken_assignments.min() - 1, broken_assignments.max() + 1)
 
-    t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
-    fig.savefig('experiments_results/{}__{}.png'.format(title.replace(' ', '_'), t_))
+    if not os.path.isdir('experiments_results/{}'.format(title)):
+        os.makedirs('experiments_results/{}'.format(title))
+    fig.savefig('experiments_results/{}/{}.png'.format(title, subtitle))
 
-    print("Iterations: {}".format(len(iterations_data)))
-    print("Assigned tasks: {}".format(iterations_data[-1].tasks_types_count))
-    print("Broken assignments: {}".format(sum(iterations_data[-1].broken_assignments.values())))
+    with open('experiments_results/{}/{}.txt'.format(title, subtitle), 'w') as fref:
+        # t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
+        fref.write("Iterations: {}".format(len(iterations_data)))
+        fref.write("Assigned tasks: {}".format(iterations_data[-1].tasks_types_count))
+        fref.write("Broken assignments: {}".format(sum(iterations_data[-1].broken_assignments.values())))
 
-    rounded_last_iter_resources = map( partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],) )
-    print("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})".format(*rounded_last_iter_resources))
+        rounded_last_iter_resources = map(partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],) )
+        fref.write("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})".format(*rounded_last_iter_resources))
 
-    for node, usages in iterations_data[-1].per_node_resource_usage.items():
-        rounded_last_iter_resources = map(
-            partial(round, ndigits=2),
-            (usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ],))
-        print("resource_usage_per_node(node={}, cpu, mem, membw_flat) = ({}, {}, {})".format(
-            node.name, *rounded_last_iter_resources))
+        for node, usages in iterations_data[-1].per_node_resource_usage.items():
+            rounded_last_iter_resources = map(
+                partial(round, ndigits=2),
+                (usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ],))
+            fref.write("resource_usage_per_node(node={}, cpu, mem, membw_flat) = ({}, {}, {})".format(
+                node.name, *rounded_last_iter_resources))
 
 
 def experiment__nodes_membw_contended():
@@ -264,7 +269,7 @@ def experiment__nodes_membw_contended():
                    wrapper_iteration_finished_callback(iterations_data))
 
         header = {'nodes': run_params[0], 'scheduler_dimensions': run_params[1]}
-        create_report('experiment membw contention {}'.format(ir), header, iterations_data)
+        create_report('experiment membw contention {}'.format(ir), ir, header, iterations_data)
 
 
 def experiment__ffdassymetricmembw__tco():
@@ -304,7 +309,7 @@ def experiment__ffdassymetricmembw__tco():
                    wrapper_iteration_finished_callback(iterations_data))
 
         header = {'nodes': run_params[0], 'scheduler_dimensions': run_params[1]}
-        create_report('experiment membw contention {}'.format(ir), header, iterations_data)
+        create_report('experiment membw contention', ir, header, iterations_data)
 
 
 def experiment__bar3d():
@@ -348,11 +353,46 @@ def experiment__bar3d():
                    wrapper_iteration_finished_callback(iterations_data))
 
         header = {'nodes': run_params[0], 'scheduler_dimensions': run_params[1]}
-        create_report('experiment membw contention {}'.format(ir), header, iterations_data)
+        create_report('experiment membw contention', ir, header, iterations_data)
 
 
-def experiment__generic(nodes, random_seed, task_creation_fun, scheduler_class, scheduler_kwargs):
-    scheduler
+def experiments_set__generic(experiment_name, *args):
+    def experiment__generic(
+                task_creation_fun: Callable, scheduler_class: Algorithm,
+                scheduler_kwargs: Dict, nodes_count: Tuple[int, int, int]):
+        input_args = locals()
+        simulator_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
+        nodes = prepare_NxMxK_nodes__demo_configuration(
+            apache_pass_count=nodes_count[0], dram_only_v1_count=nodes_count[1],
+            dram_only_v2_count=nodes_count[2],
+            dimensions=simulator_dimensions)
+        extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
+        scheduler_class = scheduler_class
+        iterations_data: List[IterationData] = []
+        single_run(nodes, task_creation_fun,
+                   extra_simulator_args, scheduler_class, scheduler_kwargs,
+                   wrapper_iteration_finished_callback(iterations_data))
+        header = {'nodes': nodes_count, 'scheduler_kwargs': scheduler_kwargs, 'scheduler_class': scheduler_class}
+        create_report(experiment_name, 1, input_args, iterations_data)
+
+    for params in itertools.product(*args):
+        experiment__generic(*params)
+
+
+def task_creation_fun(index, max_items=None):
+    if max_items is not None and index == max_items:
+        return None
+    return randonly_choose_from_taskset_single(
+            extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
+            {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, index)
+
+
+def experiment_bar():
+    experiments_set__generic(
+        'comparing_bar2d_vs_bar3d__option_A',
+        (partial(task_creation_fun, {'max_items': 200}),),
+        (BARGeneric,), ({'dimensions': {rt.CPU, rt.MEM}}, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}},),
+        ((5, 10, 5),))
 
 
 if __name__ == "__main__":
@@ -362,8 +402,11 @@ if __name__ == "__main__":
     except ImportError:
         # No installed packages required for report generation.
         exit(1)
+
+    init_logging('trace', 'scheduler_extender_simulator_experiments')
+    logging.basicConfig(level=logging.ERROR)
+
     # experiment__nodes_membw_contended()
     # experiment__ffdassymetricmembw__tco()
-    init_logging('trace', 'scheduler_extender_simulator')
-    logging.basicConfig(level=logging.ERROR)
-    experiment__bar3d()
+    # experiment__bar3d()
+    experiment_bar()
