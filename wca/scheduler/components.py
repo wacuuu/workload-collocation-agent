@@ -16,7 +16,7 @@ from wca.config import register
 from wca.scheduler.algorithms.fit import FitGeneric
 from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.data_providers.cluster_data_provider import (
-        ClusterDataProvider, Kubeapi, Prometheus)
+        ClusterDataProvider, Kubeapi, Prometheus, Queries)
 
 
 def register_algorithms():
@@ -27,4 +27,5 @@ def register_algorithms():
 def register_dataproviders():
     register(Kubeapi)
     register(Prometheus)
+    register(Queries)
     register(ClusterDataProvider)
