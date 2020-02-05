@@ -49,7 +49,7 @@ class Resources:
         return r
 
     def __bool__(self):
-        return all([val > 0 for val in self.data.values()])
+        return all([val > 0 or abs(val) < 0.0001 for val in self.data.values()])
 
     def __sub__(self, other):
         me = self.copy()

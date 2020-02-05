@@ -39,10 +39,11 @@ class Algorithm(ABC):
         pass
 
 
-@dataclass
 class BaseAlgorithm(ABC):
-    data_provider: DataProvider
-    dimensions: Tuple[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE)
+    def __init__(self, data_provider: DataProvider,
+                 dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE)):
+        self.data_provider = data_provider
+        self.dimensions = dimensions
 
     def filter(self, extender_args: ExtenderArgs) -> Tuple[
             ExtenderFilterResult, List[Metric]]:

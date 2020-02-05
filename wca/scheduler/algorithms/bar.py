@@ -13,10 +13,11 @@
 # limitations under the License.
 
 import logging
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, Iterable
 from dataclasses import field
 
 from wca.scheduler.algorithms import used_resources_on_node, free_resources_on_node
+from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.algorithms.fit import FitGeneric
 from wca.scheduler.types import ResourceType as rt
 
@@ -24,11 +25,16 @@ log = logging.getLogger(__name__)
 
 
 class BARGeneric(FitGeneric):
-    least_used_weights: Dict[rt, float] = field(default_factory=lambda: {})
-    max_node_score: int = 10
-
-    def __post_init__(self):
-        self.least_used_weights = {dim: 1 for dim in self.dimensions}
+    def __init__(self, data_provider: DataProvider,
+                 dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 max_node_score: int = 10, least_used_weights: Dict[rt, float] = None):
+        FitGeneric.__init__(self, data_provider, dimensions)
+        if least_used_weights is None:
+            self.least_used_weights = {dim: 1 for dim in self.dimensions}
+            self.least_used_weights[rt.MEMBW_FLAT] = 1
+        else:
+            self.least_used_weights = least_used_weights
+        self.max_node_score = max_node_score
 
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: Tuple[Any]) -> int:
