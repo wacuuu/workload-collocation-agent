@@ -289,8 +289,11 @@ class ClusterSimulator:
                         self.rough_assignments_per_node[task.assignment] += 1
         return assigned_count
 
-    def call_scheduler(self, new_task: Task):
+    def call_scheduler(self, new_task: Optional[Task]):
         """To map simulator structure into required by scheduler.Algorithm interace."""
+
+        if new_task is None:
+            return {}
 
         assert self.dimensions.issubset(set(new_task.requested.data.keys())), \
             '{} {}'.format(set(new_task.requested.data.keys()),
@@ -331,7 +334,7 @@ class ClusterSimulator:
         # Update state after deleting tasks.
         self.update_nodes_state()
 
-        assignments = self.call_scheduler(changes[1][0])
+        assignments = self.call_scheduler(changes[1][0] if changes[1] else None)
         log.debug("Changes: {}".format(changes))
         log.debug("Assignments performed: {}".format(assignments))
         assigned_count = self.perform_assignments(assignments)
@@ -346,5 +349,6 @@ class ClusterSimulator:
 
         return assigned_count
 
-    def iterate_single_task(self, new_task: Task):
-        return self.iterate(delta_time=1, changes=([], [new_task]))
+    def iterate_single_task(self, new_task: Optional[Task]):
+        new_tasks = [] if new_task is None else [new_task]
+        return self.iterate(delta_time=1, changes=([], new_tasks))

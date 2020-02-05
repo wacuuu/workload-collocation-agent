@@ -55,7 +55,7 @@ class FitGeneric(BaseAlgorithm):
 
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: Tuple) -> int:
-        """priorizatation turn off"""
+        """no priorizatation method for FitGeneric"""
         return 0
 
 

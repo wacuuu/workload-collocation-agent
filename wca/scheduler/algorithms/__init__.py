@@ -118,8 +118,9 @@ def free_resources_on_node(
             free[dimension] -= used[dimension]
     if rt.MEMBW_READ in dimensions:
         assert rt.MEMBW_WRITE in dimensions
-        free[rt.MEMBW_READ] = capacity[rt.MEMBW_READ] - (used[rt.MEMBW_READ] + used[rt.MEMBW_WRITE] * 4)
-        free[rt.MEMBW_WRITE] = capacity[rt.MEMBW_WRITE] - (used[rt.MEMBW_WRITE] + used[rt.MEMBW_READ] / 4)
+        read, write = rt.MEMBW_READ, rt.MEMBW_WRITE
+        free[read] = capacity[read] - (used[read] + used[write] * 4)
+        free[write] = capacity[write] - (used[write] + used[read] / 4)
     return free
 
 

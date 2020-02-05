@@ -14,6 +14,7 @@
 
 import logging
 from typing import Tuple, Dict, Any
+from dataclasses import field
 
 from wca.scheduler.algorithms import used_resources_on_node, free_resources_on_node
 from wca.scheduler.algorithms.fit import FitGeneric
@@ -23,17 +24,11 @@ log = logging.getLogger(__name__)
 
 
 class BARGeneric(FitGeneric):
-    def app_requested_fraction(self, requested, free) -> Dict[rt, float]:
-        """Flats MEMBW_WRITE and MEMBW_READ to single dimension MEMBW_FLAT"""
-        fractions = {}
-        for dimension in self.dimensions:
-            if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
-                fractions[dimension] = float(requested[dimension]) / float(free[dimension])
-        if rt.MEMBW_READ in self.dimensions:
-            assert rt.MEMBW_WRITE in self.dimensions
-            fractions[rt.MEMBW_FLAT] = (requested[rt.MEMBW_READ] + 4*requested[rt.MEMBW_WRITE]) \
-                / (free[rt.MEMBW_READ] + 4*free[rt.MEMBW_WRITE])
-        return fractions
+    least_used_weights: Dict[rt, float] = field(default_factory=lambda: {})
+    max_node_score: int = 10
+
+    def __post_init__(self):
+        self.least_used_weights = {dim: 1 for dim in self.dimensions}
 
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: Tuple[Any]) -> int:
@@ -42,22 +37,42 @@ class BARGeneric(FitGeneric):
         used, free, requested = used_free_requested(node_name, app_name, self.dimensions,
                                                     *data_provider_queried)
 
-        app_requested_fraction = self.app_requested_fraction(requested, free)
-        mean = sum([v for v in app_requested_fraction.values()])/len(app_requested_fraction)
-        if len(app_requested_fraction) > 2:
+        requested_fraction = app_requested_fraction(self.dimensions, requested, free)
+
+        # Least used.
+        weights = self.least_used_weights
+        weights_sum = sum([weight for weight in weights.values()])
+        free_fraction = {dim: 1.0-fraction for dim, fraction in requested_fraction.items()}
+        least_used_score = \
+            sum([free_fraction*weights[dim] for dim, free_fraction in free_fraction.items()]) \
+            / weights_sum * self.max_node_score
+
+        # priority according to variance of dimensions
+        mean = sum([v for v in requested_fraction.values()])/len(requested_fraction)
+        if len(requested_fraction) > 2:
             variance = sum([(fraction - mean)*(fraction - mean)
-                            for fraction in app_requested_fraction.values()]) \
-                       / len(app_requested_fraction)
-        elif len(app_requested_fraction) == 1:
-            variance = abs(app_requested_fraction[0] - app_requested_fraction[1])
+                            for fraction in requested_fraction.values()]) \
+                       / len(requested_fraction)
+        elif len(requested_fraction) == 1:
+            variance = abs(requested_fraction[0] - requested_fraction[1])
         else:
             variance = 0
-        score = int((1-variance) * self.get_max_node_score())
-        return score
+        bar_score = int((1-variance) * self.max_node_score)
 
-    def get_max_node_score(self):
-        # @TODO should be defined as parameter
-        return 10
+        return (bar_score + least_used_score) / 2
+
+
+def app_requested_fraction(dimensions, requested, free) -> Dict[rt, float]:
+    """Flats MEMBW_WRITE and MEMBW_READ to single dimension MEMBW_FLAT"""
+    fractions = {}
+    for dimension in dimensions:
+        if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
+            fractions[dimension] = float(requested[dimension]) / float(free[dimension])
+    if rt.MEMBW_READ in dimensions:
+        assert rt.MEMBW_WRITE in dimensions
+        fractions[rt.MEMBW_FLAT] = (requested[rt.MEMBW_READ] + 4*requested[rt.MEMBW_WRITE]) \
+            / (free[rt.MEMBW_READ] + 4*free[rt.MEMBW_WRITE])
+    return fractions
 
 
 def used_free_requested(

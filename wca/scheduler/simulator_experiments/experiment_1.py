@@ -4,8 +4,9 @@ import logging
 import itertools
 from functools import partial
 from collections import Counter
-from pprint import pprint
+import pprint
 from typing import Dict, List, Any, Callable, Tuple
+import shutil
 
 import random
 from dataclasses import dataclass
@@ -26,9 +27,6 @@ def single_run(nodes: List[Node], task_creation_fun: Callable[[int], Task],
                extra_simulator_args: Dict, scheduler_class: Algorithm,
                extra_scheduler_kwargs: Dict, iteration_finished_callback: Callable = None):
     """Compare standard algorithm with the algorithm which looks also at MEMBW"""
-    pprint(locals())
-    tasks = []
-
     simulator = ClusterSimulator(
         tasks=[],
         nodes=nodes,
@@ -128,32 +126,6 @@ def randonly_choose_from_taskset_single(taskset, dimensions, name_sufix):
     return task
 
 
-def prepare_NxMxK_nodes__demo_configuration(apache_pass_count, dram_only_v1_count,
-                                            dram_only_v2_count, dimensions):
-    """Taken from WCA team real cluster."""
-    apache_pass = {rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
-                   rt.MEMBW_WRITE: 10, rt.WSS: 256}
-    dram_only_v1 = {rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150,
-                    rt.MEMBW_WRITE: 150, rt.WSS: 192}
-    dram_only_v2 = {rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ: 200,
-                    rt.MEMBW_WRITE: 200, rt.WSS: 394}
-    nodes_spec = [apache_pass, dram_only_v1, dram_only_v2]
-
-    # Filter only dimensions required.
-    for i, node_spec in enumerate(nodes_spec):
-        nodes_spec[i] = {dim: val for dim, val in node_spec.items() if dim in dimensions}
-
-    inode = 0
-    nodes = []
-    for i_node_type, node_type_count in enumerate((apache_pass_count, dram_only_v1_count,
-                                                   dram_only_v2_count,)):
-        for i in range(node_type_count):
-            node = Node(str(inode), available_resources=Resources(nodes_spec[i_node_type]))
-            nodes.append(node)
-            inode += 1
-    return nodes
-
-
 @dataclass
 class IterationData:
     cluster_resource_usage: Resources
@@ -216,148 +188,35 @@ def create_report(title: str, subtitle: str,
     fig.savefig('experiments_results/{}/{}.png'.format(title, subtitle))
 
     with open('experiments_results/{}/{}.txt'.format(title, subtitle), 'w') as fref:
-        # t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
-        fref.write("Iterations: {}".format(len(iterations_data)))
-        fref.write("Assigned tasks: {}".format(iterations_data[-1].tasks_types_count))
-        fref.write("Broken assignments: {}".format(sum(iterations_data[-1].broken_assignments.values())))
+        t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
+        fref.write("Start of experiment: {}\n".format(t_))
+        fref.write("Run params: {}\n".format(header))
+        fref.write("Iterations: {}\n".format(len(iterations_data)))
+        fref.write("Assigned tasks: {}\n".format(iterations_data[-1].tasks_types_count))
+        fref.write("Broken assignments: {}\n".format(
+            sum(iterations_data[-1].broken_assignments.values())))
 
-        rounded_last_iter_resources = map(partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],) )
-        fref.write("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})".format(*rounded_last_iter_resources))
+        rounded_last_iter_resources = \
+            map(partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],))
+        fref.write("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})\n".format(
+            *rounded_last_iter_resources))
 
         for node, usages in iterations_data[-1].per_node_resource_usage.items():
             rounded_last_iter_resources = map(
                 partial(round, ndigits=2),
                 (usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ],))
-            fref.write("resource_usage_per_node(node={}, cpu, mem, membw_flat) = ({}, {}, {})".format(
-                node.name, *rounded_last_iter_resources))
+            fref.write(
+                "resource_usage_per_node(node={}, cpu, mem, membw_flat) = ({}, {}, {})\n".format(
+                    node.name, *rounded_last_iter_resources))
 
-
-def experiment__nodes_membw_contended():
-    # looping around this:
-    nodes__ = (
-        (3, 4, 2),
-        (5, 15, 10),
-    )
-    scheduler_dimensions__ = (
-        ([rt.CPU, rt.MEM, ]),
-        ([rt.CPU, rt.MEM, rt.MEMBW]),
-    )
-
-    for ir, run_params in enumerate(itertools.product(nodes__, scheduler_dimensions__)):
-        # reset seed
-        random.seed(300)
-
-        simulator_dimensions = {rt.CPU, rt.MEM, rt.MEMBW}
-
-        # instead of 3 should be 2, but then results are less visible
-        nodes = prepare_NxMxK_nodes__demo_configuration(
-            apache_pass_count=run_params[0][0], dram_only_v1_count=run_params[0][1],
-            dram_only_v2_count=run_params[0][2],
-            dimensions=simulator_dimensions)
-
-        extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
-        scheduler_class = FitGeneric
-        extra_scheduler_kwargs = {"dimensions": set(run_params[1])}
-
-        def task_creation_fun(index):
-            return randonly_choose_from_taskset_single(tasks__2lm_contention_demo,
-                                                       simulator_dimensions, index)
-
-        iterations_data: List[IterationData] = []
-        single_run(nodes, task_creation_fun,
-                   extra_simulator_args, scheduler_class, extra_scheduler_kwargs,
-                   wrapper_iteration_finished_callback(iterations_data))
-
-        header = {'nodes': run_params[0], 'scheduler_dimensions': run_params[1]}
-        create_report('experiment membw contention {}'.format(ir), ir, header, iterations_data)
-
-
-def experiment__ffdassymetricmembw__tco():
-    # looping around this:
-    nodes__ = (
-        # (3, 4, 2),
-        (0, 15, 10),
-    )
-    scheduler_dimensions__ = (
-        ([rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE]),
-    )
-
-    for ir, run_params in enumerate(itertools.product(nodes__, scheduler_dimensions__)):
-        # reset seed
-        random.seed(300)
-
-        simulator_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
-
-        # Instead of 3 should be 2, but then results are less visible.
-        nodes = prepare_NxMxK_nodes__demo_configuration(
-            apache_pass_count=run_params[0][0], dram_only_v1_count=run_params[0][1],
-            dram_only_v2_count=run_params[0][2],
-            dimensions=simulator_dimensions)
-
-        extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
-        scheduler_class = FitGeneric
-        extra_scheduler_kwargs = {"dimensions": set(run_params[1])}
-
-        def task_creation_fun(index):
-            return randonly_choose_from_taskset_single(
-                    extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
-                    simulator_dimensions, index)
-
-        iterations_data: List[IterationData] = []
-        single_run(nodes, task_creation_fun,
-                   extra_simulator_args, scheduler_class, extra_scheduler_kwargs,
-                   wrapper_iteration_finished_callback(iterations_data))
-
-        header = {'nodes': run_params[0], 'scheduler_dimensions': run_params[1]}
-        create_report('experiment membw contention', ir, header, iterations_data)
-
-
-def experiment__bar3d():
-    """Compare standard kubernetes BAR 2d, with our 3D version
-       taking into consideration also (MEMBW_WRITE, MEMBW_READ)"""
-    # looping around this:
-    nodes__ = (
-        # (3, 4, 2),
-        # (0, 20, 10),
-        (0, 3, 3),
-    )
-    scheduler_dimensions__ = (
-        ([rt.CPU, rt.MEM]),
-        ([rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE]),
-    )
-
-    for ir, run_params in enumerate(itertools.product(nodes__, scheduler_dimensions__)):
-        # reset seed
-        random.seed(300)
-
-        simulator_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
-
-        # Instead of 3 should be 2, but then results are less visible.
-        nodes = prepare_NxMxK_nodes__demo_configuration(
-            apache_pass_count=run_params[0][0], dram_only_v1_count=run_params[0][1],
-            dram_only_v2_count=run_params[0][2],
-            dimensions=simulator_dimensions)
-
-        extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
-        scheduler_class = BARGeneric
-        extra_scheduler_kwargs = {"dimensions": set(run_params[1])}
-
-        def task_creation_fun(index):
-            return randonly_choose_from_taskset_single(
-                    extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
-                    simulator_dimensions, index)
-
-        iterations_data: List[IterationData] = []
-        single_run(nodes, task_creation_fun,
-                   extra_simulator_args, scheduler_class, extra_scheduler_kwargs,
-                   wrapper_iteration_finished_callback(iterations_data))
-
-        header = {'nodes': run_params[0], 'scheduler_dimensions': run_params[1]}
-        create_report('experiment membw contention', ir, header, iterations_data)
+    with open('experiments_results/{}/README.txt'.format(title), 'a') as fref:
+        fref.write("Subexperiment: {}\n".format(subtitle))
+        fref.write("Run params: {}\n\n".format(pprint.pformat(header, indent=4)))
 
 
 def experiments_set__generic(experiment_name, *args):
     def experiment__generic(
+                exp_iter: int,
                 task_creation_fun: Callable, scheduler_class: Algorithm,
                 scheduler_kwargs: Dict, nodes_count: Tuple[int, int, int]):
         input_args = locals()
@@ -372,26 +231,67 @@ def experiments_set__generic(experiment_name, *args):
         single_run(nodes, task_creation_fun,
                    extra_simulator_args, scheduler_class, scheduler_kwargs,
                    wrapper_iteration_finished_callback(iterations_data))
-        header = {'nodes': nodes_count, 'scheduler_kwargs': scheduler_kwargs, 'scheduler_class': scheduler_class}
-        create_report(experiment_name, 1, input_args, iterations_data)
+        create_report(experiment_name, exp_iter, input_args, iterations_data)
+        log.info('Finished experiment.')
 
-    for params in itertools.product(*args):
-        experiment__generic(*params)
-
-
-def task_creation_fun(index, max_items=None):
-    if max_items is not None and index == max_items:
-        return None
-    return randonly_choose_from_taskset_single(
-            extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
-            {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, index)
+    if os.path.isdir('experiments_results/{}'.format(experiment_name)):
+        shutil.rmtree('experiments_results/{}'.format(experiment_name))
+    for exp_iter, params in enumerate(itertools.product(*args)):
+        random.seed(300)  # reset random generator used
+        experiment__generic(exp_iter, *params)
 
 
-def experiment_bar():
+class TaskGenerator__2lm_contention_demo:
+    """takes randomly from >>tasks__2lm_contention_demo<<"""
+    def __init__(self, max_items, seed):
+        self.max_items = max_items
+        random.seed(seed)
+
+    def __call__(self, index: int):
+        if index >= self.max_items:
+            return None
+        return self.rand_from_taskset(str(index))
+
+    @staticmethod
+    def rand_from_taskset(name_suffix: str):
+        return randonly_choose_from_taskset_single(
+                extend_membw_dimensions_to_write_read(tasks__2lm_contention_demo),
+                {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, name_suffix)
+
+
+def prepare_NxMxK_nodes__demo_configuration(apache_pass_count, dram_only_v1_count,
+                                            dram_only_v2_count, dimensions):
+    """Taken from WCA team real cluster."""
+    apache_pass = {rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
+                   rt.MEMBW_WRITE: 10, rt.WSS: 256}
+    dram_only_v1 = {rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150,
+                    rt.MEMBW_WRITE: 150, rt.WSS: 192}
+    dram_only_v2 = {rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ: 200,
+                    rt.MEMBW_WRITE: 200, rt.WSS: 394}
+    nodes_spec = [apache_pass, dram_only_v1, dram_only_v2]
+
+    # Filter only dimensions required.
+    for i, node_spec in enumerate(nodes_spec):
+        nodes_spec[i] = {dim: val for dim, val in node_spec.items() if dim in dimensions}
+
+    inode = 0
+    nodes = []
+    for i_node_type, node_type_count in enumerate((apache_pass_count, dram_only_v1_count,
+                                                   dram_only_v2_count,)):
+        for i in range(node_type_count):
+            node = Node(str(inode), available_resources=Resources(nodes_spec[i_node_type]))
+            nodes.append(node)
+            inode += 1
+    return nodes
+
+
+def run():
+    default_dims = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
     experiments_set__generic(
         'comparing_bar2d_vs_bar3d__option_A',
-        (partial(task_creation_fun, {'max_items': 200}),),
-        (BARGeneric,), ({'dimensions': {rt.CPU, rt.MEM}}, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}},),
+        (TaskGenerator__2lm_contention_demo(max_items=200, seed=300),),
+        (FitGeneric, BARGeneric,),
+        ({'dimensions': {rt.CPU, rt.MEM}}, {'dimensions': default_dims},),
         ((5, 10, 5),))
 
 
@@ -406,7 +306,4 @@ if __name__ == "__main__":
     init_logging('trace', 'scheduler_extender_simulator_experiments')
     logging.basicConfig(level=logging.ERROR)
 
-    # experiment__nodes_membw_contended()
-    # experiment__ffdassymetricmembw__tco()
-    # experiment__bar3d()
-    experiment_bar()
+    run()
