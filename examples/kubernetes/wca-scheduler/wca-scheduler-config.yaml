@@ -3,8 +3,8 @@ loggers:
   # wca.scheduler.server: DEBUG
   # wca.scheduler.algorithms.ffd_generic: WARNING
   # wca.scheduler.data_providers.prometheus_data_provider: DEBUG
-  wca.scheduler.data_providers.cluster_data_provider: DEBUG
-algorithm: !FFDGeneric
+  #wca.scheduler.data_providers.cluster_data_provider: DEBUG
+algorithm: !FitGeneric
   data_provider: !ClusterDataProvider
     kubeapi: !Kubeapi
       host: !Env KUBERNETES_SERVICE_HOST
@@ -12,3 +12,10 @@ algorithm: !FFDGeneric
     prometheus: !Prometheus
       host: http://100.64.176.36
       port: 30900
+      timeout: 5.0
+      queries: !Queries
+        APP_REQUESTED_RESOURCES_QUERY_MAP:
+              cpu: 'max(max_over_time(task_requested_cpus[3h:1s])) by (app)'
+              mem: 'max(max_over_time(task_requested_mem_bytes[3h:1s])) by (app)'
+              membw_read: 'max(max_over_time (task_membw_reads_bytes_per_second[3h:1s])) by (app)'
+              membw_write: 'max(max_over_time (task_membw_writes_bytes_per_second[3h:1s])) by (app)'

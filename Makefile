@@ -129,6 +129,7 @@ wrapper_package:
 	pipenv run pex . $(OPTIONAL_MODULES) -D examples/workloads/wrapper $(PEX_OPTIONS) -o dist/cassandra_stress_wrapper.pex -m wrapper.parser_cassandra_stress
 	pipenv run pex . $(OPTIONAL_MODULES) -D examples/workloads/wrapper $(PEX_OPTIONS) -o dist/stress_ng_wrapper.pex -m wrapper.parser_stress_ng
 	pipenv run pex . $(OPTIONAL_MODULES) -D examples/workloads/wrapper $(PEX_OPTIONS) -o dist/memtier_benchmark_wrapper.pex -m wrapper.parser_memtier
+	pipenv run pex . $(OPTIONAL_MODULES) -D examples/workloads/wrapper $(PEX_OPTIONS) -o dist/mysql_tpm_gauge_wrapper.pex -m wrapper.parser_mysql_tpm_gauge
 	./dist/wrapper.pex --help >/dev/null
 
 #-----------------------------------------------------------------------------------------------

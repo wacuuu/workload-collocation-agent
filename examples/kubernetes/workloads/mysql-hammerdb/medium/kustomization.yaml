@@ -1,0 +1,18 @@
+nameSuffix: -medium
+bases:
+- ../base
+
+commonLabels:
+  app: mysql-hammerdb-medium
+  size: medium
+
+configMapGenerator:
+  - name: hammerdb
+    behavior: merge
+    literals:
+      - virtual_users=100
+      - count_ware=100
+      - virtual_users_build=100
+
+patchesStrategicMerge:
+  - resources.yaml

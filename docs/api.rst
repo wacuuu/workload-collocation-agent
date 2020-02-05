@@ -59,7 +59,7 @@ and store them in metrics_storage component.
     Enable derived metrics ips, ipc and cache_hit_ratio.
     (based on enabled_event names, default to False)
 
-- ``enable_perf_uncore``: **bool** = *None*
+- ``uncore_event_names``: **List[str]** = `[]`
 
     Enable perf event uncore metrics.
     (defaults to None - automatic, if available enable)

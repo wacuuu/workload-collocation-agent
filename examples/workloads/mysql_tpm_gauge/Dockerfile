@@ -12,20 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from wca.config import register
-from wca.scheduler.algorithms.fit import FitGeneric
-from wca.scheduler.algorithms.bar import BARGeneric
-from wca.scheduler.data_providers.cluster_data_provider import (
-        ClusterDataProvider, Kubeapi, Prometheus, Queries)
 
+FROM centos:7 AS mysql_tpm_gauge
 
-def register_algorithms():
-    register(FitGeneric)
-    register(BARGeneric)
+RUN yum -y update
+RUN yum -y install epel-release
+RUN yum -y install python36 python-pip python36-pip which make git mysql
 
+RUN pip3 install mysql-connector-python
 
-def register_dataproviders():
-    register(Kubeapi)
-    register(Prometheus)
-    register(Queries)
-    register(ClusterDataProvider)
+WORKDIR /mysql-tpm-gauge
+
+COPY mysql_tpm_gauge.py .
+#COPY /dist/mysql_tpm_gauge_wrapper.pex /usr/bin/

@@ -5,10 +5,11 @@ configMapGenerator:
   - name: fconf
     files:
     - configurations/fluent.conf
+    - configurations/hammerdb.conf
+    - configurations/stress.conf
     - configurations/memtier.conf
     - configurations/mutilate.conf
     - configurations/specjbb.conf
-    - configurations/stress.conf
     - configurations/sysbench.conf
 
 resources:

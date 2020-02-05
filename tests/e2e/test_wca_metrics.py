@@ -87,6 +87,13 @@ def test_wca_metrics_kustomize(workload_name):
     test_wca(workload_name, ['apm_sli', 'task_cycles'])
 
 
+@pytest.mark.parametrize('workload_name', [
+    'mysql-hammerdb'
+])
+def test_wca_metrics_kustomize_throughput(workload_name):
+    test_wca(workload_name, ['apm_sli2', 'task_cycles'])
+
+
 def test_wca(workload_name, metrics):
     assert 'PROMETHEUS' in os.environ, 'prometheus host to connect'
     assert 'BUILD_NUMBER' in os.environ
