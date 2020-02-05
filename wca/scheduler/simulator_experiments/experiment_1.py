@@ -229,6 +229,7 @@ def create_report(title: str, subtitle: str,
 
 
 def experiments_set__generic(experiment_name, *args):
+    """takes the same arguments as experiment__generic but as lists. @TODO"""
     def experiment__generic(
                 exp_iter: int,
                 task_creation_fun: Callable, scheduler_class: Algorithm,
@@ -239,9 +240,9 @@ def experiments_set__generic(experiment_name, *args):
             apache_pass_count=nodes_count[0], dram_only_v1_count=nodes_count[1],
             dram_only_v2_count=nodes_count[2],
             dimensions=simulator_dimensions)
-        extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
         scheduler_class = scheduler_class
         iterations_data: List[IterationData] = []
+        extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
         single_run(nodes, task_creation_fun,
                    extra_simulator_args, scheduler_class, scheduler_kwargs,
                    wrapper_iteration_finished_callback(iterations_data))
@@ -251,7 +252,6 @@ def experiments_set__generic(experiment_name, *args):
     if os.path.isdir('experiments_results/{}'.format(experiment_name)):
         shutil.rmtree('experiments_results/{}'.format(experiment_name))
     for exp_iter, params in enumerate(itertools.product(*args)):
-        random.seed(300)  # reset random generator used
         experiment__generic(exp_iter, *params)
 
 
@@ -300,12 +300,12 @@ def prepare_NxMxK_nodes__demo_configuration(apache_pass_count, dram_only_v1_coun
 
 
 def run():
-    default_dims = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
     experiments_set__generic(
         'comparing_bar2d_vs_bar3d__option_A',
         (TaskGenerator__2lm_contention_demo(max_items=200, seed=300),),
         (FitGeneric, BARGeneric,),
-        ({'dimensions': {rt.CPU, rt.MEM}}, {'dimensions': default_dims},),
+        ({'dimensions': {rt.CPU, rt.MEM}},
+         {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}},),
         ((5, 10, 5),))
 
 

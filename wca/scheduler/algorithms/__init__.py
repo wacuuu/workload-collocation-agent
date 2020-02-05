@@ -13,7 +13,6 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
 from typing import List, Tuple, Iterable, Any
 import logging
 
@@ -141,4 +140,4 @@ def membw_check(requested: Resources, used: Resources, capacity: Resources) -> b
     READ = rt.MEMBW_READ
     R = float(capacity[rt.MEMBW_READ])/float(capacity[rt.MEMBW_WRITE])
 
-    return used[READ] + R * used[WRITE] < capacity[READ]
+    return (used[READ]+requested[READ]) + R * (used[WRITE]+requested[WRITE]) < capacity[READ]

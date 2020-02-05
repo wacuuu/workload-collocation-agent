@@ -22,7 +22,7 @@ def test_single_run():
 
     simulator = single_run(nodes, task_creation_fun, extra_simulator_args,
                            scheduler_class, extra_scheduler_kwargs)
-    assert len(simulator.tasks) == 12
+    assert len(simulator.tasks) == 25
     # assert len([node for node in simulator.nodes if node.unassigned.data[rt.MEMBW] < 0]) == 1
 
 
@@ -47,4 +47,4 @@ def test_single_run_membw_write_read():
 
     simulator = single_run(nodes, task_creation_fun_aep, extra_simulator_args,
                            scheduler_class, extra_scheduler_kwargs)
-    assert len(simulator.tasks) == 15
+    assert len(simulator.tasks) == 14
