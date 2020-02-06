@@ -127,7 +127,7 @@ class Cgroup:
             with open(os.path.join(self.cgroup_cpu_fullpath, CgroupResource.CPU_USAGE)) as \
                     cpu_usage_file:
                 # scale to seconds
-                cpu_usage = float(cpu_usage_file.read()) / 1e9
+                cpu_usage = int(cpu_usage_file.read()) / 1e9
         except FileNotFoundError as e:
             raise MissingMeasurementException(
                 'File {} is missing. Cpu usage unavailable.'.format(e.filename))

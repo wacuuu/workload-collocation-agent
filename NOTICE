@@ -47,28 +47,40 @@ Copyright 2018 Intel Corporation
     from https://github.com/kubernetes/dashboard on Apache License 2.0
     available at component-licenses/APACHE-2.0-LICENSE.
     - Copyright 2017 The Kubernetes Authors.
+    The code used is in the filed:
+    - examples/kubernetes/monitoring/dashboard/kubernetes-dashboard.yaml
+    - examples/kubernetes/monitoring/dashboard/dashboard_metrics_scraper.yaml
+    - examples/kubernetes/monitoring/dashboard/configmap_secrets.yaml
+    - examples/kubernetes/monitoring/dashboard/service_account_dashboard.yaml
 
 
     This software contains portions of fluentd-kubernetes-daemonset
     from https://github.com/fluent/fluentd-kubernetes-daemonset on Apache License 2.0
     available at component-licenses/APACHE-2.0-LICENSE.
+    The code used is in the file:
+    - examples/kubernetes/monitoring/fluentd/daemonset.yaml
 
 
     This software contains portions of Prometheus Operator
     from https://github.com/coreos/prometheus-operator on Apache License 2.0
     available at component-licenses/APACHE-2.0-LICENSE.
     - Copyright 2015 CoreOS, Inc
+    The code used is in the files:
+    - examples/kubernetes/monitoring/prometheus/operator/deployment.yaml
+    - examples/kubernetes/monitoring/prometheus/prometheus.yaml
 
 
     This software contains portions of Node exporter
     from https://https://github.com/prometheus/node_exporter on Apache License 2.0
     available at component-licenses/APACHE-2.0-LICENSE.
     - Copyright 2013-2015 The Prometheus Authors
-    The following file are included in this product:
-    - prometheus_rule.16-compatibility-rules-new-to-old.yaml
+    The code used is in the file:
+    - examples/kubernetes/monitoring/prometheus/prometheus_rule.16-compatibility-rules-new-to-old.yaml
 
 
     This software contains portions of kube-state-metrics from
     https://github.com/kubernetes/kube-state-metrics on MIT License available
     at component-linceses/MIT-LICENSE.
     - Copyright (c) 2010 Meme Dough
+    The code used is in the file:
+    - examples/kubernetes/monitoring/kube-state-metrics/deployment.yaml
