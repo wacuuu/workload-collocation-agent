@@ -37,27 +37,6 @@ from wca.scheduler.types import ResourceType as rt
 log = logging.getLogger(__name__)
 
 
-def single_run(nodes: List[Node], task_creation_fun: Callable[[int], Task],
-               extra_simulator_args: Dict, scheduler_class: Algorithm,
-               extra_scheduler_kwargs: Dict, iteration_finished_callback: Callable = None):
-    """Compare standard algorithm with the algorithm which looks also at MEMBW"""
-    simulator = ClusterSimulator(
-        tasks=[],
-        nodes=nodes,
-        scheduler=None,
-        **extra_simulator_args)
-    data_proxy = ClusterSimulatorDataProvider(simulator)
-    simulator.scheduler = scheduler_class(data_provider=data_proxy, **extra_scheduler_kwargs)
-
-    iteration = 0
-    while simulator.iterate_single_task(task_creation_fun(iteration)) == 1:
-        if iteration_finished_callback is not None:
-            iteration_finished_callback(iteration, simulator)
-        iteration += 1
-
-    return simulator
-
-
 # taken from 2lm contention demo slides:
 # wca_load_balancing_multidemnsional_2lm_v0.2
 tasks__2lm_contention_demo = [
@@ -204,7 +183,7 @@ def create_report(title: str, subtitle: str,
     with open('experiments_results/{}/{}.txt'.format(title, subtitle), 'w') as fref:
         t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
         fref.write("Start of experiment: {}\n".format(t_))
-        fref.write("Run params: {}\n".format(header))
+        fref.write("Run params: {}\n".format(pprint.pformat(header, indent=4)))
         fref.write("Iterations: {}\n".format(len(iterations_data)))
         fref.write("Assigned tasks: {}\n".format(iterations_data[-1].tasks_types_count))
         fref.write("Broken assignments: {}\n".format(
@@ -232,20 +211,21 @@ def experiments_set__generic(experiment_name, *args):
     """takes the same arguments as experiment__generic but as lists. @TODO"""
     def experiment__generic(
                 exp_iter: int,
-                task_creation_fun: Callable, scheduler_class: Algorithm,
-                scheduler_kwargs: Dict, nodes_count: Tuple[int, int, int]):
+                max_iteration: int,
+                task_creation_fun: Callable,
+                scheduler_init: Tuple[Algorithm, Dict],
+                nodes: List[Node]):
+        scheduler_class, scheduler_kwargs = scheduler_init
         input_args = locals()
-        simulator_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
-        nodes = prepare_NxMxK_nodes__demo_configuration(
-            apache_pass_count=nodes_count[0], dram_only_v1_count=nodes_count[1],
-            dram_only_v2_count=nodes_count[2],
-            dimensions=simulator_dimensions)
-        scheduler_class = scheduler_class
         iterations_data: List[IterationData] = []
-        extra_simulator_args = {"allow_rough_assignment": True, "dimensions": simulator_dimensions}
-        single_run(nodes, task_creation_fun,
-                   extra_simulator_args, scheduler_class, scheduler_kwargs,
+
+        simulator = ClusterSimulator(tasks=[], nodes=nodes, scheduler=None)
+        data_proxy = ClusterSimulatorDataProvider(simulator)
+        simulator.scheduler = scheduler_class(data_provider=data_proxy, **scheduler_kwargs)
+
+        run_n_iter(max_iteration, simulator, task_creation_fun,
                    wrapper_iteration_finished_callback(iterations_data))
+
         create_report(experiment_name, exp_iter, input_args, iterations_data)
         log.info('Finished experiment.')
 
@@ -273,8 +253,21 @@ class TaskGenerator__2lm_contention_demo:
                 {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, name_suffix)
 
 
-def prepare_NxMxK_nodes__demo_configuration(apache_pass_count, dram_only_v1_count,
-                                            dram_only_v2_count, dimensions):
+def run_n_iter(iterations_count: int, simulator: ClusterSimulator,
+               task_creation_fun: Callable[[int], Task],
+               iteration_finished_callback: Callable):
+    iteration = 0
+    while iteration < iterations_count:
+        simulator.iterate_single_task(task_creation_fun(iteration))
+        iteration_finished_callback(iteration, simulator)
+        iteration += 1
+    return simulator
+
+
+def prepare_NxMxK_nodes__demo_configuration(
+        apache_pass_count, dram_only_v1_count,
+        dram_only_v2_count,
+        dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}) -> List[Node]:
     """Taken from WCA team real cluster."""
     apache_pass = {rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
                    rt.MEMBW_WRITE: 10, rt.WSS: 256}
@@ -300,13 +293,18 @@ def prepare_NxMxK_nodes__demo_configuration(apache_pass_count, dram_only_v1_coun
 
 
 def run():
+    # dimensions supported by simulator
     experiments_set__generic(
         'comparing_bar2d_vs_bar3d__option_A',
+        (200,),
         (TaskGenerator__2lm_contention_demo(max_items=200, seed=300),),
-        (FitGeneric, BARGeneric,),
-        ({'dimensions': {rt.CPU, rt.MEM}},
-         {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}},),
-        ((5, 10, 5),))
+        (
+            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
+            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
+        ),
+        (prepare_NxMxK_nodes__demo_configuration(5, 10, 5),))
 
 
 if __name__ == "__main__":

@@ -42,7 +42,7 @@ class FitGeneric(BaseAlgorithm):
             for broken in broken_capacities:
                 if broken in (rt.MEMBW, rt.MEMBW_READ, rt.MEMBW_WRITE):
                     log.error('Not enough resources! [%s]: %r' %
-                              (broken, (capacity[broken] - used[broken] - requested[broken]) / 1e9))
+                              (broken, (capacity[broken] - used[broken] - requested[broken])))
             broken_capacities.update((rt.MEMBW_READ, rt.MEMBW_READ,))
         broken_capacities_str = ','.join([str(e) for e in broken_capacities])
 

@@ -12,13 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Set
 import logging
 
 from wca.logger import TRACE
 from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.types import ExtenderArgs, ResourceType
+from wca.scheduler.types import ExtenderArgs
+from wca.scheduler.types import ResourceType as rt
 
 
 log = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ class Resources:
         self.data = resources
 
     def __repr__(self):
-        return str(self.data)
+        return str({key: round(val, 2) for key, val in self.data.items()})
 
     @staticmethod
     def create_empty(dimensions):
@@ -66,16 +67,17 @@ class Resources:
         """Mutates self. """
         assert set(self.data.keys()) == set(b.data.keys())
         for key in self.data.keys():
-            if key == ResourceType.MEMBW_READ or key == ResourceType.MEMBW_WRITE:
+            if key == rt.MEMBW_READ or key == rt.MEMBW_WRITE:
                 continue
             self.data[key] -= b.data[key]
 
         # Special case for MEMBW
-        if ResourceType.MEMBW_READ in self.data and ResourceType.MEMBW_WRITE in self.data:
-            READ = ResourceType.MEMBW_READ
-            WRITE = ResourceType.MEMBW_WRITE
+        if rt.MEMBW_READ in self.data and rt.MEMBW_WRITE in self.data:
+            READ = rt.MEMBW_READ
+            WRITE = rt.MEMBW_WRITE
             x = self.data
             y = b.data
+            # mirror calculations for WRITE from READ; that are not two seperate dimensions;
             x[READ] = x[READ] - y[READ] - y[WRITE] * membw_read_write_ratio
             x[WRITE] = x[WRITE] - y[WRITE] - y[READ] / membw_read_write_ratio
 
@@ -116,12 +118,12 @@ class Task:
         self.real: Resources = Resources.create_empty(requested.data.keys())
         self.life_time: int = 0
 
-    def remove_dimension(self, resource_type: ResourceType):
+    def remove_dimension(self, resource_type: rt):
         """Post-creation removal of one of the dimensions."""
         for resources_ in (self.requested, self.real):
             del resources_.data[resource_type]
 
-    def add_dimension(self, resource_type: ResourceType, requested_val):
+    def add_dimension(self, resource_type: rt, requested_val):
         """Post-creation addition of a dimension."""
         self.requested.data[resource_type] = requested_val
         self.real.data[resource_type] = 0
@@ -161,13 +163,13 @@ class Node:
         self.unassigned = available_resources.copy()
 
     def __repr__(self):
-        return "(name: {}, initial: {}, free: {}, unassigned: {})".format(
+        return "(name: {}, initial: {})".format(
             self.name, str(self.initial), str(self.free), str(self.unassigned))
 
     def get_membw_read_write_ratio(self):
         d_ = self.initial.data
-        if ResourceType.MEMBW_READ in d_ and ResourceType.MEMBW_WRITE in d_:
-            return d_[ResourceType.MEMBW_READ] / d_[ResourceType.MEMBW_WRITE]
+        if rt.MEMBW_READ in d_ and rt.MEMBW_WRITE in d_:
+            return d_[rt.MEMBW_READ] / d_[rt.MEMBW_WRITE]
         return 1
 
     # @staticmethod
@@ -176,13 +178,13 @@ class Node:
     #     assert set(a.data.keys()) == set(b.data.keys())
     #     c = a.copy()
     #     for key in self.data.keys():
-    #         if key == ResourceType.MEMBW_READ or key == ResourceType.MEMBW_WRITE:
+    #         if key == rt.MEMBW_READ or key == rt.MEMBW_WRITE:
     #             continue
     #         c.data[key] -= b.data[key]
     #     # Special case for MEMBW
-    #     if ResourceType.MEMBW_READ in c.data and ResourceType.MEMBW_WRITE in c.data:
-    #         READ = ResourceType.MEMBW_READ
-    #         WRITE = ResourceType.MEMBW_WRITE
+    #     if rt.MEMBW_READ in c.data and rt.MEMBW_WRITE in c.data:
+    #         READ = rt.MEMBW_READ
+    #         WRITE = rt.MEMBW_WRITE
     #         x = c.data
     #         y = b.data
     #         x[READ] = x[READ] - y[READ] - y[WRITE] * membw_read_write_ratio
@@ -215,8 +217,10 @@ class ClusterSimulator:
     tasks: List[Task]
     nodes: List[Node]
     scheduler: Optional[Algorithm]
-    allow_rough_assignment: bool = False
-    dimensions: Set[ResourceType] = (ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW,)
+    allow_rough_assignment: bool = True
+    dimensions: Set[rt] = \
+        field(default_factory=lambda: {rt.CPU, rt.MEM,
+                                       rt.MEMBW_READ, rt.MEMBW_WRITE})
 
     def __post_init__(self):
         self.time = 0

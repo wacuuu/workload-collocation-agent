@@ -14,7 +14,6 @@
 
 import logging
 from typing import Tuple, Dict, Any, Iterable
-from dataclasses import field
 
 from wca.scheduler.algorithms import used_resources_on_node, free_resources_on_node
 from wca.scheduler.data_providers import DataProvider
