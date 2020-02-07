@@ -514,7 +514,7 @@ def kustomize_configure_workload_to_test(workload) {
 }
 
 def test_wca_metrics_kustomize() {
-    sh "source env/bin/activate && \
+    sh "make venv; source env/bin/activate && \
         pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomize --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v && \
         pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomize_throughput --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v && \
         deactivate"
@@ -618,7 +618,7 @@ def remove_file(path) {
 }
 
 def test_wca_metrics() {
-    sh "source env/bin/activate && \
+    sh "make venv; source env/bin/activate && \
         pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v && \
         deactivate"
 }
