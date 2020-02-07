@@ -514,8 +514,10 @@ def kustomize_configure_workload_to_test(workload) {
 }
 
 def test_wca_metrics_kustomize() {
-    sh "make venv; PYTHONPATH=. pipenv run pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomize --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v"
-    sh "make venv; PYTHONPATH=. pipenv run pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomize_throughput --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v"
+    sh "source env/bin/activate && \
+        pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomize --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v && \
+        pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics_kustomize_throughput --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v && \
+        deactivate"
 }
 
 def image_check(image_name) {
@@ -616,7 +618,9 @@ def remove_file(path) {
 }
 
 def test_wca_metrics() {
-    sh "PYTHONPATH=. pipenv run pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v"
+    sh "source env/bin/activate && \
+        pytest ${WORKSPACE}/tests/e2e/test_wca_metrics.py::test_wca_metrics --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v && \
+        deactivate"
 }
 def if_perform_e2e() {
     /* Check whether in commit message there is [e2e-skip] substring: if so then skip e2e stage. */
