@@ -52,16 +52,6 @@ flake8:
 	@echo Checking code quality.
 	$(call execute_in_venv, flake8 wca tests examples)
 
-bandit:
-	@echo Checking code with bandit.
-	$(call execute_in_venv, bandit -r wca -s B101 -f html -o wca-bandit.html)
-
-bandit_pex:
-	@echo Checking pex with bandit.
-	unzip dist/wca.pex -d dist/wca-pex-bandit
-	$(call execute_in_venv, bandit -r dist/wca-pex-bandit/.deps -s B101 -f html -o wca-pex-bandit.html || true)
-	rm -rf dist/wca-pex-bandit 
-
 check_outdated:
 	@echo Checking out of date dependencies.
 	$(call execute_in_venv, pip list --outdated)

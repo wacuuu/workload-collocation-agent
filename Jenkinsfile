@@ -90,7 +90,20 @@ pipeline {
             when {expression{return params.PRECHECKS}}
              steps {
              sh '''
-               make bandit bandit_pex
+                source env/bin/activate
+
+                echo Install bandit.
+                pip install wheel==0.33.6 bandit==1.6.2;
+
+                echo Checking code with bandit.
+                bandit -r wca -s B101 -f html -o wca-bandit.html
+
+                echo Checking pex with bandit.
+                unzip dist/wca.pex -d dist/wca-pex-bandit
+                bandit -r dist/wca-pex-bandit/.deps -s B101 -f html -o wca-pex-bandit.html || true
+                rm -rf dist/wca-pex-bandit
+
+                deactivate
              '''
              archiveArtifacts(artifacts: "wca-bandit.html, wca-pex-bandit.html")
            }
