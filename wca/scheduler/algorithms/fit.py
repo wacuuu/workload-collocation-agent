@@ -36,18 +36,22 @@ class FitGeneric(BaseAlgorithm):
 
         used = used_resources_on_node(self.dimensions, assigned_apps_counts[node_name], apps_spec)
         capacity = nodes_capacities[node_name]
+
         requested = apps_spec[app_name]
 
         broken_capacities = set([r for r in self.dimensions
                                  if requested[r] > capacity[r] - used[r]])
 
-        log.log(TRACE, "Requested %s Capacity %s Used %s", requested, capacity, used)
+        # Parse "requested" as dict from defaultdict to get better string representation.
+        log.log(TRACE, "[Filter] Requested %s Capacity %s Used %s", dict(requested), capacity, used)
 
         if not membw_check(requested, used, capacity):
             for broken in broken_capacities:
                 if broken in (rt.MEMBW, rt.MEMBW_READ, rt.MEMBW_WRITE):
-                    log.warning('Not enough resources! [%s]: %r' %
-                                (broken, (capacity[broken] - used[broken] - requested[broken])))
+                    log.log(TRACE, '[Filter] Not enough %s resource for %r in %r ! Difference: %r',
+                            broken, app_name, node_name,
+                            abs(capacity[broken] - used[broken] - requested[broken]))
+
             broken_capacities.update((rt.MEMBW_READ, rt.MEMBW_READ,))
 
         broken_capacities_str = ','.join([str(e) for e in broken_capacities])
@@ -77,7 +81,6 @@ class FitGeneric(BaseAlgorithm):
         if not broken_capacities:
             return True, ''
         else:
-            log.debug("Broken_capacities: {}".format(broken_capacities))
             return False, 'Could not fit node for dimensions: ({}).'.format(broken_capacities_str)
 
     def priority_for_node(self, node_name: str, app_name: str,

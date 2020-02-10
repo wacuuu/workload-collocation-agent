@@ -15,6 +15,8 @@
 import logging
 from typing import Tuple, Dict, Any, Iterable
 
+from wca.logger import TRACE
+
 from wca.scheduler.algorithms import used_resources_on_node, free_resources_on_node
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.algorithms.fit import FitGeneric
@@ -42,7 +44,12 @@ class BARGeneric(FitGeneric):
         used, free, requested = used_free_requested(node_name, app_name, self.dimensions,
                                                     *data_provider_queried)
 
+        # Parse "requested" as dict from defaultdict to get better string representation.
+        log.log(TRACE, "[Prioritize] Requested %s Free %s Used %s", dict(requested), free, used)
+
         requested_fraction = app_requested_fraction(self.dimensions, requested, free)
+
+        log.log(TRACE, "[Prioritize] Requested fraction: %s", requested_fraction)
 
         # Least used.
         weights = self.least_used_weights

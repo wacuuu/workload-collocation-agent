@@ -17,6 +17,7 @@ from typing import List, Tuple, Iterable, Any
 import logging
 
 from wca.metrics import Metric
+from wca.logger import TRACE
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, \
                                 NodeName, Resources
 from wca.scheduler.types import ResourceType as rt
@@ -60,31 +61,29 @@ class BaseAlgorithm(Algorithm):
         for node_name in nodes_names:
             passed, message = self.app_fit_node(node_name, app_name, data_provider_queried)
             if not passed:
-                log.warning('Failed Node %r, %r' % (node_name, message,))
+                log.log(TRACE, 'Failed Node %r, %r', node_name, message)
                 extender_filter_result.FailedNodes[node_name] = message
             else:
                 extender_filter_result.NodeNames.append(node_name)
-
-        log.debug('Results: {}'.format(extender_filter_result))
 
         return extender_filter_result, self.metrics
 
     def prioritize(self, extender_args: ExtenderArgs) -> Tuple[
             List[HostPriority], List[Metric]]:
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
-        log.info('[Prioritize] Nodes: %r' % nodes_names)
-
-        data_provider_queried = self.query_data_provider()
 
         priorities = []
 
-        # TODO: Fill this with metrics from algorithm.
-        metrics = []
+        # Clear for new metrics.
+        self.metrics = []
+
+        data_provider_queried = self.query_data_provider()
 
         for node_name in sorted(nodes_names):
             priority = self.priority_for_node(node_name, app_name, data_provider_queried)
             priorities.append(HostPriority(node_name, priority))
-        return priorities, metrics
+
+        return priorities, self.metrics
 
     @abstractmethod
     def app_fit_node(self, node_name: NodeName, app_name: str,
