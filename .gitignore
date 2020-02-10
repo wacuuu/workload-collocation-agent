@@ -33,3 +33,4 @@ apiserver-kubelet-client.crt
 apiserver-kubelet-client.key
 allocations.prom
 wca-bandit.html
+/wca/scheduler/simulator_experiments/experiments_results/

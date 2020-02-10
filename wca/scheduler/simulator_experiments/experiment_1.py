@@ -29,6 +29,7 @@ from wca.logger import init_logging
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.algorithms.fit import FitGeneric
+from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
 from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
     ClusterSimulatorDataProvider)
@@ -169,7 +170,7 @@ def experiments_set__generic(experiment_name, *args):
     def experiment__generic(
                 exp_iter: int,
                 max_iteration: int,
-                task_creation_fun: Callable,
+                task_creation_fun_def: Tuple[Callable, Dict],
                 scheduler_init: Tuple[Algorithm, Dict],
                 nodes: List[Node]):
         scheduler_class, scheduler_kwargs = scheduler_init
@@ -179,6 +180,9 @@ def experiments_set__generic(experiment_name, *args):
         simulator = ClusterSimulator(tasks=[], nodes=nodes, scheduler=None)
         data_proxy = ClusterSimulatorDataProvider(simulator)
         simulator.scheduler = scheduler_class(data_provider=data_proxy, **scheduler_kwargs)
+
+        task_creation_class, task_creation_args = task_creation_fun_def
+        task_creation_fun = task_creation_class(**task_creation_args)
 
         run_n_iter(max_iteration, simulator, task_creation_fun,
                    wrapper_iteration_finished_callback(iterations_data))
@@ -293,42 +297,42 @@ def prepare_NxMxK_nodes__demo_configuration(
 # taken from 2lm contention demo slides:
 # wca_load_balancing_multidemnsional_2lm_v0.2
 task_definitions = [
-    Task(name='memcached_big',
-         requested=Resources({rt.CPU: 2, rt.MEM: 28,
-                              rt.MEMBW: 1.3, rt.WSS: 1.7})),
-    Task(name='memcached_medium',
-         requested=Resources({rt.CPU: 2, rt.MEM: 12,
-                              rt.MEMBW: 1.0, rt.WSS: 1.0})),
+    # Task(name='memcached_big',
+    #      requested=Resources({rt.CPU: 2, rt.MEM: 28,
+    #                           rt.MEMBW: 1.3, rt.WSS: 1.7})),
+    # Task(name='memcached_medium',
+    #      requested=Resources({rt.CPU: 2, rt.MEM: 12,
+    #                           rt.MEMBW: 1.0, rt.WSS: 1.0})),
     Task(name='memcached_small',
          requested=Resources({rt.CPU: 2, rt.MEM: 2.5,
                               rt.MEMBW: 0.4, rt.WSS: 0.4})),
+    # # ---
+    # Task(name='redis_big',
+    #      requested=Resources({rt.CPU: 1, rt.MEM: 29,
+    #                           rt.MEMBW: 0.5, rt.WSS: 14})),
+    # Task(name='redis_medium',
+    #      requested=Resources({rt.CPU: 1, rt.MEM: 11,
+    #                           rt.MEMBW: 0.4, rt.WSS: 10})),
+    # Task(name='redis_small',
+    #      requested=Resources({rt.CPU: 1, rt.MEM: 1.5,
+    #                           rt.MEMBW: 0.3, rt.WSS: 1.5})),
     # ---
-    Task(name='redis_big',
-         requested=Resources({rt.CPU: 1, rt.MEM: 29,
-                              rt.MEMBW: 0.5, rt.WSS: 14})),
-    Task(name='redis_medium',
-         requested=Resources({rt.CPU: 1, rt.MEM: 11,
-                              rt.MEMBW: 0.4, rt.WSS: 10})),
-    Task(name='redis_small',
-         requested=Resources({rt.CPU: 1, rt.MEM: 1.5,
-                              rt.MEMBW: 0.3, rt.WSS: 1.5})),
-    # ---
-    Task(name='stress_stream_big',
-         requested=Resources({rt.CPU: 3, rt.MEM: 13,
-                              rt.MEMBW: 18, rt.WSS: 12})),
-    Task(name='stress_stream_medium',
-         requested=Resources({rt.CPU: 1, rt.MEM: 12,
-                              rt.MEMBW: 6, rt.WSS: 10})),
-    Task(name='stress_stream_small',
-         requested=Resources({rt.CPU: 1, rt.MEM: 7,
-                              rt.MEMBW: 5, rt.WSS: 6})),
-    # ---
-    Task(name='sysbench_big',
-         requested=Resources({rt.CPU: 3, rt.MEM: 9,
-                              rt.MEMBW: 13, rt.WSS: 7.5})),
-    Task(name='sysbench_medium',
-         requested=Resources({rt.CPU: 2, rt.MEM: 2,
-                              rt.MEMBW: 10, rt.WSS: 2})),
+    # Task(name='stress_stream_big',
+    #      requested=Resources({rt.CPU: 3, rt.MEM: 13,
+    #                           rt.MEMBW: 18, rt.WSS: 12})),
+    # Task(name='stress_stream_medium',
+    #      requested=Resources({rt.CPU: 1, rt.MEM: 12,
+    #                           rt.MEMBW: 6, rt.WSS: 10})),
+    # Task(name='stress_stream_small',
+    #      requested=Resources({rt.CPU: 1, rt.MEM: 7,
+    #                           rt.MEMBW: 5, rt.WSS: 6})),
+    # # ---
+    # Task(name='sysbench_big',
+    #      requested=Resources({rt.CPU: 3, rt.MEM: 9,
+    #                           rt.MEMBW: 13, rt.WSS: 7.5})),
+    # Task(name='sysbench_medium',
+    #      requested=Resources({rt.CPU: 2, rt.MEM: 2,
+    #                           rt.MEMBW: 10, rt.WSS: 2})),
     Task(name='sysbench_small',
          requested=Resources({rt.CPU: 1, rt.MEM: 1,
                               rt.MEMBW: 8, rt.WSS: 1}))
@@ -343,10 +347,11 @@ def run():
         'comparing_bar2d_vs_bar3d__option_A',
         (200,),
         (
-            TaskGenerator_equal(task_definitions, 10),
-            TaskGenerator_random(task_definitions, max_items=200, seed=300),
+            (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=100)),
+            (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
         ),
         (
+            (NOPAlgorithm, {}),
             (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
             (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
             (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
@@ -356,7 +361,7 @@ def run():
             prepare_nodes(dict(
                 aep={rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40, rt.MEMBW_WRITE: 10},
                 dram={rt.CPU: 90, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150, rt.MEMBW_WRITE: 150}, ),
-                dict(aep=2, dram=6),
+                dict(aep=1, dram=1),
                 nodes_dimensions,
             ),
             prepare_nodes(dict(
@@ -382,7 +387,7 @@ if __name__ == "__main__":
         exit(1)
 
     init_logging('trace', 'scheduler_extender_simulator_experiments')
-    logging.basicConfig(level=logging.ERROR)
-    #logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
+    logging.basicConfig(level=logging.DEBUG)
+    logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
 
     run()

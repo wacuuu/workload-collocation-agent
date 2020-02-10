@@ -22,13 +22,16 @@ class NOPAlgorithm(Algorithm):
     """rst
     NOP algorithm.
     """
+    def __init__(self, data_provider):
+        pass
 
-    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
+
+    def filter(self, extender_args: ExtenderArgs):
         _, nodes, _, _ = extract_common_input(extender_args)
 
-        return ExtenderFilterResult(nodes=nodes)
+        return ExtenderFilterResult(Nodes=nodes), []
 
-    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
+    def prioritize(self, extender_args: ExtenderArgs):
         _, nodes, _, _ = extract_common_input(extender_args)
 
-        return [HostPriority(node, 0) for node in nodes]
+        return [HostPriority(node, 0) for node in nodes], []

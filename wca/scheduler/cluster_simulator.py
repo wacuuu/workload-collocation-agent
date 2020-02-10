@@ -163,7 +163,7 @@ class Node:
         self.unassigned = available_resources.copy()
 
     def __repr__(self):
-        return "(name: {}, initial: {})".format(
+        return "Node(name: {}, initial: {}, free: {}, unassiged: {})".format(
             self.name, str(self.initial), str(self.free), str(self.unassigned))
 
     def get_membw_read_write_ratio(self):
@@ -293,8 +293,10 @@ class ClusterSimulator:
                         self.rough_assignments_per_node[task.assignment] += 1
         return assigned_count
 
-    def call_scheduler(self, new_task: Optional[Task]):
-        """To map simulator structure into required by scheduler.Algorithm interace."""
+    def call_scheduler(self, new_task: Optional[Task]) -> Dict[str, Node]:
+        """To map simulator structure into required by scheduler.Algorithm interace.
+        Returns task_name -> node_name.
+        """
 
         if new_task is None:
             return {}
