@@ -298,6 +298,8 @@ class ClusterSimulator:
         Returns task_name -> node_name.
         """
 
+        log.log(TRACE, "Before calling scheduler; new_task={}; nodes={}".format(new_task, self.nodes))
+
         if new_task is None:
             return {}
 
@@ -357,4 +359,7 @@ class ClusterSimulator:
 
     def iterate_single_task(self, new_task: Optional[Task]):
         new_tasks = [] if new_task is None else [new_task]
+        if new_task is not None:
+            assert new_task.name not in set([task.name for task in self.tasks]), 'Tasks names must be unique, use sufixes'
+            assert new_task not in self.tasks, 'Each Task must be seperate object (deep copy)'
         return self.iterate(delta_time=1, changes=([], new_tasks))

@@ -226,6 +226,7 @@ class TaskGenerator_equal:
         for task_def in task_definitions:
             for r in range(replicas):
                 task_copy = task_def.copy()
+                task_copy.name += Task.CORE_NAME_SEP + str(r)
                 self.tasks.append(task_copy)
 
     def __call__(self, index: int):
@@ -353,8 +354,8 @@ def run():
             # (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
         ),
         (
-            (NOPAlgorithm, {}),
-            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
+            # (NOPAlgorithm, {}),
+            # (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
             (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
             # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
             # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
@@ -391,5 +392,6 @@ if __name__ == "__main__":
     init_logging('trace', 'scheduler_extender_simulator_experiments')
     logging.basicConfig(level=logging.INFO)
     logging.getLogger('wca.scheduler').setLevel(logging.DEBUG)
+    logging.getLogger('wca.scheduler.cluster_simulator').setLevel(90)
 
     run()
