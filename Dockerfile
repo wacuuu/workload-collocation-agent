@@ -37,7 +37,7 @@ RUN yum -y update && yum -y install python36 python-pip which make git wget
 RUN (cd /etc/yum.repos.d/; \
         wget https://copr.fedorainfracloud.org/coprs/jhli/ipmctl/repo/epel-7/jhli-ipmctl-epel-7.repo; \
         wget https://copr.fedorainfracloud.org/coprs/jhli/safeclib/repo/epel-7/jhli-safeclib-epel-7.repo)
-RUN yum install -y ndctl ndctl-libs ndctl-devel libsafec ipmctl
+RUN yum install -y ndctl ndctl-libs ndctl-devel libsafec ipmctl dmidecode
 # --- TODO: consider moving that to init container just responsilbe for preparing this data
 
 WORKDIR /wca
