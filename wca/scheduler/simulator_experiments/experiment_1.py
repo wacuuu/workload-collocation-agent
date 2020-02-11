@@ -220,11 +220,13 @@ class TaskGenerator_equal:
         self.replicas = replicas
         self.tasks = []
 
-        tasks = extend_membw_dimensions_to_write_read(task_definitions)
-        for task in tasks:
-            task.remove_dimension(rt.WSS)
-        for task in tasks:
-            self.tasks.extend([task]*replicas)
+        task_definitions = extend_membw_dimensions_to_write_read(task_definitions)
+        for task_def in task_definitions:
+            task_def.remove_dimension(rt.WSS)
+        for task_def in task_definitions:
+            for r in range(replicas):
+                task_copy = task_def.copy()
+                self.tasks.append(task_copy)
 
     def __call__(self, index: int):
         if self.tasks:
@@ -345,17 +347,17 @@ def run():
     # dimensions supported by simulator
     experiments_set__generic(
         'comparing_bar2d_vs_bar3d__option_A',
-        (200,),
+        (30,),
         (
-            (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=100)),
-            (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
+            (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=10)),
+            # (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
         ),
         (
             (NOPAlgorithm, {}),
             (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
             (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
-            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
-            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
+            # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
+            # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
         ),
         (
             prepare_nodes(dict(
@@ -364,16 +366,16 @@ def run():
                 dict(aep=1, dram=1),
                 nodes_dimensions,
             ),
-            prepare_nodes(dict(
-                apache_pass={rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
-                             rt.MEMBW_WRITE: 10, rt.WSS: 256},
-                dram_only_v1={rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150,
-                              rt.MEMBW_WRITE: 150, rt.WSS: 192},
-                dram_only_v2={rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ: 200,
-                              rt.MEMBW_WRITE: 200, rt.WSS: 394}),
-                dict(apache_pass=5, dram_only_v1=10, dram_only_v2=5),
-                nodes_dimensions
-            ),
+            # prepare_nodes(dict(
+            #     apache_pass={rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
+            #                  rt.MEMBW_WRITE: 10, rt.WSS: 256},
+            #     dram_only_v1={rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150,
+            #                   rt.MEMBW_WRITE: 150, rt.WSS: 192},
+            #     dram_only_v2={rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ: 200,
+            #                   rt.MEMBW_WRITE: 200, rt.WSS: 394}),
+            #     dict(apache_pass=5, dram_only_v1=10, dram_only_v2=5),
+            #     nodes_dimensions
+            # ),
         )
     )
 
@@ -387,7 +389,7 @@ if __name__ == "__main__":
         exit(1)
 
     init_logging('trace', 'scheduler_extender_simulator_experiments')
-    logging.basicConfig(level=logging.DEBUG)
-    logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
+    logging.getLogger('wca.scheduler').setLevel(logging.DEBUG)
 
     run()
