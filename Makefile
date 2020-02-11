@@ -54,7 +54,7 @@ flake8:
 
 check_outdated:
 	@echo Checking out of date dependencies.
-	$(call execute_in_venv, pip list --outdated)
+	$(call execute_in_venv, pip list --outdated | tee /dev/stderr | if [[ $$(wc -l) != 0 ]]; then echo "WARNING! Some of packageges are outdated. Consider updating the dependencies."; fi)
 
 unit:
 	@echo Running unit tests.
