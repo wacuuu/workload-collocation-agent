@@ -1,9 +1,6 @@
 loggers:
   wca: INFO
-  # wca.scheduler.server: DEBUG
-  # wca.scheduler.algorithms.ffd_generic: WARNING
-  # wca.scheduler.data_providers.prometheus_data_provider: DEBUG
-  #wca.scheduler.data_providers.cluster_data_provider: DEBUG
+  wca.scheduler.algorithms.fit: TRACE
 algorithm: !FitGeneric
   data_provider: !ClusterDataProvider
     kubeapi: !Kubeapi
