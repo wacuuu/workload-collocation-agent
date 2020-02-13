@@ -17,8 +17,6 @@ from enum import Enum
 from typing import Dict, List
 
 from wca.metrics import Metric, MetricType
-from wca.storage import (convert_to_prometheus_exposition_format,
-                         is_convertable_to_prometheus_exposition_format)
 
 log = logging.getLogger(__name__)
 
