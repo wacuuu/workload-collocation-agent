@@ -34,14 +34,34 @@ def build_resources_2(membw_read=None, membw_write=None):
 #     assert expected == membw_check(requested, used, capacity)
 
 
-# @pytest.mark.parametrize(
-#     'capacity, used, expected', (
-#         (build_resources(5,5), build_resources(10,10), True),
+def test_sum_resources():
+    sum_ = sum_resources(build_resources(3, 3), build_resources(2, 2)) 
+    assert sum_[rt.CPU] == 5 and sum_[rt.MEM] == 5
 
-#         (build_resources_2(1,1), build_resources_2(40,10), True),
 
-#         (build_resources_2(30,0), build_resources_2(40,10), False),
-#     )
-# )
-# def test_free_resources_on_node(capacity, used, expected):
-#     assert expected == free_resources_on_node(capacity, used)
+def test_substract_resources():
+    sub_ = substract_resources(build_resources(cpu=3, mem=3), build_resources(cpu=2, mem=2)) 
+    assert sub_[rt.CPU] == 1 and sub_[rt.MEM] == 1
+
+
+def test_flat_membw_read_write():
+    r = flat_membw_read_write(build_resources(3, 3, 4, 1), 4)
+    assert rt.MEMBW_READ not in r and rt.MEMBW_WRITE not in r
+    assert r[rt.MEMBW_FLAT] == 8.0
+    assert r[rt.CPU] == 3 and r[rt.MEM] == 3
+
+def test_divide_resources():
+    a = build_resources(3, 3, 4, 1)
+    b = build_resources(2, 2, 8, 2)
+    c = divide_resources(a, b)
+    assert c[rt.CPU] == 3.0/2.0 and c[rt.MEM] == 3.0/2.0
+    assert c[rt.MEMBW_FLAT] == 0.5
+
+
+def test_used_resources_on_node():
+    dimensions = {rt.CPU, rt.MEM}
+    assigned_apps_counts = {'node1': {'stress_ng': 8}}
+    apps_spec = {'stress_ng': {rt.CPU: 8, rt.MEM: 10}}
+    r = used_resources_on_node(dimensions, assigned_apps_counts, apps_spec)
+    assert r[rt.CPU] == 64
+    assert r[rt.MEM] == 80

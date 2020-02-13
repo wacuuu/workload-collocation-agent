@@ -376,7 +376,7 @@ def run():
         (30,),
         (
             (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=10)),
-            # (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
+            (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
         ),
         (
             # (NOPAlgorithm, {}),
@@ -389,7 +389,7 @@ def run():
             prepare_nodes(dict(
                 aep={rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40, rt.MEMBW_WRITE: 10},
                 dram={rt.CPU: 90, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150, rt.MEMBW_WRITE: 150}, ),
-                dict(aep=1, dram=1),
+                dict(aep=2, dram=2),
                 nodes_dimensions,
             ),
             # prepare_nodes(dict(
