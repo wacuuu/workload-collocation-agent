@@ -17,7 +17,7 @@ import datetime
 import logging
 import itertools
 from functools import partial
-from collections import Counter
+from collections import Counter, defaultdict
 import pprint
 from typing import Dict, List, Any, Callable, Tuple, Set
 import shutil
@@ -30,15 +30,13 @@ from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.algorithms.fit import FitGeneric
 from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
-from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, Task, AssignmentsCounts
+from wca.scheduler.cluster_simulator import \
+        ClusterSimulator, Node, Resources, Task, AssignmentsCounts
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
     ClusterSimulatorDataProvider)
-from wca.scheduler.types import NodeName, AppName
 from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
-
-
 
 
 def extend_membw_dimensions_to_write_read(taskset):
@@ -85,6 +83,7 @@ class IterationData:
     broken_assignments: Dict[Node, int]
     assignments_counts: AssignmentsCounts
     tasks_types_count: Dict[str, int]
+    metrics: Dict[str, List[float]]
 
 
 def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
@@ -95,9 +94,17 @@ def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
         assignments_counts = simulator.assignments_counts()
         tasks_types_count = Counter([task.get_core_name() for task in simulator.tasks])
 
+        metrics_registry = simulator.scheduler.get_metrics_registry()
+        if metrics_registry is not None:
+            metrics = metrics_registry.as_dict()
+        else:
+            metrics = {}
+
         iterations_data.append(IterationData(
             cluster_resource_usage, per_node_resource_usage,
-            broken_assignments, assignments_counts, tasks_types_count))
+            broken_assignments, assignments_counts, tasks_types_count,
+            metrics=metrics,
+        ))
 
     return iteration_finished_callback
 
@@ -105,7 +112,7 @@ def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
 def create_report(title: str, subtitle: str,
                   run_params: Dict[str, Any],
                   iterations_data: List[IterationData],
-                  reports_root_directory: str ='experiments_results'):
+                  reports_root_directory: str = 'experiments_results'):
     """
         Results will be saved to location:
         {reports_root_directory}/{title}/{subtitle}.{extension}
@@ -153,6 +160,7 @@ def create_report(title: str, subtitle: str,
         os.makedirs(exp_dir)
     fig.savefig('{}/{}.png'.format(exp_dir, subtitle))
 
+
     with open('{}/{}.txt'.format(exp_dir, subtitle), 'w') as fref:
         pp = pprint.pformat
         t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
@@ -160,10 +168,11 @@ def create_report(title: str, subtitle: str,
         fref.write("Run params: {}\n".format(pprint.pformat(run_params, indent=4)))
         fref.write("Iterations: {}\n".format(len(iterations_data)))
         fref.write("Scheduled tasks (might not be successfully assigned): {}\n"
-            .format(iterations_data[-1].tasks_types_count))
+                   .format(iterations_data[-1].tasks_types_count))
 
         assignments_counts = iterations_data[-1].assignments_counts
-        fref.write("Assigned tasks per node: {}\n".format(pp(assignments_counts.per_node), indent=4))
+        fref.write("Assigned tasks per node: {}\n".format(pp(assignments_counts.per_node),
+                                                          indent=4))
         fref.write("Assigned tasks per cluster: {}\n".format(assignments_counts.per_cluster))
         fref.write("Unassigned tasks: {}\n".format(assignments_counts.unassigned))
 
@@ -182,6 +191,16 @@ def create_report(title: str, subtitle: str,
             fref.write(
                 "resource_usage_per_node(node={}, cpu, mem, membw_flat) = ({}, {}, {})\n".format(
                     node.name, *rounded_last_iter_resources))
+
+        # Visualize metrics
+        # d = defaultdict(list)
+        # for iteration, idata in enumerate(iterations_data):
+        #     for metric_name, value in idata.metrics.items():
+        #         d[metric_name].append((iteration, value))
+        # series = dict(d)
+        # import seaborn
+        # seaborn.lineplot(iterations, series)
+        # fref.write("metrics: \n{}".format(pp(series)))
 
     with open('{}/README.txt'.format(exp_dir), 'a') as fref:
         fref.write("Subexperiment: {}\n".format(subtitle))
@@ -270,8 +289,8 @@ def run_n_iter(iterations_count: int, simulator: ClusterSimulator,
 
 
 def prepare_nodes(
-        node_specs: Dict[str, Dict], # node_type to resource dict,
-        type_counts: Dict[str, int], # node_type to number of nodes,
+        node_specs: Dict[str, Dict],  # node_type to resource dict,
+        type_counts: Dict[str, int],  # node_type to number of nodes,
         dimensions: Set[rt]
         ) -> List[Node]:
     """Create cluster with node_specs with number of each kind (node_spec are sorted by name).
@@ -292,33 +311,36 @@ def prepare_nodes(
             nodes.append(node)
     return nodes
 
-def prepare_NxMxK_nodes__demo_configuration(
-        apache_pass_count, dram_only_v1_count,
-        dram_only_v2_count,
-        dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}) -> List[Node]:
-    """Taken from WCA team real cluster."""
-    print('deprecated! please use prepare_nodes!')
-    apache_pass = {rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
-                   rt.MEMBW_WRITE: 10, rt.WSS: 256}
-    dram_only_v1 = {rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150,
-                    rt.MEMBW_WRITE: 150, rt.WSS: 192}
-    dram_only_v2 = {rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ: 200,
-                    rt.MEMBW_WRITE: 200, rt.WSS: 394}
-    nodes_spec = [apache_pass, dram_only_v1, dram_only_v2]
 
-    # Filter only dimensions required.
-    for i, node_spec in enumerate(nodes_spec):
-        nodes_spec[i] = {dim: val for dim, val in node_spec.items() if dim in dimensions}
+# Superseded by prepare_nodes above
+# def prepare_NxMxK_nodes__demo_configuration(
+#         apache_pass_count, dram_only_v1_count,
+#         dram_only_v2_count,
+#         dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}) -> List[Node]:
+#     """Taken from WCA team real cluster."""
+#     print('deprecated! please use prepare_nodes!')
+#     apache_pass = {rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
+#                    rt.MEMBW_WRITE: 10, rt.WSS: 256}
+#     dram_only_v1 = {rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150,
+#                     rt.MEMBW_WRITE: 150, rt.WSS: 192}
+#     dram_only_v2 = {rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ: 200,
+#                     rt.MEMBW_WRITE: 200, rt.WSS: 394}
+#     nodes_spec = [apache_pass, dram_only_v1, dram_only_v2]
+#
+#     # Filter only dimensions required.
+#     for i, node_spec in enumerate(nodes_spec):
+#         nodes_spec[i] = {dim: val for dim, val in node_spec.items() if dim in dimensions}
+#
+#     inode = 0
+#     nodes = []
+#     for i_node_type, node_type_count in enumerate((apache_pass_count, dram_only_v1_count,
+#                                                    dram_only_v2_count,)):
+#         for i in range(node_type_count):
+#             node = Node(str(inode), available_resources=Resources(nodes_spec[i_node_type]))
+#             nodes.append(node)
+#             inode += 1
+#     return nodes
 
-    inode = 0
-    nodes = []
-    for i_node_type, node_type_count in enumerate((apache_pass_count, dram_only_v1_count,
-                                                   dram_only_v2_count,)):
-        for i in range(node_type_count):
-            node = Node(str(inode), available_resources=Resources(nodes_spec[i_node_type]))
-            nodes.append(node)
-            inode += 1
-    return nodes
 
 # taken from 2lm contention demo slides:
 # wca_load_balancing_multidemnsional_2lm_v0.2
@@ -365,23 +387,24 @@ task_definitions = [
 ]
 
 # Used to filter out unsed node dimensions
-nodes_dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
+nodes_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
+
 
 def run():
     # dimensions supported by simulator
     experiments_set__generic(
         'comparing_bar2d_vs_bar3d__option_A',
-        (30,),
+        (4,),
         (
             (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=10)),
-            # (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
+            (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
         ),
         (
             # (NOPAlgorithm, {}),
-            # (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
+            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
             (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
-            # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
-            # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
         ),
         (
             prepare_nodes(dict(
@@ -412,9 +435,10 @@ if __name__ == "__main__":
         # No installed packages required for report generation.
         exit(1)
 
-    init_logging('trace', 'scheduler_extender_simulator_experiments')
+    # init_logging('trace', 'scheduler_extender_simulator_experiments')
     logging.basicConfig(level=logging.INFO)
-    logging.getLogger('wca.scheduler').setLevel(logging.DEBUG)
-    logging.getLogger('wca.scheduler.cluster_simulator').setLevel(90)
+    # logging.getLogger('wca.scheduler').setLevel(logging.INFO)
+    # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(90)
+    logging.getLogger('wca.scheduler.algorithms').setLevel(9)
 
     run()

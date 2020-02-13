@@ -37,7 +37,11 @@ class Server:
 
         @self.app.route('/metrics')
         def metrics():
-            return self.algorithm.metrics.prometheus_exposition()
+            metrics_registry = self.algorithm.get_metrics_registry()
+            if metrics_registry:
+                return metrics_registry.prometheus_exposition()
+            else:
+                return ''
 
         @self.app.route('/filter', methods=['POST'])
         def filter():

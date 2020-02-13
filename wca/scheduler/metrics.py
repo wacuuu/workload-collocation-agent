@@ -17,8 +17,6 @@ from enum import Enum
 from typing import Dict, List
 
 from wca.metrics import Metric, MetricType
-from wca.storage import (convert_to_prometheus_exposition_format,
-                         is_convertable_to_prometheus_exposition_format)
 
 log = logging.getLogger(__name__)
 
@@ -79,12 +77,23 @@ class MetricRegistry:
     def clean(self):
         self._storage = {}
 
+    def as_dict(self) -> [str, float]:
+        """  """
+        d = {}
+        for name, metrics in self._storage.items():
+            for metric in metrics:
+                d[name+repr(metric.labels)] = metric.value
+        return d
+
     def prometheus_exposition(self) -> str:
         metrics = []
 
         for _, new_metrics in self._storage.items():
             metrics.extend(new_metrics)
-
+        # Lazy import, because we do not want to import all storage module code including
+        # libc and security.
+        from wca.storage import (convert_to_prometheus_exposition_format,
+                                 is_convertable_to_prometheus_exposition_format)
         if is_convertable_to_prometheus_exposition_format(metrics):
             prometheus_exposition = convert_to_prometheus_exposition_format(metrics)
             return prometheus_exposition

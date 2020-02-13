@@ -18,7 +18,8 @@ from typing import Tuple, Dict, Any, Iterable
 from wca.metrics import Metric, MetricType
 from wca.logger import TRACE
 
-from wca.scheduler.algorithms import used_resources_on_node, free_resources_on_node
+from wca.scheduler.algorithms import used_resources_on_node, \
+    calculate_read_write_ratio, substract_resources, divide_resources
 from wca.scheduler.algorithms.fit import FitGeneric
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricName
@@ -43,8 +44,10 @@ class BARGeneric(FitGeneric):
                           data_provider_queried: Tuple[Any]) -> int:
         nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
 
-        used, free, requested = used_free_requested(node_name, app_name, self.dimensions,
-                                                    *data_provider_queried)
+        used, free, requested = \
+            used_free_requested(node_name, app_name, self.dimensions,
+                                nodes_capacities, assigned_apps_counts, apps_spec)
+        membw_read_write_ratio = calculate_read_write_ratio(nodes_capacities[node_name])
 
         for resource in used:
             self.metrics.add(
@@ -71,7 +74,7 @@ class BARGeneric(FitGeneric):
         log.log(TRACE, "[Prioritize][%s][%s] Requested %s Free %s Used %s",
                 app_name, node_name, dict(requested), free, used)
 
-        requested_fraction = app_requested_fraction(self.dimensions, requested, free)
+        requested_fraction = divide_resources(requested, free, membw_read_write_ratio)
 
         for resource, fraction in requested_fraction.items():
             self.metrics.add(
@@ -113,8 +116,9 @@ class BARGeneric(FitGeneric):
             variance = sum([(fraction - mean)*(fraction - mean)
                             for fraction in requested_fraction.values()]) \
                        / len(requested_fraction)
-        elif len(requested_fraction) == 1:
-            variance = abs(requested_fraction[0] - requested_fraction[1])
+        elif len(requested_fraction) == 2:
+            values = list(requested_fraction.values())
+            variance = abs(values[0] - values[1])
         else:
             variance = 0
 
@@ -149,24 +153,12 @@ class BARGeneric(FitGeneric):
         return result
 
 
-def app_requested_fraction(dimensions, requested, free) -> Dict[rt, float]:
-    """Flats MEMBW_WRITE and MEMBW_READ to single dimension MEMBW_FLAT"""
-    fractions = {}
-    for dimension in dimensions:
-        if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
-            fractions[dimension] = float(requested[dimension]) / float(free[dimension])
-    if rt.MEMBW_READ in dimensions:
-        assert rt.MEMBW_WRITE in dimensions
-        fractions[rt.MEMBW_FLAT] = (requested[rt.MEMBW_READ] + 4*requested[rt.MEMBW_WRITE]) \
-            / (free[rt.MEMBW_READ] + 4*free[rt.MEMBW_WRITE])
-    return fractions
-
-
 def used_free_requested(
         node_name, app_name, dimensions,
         nodes_capacities, assigned_apps_counts, apps_spec):
     """Helper function not making any new calculations."""
+    membw_read_write_ratio = calculate_read_write_ratio(nodes_capacities[node_name])
     used = used_resources_on_node(dimensions, assigned_apps_counts[node_name], apps_spec)
-    free = free_resources_on_node(dimensions, nodes_capacities[node_name], used)  # allocable
+    free = substract_resources(nodes_capacities[node_name], used, membw_read_write_ratio)
     requested = apps_spec[app_name]
     return used, free, requested

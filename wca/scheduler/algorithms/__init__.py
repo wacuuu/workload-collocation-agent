@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Iterable, Any
+from typing import List, Tuple, Iterable, Any, Optional
 import logging
 
 from wca.metrics import Metric
@@ -39,6 +39,9 @@ class Algorithm(ABC):
             List[HostPriority], List[Metric]]:
         pass
 
+    @abstractmethod
+    def get_metrics_registry(self) -> Optional[MetricRegistry]:
+        return None
 
 class BaseAlgorithm(Algorithm):
     """Implementing some basic functionalities which probably
@@ -83,6 +86,9 @@ class BaseAlgorithm(Algorithm):
 
         return priorities
 
+    def get_metrics_registry(self) -> Optional[MetricRegistry]:
+        return self.metrics
+
     @abstractmethod
     def app_fit_node(self, node_name: NodeName, app_name: str,
                      data_provider_queried: Tuple[Any]) -> bool:
@@ -113,44 +119,6 @@ def used_resources_on_node(dimensions, assigned_apps_counts, apps_spec) -> Resou
     return used
 
 
-def free_resources_on_node(
-        dimensions: Iterable[rt], capacity: Resources,
-        used: Resources) -> Resources:
-    """Returns free resources on node, by substracting capacity-used"""
-    free = capacity.copy()
-    for dimension in dimensions:
-        if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
-            free[dimension] -= used[dimension]
-    if rt.MEMBW_READ in dimensions:
-        assert rt.MEMBW_WRITE in dimensions
-        read, write = rt.MEMBW_READ, rt.MEMBW_WRITE
-        R = float(capacity[rt.MEMBW_READ])/float(capacity[rt.MEMBW_WRITE])
-        free[read] = capacity[read] - (used[read] + used[write] * R)
-        free[write] = capacity[write] - (used[write] + used[read] / R)
-    return free
-
-
-def membw_check(requested: Resources, used: Resources, capacity: Resources) -> bool:
-    """
-    read/write ratio, e.g. 40GB/s / 10GB/s = 4,
-    what means reading is 4 time faster
-    """
-    # Assert that required dimensions are available.
-    for resource in (rt.MEMBW_WRITE, rt.MEMBW_READ,):
-        for source in (requested, used):
-            if resource not in source:
-                return True
-
-    # To shorten the notation.
-    WRITE = rt.MEMBW_WRITE
-    READ = rt.MEMBW_READ
-    R = float(capacity[rt.MEMBW_READ])/float(capacity[rt.MEMBW_WRITE])
-
-    predicted_membw_flat_usage = (used[READ]+requested[READ]) + R * (used[WRITE]+requested[WRITE])
-
-    return predicted_membw_flat_usage < capacity[READ], predicted_membw_flat_usage
-
-
 def sum_resources(a: Resources, b: Resources) -> Resources:
     assert set(a.keys()) == set(b.keys()), \
         'the same dimensions must be provided for both resources'
@@ -160,19 +128,60 @@ def sum_resources(a: Resources, b: Resources) -> Resources:
     return c
 
 
-def substract_resources(a: Resources, b: Resources, membw_read_write_ratio: float) -> Resources:
+def substract_resources(a: Resources, b: Resources,
+                        membw_read_write_ratio: Optional[float]) -> Resources:
     assert set(a.keys()) == set(b.keys()), \
         'the same dimensions must be provided for both resources'
-    assert type(membw_read_write_ratio) == float
     dimensions = set(a.keys())
 
     c = a.copy()
     for dimension in dimensions:
         if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
-            c[dimension] = a[dimensions] - b[dimension]
+            c[dimension] = a[dimension] - b[dimension]
     if rt.MEMBW_READ in dimensions:
         assert rt.MEMBW_WRITE in dimensions
+        assert type(membw_read_write_ratio) == float
         read, write = rt.MEMBW_READ, rt.MEMBW_WRITE
         c[read] = a[read] - (b[read] + b[write] * membw_read_write_ratio)
         c[write] = a[write] - (b[write] + b[read] / membw_read_write_ratio)
+    return c
+
+
+def calculate_read_write_ratio(capacity: Resources) -> Optional[float]:
+    dimensions = capacity.keys()
+    if rt.MEMBW_READ in dimensions:
+        assert rt.MEMBW_WRITE in dimensions
+        return float(capacity[rt.MEMBW_READ])/float(capacity[rt.MEMBW_WRITE])
+    else:
+        return None
+
+
+def flat_membw_read_write(a: Resources, membw_read_write_ratio: Optional[float]) -> Resources:
+    """Takes >>a<< and replace rt.MEMBW_WRITE and rt.MEMBW_READ with single value rt.MEMBW_FLAT."""
+    dimensions = a.keys()
+    b = a.copy()
+    if rt.MEMBW_READ in dimensions:
+        assert rt.MEMBW_WRITE in dimensions
+        assert type(membw_read_write_ratio) == float
+        del b[rt.MEMBW_READ]
+        del b[rt.MEMBW_WRITE]
+        b[rt.MEMBW_FLAT] = a[rt.MEMBW_READ] + membw_read_write_ratio * a[rt.MEMBW_WRITE]
+    return b
+
+
+def divide_resources(a: Resources, b: Resources,
+                     membw_read_write_ratio: Optional[float]) -> Resources:
+    """Flattens rt.MEMBW_READ and rt.MEMBW_WRITE to rt.MEMBW_FLAT."""
+    assert set(a.keys()) == set(b.keys()), \
+        'the same dimensions must be provided for both resources'
+    # must flatten membw_read_write
+    if rt.MEMBW_READ in a.keys():
+        a = flat_membw_read_write(a, membw_read_write_ratio)
+        b = flat_membw_read_write(b, membw_read_write_ratio)
+
+    dimensions = set(a.keys())
+
+    c = {}
+    for dimension in dimensions:
+        c[dimension] = float(a[dimension]) / float(b[dimension])
     return c

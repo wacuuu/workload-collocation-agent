@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import List
 
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.utils import extract_common_input
@@ -25,13 +24,12 @@ class NOPAlgorithm(Algorithm):
     def __init__(self, data_provider):
         pass
 
-
     def filter(self, extender_args: ExtenderArgs):
         _, nodes, _, _ = extract_common_input(extender_args)
 
-        return ExtenderFilterResult(Nodes=nodes), []
+        return ExtenderFilterResult(Nodes=nodes)
 
     def prioritize(self, extender_args: ExtenderArgs):
         _, nodes, _, _ = extract_common_input(extender_args)
 
-        return [HostPriority(node, 0) for node in nodes], []
+        return [HostPriority(node, 0) for node in nodes]
