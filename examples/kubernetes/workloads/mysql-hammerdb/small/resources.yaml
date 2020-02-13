@@ -9,5 +9,24 @@ spec:
         - name: mysql
           resources:
             requests:
+              cpu: 2
+              memory: 50G
+            limits:
+              cpu: 2
+              memory: 50G
+        - name: hammerdb
+          resources:
+            requests:
               cpu: 1
-              memory: 2G
+              memory: 1G
+            limits:
+              cpu: 1
+              memory: 1G
+        - name: mysql-tpm-gauge
+          resources:
+            requests:
+              cpu: 1
+              memory: 1G
+            limits:
+              cpu: 1
+              memory: 1G

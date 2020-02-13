@@ -94,17 +94,24 @@ spec:
 
     - name: mysql-hammerdb
       rules:
+        - record: apm_hammerdb_tpm_gauge_alive
+          expr: ceil(rate(apm_hammerdb_tpm_gauge_stdout_lines[30s])>0)
         - record: apm_hammerdb_alive
           expr: ceil(rate(apm_hammerdb_stdout_lines[30s])>0)
         - record: apm_hammerdb_ops
-          expr: avg_over_time(apm_hammerdb_tpm[90s]) and apm_hammerdb_alive
+          expr: avg_over_time(apm_hammerdb_tpm[90s]) and apm_hammerdb_tpm_gauge_alive
+        - record: apm_hammerdb_latency
+          expr: avg_over_time(apm_hammerdb_latency_stdout[1m]) and ignoring(quantile, type_query) apm_hammerdb_alive
         # common apm metrics
+        - record: apm_mysql_latency
+          expr: apm_hammerdb_latency{quantile='0.9',type_query='neword'} * on(task_name) group_right() task_up  / 1e3
         - record: apm_mysql_qps
           expr: apm_hammerdb_ops * on(task_name) group_right() task_up
         # T & L per app
-        - record: apm_throughput      # transaction per minute from mysql (get by script 'mysql_tpm_gauge.py')
+        - record: apm_throughput      # transaction per minute from mysql (get by script 'mysql_tpm_gauge.py') https://www.hammerdb.com/docs/ch06s04.html
           expr: apm_mysql_qps
-        # no latency from hammerdb or mysql
+        - record: apm_latency         # perform 'neword' operation in milliseconds (ms) on quantile 90% https://www.hammerdb.com/docs/ch03s07.html
+          expr: apm_mysql_latency
 
     - name: apm-generic
       rules:
@@ -133,6 +140,11 @@ spec:
         - {record: apm_slo, labels: {app: sysbench-memory-medium}, expr: "200"}
         - {record: apm_slo, labels: {app: sysbench-memory-small}, expr: "380"}
 
+        # Mysql latency goal
+        - {record: apm_slo, labels: {app: mysql-hammerdb-big}, expr: "10"}
+        - {record: apm_slo, labels: {app: mysql-hammerdb-medium}, expr: "3"}
+        - {record: apm_slo, labels: {app: mysql-hammerdb-small}, expr: "3"}
+
         #--------------------------------------- Targets for Throughput [msecs]
         # Memcached QPS goal
         - {record: apm_slo2, labels: {app: memcached-mutilate-big},    expr: "20000" }
@@ -153,6 +165,11 @@ spec:
         - {record: apm_slo2, labels: {app: sysbench-memory-big}, expr: "150"}
         - {record: apm_slo2, labels: {app: sysbench-memory-medium}, expr: "150"}
         - {record: apm_slo2, labels: {app: sysbench-memory-small}, expr: "250"}
+
+        # Mysql transaction per minute goal
+        - {record: apm_slo2, labels: {app: mysql-hammerdb-big}, expr: "1400000"}
+        - {record: apm_slo2, labels: {app: mysql-hammerdb-medium}, expr: "40000"}
+        - {record: apm_slo2, labels: {app: mysql-hammerdb-small}, expr: "4000"}
 
         ##--------------------------------------- normalized
         #  # Memcached QPS goal
