@@ -146,7 +146,9 @@ def membw_check(requested: Resources, used: Resources, capacity: Resources) -> b
     READ = rt.MEMBW_READ
     R = float(capacity[rt.MEMBW_READ])/float(capacity[rt.MEMBW_WRITE])
 
-    return (used[READ]+requested[READ]) + R * (used[WRITE]+requested[WRITE]) < capacity[READ]
+    predicted_membw_flat_usage = (used[READ]+requested[READ]) + R * (used[WRITE]+requested[WRITE])
+
+    return predicted_membw_flat_usage < capacity[READ], predicted_membw_flat_usage
 
 
 def sum_resources(a: Resources, b: Resources) -> Resources:
@@ -154,7 +156,7 @@ def sum_resources(a: Resources, b: Resources) -> Resources:
         'the same dimensions must be provided for both resources'
     c = {}
     for resource in a.keys():
-        c[resource] = a[resources] + b[resources]
+        c[resource] = a[resource] + b[resource]
     return c
 
 

@@ -46,7 +46,15 @@ class FitGeneric(BaseAlgorithm):
         log.log(TRACE, "[Filter][%s][%s] Requested %s Capacity %s Used %s",
                 app_name, node_name, dict(requested), capacity, used)
 
-        if not membw_check(requested, used, capacity):
+        membw_check_result, predicted_membw_flat_usage = membw_check(requested, used, capacity)
+
+        self.metrics.add(Metric(
+            name=MetricName.FIT_PREDICTED_MEMBW_FLAT_USAGE,
+            value=predicted_membw_flat_usage,
+            labels=dict(app=app_name, node=node_name),
+            type=MetricType.GAUGE))
+
+        if not membw_check_result:
             for broken in broken_capacities:
                 if broken in (rt.MEMBW, rt.MEMBW_READ, rt.MEMBW_WRITE):
                     log.log(TRACE,
