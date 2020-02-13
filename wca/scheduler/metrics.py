@@ -70,6 +70,14 @@ class MetricRegistry:
     def clean(self):
         self._storage = {}
 
+    def as_dict(self) -> [str, float]:
+        """  """
+        d = {}
+        for name, metrics in self._storage.items():
+            for metric in metrics:
+                d[name+repr(metric.labels)] = metric.value
+        return d
+
     def prometheus_exposition(self) -> str:
         metrics = []
 
