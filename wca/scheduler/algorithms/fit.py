@@ -43,13 +43,15 @@ class FitGeneric(BaseAlgorithm):
                                  if requested[r] > capacity[r] - used[r]])
 
         # Parse "requested" as dict from defaultdict to get better string representation.
-        log.log(TRACE, "[Filter] Requested %s Capacity %s Used %s", dict(requested), capacity, used)
+        log.log(TRACE, "[Filter][%s][%s] Requested %s Capacity %s Used %s",
+                app_name, node_name, dict(requested), capacity, used)
 
         if not membw_check(requested, used, capacity):
             for broken in broken_capacities:
                 if broken in (rt.MEMBW, rt.MEMBW_READ, rt.MEMBW_WRITE):
-                    log.log(TRACE, '[Filter] Not enough %s resource for %r in %r ! Difference: %r',
-                            broken, app_name, node_name,
+                    log.log(TRACE,
+                            '[Filter][%s][%s] Not enough %s resource for %r in %r ! Difference: %r',
+                            app_name, node_name, broken, app_name, node_name,
                             abs(capacity[broken] - used[broken] - requested[broken]))
 
             broken_capacities.update((rt.MEMBW_READ, rt.MEMBW_READ,))
@@ -58,21 +60,21 @@ class FitGeneric(BaseAlgorithm):
 
         # Prepare metrics.
         for resource in used:
-            self.metrics.append(
-                Metric(name=MetricName.NODE_USED_RESOURCE,
-                       value=used[resource],
-                       labels=dict(node=node_name, resource=resource),
-                       type=MetricType.GAUGE,))
+            self.metrics.add(
+                    Metric(name=MetricName.NODE_USED_RESOURCE,
+                           value=used[resource],
+                           labels=dict(node=node_name, resource=resource),
+                           type=MetricType.GAUGE,))
 
         for resource in capacity:
-            self.metrics.append(
+            self.metrics.add(
                 Metric(name=MetricName.NODE_CAPACITY_RESOURCE,
                        value=capacity[resource],
                        labels=dict(node=node_name, resource=resource),
                        type=MetricType.GAUGE,))
 
         for resource in requested:
-            self.metrics.append(
+            self.metrics.add(
                 Metric(name=MetricName.APP_REQUESTED_RESOURCE,
                        value=used[resource],
                        labels=dict(resource=resource, app=app_name),
