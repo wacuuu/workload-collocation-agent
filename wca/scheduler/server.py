@@ -14,17 +14,16 @@
 import logging
 from dataclasses import asdict
 from flask import Flask, request, jsonify
-from typing import Dict, List
+from typing import Dict
 
-from wca.metrics import Metric
+from wca.metrics import Metric, MetricType
 from wca.scheduler.metrics import MetricName
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, ResourceType
-from wca.storage import (convert_to_prometheus_exposition_format,
-                         is_convertable_to_prometheus_exposition_format)
+from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult
 
 log = logging.getLogger(__name__)
 
 DEFAULT_NAMESPACE = 'default'
+DEFAULT_METRIC_LABELS = {}
 
 
 class Server:
@@ -32,46 +31,17 @@ class Server:
         self.app = Flask('k8s scheduler extender')
         self.algorithm = configuration['algorithm']
 
-        # Metrics.
-        self.filter_metrics: List[Metric] = []
-        self.prioritize_metrics: List[Metric] = []
-
-        # Internal counters.
-        self.internal_counters: Dict[MetricName, int] = _prepare_internal_counters()
-
         @self.app.route('/status')
         def status():
-            capacity = self.algorithm.data_provider.get_nodes_capacities([
-                ResourceType.CPU,
-                ResourceType.MEM,
-                ResourceType.MEMBW_READ,
-                ResourceType.MEMBW_WRITE])
-
-            ass, unass = self.algorithm.data_provider.get_apps_counts()
-
-            apps = self.algorithm.data_provider.get_apps_requested_resources([
-                ResourceType.CPU,
-                ResourceType.MEM,
-                ResourceType.MEMBW_READ,
-                ResourceType.MEMBW_WRITE])
-
-            return jsonify(dict(capacity=capacity, ass=ass, unass=unass, apps=apps))
+            return jsonify(True)
 
         @self.app.route('/metrics')
         def metrics():
-            metrics = []
-
-            metrics.extend(_make_internal_metrics(self.internal_counters))
-            metrics.extend(self.filter_metrics)
-            metrics.extend(self.prioritize_metrics)
-
-            if is_convertable_to_prometheus_exposition_format(metrics):
-                prometheus_exposition = convert_to_prometheus_exposition_format(metrics)
-                return prometheus_exposition
+            metrics_registry = self.algorithm.get_metrics_registry()
+            if metrics_registry:
+                return metrics_registry.prometheus_exposition()
             else:
-                log.warning('[Metrics] Cannot convert internal metrics '
-                            'to prometheus exposition format!')
-                return jsonify([])
+                return ''
 
         @self.app.route('/filter', methods=['POST'])
         def filter():
@@ -83,16 +53,28 @@ class Server:
 
             if DEFAULT_NAMESPACE == pod_namespace:
                 log.info('[Filter] Trying to filter nodes for Pod %r' % pod_name)
-                result, metrics = self.algorithm.filter(extender_args)
+
+                result = self.algorithm.filter(extender_args)
+
                 log.info('[Filter] Result: %r' % result)
 
-                self.filter_metrics = metrics
-                self.internal_counters[MetricName.FILTER] += 1
+                self.algorithm.metrics.add(Metric(
+                    name=MetricName.FILTER,
+                    value=1,
+                    labels=DEFAULT_METRIC_LABELS,
+                    type=MetricType.COUNTER))
+
                 return jsonify(asdict(result))
             else:
-                self.internal_counters[MetricName.POD_IGNORE_FILTER] += 1
                 log.info('[Filter] Ignoring Pod %r : Different namespace!' %
                          pod_name)
+
+                self.algorithm.metrics.add(Metric(
+                    name=MetricName.POD_IGNORE_FILTER,
+                    value=1,
+                    labels=DEFAULT_METRIC_LABELS,
+                    type=MetricType.COUNTER))
+
                 return jsonify(ExtenderFilterResult(NodeNames=extender_args.NodeNames))
 
         @self.app.route('/prioritize', methods=['POST'])
@@ -106,34 +88,28 @@ class Server:
             if DEFAULT_NAMESPACE == pod_namespace:
                 log.info('[Prioritize] Trying to prioritize nodes for Pod %r' % pod_name)
 
-                result, metrics = self.algorithm.prioritize(extender_args)
+                result = self.algorithm.prioritize(extender_args)
 
                 priorities = [asdict(host)
                               for host in result]
 
                 log.info('[Prioritize] Result: %r ' % priorities)
 
-                self.prioritize_metrics = metrics
-                self.internal_counters[MetricName.PRIORITIZE] += 1
+                self.algorithm.metrics.add(Metric(
+                    name=MetricName.PRIORITIZE,
+                    value=1,
+                    labels=DEFAULT_METRIC_LABELS,
+                    type=MetricType.COUNTER))
+
                 return jsonify(priorities)
             else:
-                self.internal_counters[MetricName.POD_IGNORE_PRIORITIZE] += 1
                 log.info('[Prioritize] Ignoring Pod %r : Different namespace!' %
                          pod_name)
+
+                self.algorithm.metrics.add(Metric(
+                    name=MetricName.POD_IGNORE_PRIORITIZE,
+                    value=1,
+                    labels=DEFAULT_METRIC_LABELS,
+                    type=MetricType.COUNTER))
+
                 return jsonify([])
-
-
-def _prepare_internal_counters() -> Dict[MetricName, int]:
-    return {
-        MetricName.POD_IGNORE_FILTER: 0,
-        MetricName.POD_IGNORE_PRIORITIZE: 0,
-        MetricName.FILTER: 0,
-        MetricName.PRIORITIZE: 0
-            }
-
-
-def _make_internal_metrics(internal_counters: Dict[MetricName, int]) -> List[Metric]:
-    metrics = []
-    for name, counter in internal_counters.items():
-        metrics.append(Metric(name, float(counter)))
-    return metrics

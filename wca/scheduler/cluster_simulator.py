@@ -363,14 +363,13 @@ class ClusterSimulator:
                'name': new_task.name, 'namespace': 'default'}}
         extender_args = ExtenderArgs([], pod, node_names)
 
-        extender_filter_result, extender_filter_metrics = self.scheduler.filter(extender_args)
+        extender_filter_result = self.scheduler.filter(extender_args)
         filtered_nodes = [node for node in extender_args.NodeNames
                           if node not in extender_filter_result.FailedNodes]
         log.log(TRACE, "Nodes left after filtering: ({})".format(','.join(filtered_nodes)))
 
         extender_args.NodeNames = filtered_nodes  # to prioritize pass only filtered nodes
-        extender_prioritize_result, extender_prioritize_metrics = \
-            self.scheduler.prioritize(extender_args)
+        extender_prioritize_result = self.scheduler.prioritize(extender_args)
         priorities_str = ','.join(["{}:{}".format(el.Host, str(el.Score))
                                    for el in extender_prioritize_result])
         log.log(TRACE, "Priorities of nodes: ({})".format(priorities_str))

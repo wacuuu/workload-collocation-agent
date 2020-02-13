@@ -18,6 +18,7 @@ import logging
 
 from wca.metrics import Metric
 from wca.logger import TRACE
+from wca.scheduler.metrics import MetricRegistry
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, \
                                 NodeName, Resources
 from wca.scheduler.types import ResourceType as rt
@@ -38,6 +39,9 @@ class Algorithm(ABC):
             List[HostPriority], List[Metric]]:
         pass
 
+    @abstractmethod
+    def get_metrics_registry(self) -> Optional[MetricRegistry]:
+        return None
 
 class BaseAlgorithm(Algorithm):
     """Implementing some basic functionalities which probably
@@ -49,17 +53,13 @@ class BaseAlgorithm(Algorithm):
                  dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE)):
         self.data_provider = data_provider
         self.dimensions = dimensions
-        self.metrics = []
+        self.metrics = MetricRegistry()
 
-    def filter(self, extender_args: ExtenderArgs) -> Tuple[
-            ExtenderFilterResult, List[Metric]]:
+    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         log.debug('[Filter] ExtenderArgs: %r' % extender_args)
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
 
         extender_filter_result = ExtenderFilterResult()
-
-        # Clear for new metrics.
-        self.metrics = []
 
         data_provider_queried = self.query_data_provider()
 
@@ -71,16 +71,12 @@ class BaseAlgorithm(Algorithm):
             else:
                 extender_filter_result.NodeNames.append(node_name)
 
-        return extender_filter_result, self.metrics
+        return extender_filter_result
 
-    def prioritize(self, extender_args: ExtenderArgs) -> Tuple[
-            List[HostPriority], List[Metric]]:
+    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
 
         priorities = []
-
-        # Clear for new metrics.
-        self.metrics = []
 
         data_provider_queried = self.query_data_provider()
 
@@ -88,7 +84,10 @@ class BaseAlgorithm(Algorithm):
             priority = self.priority_for_node(node_name, app_name, data_provider_queried)
             priorities.append(HostPriority(node_name, priority))
 
-        return priorities, self.metrics
+        return priorities
+
+    def get_metrics_registry(self) -> Optional[MetricRegistry]:
+        return self.metrics
 
     @abstractmethod
     def app_fit_node(self, node_name: NodeName, app_name: str,

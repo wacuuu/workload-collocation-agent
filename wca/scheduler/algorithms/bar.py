@@ -44,7 +44,7 @@ class BARGeneric(FitGeneric):
 
         used, free, requested = \
             used_free_requested(node_name, app_name, self.dimensions,
-                                *data_provider_queried)
+                                nodes_capacities, assigned_apps_counts, apps_spec)
         membw_read_write_ratio = calculate_read_write_ratio(nodes_capacities[node_name])
 
         # Parse "requested" as dict from defaultdict to get better string representation.
@@ -77,8 +77,9 @@ class BARGeneric(FitGeneric):
             variance = sum([(fraction - mean)*(fraction - mean)
                             for fraction in requested_fraction.values()]) \
                        / len(requested_fraction)
-        elif len(requested_fraction) == 1:
-            variance = abs(requested_fraction[0] - requested_fraction[1])
+        elif len(requested_fraction) == 2:
+            values = list(requested_fraction.values())
+            variance = abs(values[0] - values[1])
         else:
             variance = 0
 

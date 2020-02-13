@@ -19,9 +19,10 @@ from wca.metrics import Metric, MetricType
 from wca.logger import TRACE
 from wca.scheduler.algorithms import \
     BaseAlgorithm, used_resources_on_node, calculate_read_write_ratio, \
-    substract_resources, sum_resources
+    substract_resources, sum_resources, flat_membw_read_write
 from wca.scheduler.metrics import MetricName
 from wca.scheduler.types import (ExtenderArgs, HostPriority, NodeName)
+from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
 
@@ -43,7 +44,7 @@ class FitGeneric(BaseAlgorithm):
         free = substract_resources(capacity, sum_resources(used, requested), membw_read_write_ratio)
         broken_capacities = {r: abs(v) for r, v in free.items() if v < 0}
 
-        self._generate_internal_metrics(app_name, node_name, used, capacity, requested)
+        self._generate_internal_metrics(app_name, node_name, used, capacity, requested, free)
 
         if not broken_capacities:
             return True, ''
@@ -57,26 +58,36 @@ class FitGeneric(BaseAlgorithm):
         """no prioritization method for FitGeneric"""
         return 0
 
-    def _generate_internal_metrics(self, app_name, node_name, used, capacity, requested):
-        log.log(TRACE, "[Filter] Requested %s Capacity %s Used %s", dict(requested), capacity, used)
+    def _generate_internal_metrics(self, app_name, node_name, used, capacity, requested, free):
+        log.log(TRACE, "[Filter][%s][%s] Requested %s Capacity %s Used %s",
+                app_name, node_name, dict(requested), capacity, used)
+
+        membw_read_write_ratio = calculate_read_write_ratio(capacity)
+        free_membw_flat = flat_membw_read_write(free, membw_read_write_ratio)
+
+        self.metrics.add(Metric(
+            name=MetricName.FIT_PREDICTED_MEMBW_FLAT_USAGE,
+            value=free_membw_flat[rt.MEMBW_FLAT],
+            labels=dict(app=app_name, node=node_name),
+            type=MetricType.GAUGE))
 
         # Prepare metrics.
         for resource in used:
-            self.metrics.append(
+            self.metrics.add(
                 Metric(name=MetricName.NODE_USED_RESOURCE,
                        value=used[resource],
                        labels=dict(node=node_name, resource=resource),
                        type=MetricType.GAUGE,))
 
         for resource in capacity:
-            self.metrics.append(
+            self.metrics.add(
                 Metric(name=MetricName.NODE_CAPACITY_RESOURCE,
                        value=capacity[resource],
                        labels=dict(node=node_name, resource=resource),
                        type=MetricType.GAUGE,))
 
         for resource in requested:
-            self.metrics.append(
+            self.metrics.add(
                 Metric(name=MetricName.APP_REQUESTED_RESOURCE,
                        value=used[resource],
                        labels=dict(resource=resource, app=app_name),
