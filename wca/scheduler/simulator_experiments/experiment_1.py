@@ -371,16 +371,16 @@ def run():
     # dimensions supported by simulator
     experiments_set__generic(
         'comparing_bar2d_vs_bar3d__option_A',
-        (30,),
+        (10,),
         (
-            (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=10)),
+            (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=5)),
             # (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
         ),
         (
             # (NOPAlgorithm, {}),
             # (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
-            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
-            # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
+            # (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
             # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
         ),
         (
@@ -412,9 +412,10 @@ if __name__ == "__main__":
         # No installed packages required for report generation.
         exit(1)
 
-    init_logging('trace', 'scheduler_extender_simulator_experiments')
+    # init_logging('trace', 'scheduler_extender_simulator_experiments')
     logging.basicConfig(level=logging.INFO)
-    logging.getLogger('wca.scheduler').setLevel(logging.DEBUG)
-    logging.getLogger('wca.scheduler.cluster_simulator').setLevel(90)
+    # logging.getLogger('wca.scheduler').setLevel(logging.INFO)
+    # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(90)
+    logging.getLogger('wca.scheduler.algorithms').setLevel(9)
 
     run()

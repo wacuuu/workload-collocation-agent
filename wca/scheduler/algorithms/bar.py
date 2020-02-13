@@ -41,8 +41,8 @@ class BARGeneric(FitGeneric):
                           data_provider_queried: Tuple[Any]) -> int:
         nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
 
-        used, free, requested = used_free_requested(node_name, app_name, self.dimensions,
-                                                    *data_provider_queried)
+        used, free, requested = used_free_requested(
+            node_name, app_name, self.dimensions, nodes_capacities, assigned_apps_counts, apps_spec)
 
         # Parse "requested" as dict from defaultdict to get better string representation.
         log.log(TRACE, "[Prioritize][%s][%s] Requested %s Free %s Used %s",
@@ -74,8 +74,9 @@ class BARGeneric(FitGeneric):
             variance = sum([(fraction - mean)*(fraction - mean)
                             for fraction in requested_fraction.values()]) \
                        / len(requested_fraction)
-        elif len(requested_fraction) == 1:
-            variance = abs(requested_fraction[0] - requested_fraction[1])
+        elif len(requested_fraction) == 2:
+            values = list(requested_fraction.values())
+            variance = abs(values[0] - values[1])
         else:
             variance = 0
 

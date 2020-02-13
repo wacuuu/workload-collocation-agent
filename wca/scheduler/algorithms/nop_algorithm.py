@@ -29,9 +29,9 @@ class NOPAlgorithm(Algorithm):
     def filter(self, extender_args: ExtenderArgs):
         _, nodes, _, _ = extract_common_input(extender_args)
 
-        return ExtenderFilterResult(Nodes=nodes), []
+        return ExtenderFilterResult(Nodes=nodes)
 
     def prioritize(self, extender_args: ExtenderArgs):
         _, nodes, _, _ = extract_common_input(extender_args)
 
-        return [HostPriority(node, 0) for node in nodes], []
+        return [HostPriority(node, 0) for node in nodes]
