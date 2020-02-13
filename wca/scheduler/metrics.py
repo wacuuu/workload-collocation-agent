@@ -75,7 +75,6 @@ class MetricRegistry:
         metrics = []
 
         for _, new_metrics in self._storage.items():
-            log.debug('[Metrics] %s', new_metrics)
             metrics.extend(new_metrics)
 
         if is_convertable_to_prometheus_exposition_format(metrics):
