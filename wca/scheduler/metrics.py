@@ -33,6 +33,7 @@ class MetricName(str, Enum):
     APP_REQUESTED_RESOURCE = PREFIX + 'app_requested_resource'
     NODE_CAPACITY_RESOURCE = PREFIX + 'node_capacity_resource'
     NODE_USED_RESOURCE = PREFIX + 'node_used_resource'
+    FIT_PREDICTED_MEMBW_FLAT_USAGE = PREFIX + 'fit_predicted_membw_flat_usage'
 
     def __repr__(self):
         return repr(self.value)
