@@ -39,6 +39,27 @@ class FitGeneric(BaseAlgorithm):
 
         requested = apps_spec[app_name]
 
+        for resource in used:
+            self.metrics.add(
+                    Metric(name=MetricName.NODE_USED_RESOURCE,
+                           value=used[resource],
+                           labels=dict(node=node_name, resource=resource),
+                           type=MetricType.GAUGE,))
+
+        for resource in capacity:
+            self.metrics.add(
+                Metric(name=MetricName.NODE_CAPACITY_RESOURCE,
+                       value=capacity[resource],
+                       labels=dict(node=node_name, resource=resource),
+                       type=MetricType.GAUGE,))
+
+        for resource in requested:
+            self.metrics.add(
+                Metric(name=MetricName.APP_REQUESTED_RESOURCE,
+                       value=used[resource],
+                       labels=dict(resource=resource, app=app_name),
+                       type=MetricType.GAUGE,))
+
         broken_capacities = set([r for r in self.dimensions
                                  if requested[r] > capacity[r] - used[r]])
 
@@ -65,28 +86,6 @@ class FitGeneric(BaseAlgorithm):
             broken_capacities.update((rt.MEMBW_READ, rt.MEMBW_READ,))
 
         broken_capacities_str = ','.join([str(e) for e in broken_capacities])
-
-        # Prepare metrics.
-        for resource in used:
-            self.metrics.add(
-                    Metric(name=MetricName.NODE_USED_RESOURCE,
-                           value=used[resource],
-                           labels=dict(node=node_name, resource=resource),
-                           type=MetricType.GAUGE,))
-
-        for resource in capacity:
-            self.metrics.add(
-                Metric(name=MetricName.NODE_CAPACITY_RESOURCE,
-                       value=capacity[resource],
-                       labels=dict(node=node_name, resource=resource),
-                       type=MetricType.GAUGE,))
-
-        for resource in requested:
-            self.metrics.add(
-                Metric(name=MetricName.APP_REQUESTED_RESOURCE,
-                       value=used[resource],
-                       labels=dict(resource=resource, app=app_name),
-                       type=MetricType.GAUGE,))
 
         if not broken_capacities:
             return True, ''

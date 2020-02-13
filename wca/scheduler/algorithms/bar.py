@@ -15,11 +15,13 @@
 import logging
 from typing import Tuple, Dict, Any, Iterable
 
+from wca.metrics import Metric, MetricType
 from wca.logger import TRACE
 
 from wca.scheduler.algorithms import used_resources_on_node, free_resources_on_node
-from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.algorithms.fit import FitGeneric
+from wca.scheduler.data_providers import DataProvider
+from wca.scheduler.metrics import MetricName
 from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
@@ -44,11 +46,38 @@ class BARGeneric(FitGeneric):
         used, free, requested = used_free_requested(node_name, app_name, self.dimensions,
                                                     *data_provider_queried)
 
+        for resource in used:
+            self.metrics.add(
+                    Metric(name=MetricName.NODE_USED_RESOURCE,
+                           value=used[resource],
+                           labels=dict(node=node_name, resource=resource),
+                           type=MetricType.GAUGE,))
+
+        for resource in free:
+            self.metrics.add(
+                Metric(name=MetricName.NODE_FREE_RESOURCE,
+                       value=free[resource],
+                       labels=dict(node=node_name, resource=resource),
+                       type=MetricType.GAUGE,))
+
+        for resource in requested:
+            self.metrics.add(
+                Metric(name=MetricName.APP_REQUESTED_RESOURCE,
+                       value=used[resource],
+                       labels=dict(resource=resource, app=app_name),
+                       type=MetricType.GAUGE,))
+
         # Parse "requested" as dict from defaultdict to get better string representation.
         log.log(TRACE, "[Prioritize][%s][%s] Requested %s Free %s Used %s",
                 app_name, node_name, dict(requested), free, used)
 
         requested_fraction = app_requested_fraction(self.dimensions, requested, free)
+
+        for resource, fraction in requested_fraction.items():
+            self.metrics.add(
+                    Metric(name=MetricName.BAR_REQUESTED_FRACTION,
+                           value=fraction, labels=dict(app=app_name, resource=resource),
+                           type=MetricType.GAUGE))
 
         log.log(TRACE, "[Prioritize][%s][%s] Requested fraction: %s",
                 app_name, node_name, requested_fraction)
@@ -64,11 +93,21 @@ class BARGeneric(FitGeneric):
         log.log(TRACE, "[Prioritize][%s][%s] Least used score: %s",
                 app_name, node_name, least_used_score)
 
+        self.metrics.add(
+                Metric(name=MetricName.BAR_LEAST_USED_SCORE,
+                       value=least_used_score, labels=dict(app=app_name, node=node_name),
+                       type=MetricType.GAUGE))
+
         # priority according to variance of dimensions
         mean = sum([v for v in requested_fraction.values()])/len(requested_fraction)
 
         log.log(TRACE, "[Prioritize][%s][%s] Mean: %s",
                 app_name, node_name, mean)
+
+        self.metrics.add(
+                Metric(name=MetricName.BAR_MEAN,
+                       value=mean, labels=dict(app=app_name),
+                       type=MetricType.GAUGE))
 
         if len(requested_fraction) > 2:
             variance = sum([(fraction - mean)*(fraction - mean)
@@ -82,15 +121,30 @@ class BARGeneric(FitGeneric):
         log.log(TRACE, "[Prioritize][%s][%s] Variance: %s",
                 app_name, node_name, variance)
 
+        self.metrics.add(
+                Metric(name=MetricName.BAR_MEAN,
+                       value=mean, labels=dict(app=app_name, node=node_name),
+                       type=MetricType.GAUGE))
+
         bar_score = int((1-variance) * self.max_node_score)
 
         log.log(TRACE, "[Prioritize][%s][%s] Bar score: %s",
                 app_name, node_name, bar_score)
 
+        self.metrics.add(
+                Metric(name=MetricName.BAR_SCORE,
+                       value=bar_score, labels=dict(app=app_name, node=node_name),
+                       type=MetricType.GAUGE))
+
         result = (bar_score + least_used_score) / 2
 
         log.log(TRACE, "[Prioritize][%s][%s] Result: %s",
                 app_name, node_name, result)
+
+        self.metrics.add(
+                Metric(name=MetricName.BAR_RESULT,
+                       value=result, labels=dict(app=app_name, node=node_name),
+                       type=MetricType.GAUGE))
 
         return result
 
