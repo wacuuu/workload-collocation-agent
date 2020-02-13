@@ -30,15 +30,13 @@ from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.algorithms.fit import FitGeneric
 from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
-from wca.scheduler.cluster_simulator import ClusterSimulator, Node, Resources, Task, AssignmentsCounts
+from wca.scheduler.cluster_simulator import \
+        ClusterSimulator, Node, Resources, Task, AssignmentsCounts
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
     ClusterSimulatorDataProvider)
-from wca.scheduler.types import NodeName, AppName
 from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
-
-
 
 
 def extend_membw_dimensions_to_write_read(taskset):
@@ -105,7 +103,7 @@ def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
 def create_report(title: str, subtitle: str,
                   run_params: Dict[str, Any],
                   iterations_data: List[IterationData],
-                  reports_root_directory: str ='experiments_results'):
+                  reports_root_directory: str = 'experiments_results'):
     """
         Results will be saved to location:
         {reports_root_directory}/{title}/{subtitle}.{extension}
@@ -160,10 +158,11 @@ def create_report(title: str, subtitle: str,
         fref.write("Run params: {}\n".format(pprint.pformat(run_params, indent=4)))
         fref.write("Iterations: {}\n".format(len(iterations_data)))
         fref.write("Scheduled tasks (might not be successfully assigned): {}\n"
-            .format(iterations_data[-1].tasks_types_count))
+                   .format(iterations_data[-1].tasks_types_count))
 
         assignments_counts = iterations_data[-1].assignments_counts
-        fref.write("Assigned tasks per node: {}\n".format(pp(assignments_counts.per_node), indent=4))
+        fref.write("Assigned tasks per node: {}\n".format(pp(assignments_counts.per_node),
+                                                          indent=4))
         fref.write("Assigned tasks per cluster: {}\n".format(assignments_counts.per_cluster))
         fref.write("Unassigned tasks: {}\n".format(assignments_counts.unassigned))
 
@@ -270,8 +269,8 @@ def run_n_iter(iterations_count: int, simulator: ClusterSimulator,
 
 
 def prepare_nodes(
-        node_specs: Dict[str, Dict], # node_type to resource dict,
-        type_counts: Dict[str, int], # node_type to number of nodes,
+        node_specs: Dict[str, Dict],  # node_type to resource dict,
+        type_counts: Dict[str, int],  # node_type to number of nodes,
         dimensions: Set[rt]
         ) -> List[Node]:
     """Create cluster with node_specs with number of each kind (node_spec are sorted by name).
@@ -291,6 +290,7 @@ def prepare_nodes(
             node = Node(node_name, available_resources=Resources(node_specs[node_type]))
             nodes.append(node)
     return nodes
+
 
 def prepare_NxMxK_nodes__demo_configuration(
         apache_pass_count, dram_only_v1_count,
@@ -319,6 +319,7 @@ def prepare_NxMxK_nodes__demo_configuration(
             nodes.append(node)
             inode += 1
     return nodes
+
 
 # taken from 2lm contention demo slides:
 # wca_load_balancing_multidemnsional_2lm_v0.2
@@ -365,7 +366,8 @@ task_definitions = [
 ]
 
 # Used to filter out unsed node dimensions
-nodes_dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
+nodes_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
+
 
 def run():
     # dimensions supported by simulator
@@ -381,7 +383,7 @@ def run():
             # (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
             (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
             # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
-            # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
         ),
         (
             prepare_nodes(dict(
