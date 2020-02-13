@@ -55,8 +55,16 @@ COPY examples/hello_world_runner.py ./examples
 COPY examples/hello_world_runner_with_dateutil.py ./examples
 COPY examples/http_storage.py ./examples
 COPY examples/__init__.py ./examples
+COPY Makefile .
+COPY requirements.txt .
+
+RUN make venv
+
+ENV PYTHONPATH=/wca
 
 COPY wca ./wca
+
+ENTRYPOINT ["/wca/env/bin/python", "wca/main.py"]
 
 # ------------------------ pex ----------------------
 # "pex" stage includes pex file in /usr/bin/
@@ -78,6 +86,6 @@ RUN yum -y install python36 which wget
 RUN (cd /etc/yum.repos.d/; \
         wget https://copr.fedorainfracloud.org/coprs/jhli/ipmctl/repo/epel-7/jhli-ipmctl-epel-7.repo; \
         wget https://copr.fedorainfracloud.org/coprs/jhli/safeclib/repo/epel-7/jhli-safeclib-epel-7.repo)
-RUN yum -y update && yum install -y ndctl ndctl-libs ndctl-devel libsafec ipmctl
+RUN yum -y update && yum install -y ndctl ndctl-libs ndctl-devel libsafec ipmctl dmidecode
 COPY --from=pex /wca/dist/wca.pex /usr/bin/
 ENTRYPOINT ["/usr/bin/wca.pex"]

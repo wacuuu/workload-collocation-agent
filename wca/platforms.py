@@ -26,6 +26,7 @@ from enum import Enum
 
 from wca.metrics import Metric, MetricName, Measurements, export_metrics_from_measurements
 from wca.profiling import profiler
+from wca.logger import TRACE
 
 try:
     from pkg_resources import get_distribution, DistributionNotFound
@@ -663,6 +664,7 @@ def collect_platform_information(rdt_enabled: bool = True,
     )
     assert len(platform_measurements[MetricName.PLATFORM_CPU_USAGE]) == platform.cpus, \
         "Inconsistency in cpu data returned by kernel"
+    log.log(TRACE, 'platform: %r', platform)
     return platform, create_metrics(platform), create_labels(platform, include_optional_labels)
 
 
@@ -673,7 +675,8 @@ def decode_listformat(value: str) -> Set[int]:
     """
     cores = set()
 
-    if not value:
+    # handle empty values like '' or ' '
+    if not value or value.strip() == '':
         return set()
 
     ranges = value.split(',')

@@ -111,6 +111,7 @@ def app_requested_fraction(dimensions, requested, free) -> Dict[rt, float]:
 def used_free_requested(
         node_name, app_name, dimensions,
         nodes_capacities, assigned_apps_counts, apps_spec):
+    """Helper function not making any new calculations."""
     used = used_resources_on_node(dimensions, assigned_apps_counts[node_name], apps_spec)
     free = free_resources_on_node(dimensions, nodes_capacities[node_name], used)  # allocable
     requested = apps_spec[app_name]
