@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Iterable, Any
+from typing import List, Tuple, Iterable, Any, Optional
 import logging
 
 from wca.metrics import Metric
@@ -39,6 +39,9 @@ class Algorithm(ABC):
             List[HostPriority], List[Metric]]:
         pass
 
+    @abstractmethod
+    def get_metrics_registry(self) -> Optional[MetricRegistry]:
+        return None
 
 class BaseAlgorithm(Algorithm):
     """Implementing some basic functionalities which probably
@@ -82,6 +85,9 @@ class BaseAlgorithm(Algorithm):
             priorities.append(HostPriority(node_name, priority))
 
         return priorities
+
+    def get_metrics_registry(self) -> Optional[MetricRegistry]:
+        return self.metrics
 
     @abstractmethod
     def app_fit_node(self, node_name: NodeName, app_name: str,
@@ -130,7 +136,7 @@ def free_resources_on_node(
     return free
 
 
-def membw_check(requested: Resources, used: Resources, capacity: Resources) -> bool:
+def membw_check(requested: Resources, used: Resources, capacity: Resources) -> Tuple[bool, float]:
     """
     read/write ratio, e.g. 40GB/s / 10GB/s = 4,
     what means reading is 4 time faster
@@ -139,7 +145,7 @@ def membw_check(requested: Resources, used: Resources, capacity: Resources) -> b
     for resource in (rt.MEMBW_WRITE, rt.MEMBW_READ,):
         for source in (requested, used):
             if resource not in source:
-                return True
+                return True, -1
 
     # To shorten the notation.
     WRITE = rt.MEMBW_WRITE

@@ -77,7 +77,10 @@ class MetricRegistry:
 
         for _, new_metrics in self._storage.items():
             metrics.extend(new_metrics)
-
+        # Lazy import, because we do not want to import all storage module code including
+        # libc and security.
+        from wca.storage import (convert_to_prometheus_exposition_format,
+                                 is_convertable_to_prometheus_exposition_format)
         if is_convertable_to_prometheus_exposition_format(metrics):
             prometheus_exposition = convert_to_prometheus_exposition_format(metrics)
             return prometheus_exposition
