@@ -90,7 +90,7 @@ class FitGeneric(BaseAlgorithm):
         for resource in requested:
             self.metrics.add(
                 Metric(name=MetricName.APP_REQUESTED_RESOURCE,
-                       value=used[resource],
+                       value=requested[resource],
                        labels=dict(resource=resource, app=app_name),
                        type=MetricType.GAUGE,))
 
