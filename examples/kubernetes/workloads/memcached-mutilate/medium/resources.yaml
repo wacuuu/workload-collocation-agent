@@ -11,3 +11,14 @@ spec:
             requests:
               cpu: 2
               memory: 10G # valueSize*records = 8kB * 1M = 10GB
+            limits:
+              cpu: 2
+              memory: 10G
+        - name: mutilate
+          resources:
+            requests:
+              cpu: 5
+              memory: 1G
+            limits:
+              cpu: 5
+              memory: 1G
