@@ -114,7 +114,7 @@ def create_report(title: str, subtitle: str,
                   iterations_data: List[IterationData],
                   reports_root_directory: str = 'experiments_results',
                   filter_metrics=None,
-                  ):
+                  ) -> dict:
     """
         Results will be saved to location:
         {reports_root_directory}/{title}/{subtitle}.{extension}
@@ -139,57 +139,65 @@ def create_report(title: str, subtitle: str,
     else:
         membw_usage = np.array([iter_.cluster_resource_usage.data[rt.MEMBW] for iter_ in iterd])
     # ---
-    number_of_metrics = len(filter_metrics)
-    fig, axs = plt.subplots(2 + number_of_metrics)
-    fig.set_size_inches(20, 20 + 6*number_of_metrics)
-    axs[0].plot(iterations, cpu_usage, 'r--')
-    axs[0].plot(iterations, mem_usage, 'b--')
-    axs[0].plot(iterations, membw_usage, 'g--')
-    axs[0].legend(['cpu usage', 'mem usage', 'membw usage'])
-    # ---
-    axs[0].set_title('{} {}'.format(title, subtitle), fontsize=10)
-    # ---
-    axs[0].set_xlim(iterations.min(), iterations.max())
-    axs[0].set_ylim(0, 1)
-
-    broken_assignments = np.array([sum(list(iter_.broken_assignments.values())) for iter_ in iterd])
-    axs[1].plot(iterations, broken_assignments, 'g--')
-    axs[1].legend(['broken assignments'])
-    axs[1].set_ylabel('')
-    axs[1].set_xlim(iterations.min(), iterations.max())
-    axs[1].set_ylim(broken_assignments.min() - 1, broken_assignments.max() + 1)
-
     if not os.path.isdir(exp_dir):
         os.makedirs(exp_dir)
+    CHARTS = False
+    if CHARTS:
+        number_of_metrics = len(filter_metrics)
+        fig, axs = plt.subplots(2 + number_of_metrics)
+        fig.set_size_inches(20, 20 + 6*number_of_metrics)
+        axs[0].plot(iterations, cpu_usage, 'r--')
+        axs[0].plot(iterations, mem_usage, 'b--')
+        axs[0].plot(iterations, membw_usage, 'g--')
+        axs[0].legend(['cpu usage', 'mem usage', 'membw usage'])
+        # ---
+        axs[0].set_title('{} {}'.format(title, subtitle), fontsize=10)
+        # ---
+        axs[0].set_xlim(iterations.min(), iterations.max())
+        axs[0].set_ylim(0, 1)
 
-    # Visualize metrics
-    try:
-        import seaborn as sns
-        import pandas as pd
-        for pidx, filter in enumerate(filter_metrics):
-            dicts = []
-            for iteration, idata in enumerate(iterations_data):
-                d = {k.split('{')[1][:-1]: v for k, v in idata.metrics.items() if k.startswith(filter)}
-                if not d:
-                    log.warning('metric %s not found: available: %s', filter,
-                                ', '.join([m.split('{')[0] for m in idata.metrics.keys()]))
-                dicts.append(d)
-            filled_markers = ('o', 'v', '^', '<', '>', '8', 's', 'p', '*',
-                              'h', 'H', 'D', 'd', 'P', 'X', 'a', 'b', 'c', 'd', 'e'
-                              'f', 'g')
-            df = pd.DataFrame(dicts)
-            x = sns.lineplot(data=df,
-                             markers=filled_markers,
-                             dashes=False,
-                             ax=axs[2+pidx])
-            x.set_title(filter)
-            x.set_xlim(iterations.min(), iterations.max())
+        broken_assignments = np.array([sum(list(iter_.broken_assignments.values())) for iter_ in iterd])
+        axs[1].plot(iterations, broken_assignments, 'g--')
+        axs[1].legend(['broken assignments'])
+        axs[1].set_ylabel('')
+        axs[1].set_xlim(iterations.min(), iterations.max())
+        axs[1].set_ylim(broken_assignments.min() - 1, broken_assignments.max() + 1)
 
-        # plt.show()
-    except ImportError:
-        log.warning('missing seaborn and pandas')
 
-    fig.savefig('{}/{}.png'.format(exp_dir, subtitle))
+        # Visualize metrics
+        try:
+            import seaborn as sns
+            import pandas as pd
+            for pidx, filter in enumerate(filter_metrics):
+                dicts = []
+                for iteration, idata in enumerate(iterations_data):
+                    d = {k.split('{')[1][:-1]: v for k, v in idata.metrics.items() if k.startswith(filter)}
+                    if not d:
+                        log.warning('metric %s not found: available: %s', filter,
+                                    ', '.join([m.split('{')[0] for m in idata.metrics.keys()]))
+                    dicts.append(d)
+
+                from matplotlib.markers import MarkerStyle
+                df = pd.DataFrame(dicts)
+                try:
+                    x = sns.lineplot(data=df,
+                                     markers=MarkerStyle.filled_markers,
+                                     dashes=False,
+                                     ax=axs[2+pidx])
+                except ValueError:
+                    x = sns.lineplot(data=df,
+                                     dashes=False,
+                                     ax=axs[2+pidx])
+                x.set_title(filter)
+                x.set_xlim(iterations.min(), iterations.max())
+
+            # plt.show()
+        except ImportError:
+            log.warning('missing seaborn and pandas')
+
+        fig.savefig('{}/{}.png'.format(exp_dir, subtitle))
+
+    stats = {}
 
     with open('{}/{}.txt'.format(exp_dir, subtitle), 'w') as fref:
         pp = pprint.pformat
@@ -197,22 +205,40 @@ def create_report(title: str, subtitle: str,
         fref.write("Start of experiment: {}\n".format(t_))
         fref.write("Run params: {}\n".format(pprint.pformat(run_params, indent=4)))
         fref.write("Iterations: {}\n".format(len(iterations_data)))
-        fref.write("Scheduled tasks (might not be successfully assigned): {}\n"
-                   .format(iterations_data[-1].tasks_types_count))
+        total_tasks_dict = dict(iterations_data[-1].tasks_types_count)
+        stats['TASKS'] = sum(total_tasks_dict.values())
+        fref.write("Scheduled tasks (might not be successfully assigned): {}\n\n"
+                   .format(total_tasks_dict))
 
         assignments_counts = iterations_data[-1].assignments_counts
-        fref.write("Assigned tasks per node: {}\n".format(pp(assignments_counts.per_node),
-                                                          indent=4))
-        fref.write("Assigned tasks per cluster: {}\n".format(assignments_counts.per_cluster))
-        fref.write("Unassigned tasks: {}\n".format(assignments_counts.unassigned))
 
-        fref.write("Broken assignments: {}\n".format(
-            sum(iterations_data[-1].broken_assignments.values())))
+        stats['NODES'] = len(assignments_counts.per_node.keys())
+
+        node_names = assignments_counts.per_node.keys()
+        for node_type, nodes in itertools.groupby(sorted(node_names), lambda x:x.split('_')[0]):
+            stats['%s_nodes' % node_type] = len(list(nodes))
+
+        fref.write("Assigned tasks per node:\n")
+        for node, counters in assignments_counts.per_node.items():
+            fref.write("   {}: {}\n".format(node, dict(counters)))
+
+        fref.write("\nAssigned tasks per cluster: {}\n".format(dict(assignments_counts.per_cluster)))
+        fref.write("Unassigned tasks: {}\n".format(dict(assignments_counts.unassigned)))
+
+        broken_assignments = sum(iterations_data[-1].broken_assignments.values())
+        fref.write("Broken assignments: {}\n".format(broken_assignments))
+        stats['name'] = subtitle
+        stats['broken_assignments'] = broken_assignments
 
         rounded_last_iter_resources = \
             map(partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],))
+        cpu_util, mem_util, bw_util = rounded_last_iter_resources
+        stats['UTIL'] = (cpu_util + mem_util + bw_util) / 3
+        stats['cpu_util'] = cpu_util
+        stats['mem_util'] = mem_util
+        stats['bw_util'] = bw_util
         fref.write("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})\n".format(
-            *rounded_last_iter_resources))
+            cpu_util, mem_util, bw_util))
 
         for node, usages in iterations_data[-1].per_node_resource_usage.items():
             rounded_last_iter_resources = map(
@@ -229,15 +255,19 @@ def create_report(title: str, subtitle: str,
         fref.write("Subexperiment: {}\n".format(subtitle))
         fref.write("Run params: {}\n\n".format(pprint.pformat(run_params, indent=4)))
 
+    return stats
+
 
 def experiments_set__generic(experiment_name, extra_charts, *args):
     """takes the same arguments as experiment__generic but as lists. @TODO"""
+    stats_dicts = []
     def experiment__generic(
                 exp_iter: int,
                 max_iteration: int,
                 task_creation_fun_def: Tuple[Callable, Dict],
+                nodes: List[Node],
                 scheduler_init: Tuple[Algorithm, Dict],
-                nodes: List[Node]):
+                ):
         scheduler_class, scheduler_kwargs = scheduler_init
         input_args = locals()
         iterations_data: List[IterationData] = []
@@ -257,14 +287,24 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
         else:
             filter_metrics = []
 
-        create_report(experiment_name, exp_iter, input_args, iterations_data,
+        dimensions = len(scheduler_kwargs.get('dimensions', []))
+        stats = create_report(experiment_name,
+                      '%d_%s(%s)' % (exp_iter, scheduler_class.__name__, dimensions),
+                      input_args, iterations_data,
                       filter_metrics=filter_metrics)
-        log.info('Finished experiment.')
+        log.debug('Finished experiment.', experiment_name, exp_iter)
+        log.debug('Stats:', stats)
+        stats_dicts.append(stats)
 
     if os.path.isdir('experiments_results/{}'.format(experiment_name)):
         shutil.rmtree('experiments_results/{}'.format(experiment_name))
     for exp_iter, params in enumerate(itertools.product(*args)):
         experiment__generic(exp_iter, *params)
+
+    import pandas as pd
+    pd.set_option('display.max_columns', None)
+    pd.set_option('display.width', 200)
+    print(pd.DataFrame(stats_dicts))
 
 
 class TaskGenerator_random:
@@ -294,8 +334,12 @@ class TaskGenerator_equal:
         task_definitions = extend_membw_dimensions_to_write_read(task_definitions)
         for task_def in task_definitions:
             task_def.remove_dimension(rt.WSS)
-        for task_def in task_definitions:
-            for r in range(replicas):
+        # Order of this for matters:
+        # T1, T2, T1, T2 (interleaved) - expected from kubernetes
+        # or
+        # T1, T1, T2, T2 (flat)
+        for r in range(replicas):
+            for task_def in task_definitions:
                 task_copy = task_def.copy()
                 task_copy.name += Task.CORE_NAME_SEP + str(r)
                 self.tasks.append(task_copy)
@@ -335,7 +379,7 @@ def prepare_nodes(
     nodes = []
     for node_type in sorted(node_specs.keys()):
         for node_id in range(type_counts[node_type]):
-            node_name = node_type+str(node_id)
+            node_name = node_type+'_'+str(node_id)
             node = Node(node_name, available_resources=Resources(node_specs[node_type]))
             nodes.append(node)
     return nodes
@@ -380,9 +424,9 @@ task_definitions = [
     # Task(name='memcached_medium',
     #      requested=Resources({rt.CPU: 2, rt.MEM: 12,
     #                           rt.MEMBW: 1.0, rt.WSS: 1.0})),
-    Task(name='memcached_small',
-         requested=Resources({rt.CPU: 2, rt.MEM: 2.5,
-                              rt.MEMBW: 0.4, rt.WSS: 0.4})),
+    # Task(name='memcached_small',
+    #      requested=Resources({rt.CPU: 2, rt.MEM: 2.5,
+    #                           rt.MEMBW: 0.4, rt.WSS: 0.4})),
     # # ---
     # Task(name='redis_big',
     #      requested=Resources({rt.CPU: 1, rt.MEM: 29,
@@ -410,37 +454,42 @@ task_definitions = [
     # Task(name='sysbench_medium',
     #      requested=Resources({rt.CPU: 2, rt.MEM: 2,
     #                           rt.MEMBW: 10, rt.WSS: 2})),
-    Task(name='sysbench_small',
-         requested=Resources({rt.CPU: 1, rt.MEM: 1,
-                              rt.MEMBW: 8, rt.WSS: 1}))
+    # Task(name='sysbench_small',
+    #      requested=Resources({rt.CPU: 1, rt.MEM: 1,
+    #                           rt.MEMBW: 8, rt.WSS: 1}))
+
+    # Artificial workloads
+    Task(name='cpu_bound', requested=Resources({rt.CPU: 10, rt.MEM: 50, rt.MEMBW: 1, rt.WSS: 1})),
+    Task(name='mem_bound', requested=Resources({rt.CPU: 1, rt.MEM: 100, rt.MEMBW: 1, rt.WSS: 1})),
+    Task(name='bw_bound', requested=Resources({rt.CPU: 1, rt.MEM: 1, rt.MEMBW: 10, rt.WSS: 1})),
 ]
 
 # Used to filter out unsed node dimensions
 nodes_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
 
-
 def run():
     # dimensions supported by simulator
     experiments_set__generic(
         'comparing_bar2d_vs_bar3d__option_A',
-        True, # extra chart for every metric generated by algorithm
-        (20,),
+        False, # extra chart for every metric generated by algorithm
+        (150,),
         (
             (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=10)),
+            (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=30)),
+            (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=50)),
             # (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
-        ),
-        (
-            (NOPAlgorithm, {}),
-            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
-            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
-            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
-            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
         ),
         (
             prepare_nodes(dict(
                 aep={rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40, rt.MEMBW_WRITE: 10},
-                dram={rt.CPU: 90, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150, rt.MEMBW_WRITE: 150}, ),
-                dict(aep=1, dram=1),
+                dram={rt.CPU: 40, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150, rt.MEMBW_WRITE: 150}, ),
+                dict(aep=2, dram=8),
+                nodes_dimensions,
+            ),
+            prepare_nodes(dict(
+                aep={rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40, rt.MEMBW_WRITE: 10},
+                dram={rt.CPU: 40, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150, rt.MEMBW_WRITE: 150}, ),
+                dict(aep=0, dram=8),
                 nodes_dimensions,
             ),
             # prepare_nodes(dict(
@@ -453,7 +502,14 @@ def run():
             #     dict(apache_pass=5, dram_only_v1=10, dram_only_v2=5),
             #     nodes_dimensions
             # ),
-        )
+        ),
+        (
+            (NOPAlgorithm, {}),
+            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
+            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
+        ),
     )
 
 
