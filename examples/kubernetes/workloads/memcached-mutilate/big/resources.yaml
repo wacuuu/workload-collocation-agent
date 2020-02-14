@@ -11,3 +11,14 @@ spec:
             requests:
               cpu: 2
               memory: 50G
+            limits:
+              cpu: 2
+              memory: 50G
+        - name: mutilate
+          resources:
+            requests:
+              cpu: 6
+              memory: 1G
+            limits:
+              cpu: 6
+              memory: 1G
