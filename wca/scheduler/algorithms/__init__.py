@@ -43,6 +43,10 @@ class Algorithm(ABC):
     def get_metrics_registry(self) -> Optional[MetricRegistry]:
         return None
 
+    @abstractmethod
+    def get_metrics_names(self) -> List[str]:
+        return []
+
 class BaseAlgorithm(Algorithm):
     """Implementing some basic functionalities which probably
        each Algorithm subclass will need to do. However forcing
@@ -88,6 +92,9 @@ class BaseAlgorithm(Algorithm):
 
     def get_metrics_registry(self) -> Optional[MetricRegistry]:
         return self.metrics
+
+    def get_metrics_names(self) -> List[str]:
+        return self.metrics.get_names()
 
     @abstractmethod
     def app_fit_node(self, node_name: NodeName, app_name: str,

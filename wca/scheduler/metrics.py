@@ -85,6 +85,9 @@ class MetricRegistry:
                 d[name+repr(metric.labels)] = metric.value
         return d
 
+    def get_names(self) -> List[str]:
+        return list(set(map(lambda m:m.value, list(self._storage.keys()))))
+
     def prometheus_exposition(self) -> str:
         metrics = []
 

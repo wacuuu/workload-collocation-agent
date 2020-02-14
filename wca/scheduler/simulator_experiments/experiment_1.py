@@ -112,7 +112,9 @@ def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
 def create_report(title: str, subtitle: str,
                   run_params: Dict[str, Any],
                   iterations_data: List[IterationData],
-                  reports_root_directory: str = 'experiments_results'):
+                  reports_root_directory: str = 'experiments_results',
+                  filter_metrics=None,
+                  ):
     """
         Results will be saved to location:
         {reports_root_directory}/{title}/{subtitle}.{extension}
@@ -120,6 +122,7 @@ def create_report(title: str, subtitle: str,
 
         >>run_params<< is dict of params used to run experiment
     """
+    filter_metrics = filter_metrics or []
     # experiment directory
     exp_dir = '{}/{}'.format(reports_root_directory, title)
 
@@ -136,8 +139,9 @@ def create_report(title: str, subtitle: str,
     else:
         membw_usage = np.array([iter_.cluster_resource_usage.data[rt.MEMBW] for iter_ in iterd])
     # ---
-    fig, axs = plt.subplots(2)
-    fig.set_size_inches(11, 11)
+    number_of_metrics = len(filter_metrics)
+    fig, axs = plt.subplots(2 + number_of_metrics)
+    fig.set_size_inches(20, 20 + 6*number_of_metrics)
     axs[0].plot(iterations, cpu_usage, 'r--')
     axs[0].plot(iterations, mem_usage, 'b--')
     axs[0].plot(iterations, membw_usage, 'g--')
@@ -145,21 +149,46 @@ def create_report(title: str, subtitle: str,
     # ---
     axs[0].set_title('{} {}'.format(title, subtitle), fontsize=10)
     # ---
-    axs[0].set_xlim(iterations.min() - 1, iterations.max() + 1)
+    axs[0].set_xlim(iterations.min(), iterations.max())
     axs[0].set_ylim(0, 1)
 
     broken_assignments = np.array([sum(list(iter_.broken_assignments.values())) for iter_ in iterd])
     axs[1].plot(iterations, broken_assignments, 'g--')
     axs[1].legend(['broken assignments'])
-    axs[1].set_xlabel('iteration')
     axs[1].set_ylabel('')
-    axs[1].set_xlim(iterations.min() - 1, iterations.max() + 1)
+    axs[1].set_xlim(iterations.min(), iterations.max())
     axs[1].set_ylim(broken_assignments.min() - 1, broken_assignments.max() + 1)
 
     if not os.path.isdir(exp_dir):
         os.makedirs(exp_dir)
-    fig.savefig('{}/{}.png'.format(exp_dir, subtitle))
 
+    # Visualize metrics
+    try:
+        import seaborn as sns
+        import pandas as pd
+        for pidx, filter in enumerate(filter_metrics):
+            dicts = []
+            for iteration, idata in enumerate(iterations_data):
+                d = {k.split('{')[1][:-1]: v for k, v in idata.metrics.items() if k.startswith(filter)}
+                if not d:
+                    log.warning('metric %s not found: available: %s', filter,
+                                ', '.join([m.split('{')[0] for m in idata.metrics.keys()]))
+                dicts.append(d)
+            # filled_markers = (
+            #     'o', 'v', '^', '<', '>', '8', 's', 'p', '*', 'h', 'H', 'D', 'd', 'P', 'X')
+            df = pd.DataFrame(dicts)
+            x = sns.lineplot(data=df,
+                             # markers=filled_markers,
+                             dashes=False,
+                             ax=axs[2+pidx])
+            x.set_title(filter)
+            x.set_xlim(iterations.min(), iterations.max())
+
+        # plt.show()
+    except ImportError:
+        log.warning('missing seaborn and pandas')
+
+    fig.savefig('{}/{}.png'.format(exp_dir, subtitle))
 
     with open('{}/{}.txt'.format(exp_dir, subtitle), 'w') as fref:
         pp = pprint.pformat
@@ -192,22 +221,15 @@ def create_report(title: str, subtitle: str,
                 "resource_usage_per_node(node={}, cpu, mem, membw_flat) = ({}, {}, {})\n".format(
                     node.name, *rounded_last_iter_resources))
 
-        # Visualize metrics
-        # d = defaultdict(list)
-        # for iteration, idata in enumerate(iterations_data):
-        #     for metric_name, value in idata.metrics.items():
-        #         d[metric_name].append((iteration, value))
-        # series = dict(d)
-        # import seaborn
-        # seaborn.lineplot(iterations, series)
-        # fref.write("metrics: \n{}".format(pp(series)))
+        available_metrics = {m.split('{')[0] for iterdata in iterations_data for m in iterdata.metrics}
+        fref.write("available metrics: {}\n".format(', '.join(sorted(available_metrics))))
 
     with open('{}/README.txt'.format(exp_dir), 'a') as fref:
         fref.write("Subexperiment: {}\n".format(subtitle))
         fref.write("Run params: {}\n\n".format(pprint.pformat(run_params, indent=4)))
 
 
-def experiments_set__generic(experiment_name, *args):
+def experiments_set__generic(experiment_name, extra_charts, *args):
     """takes the same arguments as experiment__generic but as lists. @TODO"""
     def experiment__generic(
                 exp_iter: int,
@@ -229,7 +251,13 @@ def experiments_set__generic(experiment_name, *args):
         run_n_iter(max_iteration, simulator, task_creation_fun,
                    wrapper_iteration_finished_callback(iterations_data))
 
-        create_report(experiment_name, exp_iter, input_args, iterations_data)
+        if extra_charts:
+            filter_metrics = simulator.scheduler.get_metrics_names()
+        else:
+            filter_metrics = []
+
+        create_report(experiment_name, exp_iter, input_args, iterations_data,
+                      filter_metrics=filter_metrics)
         log.info('Finished experiment.')
 
     if os.path.isdir('experiments_results/{}'.format(experiment_name)):
@@ -394,13 +422,14 @@ def run():
     # dimensions supported by simulator
     experiments_set__generic(
         'comparing_bar2d_vs_bar3d__option_A',
-        (4,),
+        False, # extra chart for every metric generated by algorithm
+        (20,),
         (
             (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=10)),
-            (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
+            # (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
         ),
         (
-            # (NOPAlgorithm, {}),
+            (NOPAlgorithm, {}),
             (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
             (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
             (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
@@ -413,16 +442,16 @@ def run():
                 dict(aep=1, dram=1),
                 nodes_dimensions,
             ),
-            # prepare_nodes(dict(
-            #     apache_pass={rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
-            #                  rt.MEMBW_WRITE: 10, rt.WSS: 256},
-            #     dram_only_v1={rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150,
-            #                   rt.MEMBW_WRITE: 150, rt.WSS: 192},
-            #     dram_only_v2={rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ: 200,
-            #                   rt.MEMBW_WRITE: 200, rt.WSS: 394}),
-            #     dict(apache_pass=5, dram_only_v1=10, dram_only_v2=5),
-            #     nodes_dimensions
-            # ),
+            prepare_nodes(dict(
+                apache_pass={rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
+                             rt.MEMBW_WRITE: 10, rt.WSS: 256},
+                dram_only_v1={rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150,
+                              rt.MEMBW_WRITE: 150, rt.WSS: 192},
+                dram_only_v2={rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ: 200,
+                              rt.MEMBW_WRITE: 200, rt.WSS: 394}),
+                dict(apache_pass=5, dram_only_v1=10, dram_only_v2=5),
+                nodes_dimensions
+            ),
         )
     )
 
@@ -439,6 +468,6 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     # logging.getLogger('wca.scheduler').setLevel(logging.INFO)
     # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(90)
-    logging.getLogger('wca.scheduler.algorithms').setLevel(9)
+    # logging.getLogger('wca.scheduler.algorithms').setLevel(9)
 
     run()

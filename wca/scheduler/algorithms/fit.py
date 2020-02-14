@@ -65,11 +65,12 @@ class FitGeneric(BaseAlgorithm):
         membw_read_write_ratio = calculate_read_write_ratio(capacity)
         free_membw_flat = flat_membw_read_write(free, membw_read_write_ratio)
 
-        self.metrics.add(Metric(
-            name=MetricName.FIT_PREDICTED_MEMBW_FLAT_USAGE,
-            value=free_membw_flat[rt.MEMBW_FLAT],
-            labels=dict(app=app_name, node=node_name),
-            type=MetricType.GAUGE))
+        if rt.MEMBW_FLAT in free_membw_flat:
+            self.metrics.add(Metric(
+                name=MetricName.FIT_PREDICTED_MEMBW_FLAT_USAGE,
+                value=free_membw_flat[rt.MEMBW_FLAT],
+                labels=dict(app=app_name, node=node_name),
+                type=MetricType.GAUGE))
 
         # Prepare metrics.
         for resource in used:
