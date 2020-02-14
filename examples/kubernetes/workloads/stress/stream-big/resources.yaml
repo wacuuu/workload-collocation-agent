@@ -9,5 +9,9 @@ spec:
         - name: stress
           resources:
             requests:
-              cpu: 3
+              cpu: 4
               memory: 13G
+            limits:
+              cpu: 4
+              memory: 13G
+
