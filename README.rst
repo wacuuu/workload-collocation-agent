@@ -267,7 +267,7 @@ Further reading
 - `Kubernetes integration <docs/kubernetes.rst>`_
 - `Logging configuration <docs/logging.rst>`_
 - `Supported workloads and definitions </workloads>`_
-- `WCA Architecture 1.7.pdf`_
+- `[Outdated] WCA Architecture v1.7.pdf`_
 - `Secure communication with SSL <docs/ssl.rst>`_
 - `Security policy <SECURITY.md>`_
 - `Configuration examples for Kubernetes and Mesos <configs/>`_
@@ -276,4 +276,4 @@ Further reading
 - `Workload Collocation Agent API <docs/api.rst>`_
 - `wca-scheduler <docs/wca-scheduler.rst>`_
 
-.. _`WCA Architecture 1.7.pdf`: docs/WCA_Architecture_v1.7.pdf
+.. _`[Outdated] WCA Architecture v1.7.pdf`: docs/%5BOutdated%5D%20WCA%20Architecture%20v1.7.pdf

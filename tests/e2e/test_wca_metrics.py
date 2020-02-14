@@ -87,6 +87,7 @@ def test_wca_metrics_kustomize(workload_name):
     test_wca(workload_name, ['apm_sli', 'task_cycles'])
 
 
+# mysql is initializing too long for sli tests
 @pytest.mark.parametrize('workload_name', [
     'mysql-hammerdb'
 ])

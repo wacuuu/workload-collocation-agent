@@ -10,8 +10,8 @@ configMapGenerator:
   - name: hammerdb
     behavior: merge
     literals:
-      - virtual_users=5
-      - count_ware=5
+      - virtual_users=2
+      - count_ware=10
       - virtual_users_build=5
 
 patchesStrategicMerge:
