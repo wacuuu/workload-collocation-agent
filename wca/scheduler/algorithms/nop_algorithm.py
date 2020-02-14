@@ -11,18 +11,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Tuple, Any
 
-from wca.scheduler.algorithms import Algorithm
+from wca.scheduler.algorithms import Algorithm, BaseAlgorithm
 from wca.scheduler.utils import extract_common_input
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority
+from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, NodeName
 
 
-class NOPAlgorithm(Algorithm):
+class NOPAlgorithm(BaseAlgorithm):
     """rst
     NOP algorithm.
     """
     def __init__(self, data_provider):
-        pass
+        super().__init__(self, data_provider)
+
+    def app_fit_node(self, node_name: NodeName, app_name: str,
+                     data_provider_queried: Tuple[Any]) -> bool:
+        return True
+
+    def priority_for_node(self, node_name: str, app_name: str,
+                          data_provider_queried: Tuple[Any]) -> int:
+        return 0
 
     def filter(self, extender_args: ExtenderArgs):
         _, nodes, _, _ = extract_common_input(extender_args)
