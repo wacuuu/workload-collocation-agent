@@ -13,78 +13,24 @@
 # limitations under the License.
 
 import os
-import datetime
 import logging
 import itertools
-from functools import partial
-from collections import Counter, defaultdict
-import pprint
-from typing import Dict, List, Any, Callable, Tuple, Set
+from collections import Counter
+from typing import Dict, List, Callable, Tuple
 import shutil
 
-import random
-from dataclasses import dataclass
-
-from wca.logger import init_logging
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.bar import BARGeneric
-from wca.scheduler.algorithms.fit import FitGeneric
-from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
 from wca.scheduler.cluster_simulator import \
-        ClusterSimulator, Node, Resources, Task, AssignmentsCounts
+        ClusterSimulator, Node, Resources, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
     ClusterSimulatorDataProvider)
+from wca.scheduler.simulator_experiments.nodes_generators import prepare_nodes
+from wca.scheduler.simulator_experiments.reporting import IterationData, create_report, print_stats
+from wca.scheduler.simulator_experiments.task_generators import TaskGenerator_classes
 from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
-
-CHARTS=False
-
-def extend_membw_dimensions_to_write_read(taskset):
-    """replace dimensions rt.MEMBW with rt.MEMBW_WRITE and rt.MEMBW_READ"""
-    new_taskset = []
-    for task in taskset:
-        task_ = task.copy()
-        membw = task_.requested.data[rt.MEMBW]
-        task_.remove_dimension(rt.MEMBW)
-        task_.add_dimension(rt.MEMBW_READ, membw)
-        task_.add_dimension(rt.MEMBW_WRITE, 0)
-        new_taskset.append(task_)
-    return new_taskset
-
-
-def randonly_choose_from_taskset(taskset, size, seed):
-    random.seed(seed)
-    r = []
-    for i in range(size):
-        random_idx = random.randint(0, len(taskset) - 1)
-        task = taskset[random_idx].copy()
-        task.name += Task.CORE_NAME_SEP + str(i)
-        r.append(task)
-    return r
-
-
-def randonly_choose_from_taskset_single(taskset, dimensions, name_sufix):
-    random_idx = random.randint(0, len(taskset) - 1)
-    task = taskset[random_idx].copy()
-    task.name += Task.CORE_NAME_SEP + str(name_sufix)
-
-    task_dim = set(task.requested.data.keys())
-    dim_to_remove = task_dim.difference(dimensions)
-    for dim in dim_to_remove:
-        task.remove_dimension(dim)
-
-    return task
-
-
-@dataclass
-class IterationData:
-    cluster_resource_usage: Resources
-    per_node_resource_usage: Dict[Node, Resources]
-    broken_assignments: Dict[Node, int]
-    assignments_counts: AssignmentsCounts
-    tasks_types_count: Dict[str, int]
-    metrics: Dict[str, List[float]]
 
 
 def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
@@ -108,160 +54,6 @@ def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
         ))
 
     return iteration_finished_callback
-
-
-def create_report(title: str, subtitle: str,
-                  run_params: Dict[str, Any],
-                  iterations_data: List[IterationData],
-                  reports_root_directory: str = 'experiments_results',
-                  filter_metrics=None,
-                  ) -> dict:
-    """
-        Results will be saved to location:
-        {reports_root_directory}/{title}/{subtitle}.{extension}
-        where extensions='png'|'txt'
-
-        >>run_params<< is dict of params used to run experiment
-    """
-    filter_metrics = filter_metrics or []
-    # experiment directory
-    exp_dir = '{}/{}'.format(reports_root_directory, title)
-
-    plt.style.use('ggplot')
-    iterd = iterations_data
-
-    iterations = np.arange(0, len(iterd))
-    cpu_usage = np.array([iter_.cluster_resource_usage.data[rt.CPU] for iter_ in iterd])
-    mem_usage = np.array([iter_.cluster_resource_usage.data[rt.MEM] for iter_ in iterd])
-
-    if rt.MEMBW_READ in iterd[0].cluster_resource_usage.data:
-        membw_usage = np.array([iter_.cluster_resource_usage.data[rt.MEMBW_READ]
-                                for iter_ in iterd])
-    else:
-        membw_usage = np.array([iter_.cluster_resource_usage.data[rt.MEMBW] for iter_ in iterd])
-    # ---
-    if not os.path.isdir(exp_dir):
-        os.makedirs(exp_dir)
-    if CHARTS:
-        number_of_metrics = len(filter_metrics)
-        fig, axs = plt.subplots(2 + number_of_metrics)
-        fig.set_size_inches(20, 20 + 6*number_of_metrics)
-        axs[0].plot(iterations, cpu_usage, 'r--')
-        axs[0].plot(iterations, mem_usage, 'b--')
-        axs[0].plot(iterations, membw_usage, 'g--')
-        axs[0].legend(['cpu usage', 'mem usage', 'membw usage'])
-        # ---
-        axs[0].set_title('{} {}'.format(title, subtitle), fontsize=10)
-        # ---
-        axs[0].set_xlim(iterations.min(), iterations.max())
-        axs[0].set_ylim(0, 1)
-
-        broken_assignments = np.array([sum(list(iter_.broken_assignments.values())) for iter_ in iterd])
-        axs[1].plot(iterations, broken_assignments, 'g--')
-        axs[1].legend(['broken assignments'])
-        axs[1].set_ylabel('')
-        axs[1].set_xlim(iterations.min(), iterations.max())
-        axs[1].set_ylim(broken_assignments.min() - 1, broken_assignments.max() + 1)
-
-
-        # Visualize metrics
-        try:
-            import seaborn as sns
-            import pandas as pd
-            for pidx, filter in enumerate(filter_metrics):
-                dicts = []
-                for iteration, idata in enumerate(iterations_data):
-                    d = {k.split('{')[1][:-1]: v for k, v in idata.metrics.items() if k.startswith(filter)}
-                    if not d:
-                        log.warning('metric %s not found: available: %s', filter,
-                                    ', '.join([m.split('{')[0] for m in idata.metrics.keys()]))
-                    dicts.append(d)
-
-                from matplotlib.markers import MarkerStyle
-                df = pd.DataFrame(dicts)
-                try:
-                    x = sns.lineplot(data=df,
-                                     markers=MarkerStyle.filled_markers,
-                                     dashes=False,
-                                     ax=axs[2+pidx])
-                except ValueError:
-                    x = sns.lineplot(data=df,
-                                     dashes=False,
-                                     ax=axs[2+pidx])
-                x.set_title(filter)
-                x.set_xlim(iterations.min(), iterations.max())
-
-            # plt.show()
-        except ImportError:
-            log.warning('missing seaborn and pandas')
-
-        fig.savefig('{}/{}.png'.format(exp_dir, subtitle))
-
-    stats = {}
-
-    with open('{}/{}.txt'.format(exp_dir, subtitle), 'w') as fref:
-        pp = pprint.pformat
-        t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
-        fref.write("Start of experiment: {}\n".format(t_))
-        fref.write("Run params: {}\n".format(pprint.pformat(run_params, indent=4)))
-        fref.write("Iterations: {}\n".format(len(iterations_data)))
-        total_tasks_dict = dict(iterations_data[-1].tasks_types_count)
-        stats['TASKS'] = sum(total_tasks_dict.values())
-        fref.write("Scheduled tasks (might not be successfully assigned): {}\n\n"
-                   .format(total_tasks_dict))
-
-        assignments_counts = iterations_data[-1].assignments_counts
-
-        stats['NODES'] = len(assignments_counts.per_node.keys())
-
-        node_names = assignments_counts.per_node.keys()
-        for node_type, nodes in itertools.groupby(sorted(node_names), lambda x:x.split('_')[0]):
-            stats['%s_nodes' % node_type] = len(list(nodes))
-
-        fref.write("Assigned tasks per node:\n")
-        for node, counters in assignments_counts.per_node.items():
-            fref.write("   {}: {}\n".format(node, dict(counters)))
-
-        fref.write("\nAssigned tasks per cluster: {}\n".format(dict(assignments_counts.per_cluster)))
-        fref.write("Unassigned tasks: {}\n".format(dict(assignments_counts.unassigned)))
-        stats['ASSIGNED_TASKS'] = dict(assignments_counts.per_cluster)['__ALL__']
-
-        broken_assignments = sum(iterations_data[-1].broken_assignments.values())
-        fref.write("Broken assignments: {}\n".format(broken_assignments))
-        stats['name'] = subtitle
-        stats['broken_assignments'] = broken_assignments
-
-        rounded_last_iter_resources = \
-            map(partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],))
-        cpu_util, mem_util, bw_util = rounded_last_iter_resources
-        stats['UTIL'] = (cpu_util + mem_util + bw_util) / 3
-        stats['cpu_util'] = cpu_util
-        stats['mem_util'] = mem_util
-        stats['bw_util'] = bw_util
-        fref.write("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})\n".format(
-            cpu_util, mem_util, bw_util))
-        import statistics
-        nodes_utilization = []
-        for node, usages in iterations_data[-1].per_node_resource_usage.items():
-            rounded_last_iter_resources = map(
-                partial(round, ndigits=2),
-                (usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ],))
-            fref.write(
-                "resource_usage_per_node(node={}, cpu, mem, membw_flat) = ({}, {}, {})\n".format(
-                    node.name, *rounded_last_iter_resources))
-            nodes_utilization.append((usages.data[rt.CPU] + usages.data[rt.MEM] + usages.data[rt.MEMBW_READ])/3)
-
-        stats['UTIL_variance'] = statistics.variance(nodes_utilization)
-
-
-        available_metrics = {m.split('{')[0] for iterdata in iterations_data for m in iterdata.metrics}
-        fref.write("available metrics: {}\n".format(', '.join(sorted(available_metrics))))
-
-    with open('{}/README.txt'.format(exp_dir), 'a') as fref:
-        fref.write("Subexperiment: {}\n".format(subtitle))
-        fref.write("Run params: {}\n\n".format(pprint.pformat(run_params, indent=4)))
-
-    return stats
 
 
 def experiments_set__generic(experiment_name, extra_charts, *args):
@@ -293,11 +85,17 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
         else:
             filter_metrics = []
 
+
+        args = ',' + '_'.join(['%s_%s'%(k,v)
+                               for k,v in scheduler_kwargs.items() if k not in ['dimensions']])
         dimensions = len(scheduler_kwargs.get('dimensions', []))
         stats = create_report(experiment_name,
-                      '%d_%s(%s)' % (exp_iter, scheduler_class.__name__, dimensions),
-                      input_args, iterations_data,
-                      filter_metrics=filter_metrics)
+                      '%d_%s(%s%s)' % (exp_iter, scheduler_class.__name__, dimensions, args),
+                              input_args, iterations_data,
+                              filter_metrics=filter_metrics,
+                              task_gen=task_creation_fun,
+                              scheduler=simulator.scheduler,
+                              )
         log.debug('Finished experiment.', experiment_name, exp_iter)
         log.debug('Stats:', stats)
         stats_dicts.append(stats)
@@ -307,54 +105,7 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
     for exp_iter, params in enumerate(itertools.product(*args)):
         experiment__generic(exp_iter, *params)
 
-    import pandas as pd
-    pd.set_option('display.max_columns', None)
-    pd.set_option('display.width', 200)
-    print(pd.DataFrame(stats_dicts))
-
-
-class TaskGenerator_random:
-    """takes randomly from given task_definitions"""
-    def __init__(self, task_definitions, max_items, seed):
-        self.max_items = max_items
-        self.task_definitions = task_definitions
-        random.seed(seed)
-
-    def __call__(self, index: int):
-        if index >= self.max_items:
-            return None
-        return self.rand_from_taskset(str(index))
-
-    def rand_from_taskset(self, name_suffix: str):
-        return randonly_choose_from_taskset_single(
-                extend_membw_dimensions_to_write_read(self.task_definitions),
-                {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, name_suffix)
-
-
-class TaskGenerator_equal:
-    """Multiple each possible kind of tasks by replicas"""
-    def __init__(self, task_definitions: List[Task], replicas):
-        self.replicas = replicas
-        self.tasks = []
-
-        task_definitions = extend_membw_dimensions_to_write_read(task_definitions)
-        for task_def in task_definitions:
-            task_def.remove_dimension(rt.WSS)
-        # Order of this for matters:
-        # T1, T2, T1, T2 (interleaved) - expected from kubernetes
-        # or
-        # T1, T1, T2, T2 (flat)
-        for r in range(replicas):
-            for task_def in task_definitions:
-                task_copy = task_def.copy()
-                task_copy.name += Task.CORE_NAME_SEP + str(r)
-                self.tasks.append(task_copy)
-
-    def __call__(self, index: int):
-        if self.tasks:
-            return self.tasks.pop()
-        return None
-
+    print_stats(stats_dicts)
 
 def run_n_iter(iterations_count: int, simulator: ClusterSimulator,
                task_creation_fun: Callable[[int], Task],
@@ -367,61 +118,10 @@ def run_n_iter(iterations_count: int, simulator: ClusterSimulator,
     return simulator
 
 
-def prepare_nodes(
-        node_specs: Dict[str, Dict],  # node_type to resource dict,
-        type_counts: Dict[str, int],  # node_type to number of nodes,
-        dimensions: Set[rt]
-        ) -> List[Node]:
-    """Create cluster with node_specs with number of each kind (node_spec are sorted by name).
-    A: {ram: 1}, B: {ram: 10}
-    {A: 2, B: 3} result in
-    A1, A2, B1, B2, B3 machines
-    """
-
-    # Filter only dimensions required.
-    node_specs = {node_type: {dim: val for dim, val in node_spec.items() if dim in dimensions}
-                  for node_type, node_spec in node_specs.items()}
-
-    nodes = []
-    for node_type in sorted(node_specs.keys()):
-        for node_id in range(type_counts[node_type]):
-            node_name = node_type+'_'+str(node_id)
-            node = Node(node_name, available_resources=Resources(node_specs[node_type]))
-            nodes.append(node)
-    return nodes
-
-
-# Superseded by prepare_nodes above
-# def prepare_NxMxK_nodes__demo_configuration(
-#         apache_pass_count, dram_only_v1_count,
-#         dram_only_v2_count,
-#         dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}) -> List[Node]:
-#     """Taken from WCA team real cluster."""
-#     print('deprecated! please use prepare_nodes!')
-#     apache_pass = {rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40,
-#                    rt.MEMBW_WRITE: 10, rt.WSS: 256}
-#     dram_only_v1 = {rt.CPU: 48, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150,
-#                     rt.MEMBW_WRITE: 150, rt.WSS: 192}
-#     dram_only_v2 = {rt.CPU: 40, rt.MEM: 394, rt.MEMBW: 200, rt.MEMBW_READ: 200,
-#                     rt.MEMBW_WRITE: 200, rt.WSS: 394}
-#     nodes_spec = [apache_pass, dram_only_v1, dram_only_v2]
-#
-#     # Filter only dimensions required.
-#     for i, node_spec in enumerate(nodes_spec):
-#         nodes_spec[i] = {dim: val for dim, val in node_spec.items() if dim in dimensions}
-#
-#     inode = 0
-#     nodes = []
-#     for i_node_type, node_type_count in enumerate((apache_pass_count, dram_only_v1_count,
-#                                                    dram_only_v2_count,)):
-#         for i in range(node_type_count):
-#             node = Node(str(inode), available_resources=Resources(nodes_spec[i_node_type]))
-#             nodes.append(node)
-#             inode += 1
-#     return nodes
-
-
 # taken from 2lm contention demo slides:
+# Used to filter out unsed node dimensions
+nodes_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
+
 # wca_load_balancing_multidemnsional_2lm_v0.2
 task_definitions = [
     # Task(name='memcached_big',
@@ -470,19 +170,17 @@ task_definitions = [
     Task(name='bw_bound', requested=Resources({rt.CPU: 1, rt.MEM: 1, rt.MEMBW: 10, rt.WSS: 1})),
 ]
 
-# Used to filter out unsed node dimensions
-nodes_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
-
 def run():
     # dimensions supported by simulator
     experiments_set__generic(
         'comparing_bar2d_vs_bar3d__option_A',
         True, # extra chart for every metric generated by algorithm
-        (150,),
+        (30,),
         (
-            (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=10)),
-            (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=30)),
-            (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=50)),
+            # (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=10)),
+            # (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=15)),
+            (TaskGenerator_classes, dict(task_definitions=task_definitions, counts=dict(bw_bound=2, cpu_bound=5, mem_bound=7))),
+            # (TaskGenerator_equal, dict(task_definitions=task_definitions, replicas=50)),
             # (TaskGenerator_random, dict(task_definitions=task_definitions, max_items=200, seed=300)),
         ),
         (
@@ -516,11 +214,13 @@ def run():
             # ),
         ),
         (
-            (NOPAlgorithm, {}),
-            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
-            (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
-            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
-            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
+            # (NOPAlgorithm, {}),
+            # (FitGeneric, {'dimensions': {rt.CPU, rt.MEM}}),
+            # (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}, 'least_used_weight': 0}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM}, 'least_used_weight': 1}),
+            # (FitGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, 'least_used_weight': 0}),
+            (BARGeneric, {'dimensions': {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, 'least_used_weight': 1}),
         ),
     )
 
@@ -531,6 +231,7 @@ if __name__ == "__main__":
         import numpy as np
     except ImportError:
         # No installed packages required for report generation.
+        print('numpy and matplotlib are required!')
         exit(1)
 
     # init_logging('trace', 'scheduler_extender_simulator_experiments')
