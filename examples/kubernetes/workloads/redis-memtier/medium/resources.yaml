@@ -11,3 +11,14 @@ spec:
             requests:
               cpu: 1
               memory: 6G
+            limits:
+              cpu: 1
+              memory: 6G
+        - name: memtier
+          resources:
+            requests:
+              cpu: 2
+              memory: 1G
+            limits:
+              cpu: 2
+              memory: 1G

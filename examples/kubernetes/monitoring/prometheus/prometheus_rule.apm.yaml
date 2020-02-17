@@ -121,9 +121,9 @@ spec:
           expr: apm_throughput
         #--------------------------------------- Targets for Latency [msecs]
         # Memcached latency goal
-        - {record: apm_slo, labels: {app: memcached-mutilate-big},    expr: "8.0" }
-        - {record: apm_slo, labels: {app: memcached-mutilate-medium}, expr: "3.0" }
-        - {record: apm_slo, labels: {app: memcached-mutilate-small},  expr: "1.0" }
+        - {record: apm_slo, labels: {app: memcached-mutilate-big},    expr: "0.5" }
+        - {record: apm_slo, labels: {app: memcached-mutilate-medium}, expr: "0.5" }
+        - {record: apm_slo, labels: {app: memcached-mutilate-small},  expr: "0.5" }
 
         # Redis latency goal
         - {record: apm_slo, labels: {app: redis-memtier-big},        expr: "14"}
@@ -131,45 +131,45 @@ spec:
         - {record: apm_slo, labels: {app: redis-memtier-small},      expr: "5"}
 
         # Stress average duration for one bogus operation (maximum)
-        - {record: apm_slo, labels: {app: stress-stream-big},    expr: "1500"}      #  4 threads
-        - {record: apm_slo, labels: {app: stress-stream-medium}, expr: "15000"}      #  1 thread
-        - {record: apm_slo, labels: {app: stress-stream-small},  expr: "7000"}       #  1 thread
+        - {record: apm_slo, labels: {app: stress-stream-big},    expr: "500"}
+        - {record: apm_slo, labels: {app: stress-stream-medium}, expr: "5000"}
+        - {record: apm_slo, labels: {app: stress-stream-small},  expr: "2000"}
 
         # Sysbench average durations [ms]  of copying 1GB (maximum)
-        - {record: apm_slo, labels: {app: sysbench-memory-big}, expr: "200"}
-        - {record: apm_slo, labels: {app: sysbench-memory-medium}, expr: "200"}
-        - {record: apm_slo, labels: {app: sysbench-memory-small}, expr: "380"}
+        - {record: apm_slo, labels: {app: sysbench-memory-big}, expr: "100"}
+        - {record: apm_slo, labels: {app: sysbench-memory-medium}, expr: "100"}
+        - {record: apm_slo, labels: {app: sysbench-memory-small}, expr: "150"}
 
         # Mysql latency goal
-        - {record: apm_slo, labels: {app: mysql-hammerdb-big}, expr: "10"}
-        - {record: apm_slo, labels: {app: mysql-hammerdb-medium}, expr: "3"}
+        - {record: apm_slo, labels: {app: mysql-hammerdb-big}, expr: "8.5"}
+        - {record: apm_slo, labels: {app: mysql-hammerdb-medium}, expr: "2.8"}
         - {record: apm_slo, labels: {app: mysql-hammerdb-small}, expr: "3"}
 
-        #--------------------------------------- Targets for Throughput [msecs]
+        #--------------------------------------- Targets for Throughput [ops]
         # Memcached QPS goal
-        - {record: apm_slo2, labels: {app: memcached-mutilate-big},    expr: "20000" }
-        - {record: apm_slo2, labels: {app: memcached-mutilate-medium}, expr: "40000" }
-        - {record: apm_slo2, labels: {app: memcached-mutilate-small},  expr: "50000" }
+        - {record: apm_slo2, labels: {app: memcached-mutilate-big},    expr: "20100" }
+        - {record: apm_slo2, labels: {app: memcached-mutilate-medium}, expr: "40100" }
+        - {record: apm_slo2, labels: {app: memcached-mutilate-small},  expr: "50100" }
 
         # Redis QPS goal
-        - {record: apm_slo2, labels: {app: redis-memtier-big},        expr: "60000"}
-        - {record: apm_slo2, labels: {app: redis-memtier-medium},     expr: "60000"}
-        - {record: apm_slo2, labels: {app: redis-memtier-small},      expr: "70000"}
+        - {record: apm_slo2, labels: {app: redis-memtier-big},        expr: "160000"}
+        - {record: apm_slo2, labels: {app: redis-memtier-medium},     expr: "150000"}
+        - {record: apm_slo2, labels: {app: redis-memtier-small},      expr: "163000"}
 
         # Number of bogs per seconds
-        - {record: apm_slo2, labels: {app: stress-stream-big},    expr: "1000"}
-        - {record: apm_slo2, labels: {app: stress-stream-medium}, expr: "15000"}
-        - {record: apm_slo2, labels: {app: stress-stream-small},  expr: "6000"}
+        - {record: apm_slo2, labels: {app: stress-stream-big},    expr: "2.5"}
+        - {record: apm_slo2, labels: {app: stress-stream-medium}, expr: "0.4"}
+        - {record: apm_slo2, labels: {app: stress-stream-small},  expr: "0.5"}
 
         # Sysbench number of copy operations
-        - {record: apm_slo2, labels: {app: sysbench-memory-big}, expr: "150"}
-        - {record: apm_slo2, labels: {app: sysbench-memory-medium}, expr: "150"}
-        - {record: apm_slo2, labels: {app: sysbench-memory-small}, expr: "250"}
+        - {record: apm_slo2, labels: {app: sysbench-memory-big}, expr: "19200"}
+        - {record: apm_slo2, labels: {app: sysbench-memory-medium}, expr: "19300"}
+        - {record: apm_slo2, labels: {app: sysbench-memory-small}, expr: "9200"}
 
         # Mysql transaction per minute goal
-        - {record: apm_slo2, labels: {app: mysql-hammerdb-big}, expr: "1400000"}
-        - {record: apm_slo2, labels: {app: mysql-hammerdb-medium}, expr: "40000"}
-        - {record: apm_slo2, labels: {app: mysql-hammerdb-small}, expr: "4000"}
+        - {record: apm_slo2, labels: {app: mysql-hammerdb-big}, expr: "1500000"}
+        - {record: apm_slo2, labels: {app: mysql-hammerdb-medium}, expr: "460000"}
+        - {record: apm_slo2, labels: {app: mysql-hammerdb-small}, expr: "68000"}
 
         ##--------------------------------------- normalized
         #  # Memcached QPS goal
