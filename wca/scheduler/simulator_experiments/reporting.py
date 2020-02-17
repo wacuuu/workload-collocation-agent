@@ -3,6 +3,8 @@ import itertools
 import logging
 import os
 import pprint
+import statistics
+from collections import Counter
 from functools import partial
 from typing import Dict, List, Any
 
@@ -11,7 +13,7 @@ import pandas as pd
 from dataclasses import dataclass
 from matplotlib import pyplot as plt
 
-from wca.scheduler.cluster_simulator import Resources, Node, AssignmentsCounts
+from wca.scheduler.cluster_simulator import Resources, Node, AssignmentsCounts, ClusterSimulator
 from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
@@ -150,19 +152,18 @@ def create_report(title: str, subtitle: str,
         broken_assignments = sum(iterations_data[-1].broken_assignments.values())
         fref.write("Broken assignments: {}\n".format(broken_assignments))
         stats['ALGO'] = str(scheduler)
-        stats['BROKEN_ASSIGMENTS'] = broken_assignments
-        stats['ASSIGNED_TASKS'] = dict(assignments_counts.per_cluster)['__ALL__']
+        assigned_tasks = dict(assignments_counts.per_cluster)['__ALL__']
+        stats['broken%'] = int((broken_assignments / assigned_tasks) * 100)
 
         rounded_last_iter_resources = \
             map(partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],))
         cpu_util, mem_util, bw_util = rounded_last_iter_resources
-        stats['UTIL'] = (cpu_util + mem_util + bw_util) / 3
-        stats['cpu_util'] = cpu_util
-        stats['mem_util'] = mem_util
-        stats['bw_util'] = bw_util
+        stats['utilization%'] = int(((cpu_util + mem_util + bw_util) / 3) * 100)
+        # stats['cpu_util'] = cpu_util
+        # stats['mem_util'] = mem_util
+        # stats['bw_util'] = bw_util
         fref.write("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})\n".format(
             cpu_util, mem_util, bw_util))
-        import statistics
         nodes_avg_var = []
         nodes_utilization = []
         nodes_utilization_avg = []
@@ -177,9 +178,11 @@ def create_report(title: str, subtitle: str,
             nodes_utilization_avg.append((usages.data[rt.CPU] + usages.data[rt.MEM] + usages.data[rt.MEMBW_READ])/3)
             nodes_avg_var.append(statistics.variance([usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ]]))
 
-        stats['util_var_avg'] = statistics.variance(nodes_utilization_avg)
-        stats['util_avg_var'] = statistics.mean(nodes_avg_var)
-        stats['util_var'] = statistics.variance(nodes_utilization)
+        util_var_avg = statistics.variance(nodes_utilization_avg)
+        util_avg_var = statistics.mean(nodes_avg_var)
+        util_var = statistics.variance(nodes_utilization)
+
+        stats['balance'] = 1 - util_var
 
 
         available_metrics = {m.split('{')[0] for iterdata in iterations_data for m in iterdata.metrics}
@@ -192,16 +195,87 @@ def create_report(title: str, subtitle: str,
     return stats
 
 
-def print_stats(stats_dicts):
+def print_stats(stats_dicts, exp_dir):
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', 200)
     df = pd.DataFrame(stats_dicts)
     output = df.to_string(formatters={
-        'util_var': '{:,.0%}'.format,
+        'balance': '{:,.2f}'.format,
+        'broken%': '{:,.0f}%'.format,
         'util_var_avg': '{:,.0%}'.format,
         'util_avg_var': '{:,.0%}'.format,
-        'UTIL': '{:,.0%}'.format,
-        'aep_nodes': '{:.0f}'.format,
-        'dram_nodes': '{:.0f}'.format,
+        'util_var': '{:,.0%}'.format,
+        'utilization%': '{:,.0f}%'.format,
     })
     print(output)
+    df.reset_index()
+    def p(val, aggr):
+        _pivot_ui(
+            df,
+            totals=True,
+            rowTotals=False,
+            rows=['TASKS', 'NODES'],
+            cols=['ALGO'],
+            vals=[val], aggregatorName=aggr,
+            rendererName='Heatmap',
+            outfile_path=os.path.join(exp_dir, 'summary_%s.html' % val.replace('%', '')),
+            rendererOptions = dict(
+                rowTotals=False,
+                colTotals=False,
+            )
+        )
+    p('utilization%', 'Average')
+    p('balance', 'Average')
+    p('broken%', 'Average')
+
+
+
+def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
+    def iteration_finished_callback(iteration: int, simulator: ClusterSimulator):
+        per_node_resource_usage = simulator.per_node_resource_usage(True)
+        cluster_resource_usage = simulator.cluster_resource_usage(True)
+        broken_assignments = simulator.rough_assignments_per_node.copy()
+        assignments_counts = simulator.assignments_counts()
+        tasks_types_count = Counter([task.get_core_name() for task in simulator.tasks])
+
+        metrics_registry = simulator.scheduler.get_metrics_registry()
+        if metrics_registry is not None:
+            metrics = metrics_registry.as_dict()
+        else:
+            metrics = {}
+
+        iterations_data.append(IterationData(
+            cluster_resource_usage, per_node_resource_usage,
+            broken_assignments, assignments_counts, tasks_types_count,
+            metrics=metrics,
+        ))
+
+    return iteration_finished_callback
+
+
+def _pivot_ui(df, totals=True, rowTotals=True, **options):
+    """ Interactive pivot table for data analysis.
+    # Example options:
+    rows=['x', 'y'),
+    cols=['z, 'v'),
+    vals=['percentile/99th',],
+    aggregatorName='First',
+    rendererName='Heatmap'
+    """
+    try:
+        from pivottablejs import pivot_ui
+    except ImportError:
+        print("Error: cannot import pivottablejs, please install 'pip install pivottablejs'!")
+        return
+    iframe = pivot_ui(df, **options)
+    if not totals:
+        with open(iframe.src) as f:
+            replacedHtml = f.read().replace( '</style>', '.pvtTotal, .pvtTotalLabel, .pvtGrandTotal {display: none}</style>' )
+        with open(iframe.src, "w") as f:
+            f.write(replacedHtml)
+    if not rowTotals:
+        with open(iframe.src) as f:
+            replacedHtml = f.read().replace('</style>', '.rowTotal, .pvtRowTotalLabel, .pvtGrandTotal {display: none}</style>')
+        with open(iframe.src, "w") as f:
+            f.write(replacedHtml)
+    return iframe

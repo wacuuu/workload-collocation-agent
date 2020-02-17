@@ -54,10 +54,18 @@ class BaseAlgorithm(Algorithm):
        not match everybody needs."""
 
     def __init__(self, data_provider: DataProvider,
-                 dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE)):
+                 dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 alias: str = None
+                 ):
         self.data_provider = data_provider
         self.dimensions = dimensions
         self.metrics = MetricRegistry()
+        self.alias = alias
+
+    def __str__(self):
+        if self.alias is not None:
+            return self.alias
+        return super()
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         log.debug('[Filter] ExtenderArgs: %r' % extender_args)

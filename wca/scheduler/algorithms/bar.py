@@ -33,8 +33,9 @@ class BARGeneric(FitGeneric):
                  dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
                  max_node_score: int = 10, least_used_weights: Dict[rt, float] = None,
                  least_used_weight = 1,
+                 alias=None
                  ):
-        FitGeneric.__init__(self, data_provider, dimensions)
+        FitGeneric.__init__(self, data_provider, dimensions, alias=alias)
         if least_used_weights is None:
             self.least_used_weights = {dim: 1 for dim in self.dimensions}
             self.least_used_weights[rt.MEMBW_FLAT] = 1
@@ -44,6 +45,8 @@ class BARGeneric(FitGeneric):
         self.least_used_weight = least_used_weight
 
     def __str__(self):
+        if self.alias:
+            return super().__str__()
         return '%s(%d,luw=%.2f)' % (self.__class__.__name__, len(self.dimensions),
                                     self.least_used_weight)
 

@@ -64,10 +64,11 @@ class TaskGenerator_random:
 
 class TaskGenerator_classes:
     """Multiple each possible kind of tasks by replicas"""
-    def __init__(self, task_definitions: List[Task], counts: Dict[str, int]):
+    def __init__(self, task_definitions: List[Task], counts: Dict[str, int], alias=None):
         self.counts = counts
         self.tasks = []
         self.task_definitions = task_definitions
+        self.alias = None
 
         task_definitions = extend_membw_dimensions_to_write_read(task_definitions)
         for task_def in task_definitions:
@@ -96,6 +97,8 @@ class TaskGenerator_classes:
         return None
 
     def __str__(self):
+        if self.alias is not None:
+            return self.alias
         total_tasks = sum(self.counts.values())
         kinds = ','.join(['%s=%s'%(task_def_name, count) for task_def_name, count in self.counts.items()])
         return '%d(%s)'%(total_tasks, kinds)
@@ -103,10 +106,11 @@ class TaskGenerator_classes:
 
 class TaskGenerator_equal:
     """Multiple each possible kind of tasks by replicas"""
-    def __init__(self, task_definitions: List[Task], replicas):
+    def __init__(self, task_definitions: List[Task], replicas, alias=None):
         self.replicas = replicas
         self.tasks = []
         self.task_definitions = task_definitions
+        self.alias = alias
 
         task_definitions = extend_membw_dimensions_to_write_read(task_definitions)
         for task_def in task_definitions:
@@ -127,9 +131,11 @@ class TaskGenerator_equal:
         return None
 
     def __str__(self):
+        if self.alias is not None:
+            return self.alias
         total_tasks = len(self.task_definitions) * self.replicas
         kinds = ','.join(['%s=%s' % (task_def.name, self.replicas)
-                          for task_def in sorted(task_definitions, key=lambda t:t.name)])
+                          for task_def in sorted(self.task_definitions, key=lambda t:t.name)])
         return '%d(%s)'%(total_tasks, kinds)
 
 

@@ -33,6 +33,8 @@ class FitGeneric(BaseAlgorithm):
        Treats MEMBW_READ and MEMBW_WRITE differently than other dimensions."""
 
     def __str__(self):
+        if self.alias:
+            return super().__str__()
         return '%s(%d)' % (self.__class__.__name__, len(self.dimensions))
 
     def app_fit_node(self, node_name: NodeName, app_name: str,
@@ -98,27 +100,27 @@ class FitGeneric(BaseAlgorithm):
                        type=MetricType.GAUGE,))
 
 
-class FitGenericTesting(FitGeneric):
-    """with some testing cluster specific hacks"""
-
-    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
-        nodes = extender_args.NodeNames
-        log.info('[Prioritize] Nodes: %r' % nodes)
-        nodes = sorted(extender_args.NodeNames)
-        return self.testing_prioritize(nodes)
-
-    @staticmethod
-    def testing_prioritize(nodes):
-        priorities = []
-
-        # Trick to not prioritize:
-        # nodeSelector:
-        #   goal: load_generator
-        if nodes[0] == 'node200':
-            return priorities
-
-        if len(nodes) > 0:
-            for node in sorted(nodes):
-                priorities.append(HostPriority(node, 0))
-            priorities[0].Score = 100
-        return priorities
+# class FitGenericTesting(FitGeneric):
+#     """with some testing cluster specific hacks"""
+#
+#     def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
+#         nodes = extender_args.NodeNames
+#         log.info('[Prioritize] Nodes: %r' % nodes)
+#         nodes = sorted(extender_args.NodeNames)
+#         return self.testing_prioritize(nodes)
+#
+#     @staticmethod
+#     def testing_prioritize(nodes):
+#         priorities = []
+#
+#         # Trick to not prioritize:
+#         # nodeSelector:
+#         #   goal: load_generator
+#         if nodes[0] == 'node200':
+#             return priorities
+#
+#         if len(nodes) > 0:
+#             for node in sorted(nodes):
+#                 priorities.append(HostPriority(node, 0))
+#             priorities[0].Score = 100
+#         return priorities
