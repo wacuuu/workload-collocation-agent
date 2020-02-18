@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Iterable, Any, Optional
+from typing import List, Tuple, Iterable, Any, Optional, Set, Dict
 import logging
 
 from wca.metrics import Metric
@@ -21,7 +21,7 @@ from wca.logger import TRACE
 from wca.scheduler.metrics import MetricRegistry
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, \
                                 NodeName, Resources
-from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.types import ResourceType as rt, AppName
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.utils import extract_common_input
 
@@ -117,7 +117,10 @@ class BaseAlgorithm(Algorithm):
         return nodes_capacities, assigned_apps_counts, apps_spec
 
 
-def used_resources_on_node(dimensions, assigned_apps_counts, apps_spec) -> Resources:
+def used_resources_on_node(
+        dimensions: Set[rt], 
+        assigned_apps_counts: Dict[AppName, int],
+        apps_spec: [Dict[AppName, Resources]]) -> Resources:
     """Calculate used resources on a given node using data returned by data provider."""
     used = {dim: 0 for dim in dimensions}
     for app, count in assigned_apps_counts.items():
