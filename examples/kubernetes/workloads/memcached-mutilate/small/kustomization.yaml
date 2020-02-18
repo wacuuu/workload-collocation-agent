@@ -10,8 +10,8 @@ configMapGenerator:
 - name: mutilate
   behavior: merge
   literals:
-  - value=800       # 0.8kB * 1M <= 1GB
-  - qps=50000       # 200k per second
+  - value=20000       # 20kB * 1M <= 25GB
+  - qps=50000       # 50k per second
 
 patchesStrategicMerge:
   - resources.yaml

@@ -10,10 +10,10 @@ spec:
           resources:
             requests:
               cpu: 2
-              memory: 50G
+              memory: 100G
             limits:
               cpu: 2
-              memory: 50G
+              memory: 100G
         - name: mutilate
           resources:
             requests:
