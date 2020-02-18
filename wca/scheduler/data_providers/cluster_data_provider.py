@@ -46,12 +46,12 @@ class Queries:
         'sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename)'
 
     APP_REQUESTED_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = field(default_factory=lambda: {
-            ResourceType.CPU: 'max(max_over_time(task_requested_cpus[24h:5s])) by (app)',
-            ResourceType.MEM: 'max(max_over_time(task_requested_mem_bytes[24h:5s])) by (app)',
+            ResourceType.CPU: 'max(max_over_time(task_requested_cpus[3h])) by (app)',
+            ResourceType.MEM: 'max(max_over_time(task_requested_mem_bytes[3h])) by (app)',
             ResourceType.MEMBW_READ: 'max(max_over_time'
-            '(task_membw_reads_bytes_per_second[24h:5s])) by (app)',
+            '(task_membw_reads_bytes_per_second[3h])) by (app)',
             ResourceType.MEMBW_WRITE: 'max(max_over_time'
-            '(task_membw_writes_bytes_per_second[24h:5s])) by (app)'
+            '(task_membw_writes_bytes_per_second[3h])) by (app)'
     })
 
 
@@ -62,12 +62,17 @@ class Prometheus:
     timeout: Optional[Numeric(1, 60)] = 1.0
     ssl: Optional[SSL] = None
     queries: Optional[Queries] = Queries()
+    time: Optional[str] = None
 
     def do_query(self, query: str):
         url = URL_TPL.format(
                 prometheus_ip='{}:{}'.format(self.host, str(self.port)),
                 path=QUERY_PATH,
                 name=query)
+
+        if self.time:
+            url += '&time={}'.format(self.time)
+
         try:
             if self.ssl:
                 s = requests.Session()
