@@ -222,4 +222,4 @@ spec:
 
         # NORMALIZED ACCORDING THE GOALS 2
         - record: apm_sli2_normalized_per_mode
-          expr: apm_sli2 / on (app) group_left apm_slo2
+          expr: apm_sli2_per_mode / on (app) group_left apm_slo2

@@ -31,14 +31,24 @@ log = logging.getLogger(__name__)
 class BARGeneric(FitGeneric):
     def __init__(self, data_provider: DataProvider,
                  dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
-                 max_node_score: int = 10, least_used_weights: Dict[rt, float] = None):
-        FitGeneric.__init__(self, data_provider, dimensions)
+                 max_node_score: int = 10, least_used_weights: Dict[rt, float] = None,
+                 least_used_weight = 1,
+                 alias=None
+                 ):
+        FitGeneric.__init__(self, data_provider, dimensions, alias=alias)
         if least_used_weights is None:
             self.least_used_weights = {dim: 1 for dim in self.dimensions}
             self.least_used_weights[rt.MEMBW_FLAT] = 1
         else:
             self.least_used_weights = least_used_weights
         self.max_node_score = max_node_score
+        self.least_used_weight = least_used_weight
+
+    def __str__(self):
+        if self.alias:
+            return super().__str__()
+        return '%s(%d,luw=%.2f)' % (self.__class__.__name__, len(self.dimensions),
+                                    self.least_used_weight)
 
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: Tuple[Any]) -> int:
@@ -132,7 +142,7 @@ class BARGeneric(FitGeneric):
                        type=MetricType.GAUGE))
 
         # Result
-        result = (bar_score + least_used_score) / 2
+        result = (bar_score + least_used_score * self.least_used_weight) / 2
         log.log(TRACE, "[Prioritize][%s][%s] Result: %s", app_name, node_name, result)
         self.metrics.add(
                 Metric(name=MetricName.BAR_RESULT,

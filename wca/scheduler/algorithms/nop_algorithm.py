@@ -22,7 +22,10 @@ class NOPAlgorithm(BaseAlgorithm):
     """rst
     NOP algorithm.
     """
-    def __init__(self, data_provider):
+    def __str__(self):
+        return 'NOP'
+
+    def __init__(self, data_provider, alias=None):
         super().__init__(self, data_provider)
 
     def app_fit_node(self, node_name: NodeName, app_name: str,
