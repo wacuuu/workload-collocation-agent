@@ -133,6 +133,7 @@ def create_report(title: str, subtitle: str,
         fref.write("Scheduled tasks (might not be successfully assigned): {}\n\n"
                    .format(total_tasks_dict))
 
+        scheduled_tasks = sum(total_tasks_dict.values())
         assignments_counts = iterations_data[-1].assignments_counts
 
         total_nodes = len(assignments_counts.per_node.keys())
@@ -153,15 +154,16 @@ def create_report(title: str, subtitle: str,
         fref.write("Broken assignments: {}\n".format(broken_assignments))
         stats['ALGO'] = str(scheduler)
         assigned_tasks = dict(assignments_counts.per_cluster)['__ALL__']
+        stats['scheduled%'] = int((assigned_tasks/scheduled_tasks) * 100)
         stats['broken%'] = int((broken_assignments / assigned_tasks) * 100)
 
         rounded_last_iter_resources = \
             map(partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],))
         cpu_util, mem_util, bw_util = rounded_last_iter_resources
         stats['utilization%'] = int(((cpu_util + mem_util + bw_util) / 3) * 100)
-        # stats['cpu_util'] = cpu_util
-        # stats['mem_util'] = mem_util
-        # stats['bw_util'] = bw_util
+        stats['cpu_util'] = cpu_util
+        stats['mem_util'] = mem_util
+        stats['bw_util'] = bw_util
         fref.write("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})\n".format(
             cpu_util, mem_util, bw_util))
         nodes_avg_var = []

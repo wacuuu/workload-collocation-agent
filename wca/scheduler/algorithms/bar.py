@@ -149,7 +149,7 @@ class BARGeneric(FitGeneric):
                        value=result, labels=dict(app=app_name, node=node_name),
                        type=MetricType.GAUGE))
 
-        return result
+        return int(result)
 
 
 def used_free_requested(

@@ -10,10 +10,10 @@ spec:
           resources:
             requests:
               cpu: 2
-              memory: 1G # valueSize*records = 0.8kB * 1M <= 1GB
+              memory: 25G # valueSize*records = 20kB * 1M <= 25GB
             limits:
               cpu: 2
-              memory: 1G
+              memory: 25G
         - name: mutilate
           resources:
             requests:

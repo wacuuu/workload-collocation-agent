@@ -70,9 +70,9 @@ class TaskGenerator_classes:
         self.task_definitions = task_definitions
         self.alias = None
 
-        task_definitions = extend_membw_dimensions_to_write_read(task_definitions)
-        for task_def in task_definitions:
-            task_def.remove_dimension(rt.WSS)
+        # for task_def in task_definitions:
+        #     task_def.remove_dimension(rt.WSS)
+
         # Order of this for matters:
         # T1, T2, T1, T2 (interleaved) - expected from kubernetes
         # or
@@ -112,9 +112,9 @@ class TaskGenerator_equal:
         self.task_definitions = task_definitions
         self.alias = alias
 
-        task_definitions = extend_membw_dimensions_to_write_read(task_definitions)
         for task_def in task_definitions:
-            task_def.remove_dimension(rt.WSS)
+            if rt.WSS in task_def.requested.data:
+                task_def.remove_dimension(rt.WSS)
         # Order of this for matters:
         # T1, T2, T1, T2 (interleaved) - expected from kubernetes
         # or
