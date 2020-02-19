@@ -21,7 +21,7 @@ import shutil
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.algorithms.fit import FitGeneric
-from wca.scheduler.algorithms.friend import Friend
+# from wca.scheduler.algorithms.friend import Friend
 from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
 from wca.scheduler.cluster_simulator import \
         ClusterSimulator, Node, Resources, Task

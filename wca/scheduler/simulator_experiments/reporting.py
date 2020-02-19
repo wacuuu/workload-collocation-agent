@@ -18,7 +18,7 @@ from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
 
-CHARTS=False
+CHARTS = False
 
 
 @dataclass
@@ -31,14 +31,11 @@ class IterationData:
     metrics: Dict[str, List[float]]
 
 
-def generate_subexperiment_report(title: str, subtitle: str,
-                                  run_params: Dict[str, Any],
-                                  iterations_data: List[IterationData],
-                                  reports_root_directory: str = 'experiments_results',
-                                  filter_metrics=None,
-                                  task_gen=None,
-                                  scheduler=None
-                                  ) -> dict:
+def generate_subexperiment_report(
+        title: str, subtitle: str, run_params: Dict[str, Any],
+        iterations_data: List[IterationData],
+        reports_root_directory: str = 'experiments_results',
+        filter_metrics=None, task_gen=None, scheduler=None) -> dict:
     """
         Results will be saved to location:
         {reports_root_directory}/{title}/{subtitle}.{extension}
@@ -79,13 +76,13 @@ def generate_subexperiment_report(title: str, subtitle: str,
         axs[0].set_xlim(iterations.min(), iterations.max())
         axs[0].set_ylim(0, 1)
 
-        broken_assignments = np.array([sum(list(iter_.broken_assignments.values())) for iter_ in iterd])
+        broken_assignments = \
+            np.array([sum(list(iter_.broken_assignments.values())) for iter_ in iterd])
         axs[1].plot(iterations, broken_assignments, 'g--')
         axs[1].legend(['broken assignments'])
         axs[1].set_ylabel('')
         axs[1].set_xlim(iterations.min(), iterations.max())
         axs[1].set_ylim(broken_assignments.min() - 1, broken_assignments.max() + 1)
-
 
         # Visualize metrics
         try:
@@ -94,7 +91,8 @@ def generate_subexperiment_report(title: str, subtitle: str,
             for pidx, filter in enumerate(filter_metrics):
                 dicts = []
                 for iteration, idata in enumerate(iterations_data):
-                    d = {k.split('{')[1][:-1]: v for k, v in idata.metrics.items() if k.startswith(filter)}
+                    d = {k.split('{')[1][:-1]: v
+                         for k, v in idata.metrics.items() if k.startswith(filter)}
                     if not d:
                         log.warning('metric %s not found: available: %s', filter,
                                     ', '.join([m.split('{')[0] for m in idata.metrics.keys()]))
@@ -120,16 +118,12 @@ def generate_subexperiment_report(title: str, subtitle: str,
 
         fig.savefig('{}/{}.png'.format(exp_dir, subtitle))
 
-    stats = {}
-
     with open('{}/{}.txt'.format(exp_dir, subtitle), 'w') as fref:
-        pp = pprint.pformat
         t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
         fref.write("Start of experiment: {}\n".format(t_))
         fref.write("Run params: {}\n".format(pprint.pformat(run_params, indent=4)))
         fref.write("Iterations: {}\n".format(len(iterations_data)))
         total_tasks_dict = dict(iterations_data[-1].tasks_types_count)
-        stats['TASKS'] = str(task_gen) # sum(total_tasks_dict.values())
         fref.write("Scheduled tasks (might not be successfully assigned): {}\n\n"
                    .format(total_tasks_dict))
 
@@ -139,9 +133,7 @@ def generate_subexperiment_report(title: str, subtitle: str,
         total_nodes = len(assignments_counts.per_node.keys())
         node_names = assignments_counts.per_node.keys()
         nodes_info = ','.join('%s=%d'%(node_type, len(list(nodes))) for node_type, nodes
-            in itertools.groupby(sorted(node_names), lambda x:x.split('_')[0]))
-
-        stats['NODES'] = '%s(%s)' % (total_nodes, nodes_info)
+            in itertools.groupby(sorted(node_names), lambda x: x.split('_')[0]))
 
         fref.write("Assigned tasks per node:\n")
         for node, counters in assignments_counts.per_node.items():
@@ -152,19 +144,11 @@ def generate_subexperiment_report(title: str, subtitle: str,
 
         broken_assignments = sum(iterations_data[-1].broken_assignments.values())
         fref.write("Broken assignments: {}\n".format(broken_assignments))
-        stats['ALGO'] = str(scheduler)
         assigned_tasks = dict(assignments_counts.per_cluster)['__ALL__']
-        stats['scheduled%'] = int((assigned_tasks/scheduled_tasks) * 100)
-        # @TODO rather denominator should be scheduled_tasks
-        stats['broken%'] = int((broken_assignments / assigned_tasks) * 100)
 
         rounded_last_iter_resources = \
             map(partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],))
         cpu_util, mem_util, bw_util = rounded_last_iter_resources
-        stats['utilization%'] = int(((cpu_util + mem_util + bw_util) / 3) * 100)
-        stats['cpu_util'] = cpu_util
-        stats['mem_util'] = mem_util
-        stats['bw_util'] = bw_util
         fref.write("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})\n".format(
             cpu_util, mem_util, bw_util))
         nodes_avg_var = []
@@ -185,15 +169,30 @@ def generate_subexperiment_report(title: str, subtitle: str,
         util_avg_var = statistics.mean(nodes_avg_var)
         util_var = statistics.variance(nodes_utilization)
 
-        stats['balance'] = 1 - util_var
-
-
         available_metrics = {m.split('{')[0] for iterdata in iterations_data for m in iterdata.metrics}
         fref.write("available metrics: {}\n".format(', '.join(sorted(available_metrics))))
 
-    with open('{}/README.txt'.format(exp_dir), 'a') as fref:
+    with opej('{}/README.txt'.format(exp_dir), 'a') as fref:
         fref.write("Subexperiment: {}\n".format(subtitle))
         fref.write("Run params: {}\n\n".format(pprint.pformat(run_params, indent=4)))
+
+    stats = {}
+    stats['TASKS'] = str(task_gen) # sum(total_tasks_dict.values())
+    stats['NODES'] = '%s(%s)' % (total_nodes, nodes_info)
+    stats['balance'] = 1 - util_var
+    stats['cpu_util'] = cpu_util
+    stats['mem_util'] = mem_util
+    stats['bw_util'] = bw_util
+
+    stats['cpu_util(AEP)'] = cpu_util
+    stats['mem_util(AEP)'] = mem_util
+    stats['bw_util(AEP)'] = bw_util
+
+    stats['scheduled'] = scheduled_tasks
+    stats['assigned%'] = int((assigned_tasks/scheduled_tasks) * 100)
+    stats['assigned_broken%'] = int((broken_assignments / scheduled_tasks) * 100)
+    stats['ALGO'] = str(scheduler)
+    stats['utilization%'] = int(((cpu_util + mem_util + bw_util) / 3) * 100)
 
     return stats
 
@@ -204,7 +203,9 @@ def generate_experiment_report(stats_dicts, exp_dir):
     df = pd.DataFrame(stats_dicts)
     output = df.to_string(formatters={
         'balance': '{:,.2f}'.format,
-        'broken%': '{:,.0f}%'.format,
+        'assigned_broken%': '{:,.0f}%'.format,
+        'assigned%': '{:,.0f}%'.format,
+        'scheduled': '{:,.0f}%'.format,
         'util_var_avg': '{:,.0%}'.format,
         'util_avg_var': '{:,.0%}'.format,
         'util_var': '{:,.0%}'.format,
