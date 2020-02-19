@@ -82,6 +82,7 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
 
 
     exp_dir = '{}/{}'.format(reports_root_directory, experiment_name)
+    import ipdb; ipdb.set_trace()
     generate_experiment_report(experiment_stats, exp_dir)
 
 def run_n_iter(iterations_count: int, simulator: ClusterSimulator,
