@@ -24,7 +24,7 @@ task_definitions__2lm_v02 = [
     Task(name='redis_small',
          requested=Resources({rt.CPU: 1, rt.MEM: 1.5,
                               rt.MEMBW: 0.3, rt.WSS: 1.5})),
-    ---
+    #---
     Task(name='stress_stream_big',
          requested=Resources({rt.CPU: 3, rt.MEM: 13,
                               rt.MEMBW: 18, rt.WSS: 12})),

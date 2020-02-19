@@ -31,7 +31,9 @@ log = logging.getLogger(__name__)
 class BARGeneric(FitGeneric):
     def __init__(self, data_provider: DataProvider,
                  dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
-                 max_node_score: int = 10, least_used_weights: Dict[rt, float] = None,
+                 max_node_score: int = 10,
+                 least_used_weights: Dict[rt, float] = None,
+                 bar_weights: Dict[rt, float] = None,
                  least_used_weight = 1,
                  alias=None
                  ):
@@ -43,6 +45,8 @@ class BARGeneric(FitGeneric):
             self.least_used_weights = least_used_weights
         self.max_node_score = max_node_score
         self.least_used_weight = least_used_weight
+        self.bar_weights = bar_weights or {}
+
 
     def __str__(self):
         if self.alias:
@@ -119,8 +123,8 @@ class BARGeneric(FitGeneric):
 
         # Variance
         if len(requested_fraction) > 2:
-            variance = sum([(fraction - mean)*(fraction - mean)
-                            for fraction in requested_fraction.values()]) \
+            variance = sum([((fraction - mean)*(fraction - mean)) * self.bar_weights.get(rt, 1)
+                            for rt, fraction in requested_fraction.items()]) \
                        / len(requested_fraction)
         elif len(requested_fraction) == 2:
             values = list(requested_fraction.values())

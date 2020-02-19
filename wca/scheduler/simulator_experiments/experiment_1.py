@@ -21,6 +21,7 @@ import shutil
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.algorithms.fit import FitGeneric
+from wca.scheduler.algorithms.friend import Friend
 from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
 from wca.scheduler.cluster_simulator import \
         ClusterSimulator, Node, Resources, Task
@@ -46,7 +47,7 @@ nodes_definitions = dict(
     dram={rt.CPU: 40, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150, rt.MEMBW_WRITE: 150},
 )
 
-TASK_SCALE = 4
+TASK_SCALE = 1
 MACHINE_SCALE = 1
 
 def experiment_1():
@@ -90,12 +91,15 @@ def experiment_1():
             # ),
         ),
         (
+            # Friend, dict(alias='friend', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}),
             # (NOPAlgorithm, {}),
             # (FitGeneric, dict(dimensions={rt.CPU, rt.MEM})),
             # (BARGeneric, dict(dimensions={rt.CPU, rt.MEM}, least_used_weight=0)),
             (BARGeneric, dict(alias='baseline', dimensions={rt.CPU, rt.MEM}, least_used_weight=1)),
-            # (FitGeneric, dict(dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE})),
-            (BARGeneric, dict(alias='extender', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1)),
+            (FitGeneric, dict(alias='enough_bw', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE})),
+            (BARGeneric, dict(alias='BAR', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=0)),
+            (BARGeneric, dict(alias='LU_BAR', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1)),
+            (BARGeneric, dict(alias='LU_BAR_weights', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1, bar_weights={rt.MEM:0.5})),
             # (BARGeneric, dict(dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=0)),
         ),
     )
