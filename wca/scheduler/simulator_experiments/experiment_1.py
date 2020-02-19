@@ -95,12 +95,13 @@ def experiment_1():
             # (NOPAlgorithm, {}),
             # (FitGeneric, dict(dimensions={rt.CPU, rt.MEM})),
             # (BARGeneric, dict(dimensions={rt.CPU, rt.MEM}, least_used_weight=0)),
-            (BARGeneric, dict(alias='baseline', dimensions={rt.CPU, rt.MEM}, least_used_weight=1)),
-            (FitGeneric, dict(alias='enough_bw', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE})),
-            (BARGeneric, dict(alias='BAR', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=0)),
-            (BARGeneric, dict(alias='LU_BAR', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1)),
-            (BARGeneric, dict(alias='LU_BAR_weights', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1, bar_weights={rt.MEM:0.5})),
             # (BARGeneric, dict(dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=0)),
+
+            (BARGeneric, dict(alias='kubernetes_baseline', dimensions={rt.CPU, rt.MEM}, least_used_weight=1)),
+            (FitGeneric, dict(alias='Fit__enough_bw', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE})),
+            (BARGeneric, dict(alias='BAR__LU_OFF', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=0)),
+            (BARGeneric, dict(alias='BAR__LU_ON', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1)),
+            (BARGeneric, dict(alias='BAR__LU_ON__WEIGHTS_UNUEQUAL', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1, bar_weights={rt.MEM:0.5})),
         ),
     )
 
