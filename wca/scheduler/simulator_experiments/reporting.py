@@ -172,7 +172,7 @@ def generate_subexperiment_report(
         available_metrics = {m.split('{')[0] for iterdata in iterations_data for m in iterdata.metrics}
         fref.write("available metrics: {}\n".format(', '.join(sorted(available_metrics))))
 
-    with opej('{}/README.txt'.format(exp_dir), 'a') as fref:
+    with open('{}/README.txt'.format(exp_dir), 'a') as fref:
         fref.write("Subexperiment: {}\n".format(subtitle))
         fref.write("Run params: {}\n\n".format(pprint.pformat(run_params, indent=4)))
 
@@ -180,13 +180,24 @@ def generate_subexperiment_report(
     stats['TASKS'] = str(task_gen) # sum(total_tasks_dict.values())
     stats['NODES'] = '%s(%s)' % (total_nodes, nodes_info)
     stats['balance'] = 1 - util_var
-    stats['cpu_util'] = cpu_util
-    stats['mem_util'] = mem_util
-    stats['bw_util'] = bw_util
+    stats['cpu_util%'] = cpu_util * 100
+    stats['mem_util%'] = mem_util * 100
+    stats['bw_util%'] = bw_util * 100
 
-    stats['cpu_util(AEP)'] = cpu_util
-    stats['mem_util(AEP)'] = mem_util
-    stats['bw_util(AEP)'] = bw_util
+    if any('aep' in node.name for node, _ in iterations_data[-1].per_node_resource_usage.items()):
+        stats['cpu_util(AEP)%'] = 100 * statistics.mean(
+            resources.data[rt.CPU] for node, resources in 
+            iterations_data[-1].per_node_resource_usage.items() if 'aep' in node.name)
+        stats['mem_util(AEP)%'] = 100 * statistics.mean(
+            resources.data[rt.MEM] for node, resources in 
+            iterations_data[-1].per_node_resource_usage.items() if 'aep' in node.name)
+        stats['bw_util(AEP)%'] = 100 * statistics.mean(
+            resources.data[rt.MEMBW_READ] for node, resources in 
+            iterations_data[-1].per_node_resource_usage.items() if 'aep' in node.name)
+    else:
+        stats['cpu_util(AEP)%'] = float('nan')
+        stats['mem_util(AEP)%'] = float('nan')
+        stats['bw_util(AEP)%'] = float('nan')
 
     stats['scheduled'] = scheduled_tasks
     stats['assigned%'] = int((assigned_tasks/scheduled_tasks) * 100)
@@ -205,7 +216,13 @@ def generate_experiment_report(stats_dicts, exp_dir):
         'balance': '{:,.2f}'.format,
         'assigned_broken%': '{:,.0f}%'.format,
         'assigned%': '{:,.0f}%'.format,
-        'scheduled': '{:,.0f}%'.format,
+        'cpu_util(AEP)%': '{:,.0f}%'.format,
+        'mem_util(AEP)%': '{:,.0f}%'.format,
+        'bw_util(AEP)%': '{:,.0f}%'.format,
+        'cpu_util%': '{:,.0f}%'.format,
+        'mem_util%': '{:,.0f}%'.format,
+        'bw_util%': '{:,.0f}%'.format,
+        'scheduled': '{:,.0f}'.format,
         'util_var_avg': '{:,.0%}'.format,
         'util_avg_var': '{:,.0%}'.format,
         'util_var': '{:,.0%}'.format,
