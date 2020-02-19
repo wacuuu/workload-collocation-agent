@@ -47,8 +47,8 @@ nodes_definitions = dict(
     dram={rt.CPU: 40, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150, rt.MEMBW_WRITE: 150},
 )
 
-TASK_SCALE = 1
-MACHINE_SCALE = 1
+TASK_SCALE = 10
+MACHINE_SCALE = 10
 
 def experiment_1():
     # dimensions supported by simulator
