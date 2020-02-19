@@ -31,14 +31,14 @@ class IterationData:
     metrics: Dict[str, List[float]]
 
 
-def create_report(title: str, subtitle: str,
-                  run_params: Dict[str, Any],
-                  iterations_data: List[IterationData],
-                  reports_root_directory: str = 'experiments_results',
-                  filter_metrics=None,
-                  task_gen=None,
-                  scheduler=None
-                  ) -> dict:
+def generate_subexperiment_report(title: str, subtitle: str,
+                                  run_params: Dict[str, Any],
+                                  iterations_data: List[IterationData],
+                                  reports_root_directory: str = 'experiments_results',
+                                  filter_metrics=None,
+                                  task_gen=None,
+                                  scheduler=None
+                                  ) -> dict:
     """
         Results will be saved to location:
         {reports_root_directory}/{title}/{subtitle}.{extension}
@@ -155,6 +155,7 @@ def create_report(title: str, subtitle: str,
         stats['ALGO'] = str(scheduler)
         assigned_tasks = dict(assignments_counts.per_cluster)['__ALL__']
         stats['scheduled%'] = int((assigned_tasks/scheduled_tasks) * 100)
+        # @TODO rather denominator should be scheduled_tasks
         stats['broken%'] = int((broken_assignments / assigned_tasks) * 100)
 
         rounded_last_iter_resources = \
@@ -197,7 +198,7 @@ def create_report(title: str, subtitle: str,
     return stats
 
 
-def print_stats(stats_dicts, exp_dir):
+def generate_experiment_report(stats_dicts, exp_dir):
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', 200)
     df = pd.DataFrame(stats_dicts)
