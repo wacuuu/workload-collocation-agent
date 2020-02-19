@@ -293,7 +293,7 @@ class ClusterSimulator:
         if if_percentage:
             return {node: node_resource_usage[node]/node.initial
                     for node in node_resource_usage.keys()}
-        return node_resource_usage
+        return {node: node_resource_usage[node] for node in node_resource_usage.keys()}
 
     # Counter represents Dict[AppName, int]
     def assignments_counts(self) -> AssignmentsCounts:

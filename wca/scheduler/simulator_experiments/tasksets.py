@@ -53,3 +53,14 @@ task_definitions__artificial = [
     Task(name='mem', requested=Resources({rt.CPU: 1, rt.MEM: 100, rt.MEMBW_READ: 1, rt.MEMBW_WRITE:0, rt.WSS: 1})),
     Task(name='mbw', requested=Resources({rt.CPU: 1, rt.MEM: 1,   rt.MEMBW_READ: 10, rt.MEMBW_WRITE:5, rt.WSS: 1})),
 ]
+
+
+task_definitions__artificial_2 = [
+    # Artificial workloads
+    Task(name='cpu', requested=Resources({rt.CPU: 10, rt.MEM: 50, rt.MEMBW_READ: 2, rt.MEMBW_WRITE:1, rt.WSS: 1})),
+    Task(name='cpu2', requested=Resources({rt.CPU: 5, rt.MEM: 25, rt.MEMBW_READ: 2, rt.MEMBW_WRITE:0, rt.WSS: 1})),
+    Task(name='mem', requested=Resources({rt.CPU: 1, rt.MEM: 25, rt.MEMBW_READ: 1, rt.MEMBW_WRITE:0, rt.WSS: 1})),
+    Task(name='mem2', requested=Resources({rt.CPU: 1, rt.MEM: 20, rt.MEMBW_READ: 1, rt.MEMBW_WRITE:1, rt.WSS: 1})),
+    Task(name='mbw', requested=Resources({rt.CPU: 1, rt.MEM: 1, rt.MEMBW_READ: 10, rt.MEMBW_WRITE:5, rt.WSS: 1})),
+    Task(name='mbw2', requested=Resources({rt.CPU: 1, rt.MEM: 1, rt.MEMBW_READ: 7, rt.MEMBW_WRITE:1, rt.WSS: 1})),
+]

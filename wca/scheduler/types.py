@@ -27,10 +27,18 @@ FailureMessage = str
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L299
 @dataclass
 class ExtenderFilterResult():
-    Nodes: List[Dict] = None
+    Nodes: Optional[List[Dict]] = None
     NodeNames: List[NodeName] = field(default_factory=lambda: [])
     FailedNodes: Dict[NodeName, FailureMessage] = field(default_factory=lambda: {})
     Error: str = ''
+
+    def __post_init__(self):
+        if self.Nodes:
+            assure_type(self.Nodes, List[Dict])
+
+        assure_type(self.NodeNames, List[NodeName])
+        assure_type(self.FailedNodes, Dict[NodeName, FailureMessage])
+        assure_type(self.Error, str)
 
 
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L331
@@ -38,6 +46,10 @@ class ExtenderFilterResult():
 class HostPriority():
     Host: str
     Score: int
+
+    def __post_init__(self):
+        assure_type(self.Host, str)
+        assure_type(self.Score, int)
 
     def __repr__(self):
         return '%s=%s' % (self.Host, self.Score)

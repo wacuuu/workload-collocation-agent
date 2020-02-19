@@ -19,7 +19,7 @@ from wca.metrics import Metric, MetricType
 from wca.logger import TRACE
 
 from wca.scheduler.algorithms import used_resources_on_node, \
-    calculate_read_write_ratio, substract_resources, divide_resources
+    calculate_read_write_ratio, substract_resources, divide_resources, sum_resources
 from wca.scheduler.algorithms.fit import FitGeneric
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricName
@@ -31,7 +31,7 @@ log = logging.getLogger(__name__)
 class BARGeneric(FitGeneric):
     def __init__(self, data_provider: DataProvider,
                  dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
-                 max_node_score: int = 10,
+                 max_node_score: int = 1000,
                  least_used_weights: Dict[rt, float] = None,
                  bar_weights: Dict[rt, float] = None,
                  least_used_weight = 1,
@@ -61,7 +61,8 @@ class BARGeneric(FitGeneric):
         used, free, requested = \
             used_free_requested(node_name, app_name, self.dimensions,
                                 nodes_capacities, assigned_apps_counts, apps_spec)
-        membw_read_write_ratio = calculate_read_write_ratio(nodes_capacities[node_name])
+        capacity = nodes_capacities[node_name]
+        membw_read_write_ratio = calculate_read_write_ratio(capacity)
 
         # Metrics: resources: node_used, node_free and app_requested
         for resource in used:
@@ -85,37 +86,47 @@ class BARGeneric(FitGeneric):
                        labels=dict(resource=resource, app=app_name),
                        type=MetricType.GAUGE,))
 
+        # ---
+        # Least used.
+        # ---
+
         # Requested fraction
-        # Parse "requested" as dict from defaultdict to get better string representation.
-        log.log(TRACE, "[Prioritize][%s][%s] Requested %s Free %s Used %s",
-                app_name, node_name, dict(requested), free, used)
-        requested_fraction = divide_resources(requested, free, membw_read_write_ratio)
+        log.log(TRACE, "[Prioritize][app=%s][node=%s][least_used] Requested %s Free %s Used %s Capacity %s",
+                app_name, node_name, dict(requested), free, used, nodes_capacities[node_name])
+        requested_fraction = divide_resources(sum_resources(requested, used), capacity, membw_read_write_ratio)
         for resource, fraction in requested_fraction.items():
             self.metrics.add(
                     Metric(name=MetricName.BAR_REQUESTED_FRACTION,
                            value=fraction, labels=dict(app=app_name, resource=resource),
                            type=MetricType.GAUGE))
-        log.log(TRACE, "[Prioritize][%s][%s] Requested fraction: %s",
+        log.log(TRACE, "[Prioritize][app=%s][node=%s][least_used] (requested+used) fraction ((requested+used)/capacity): %s",
                 app_name, node_name, requested_fraction)
 
-        # Least used.
         weights = self.least_used_weights
         weights_sum = sum([weight for weight in weights.values()])
         free_fraction = {dim: 1.0-fraction for dim, fraction in requested_fraction.items()}
+        log.log(TRACE, "[Prioritize][app=%s][node=%s][least_used] free fraction (after new scheduling new pod) (1-requested_fraction): %s",
+                app_name, node_name, free_fraction)
+        log.log(TRACE, "[Prioritize][app=%s][node=%s][least_used] free fraction linear sum: %s",
+                app_name, node_name, sum(free_fraction.values()))
         least_used_score = \
             sum([free_fraction*weights[dim] for dim, free_fraction in free_fraction.items()]) \
-            / weights_sum * self.max_node_score
-        log.log(TRACE, "[Prioritize][%s][%s] Least used score: %s",
+            / weights_sum
+        log.log(TRACE, "[Prioritize][app=%s][node=%s][least_used] Least used score (weighted linear sum of free_fraction): %s",
                 app_name, node_name, least_used_score)
         self.metrics.add(
                 Metric(name=MetricName.BAR_LEAST_USED_SCORE,
                        value=least_used_score, labels=dict(app=app_name, node=node_name),
                        type=MetricType.GAUGE))
 
+        # ---
+        # Bar
+        # ---
+
         # Mean
         # priority according to variance of dimensions
         mean = sum([v for v in requested_fraction.values()])/len(requested_fraction)
-        log.log(TRACE, "[Prioritize][%s][%s] Mean: %s", app_name, node_name, mean)
+        log.log(TRACE, "[Prioritize][app=%s][node=%s][bar] Mean: %s", app_name, node_name, mean)
         self.metrics.add(
             Metric(name=MetricName.BAR_MEAN,
                    value=mean, labels=dict(app=app_name, node=node_name),
@@ -131,29 +142,34 @@ class BARGeneric(FitGeneric):
             variance = abs(values[0] - values[1])
         else:
             variance = 0
-        log.log(TRACE, "[Prioritize][%s][%s] Variance: %s", app_name, node_name, variance)
+        log.log(TRACE, "[Prioritize][app=%s][node=%s][bar] Variance(weighted quadratic sum of requested_fraction-mean): %s", app_name, node_name, variance)
         self.metrics.add(
             Metric(name=MetricName.BAR_VARIANCE,
                    value=variance, labels=dict(app=app_name, node=node_name),
                    type=MetricType.GAUGE))
 
-        # Bar
-        bar_score = int((1-variance) * self.max_node_score)
-        log.log(TRACE, "[Prioritize][%s][%s] Bar score: %s", app_name, node_name, bar_score)
+        bar_score = (1.0-variance)
+        log.log(TRACE, "[Prioritize][app=%s][node=%s][bar] Bar score: %s", app_name, node_name, bar_score)
         self.metrics.add(
                 Metric(name=MetricName.BAR_SCORE,
                        value=bar_score, labels=dict(app=app_name, node=node_name),
                        type=MetricType.GAUGE))
 
-        # Result
-        result = (bar_score + least_used_score * self.least_used_weight) / 2
-        log.log(TRACE, "[Prioritize][%s][%s] Result: %s", app_name, node_name, result)
+        # ---
+        # Putting together Least-used and BAR.
+        # ---
+
+        scores_sum = least_used_score * self.least_used_weight + bar_score
+        log.log(TRACE, "[Prioritize][app=%s][node=%s] scores_sum(least_used_weight=%s): %s", app_name, node_name, self.least_used_weight, scores_sum)
+
+        result = int(scores_sum * self.max_node_score / 2.0)
+        log.log(TRACE, "[Prioritize][app=%s][node=%s] Result(max_node_score=%s): %s", app_name, node_name, self.max_node_score, result)
         self.metrics.add(
                 Metric(name=MetricName.BAR_RESULT,
                        value=result, labels=dict(app=app_name, node=node_name),
                        type=MetricType.GAUGE))
 
-        return int(result)
+        return result
 
 
 def used_free_requested(
@@ -165,3 +181,9 @@ def used_free_requested(
     free = substract_resources(nodes_capacities[node_name], used, membw_read_write_ratio)
     requested = apps_spec[app_name]
     return used, free, requested
+
+
+# from random import randint, seed
+# from datetime import datetime
+# seed(datetime.now())
+# return randint(1, 100)
