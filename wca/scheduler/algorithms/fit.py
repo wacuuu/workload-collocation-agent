@@ -15,8 +15,8 @@
 import logging
 from typing import Tuple
 
-from wca.scheduler.algorithms import \
-    BaseAlgorithm, substract_resources, sum_resources, used_free_requested
+from wca.scheduler.algorithms.base import BaseAlgorithm, sum_resources, substract_resources, \
+    used_free_requested
 
 log = logging.getLogger(__name__)
 

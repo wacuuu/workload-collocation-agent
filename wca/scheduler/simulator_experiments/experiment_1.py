@@ -14,29 +14,17 @@
 
 import logging
 
-from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.algorithms.bar import BARGeneric
-from wca.scheduler.algorithms.fit import FitGeneric
-from wca.scheduler.algorithms.static_assigner import StaticAssigner
-from wca.scheduler.algorithms.bar import LeastUsedBAR, BAR, LeastUsed, BARFriend
+from wca.scheduler.algorithms.bar import LeastUsedBAR, LeastUsed, BARFriend, BAR
 from wca.scheduler.algorithms.fit import Fit
-from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
-
-from wca.scheduler.cluster_simulator import \
-        ClusterSimulator, Node, Resources, Task
-from wca.scheduler.data_providers.cluster_simulator_data_provider import (
-    ClusterSimulatorDataProvider)
+from wca.scheduler.algorithms.static_assigner import StaticAssigner
 from wca.scheduler.simulator_experiments import experiments_set__generic
 from wca.scheduler.simulator_experiments.nodes_generators import prepare_nodes
-from wca.scheduler.simulator_experiments.reporting import IterationData, generate_subexperiment_report, generate_experiment_report, \
-    wrapper_iteration_finished_callback
-from wca.scheduler.simulator_experiments.task_generators import TaskGenerator_classes, \
-    TaskGenerator_equal
-from wca.scheduler.simulator_experiments.tasksets import task_definitions__artificial, task_definitions__artificial_2, taskset_dimensions
 from wca.scheduler.simulator_experiments.task_generators import TaskGenerator_equal, \
-    TaskGenerator_classes, TaskGenerator_random
+    TaskGenerator_classes
 from wca.scheduler.simulator_experiments.tasksets import task_definitions__artificial, \
     task_definitions__artificial_2dim, nodes_definitions_artificial_2dim
+from wca.scheduler.simulator_experiments.tasksets import task_definitions__artificial_2, \
+    taskset_dimensions
 from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
@@ -50,8 +38,8 @@ nodes_definitions = dict(
     dram={rt.CPU: 80, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150, rt.MEMBW_WRITE: 150},
 )
 
-TASK_SCALE = 50    # of every type (propotionally)
-MACHINE_SCALE = 1 # of every type
+TASK_SCALE = 50  # of every type (propotionally)
+MACHINE_SCALE = 1  # of every type
 
 
 def experiment_debug():
@@ -60,15 +48,21 @@ def experiment_debug():
         False,
         (30 * TASK_SCALE,),
         (
-            (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial, replicas=10 * TASK_SCALE)),
+            (TaskGenerator_equal,
+             dict(task_definitions=task_definitions__artificial, replicas=10 * TASK_SCALE)),
         ),
         (
-            prepare_nodes(nodes_definitions, dict(aep=2 * MACHINE_SCALE, dram=6 * MACHINE_SCALE), nodes_dimensions, ),
+            prepare_nodes(nodes_definitions, dict(aep=2 * MACHINE_SCALE, dram=6 * MACHINE_SCALE),
+                          nodes_dimensions, ),
         ),
         (
-            (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_UNUEQUAL', dimensions=dim4, least_used_weight=1, bar_weights={rt.MEM: 0.5})),
-            (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_EQUAL', dimensions=dim4, least_used_weight=1)),
-            (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_100x', dimensions=dim4, least_used_weight=100)),
+            (LeastUsedBAR,
+             dict(alias='BAR__LU_ON__WEIGHTS_UNUEQUAL', dimensions=dim4, least_used_weight=1,
+                  bar_weights={rt.MEM: 0.5})),
+            (LeastUsedBAR,
+             dict(alias='BAR__LU_ON__WEIGHTS_EQUAL', dimensions=dim4, least_used_weight=1)),
+            (LeastUsedBAR,
+             dict(alias='BAR__LU_ON__WEIGHTS_100x', dimensions=dim4, least_used_weight=100)),
             (LeastUsedBAR, dict(alias='BAR__LU_OFF', dimensions=dim4, least_used_weight=0)),
         ),
     )
@@ -83,19 +77,29 @@ def experiment_bar():
         False,
         (30 * TASK_SCALE,),
         (
-            (TaskGenerator_classes, dict(task_definitions=task_definitions__artificial_2, counts=dict(mbw=20 * TASK_SCALE, cpu=5 * TASK_SCALE, mem=5 * TASK_SCALE))),
+            (TaskGenerator_classes, dict(task_definitions=task_definitions__artificial_2,
+                                         counts=dict(mbw=20 * TASK_SCALE, cpu=5 * TASK_SCALE,
+                                                     mem=5 * TASK_SCALE))),
         ),
         (
             prepare_nodes(nodes_definitions,
-                dict(aep=2*MACHINE_SCALE, dram=6*MACHINE_SCALE),
-                nodes_dimensions,
-            ),
+                          dict(aep=2 * MACHINE_SCALE, dram=6 * MACHINE_SCALE),
+                          nodes_dimensions,
+                          ),
         ),
         (
-            (BARGeneric, dict(alias='BAR__LU_ON__WEIGHTS_UNUEQUAL', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1, bar_weights={rt.MEM:0.5})),
-            (BARGeneric, dict(alias='BAR__LU_ON__WEIGHTS_EQUAL', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1)),
-            (BARGeneric, dict(alias='BAR__LU_ON__WEIGHTS_100x', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=100)),
-            (BARGeneric, dict(alias='BAR__LU_OFF', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=0)),
+            (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_UNUEQUAL',
+                              dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE},
+                              least_used_weight=1, bar_weights={rt.MEM: 0.5})),
+            (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_EQUAL',
+                              dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE},
+                              least_used_weight=1)),
+            (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_100x',
+                              dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE},
+                              least_used_weight=100)),
+            (LeastUsedBAR,
+             dict(alias='BAR__LU_OFF', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE},
+                  least_used_weight=0)),
         ),
     )
 
@@ -114,7 +118,8 @@ def experiment_1():
             # (TaskGenerator_classes, dict(task_definitions=task_definitions__artificial, counts=dict(mbw=0 * TASK_SCALE, cpu=0 * TASK_SCALE, mem=30 * TASK_SCALE))),
             # (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial, replicas=50)),
             # (TaskGenerator_random, dict(task_definitions=task_definitions__artificial, max_items=200, seed=300)),
-            (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim, replicas=TASK_SCALE)),
+            (TaskGenerator_equal,
+             dict(task_definitions=task_definitions__artificial_2dim, replicas=TASK_SCALE)),
         ),
         (
             # prepare_nodes(nodes_definitions, dict(aep=0, dram=6*MACHINE_SCALE), nodes_dimensions, ),
@@ -130,21 +135,25 @@ def experiment_1():
             #     dict(apache_pass=5, dram_only_v1=10, dram_only_v2=5),
             #     nodes_dimensions
             # ),
-            prepare_nodes(nodes_definitions_artificial_2dim, dict(cpuhost=MACHINE_SCALE, memhost=MACHINE_SCALE), nodes_dimensions, ),
+            prepare_nodes(nodes_definitions_artificial_2dim,
+                          dict(cpuhost=MACHINE_SCALE, memhost=MACHINE_SCALE), nodes_dimensions, ),
         ),
         (
             # Friend, dict(alias='friend', dimensions=dim4),
             # (NOPAlgorithm, {}),
             (Fit, dict(dimensions=dim2)),
-            # (Fit, dict(dimensions=dim4)),
-            # (LeastUsed, dict(dimensions=dim2)),
-            # (LeastUsed, dict(dimensions=dim4)),
-            # (BAR, dict(dimensions=dim2)),
-            # (BARFriend, dict(dimensions=dim2)),
-            # (LeastUsedBAR, dict(alias='kubernetes_baseline', dimensions={rt.CPU, rt.MEM})),
-            # (LeastUsedBAR, dict(alias='BAR__LU_OFF', dimensions=dim4, least_used_weight=0)),
-            # (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_EQUAL', dimensions=dim4, least_used_weight=1)),
-            # (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_UNUEQUAL', dimensions=dim4, least_used_weight=1, bar_weights={rt.MEM: 0.5})),
+            (Fit, dict(dimensions=dim4)),
+            (LeastUsed, dict(dimensions=dim2)),
+            (LeastUsed, dict(dimensions=dim4)),
+            (BAR, dict(dimensions=dim2)),
+            (BARFriend, dict(dimensions=dim2)),
+            (LeastUsedBAR, dict(alias='kubernetes_baseline', dimensions={rt.CPU, rt.MEM})),
+            (LeastUsedBAR, dict(alias='BAR__LU_OFF', dimensions=dim4, least_used_weight=0)),
+            (LeastUsedBAR,
+             dict(alias='BAR__LU_ON__WEIGHTS_EQUAL', dimensions=dim4, least_used_weight=1)),
+            (LeastUsedBAR,
+             dict(alias='BAR__LU_ON__WEIGHTS_UNUEQUAL', dimensions=dim4, least_used_weight=1,
+                  bar_weights={rt.MEM: 0.5})),
         ),
     )
 
@@ -166,9 +175,9 @@ def experiment_static_assigner():
         ),
         (
             prepare_nodes(nodes_definitions,
-                dict(aep=1, dram=1),
-                nodes_dimensions,
-            ),
+                          dict(aep=1, dram=1),
+                          nodes_dimensions,
+                          ),
         ),
         (
             (StaticAssigner,
@@ -189,12 +198,12 @@ if __name__ == "__main__":
 
     # init_logging('trace', 'scheduler_extender_simulator_experiments')
     logging.basicConfig(level=logging.INFO)
-    logging.getLogger('wca.scheduler').setLevel(logging.INFO)
-    logging.getLogger('wca.scheduler.cluster_simulator').setLevel(9)
-    logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
+    # logging.getLogger('wca.scheduler').setLevel(logging.INFO)
+    # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(9)
+    # logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
     # logging.getLogger('wca.scheduler.algorithms.bar').setLevel(9)
 
     # experiment_debug()
-    # experiment_1()
+    experiment_1()
     # experiment_bar()
-    experiment_static_assigner()
+    # experiment_static_assigner()

@@ -14,7 +14,8 @@
 from typing import Tuple, Any, Dict, Iterable
 import logging
 
-from wca.scheduler.algorithms import Algorithm, BaseAlgorithm
+from wca.scheduler.algorithms import Algorithm
+from wca.scheduler.algorithms.base import BaseAlgorithm
 from wca.scheduler.utils import extract_common_input
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, \
         HostPriority, NodeName, ResourceType as rt, AppName
@@ -27,14 +28,14 @@ log = logging.getLogger(__name__)
 class StaticAssigner(BaseAlgorithm):
     def __init__(self, data_provider: DataProvider,
                  targeted_assigned_apps_counts: Dict[NodeName, Dict[AppName, int]],
-                 dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 dimensions = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
                  alias=None
                  ):
         BaseAlgorithm.__init__(self, data_provider, dimensions, alias=alias)
         self.targeted_assigned_apps_counts = targeted_assigned_apps_counts
 
     def app_fit_node(self, node_name: NodeName, app_name: str,
-                     data_provider_queried: Tuple[Any]) -> Tuple[bool, str]:
+                     data_provider_queried) -> Tuple[bool, str]:
         """Consider if the app match the given node."""
         nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
         log.debug(assigned_apps_counts)
@@ -58,6 +59,6 @@ class StaticAssigner(BaseAlgorithm):
         return False, 'app {} count on node {} already matching self.targeted_assigned_apps_counts'.format(app_name, node_name)
 
     def priority_for_node(self, node_name: str, app_name: str,
-                          data_provider_queried: Tuple[Any]) -> int:
+                          data_provider_queried: Tuple[Any]) -> float:
         """Considering priority of the given node."""
         return 0

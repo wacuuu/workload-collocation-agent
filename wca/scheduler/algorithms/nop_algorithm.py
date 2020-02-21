@@ -13,7 +13,9 @@
 # limitations under the License.
 from typing import Tuple, Any
 
-from wca.scheduler.algorithms import Algorithm, BaseAlgorithm
+from wca.scheduler.algorithms import Algorithm
+from wca.scheduler.algorithms.base import BaseAlgorithm
+from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.utils import extract_common_input
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, NodeName
 
@@ -25,8 +27,8 @@ class NOPAlgorithm(BaseAlgorithm):
     def __str__(self):
         return 'NOP'
 
-    def __init__(self, data_provider, alias=None):
-        super().__init__(self, data_provider)
+    def __init__(self, data_provider: DataProvider):
+        BaseAlgorithm.__init__(self, data_provider)
 
     def app_fit_node(self, node_name: NodeName, app_name: str,
                      data_provider_queried: Tuple[Any]) -> bool:
@@ -36,12 +38,3 @@ class NOPAlgorithm(BaseAlgorithm):
                           data_provider_queried: Tuple[Any]) -> int:
         return 0
 
-    def filter(self, extender_args: ExtenderArgs):
-        _, nodes, _, _ = extract_common_input(extender_args)
-
-        return ExtenderFilterResult(NodeNames=nodes)
-
-    def prioritize(self, extender_args: ExtenderArgs):
-        _, nodes, _, _ = extract_common_input(extender_args)
-
-        return [HostPriority(node, 0) for node in nodes]

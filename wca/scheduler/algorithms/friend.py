@@ -18,8 +18,8 @@ from typing import Tuple, Dict, Any, Iterable
 from wca.metrics import Metric, MetricType
 from wca.logger import TRACE
 
-from wca.scheduler.algorithms import used_resources_on_node, \
-    calculate_read_write_ratio, substract_resources, divide_resources
+from wca.scheduler.algorithms.base import used_resources_on_node, substract_resources, \
+    calculate_read_write_ratio, divide_resources
 from wca.scheduler.algorithms.bar import LeastUsedBar
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.data_providers import DataProvider

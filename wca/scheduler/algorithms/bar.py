@@ -12,16 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import statistics
 import logging
+import statistics
 from typing import Tuple, Dict, Any
-
-from dataclasses import dataclass
 
 from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
-from wca.scheduler.algorithms import divide_resources, sum_resources, \
-    BaseAlgorithm, \
+from wca.scheduler.algorithms.base import sum_resources, divide_resources, \
     used_free_requested
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.data_providers import DataProvider
@@ -68,7 +65,7 @@ class LeastUsed(Fit):
     def __init__(self, data_provider: DataProvider,
                  dimensions: Tuple = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
                  least_used_weights: Dict[rt, float] = None,
-                 alias = None
+                 alias=None
                  ):
         Fit.__init__(self, data_provider, dimensions, alias=alias)
         if least_used_weights is None:
@@ -109,6 +106,7 @@ class LeastUsed(Fit):
 
         return least_used_score
 
+
 class BARFriend(Fit):
 
     def __init__(self,
@@ -141,11 +139,12 @@ class BARFriend(Fit):
         # print(app_name, node_name, requested_empty_fraction, variance, bar_score)
         return bar_score
 
+
 class BAR(Fit):
     def __init__(self,
                  data_provider,
                  dimensions=(rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
-                 bar_weights: Dict[rt, float]=None,
+                 bar_weights: Dict[rt, float] = None,
                  alias=None,
                  ):
         Fit.__init__(self, data_provider, dimensions, alias=alias)
@@ -227,13 +226,11 @@ class LeastUsedBAR(LeastUsed, BAR):
         # ---
         # Putting together Least-used and BAR.
         # ---
-        scores_sum = least_used_score * self.least_used_weight + bar_score
-        log.log(TRACE, "[Prioritize][app=%s][node=%s] scores_sum(least_used_weight=%s): %s",
-                app_name, node_name, self.least_used_weight, scores_sum)
-
-        result = scores_sum / 2.0
-        log.log(TRACE, "[Prioritize][app=%s][node=%s] Result(max_node_score=%s): %s", app_name,
-                node_name, self.max_node_score, result)
+        result = least_used_score * self.least_used_weight + bar_score
+        log.log(
+            TRACE, "[Prioritize][app=%s][node=%s] least_used_score=%s"
+                   " bar_score=%s least_used_weight=%s result=%s",
+            app_name, node_name, least_used_score, bar_score, self.least_used_weight, result)
         self.metrics.add(
             Metric(name=MetricName.BAR_RESULT,
                    value=result, labels=dict(app=app_name, node=node_name),
