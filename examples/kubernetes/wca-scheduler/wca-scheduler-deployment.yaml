@@ -21,6 +21,9 @@ spec:
   selector:
     matchLabels:
       app: wca-scheduler
+  # All existing Pods are killed before new ones are created
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -28,9 +31,10 @@ spec:
     spec:
       hostNetwork: true
       serviceAccountName: wca-scheduler
-      terminationGracePeriodSeconds: 0
-      nodeSelector:
-        kubernetes.io/hostname: node36
+      terminationGracePeriodSeconds: 1
+      nodeName: node36
+      # nodeSelector:
+      #   kubernetes.io/hostname: node36
       tolerations:
         - key: "master"
           operator: "Exists"

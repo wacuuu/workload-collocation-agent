@@ -132,9 +132,11 @@ class Kubeapi:
         return r.json()
 
 
-# TODO: Consider if K8s return memory only in 'Ki' unit.
 def _convert_k8s_memory_capacity(memory: str) -> float:
-    return float(int(memory[:-2]) * _MEMORY_UNITS['Ki'])
+    """ return as GB """
+    # TODO: Consider if K8s return memory only in 'Ki' unit.
+    assert memory.endswith['Ki']
+    return int((float(int(memory[:-2]) * _MEMORY_UNITS['Ki'])) / 1e9)
 
 
 @dataclass
@@ -164,8 +166,8 @@ class ClusterDataProvider(DataProvider):
         # Check if maybe more resources
         if ResourceType.MEMBW_READ in resources and ResourceType.MEMBW_WRITE in resources:
             # TODO: Calculate it.
-            DRAM_MEMBW_READ_BYTES = 200 * 1e9  # +/- default for every DRAM type
-            DRAM_MEMBW_WRITE_BYTES = 200 * 1e9
+            DRAM_MEMBW_READ_BYTES = 200 # +/- default for every DRAM type
+            DRAM_MEMBW_WRITE_BYTES = 200 
 
             # Check which nodes have PMM (in Memory Mode).
             query_result = self.prometheus.do_query(self.prometheus.queries.NODES_PMM_MEMORY_MODE)
@@ -177,8 +179,8 @@ class ClusterDataProvider(DataProvider):
             # Every other should have only DRAM.
             for node, capacities in node_capacities.items():
                 if node not in nodes_to_consider:
-                    capacities[ResourceType.MEMBW_READ] = float(DRAM_MEMBW_READ_BYTES)
-                    capacities[ResourceType.MEMBW_WRITE] = float(DRAM_MEMBW_WRITE_BYTES)
+                    capacities[ResourceType.MEMBW_READ] = int(DRAM_MEMBW_READ_BYTES)
+                    capacities[ResourceType.MEMBW_WRITE] = int(DRAM_MEMBW_WRITE_BYTES)
 
             # Read Memory Bandwidth from PMM nodes.
             if len(nodes_to_consider) > 0:
