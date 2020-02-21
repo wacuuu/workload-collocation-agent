@@ -74,6 +74,7 @@ class BaseAlgorithm(Algorithm):
         extender_filter_result = ExtenderFilterResult()
 
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
+        log.log(TRACE, '[Filter] data_queried: %r', data_provider_queried)
 
         # First pass (parallelizable, fast K8S style)
         accepted_node_names = []
