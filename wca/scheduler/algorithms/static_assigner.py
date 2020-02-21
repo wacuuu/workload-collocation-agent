@@ -37,14 +37,11 @@ class StaticAssigner(BaseAlgorithm):
                      data_provider_queried: Tuple[Any]) -> Tuple[bool, str]:
         """Consider if the app match the given node."""
         nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
-
+        log.debug(assigned_apps_counts)
         if node_name not in self.targeted_assigned_apps_counts:
             return False, 'node {} not specified in self.targeted_assigned_apps_counts'.format(node_name)
         if app_name not in self.targeted_assigned_apps_counts[node_name]:
             return False, 'app {} not specified in self.targeted_assigned_apps_counts'.format(app_name)
-
-        assert node_name in assigned_apps_counts, \
-            'No information from data provider about node {}'.format(node_name)
 
         if app_name not in assigned_apps_counts[node_name]:
             if self.targeted_assigned_apps_counts[node_name][app_name] > 0:
