@@ -49,6 +49,7 @@ class Fit(BaseAlgorithm):
         else:
             broken_capacities_str = \
                 ','.join(['({}: {})'.format(r, v) for r, v in broken_capacities.items()])
+            # print('broken capacity:', app_name, node_name, broken_capacities_str)
             return False, 'Could not fit node for dimensions: ({}).'.format(broken_capacities_str)
 
     def priority_for_node(self, node_name: str, app_name: str,

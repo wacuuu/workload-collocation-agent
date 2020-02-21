@@ -14,29 +14,30 @@
 
 import logging
 
-from wca.scheduler.algorithms.bar import LeastUsedBAR, BAR, LeastUsed
+from wca.scheduler.algorithms.bar import LeastUsedBAR, BAR, LeastUsed, BARFriend
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
 from wca.scheduler.simulator_experiments import experiments_set__generic
 from wca.scheduler.simulator_experiments.nodes_generators import prepare_nodes
 from wca.scheduler.simulator_experiments.task_generators import TaskGenerator_equal, \
     TaskGenerator_classes, TaskGenerator_random
-from wca.scheduler.simulator_experiments.tasksets import task_definitions__artificial
+from wca.scheduler.simulator_experiments.tasksets import task_definitions__artificial, \
+    task_definitions__artificial_2dim, nodes_definitions_artificial_2dim
 from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
 
-nodes_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
 dim4 = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
 dim2 = {rt.CPU, rt.MEM}
+nodes_dimensions = dim4
 
 nodes_definitions = dict(
     aep={rt.CPU: 40, rt.MEM: 1000, rt.MEMBW: 40, rt.MEMBW_READ: 40, rt.MEMBW_WRITE: 10},
-    dram={rt.CPU: 40, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150, rt.MEMBW_WRITE: 150},
+    dram={rt.CPU: 80, rt.MEM: 192, rt.MEMBW: 200, rt.MEMBW_READ: 150, rt.MEMBW_WRITE: 150},
 )
 
-TASK_SCALE = 1
-MACHINE_SCALE = 1
+TASK_SCALE = 50    # of every type (propotionally)
+MACHINE_SCALE = 1 # of every type
 
 
 def experiment_debug():
@@ -73,7 +74,7 @@ def experiment_1():
             # (TaskGenerator_classes, dict(task_definitions=task_definitions__artificial, counts=dict(mbw=0 * TASK_SCALE, cpu=0 * TASK_SCALE, mem=30 * TASK_SCALE))),
             # (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial, replicas=50)),
             # (TaskGenerator_random, dict(task_definitions=task_definitions__artificial, max_items=200, seed=300)),
-            (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial, replicas=10*TASK_SCALE)),
+            (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim, replicas=TASK_SCALE)),
         ),
         (
             # prepare_nodes(nodes_definitions, dict(aep=0, dram=6*MACHINE_SCALE), nodes_dimensions, ),
@@ -89,16 +90,17 @@ def experiment_1():
             #     dict(apache_pass=5, dram_only_v1=10, dram_only_v2=5),
             #     nodes_dimensions
             # ),
-            prepare_nodes(nodes_definitions, dict(aep=1, dram=1), nodes_dimensions, ),
+            prepare_nodes(nodes_definitions_artificial_2dim, dict(cpuhost=MACHINE_SCALE, memhost=MACHINE_SCALE), nodes_dimensions, ),
         ),
         (
             # Friend, dict(alias='friend', dimensions=dim4),
             # (NOPAlgorithm, {}),
             (Fit, dict(dimensions=dim2)),
             # (Fit, dict(dimensions=dim4)),
-            (LeastUsed, dict(dimensions=dim2)),
+            # (LeastUsed, dict(dimensions=dim2)),
             # (LeastUsed, dict(dimensions=dim4)),
-            (BAR, dict(dimensions=dim2)),
+            # (BAR, dict(dimensions=dim2)),
+            # (BARFriend, dict(dimensions=dim2)),
             # (LeastUsedBAR, dict(alias='kubernetes_baseline', dimensions={rt.CPU, rt.MEM})),
             # (LeastUsedBAR, dict(alias='BAR__LU_OFF', dimensions=dim4, least_used_weight=0)),
             # (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_EQUAL', dimensions=dim4, least_used_weight=1)),
@@ -120,7 +122,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     # logging.getLogger('wca.scheduler').setLevel(logging.INFO)
     # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(9)
-    # logging.getLogger('wca.scheduler.algorithms').setLevel(9)
+    logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
+    # logging.getLogger('wca.scheduler.algorithms.bar').setLevel(9)
 
     # experiment_debug()
     experiment_1()

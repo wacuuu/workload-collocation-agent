@@ -42,6 +42,7 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
     ):
         scheduler_class, scheduler_kwargs = scheduler_init
         input_args = locals()
+        input_args.pop('experiment_stats')
         iterations_data: List[IterationData] = []
 
         simulator = ClusterSimulator(tasks=[], nodes=nodes, scheduler=None)
@@ -73,7 +74,7 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
                                               )
         log.debug('Finished experiment.', experiment_name, exp_iter)
         log.debug('Stats:', stats)
-        print('.', end='')
+        print('.', end='', flush=True)
         experiment_stats.append(stats)
 
     if os.path.isdir('experiments_results/{}'.format(experiment_name)):

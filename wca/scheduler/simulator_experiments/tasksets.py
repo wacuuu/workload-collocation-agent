@@ -54,6 +54,16 @@ task_definitions__artificial = [
     Task(name='mbw', requested=Resources({rt.CPU: 1, rt.MEM: 1,   rt.MEMBW_READ: 10, rt.MEMBW_WRITE:5, rt.WSS: 1})),
 ]
 
+nodes_definitions_artificial_2dim = dict(
+    cpuhost={rt.CPU: 100, rt.MEM: 200, rt.MEMBW_READ: 100, rt.MEMBW_WRITE: 100},
+    memhost={rt.CPU: 100, rt.MEM: 1000, rt.MEMBW_READ: 100, rt.MEMBW_WRITE: 100},
+)
+task_definitions__artificial_2dim = [
+    Task(name='cputask', requested=Resources(
+        {rt.CPU: 1, rt.MEM: 2, rt.MEMBW_READ: 0, rt.MEMBW_WRITE: 0, rt.WSS: 0})),
+    Task(name='memtask', requested=Resources(
+        {rt.CPU: 1, rt.MEM: 10, rt.MEMBW_READ: 0, rt.MEMBW_WRITE: 0, rt.WSS: 0})),
+]
 
 task_definitions__artificial_2 = [
     # Artificial workloads

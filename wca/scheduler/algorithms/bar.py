@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import statistics
 import logging
-from typing import Tuple, Dict, Any, Iterable
+from typing import Tuple, Dict, Any
 
 from dataclasses import dataclass
 
@@ -30,14 +31,14 @@ from wca.scheduler.types import ResourceType as rt
 log = logging.getLogger(__name__)
 
 
-@dataclass
-class MaxNodeScore(Fit):
-    algo: BaseAlgorithm
-    max_node_score: float = 1
-
-    def priority_for_node(self, node_name, app_name, data_provider_queried) -> float:
-        return self.algo.priority_for_node(node_name, app_name,
-                                           data_provider_queried) * self.max_node_score
+# @dataclass
+# class MaxNodeScore(Fit):
+#     algo: BaseAlgorithm
+#     max_node_score: float = 1
+#
+#     def priority_for_node(self, node_name, app_name, data_provider_queried) -> float:
+#         return self.algo.priority_for_node(node_name, app_name,
+#                                            data_provider_queried) * self.max_node_score
 
 
 def get_requested_fraction(app_name, apps_spec, assigned_apps_counts, node_name,
@@ -108,6 +109,37 @@ class LeastUsed(Fit):
 
         return least_used_score
 
+class BARFriend(Fit):
+
+    def __init__(self,
+                 data_provider,
+                 dimensions=(rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 alias=None,
+                 ):
+        Fit.__init__(self, data_provider, dimensions, alias=alias)
+
+    def priority_for_node(self, node_name, app_name, data_provider_queried) -> float:
+        """
+        # ---
+        # BAR
+        # ---
+        """
+        nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
+        total_demand = {}
+        total_capacity = {}
+
+        used, free, requested, capacity, membw_read_write_ratio, metrics = \
+            used_free_requested(node_name, app_name, self.dimensions,
+                                nodes_capacities, assigned_apps_counts, apps_spec)
+
+        requested_empty_fraction = divide_resources(
+            requested, capacity,
+            membw_read_write_ratio
+        )
+        variance = statistics.variance(requested_empty_fraction.values())
+        bar_score = (1.0 - variance)
+        # print(app_name, node_name, requested_empty_fraction, variance, bar_score)
+        return bar_score
 
 class BAR(Fit):
     def __init__(self,
@@ -180,7 +212,6 @@ class LeastUsedBAR(LeastUsed, BAR):
         LeastUsed.__init__(self, data_provider, dimensions, least_used_weights, alias=alias)
         BAR.__init__(self, data_provider, dimensions, bar_weights)
         self.least_used_weight = least_used_weight
-        self.max_node_score: float = max_node_score
 
     def __str__(self):
         if self.alias:
@@ -189,7 +220,7 @@ class LeastUsedBAR(LeastUsed, BAR):
                                     self.least_used_weight)
 
     def priority_for_node(self, node_name: str, app_name: str,
-                          data_provider_queried: Tuple[Any]) -> int:
+                          data_provider_queried: Tuple[Any]) -> float:
         least_used_score = LeastUsed.priority_for_node(self, node_name, app_name,
                                                        data_provider_queried)
         bar_score = BAR.priority_for_node(self, node_name, app_name, data_provider_queried)
@@ -200,7 +231,7 @@ class LeastUsedBAR(LeastUsed, BAR):
         log.log(TRACE, "[Prioritize][app=%s][node=%s] scores_sum(least_used_weight=%s): %s",
                 app_name, node_name, self.least_used_weight, scores_sum)
 
-        result = scores_sum * self.max_node_score / 2.0
+        result = scores_sum / 2.0
         log.log(TRACE, "[Prioritize][app=%s][node=%s] Result(max_node_score=%s): %s", app_name,
                 node_name, self.max_node_score, result)
         self.metrics.add(

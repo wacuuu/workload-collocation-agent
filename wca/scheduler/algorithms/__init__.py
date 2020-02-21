@@ -68,6 +68,7 @@ class BaseAlgorithm(Algorithm):
 
     def __init__(self, data_provider: DataProvider,
                  dimensions: Tuple = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 max_node_score: float = 10,
                  alias: str = None
                  ):
         self.data_provider = data_provider
@@ -75,6 +76,7 @@ class BaseAlgorithm(Algorithm):
         self.metrics = None
         self.alias = alias
         self.reinit_metrics()
+        self.max_node_score = max_node_score
 
     def reinit_metrics(self):
         self.metrics = MetricRegistry()
@@ -96,6 +98,7 @@ class BaseAlgorithm(Algorithm):
             passed, message = self.app_fit_node(node_name, app_name, data_provider_queried)
             if not passed:
                 log.log(TRACE, 'Failed Node %r, %r', node_name, message)
+                log.debug('Failed Node %r, %r', node_name, message)
                 extender_filter_result.FailedNodes[node_name] = message
             else:
                 extender_filter_result.NodeNames.append(node_name)
@@ -114,8 +117,10 @@ class BaseAlgorithm(Algorithm):
 
         # print('Number of nodes to prioritetize:', len(nodes_names))
         for node_name in sorted(nodes_names):
-            priority = int(self.priority_for_node(node_name, app_name, data_provider_queried))
-            priorities.append(HostPriority(node_name, priority))
+            priority = self.priority_for_node(node_name, app_name, data_provider_queried)
+            priority_scaled = int(priority * self.max_node_score)
+            # print(app_name, node_name, priority_scaled)
+            priorities.append(HostPriority(node_name, priority_scaled))
 
         return priorities
 
