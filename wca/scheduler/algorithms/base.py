@@ -113,7 +113,7 @@ class BaseAlgorithm(Algorithm):
             priority_scaled = int(priority * self.max_node_score)
             priorities.append(HostPriority(node_name, priority_scaled))
 
-        log.debug('[Prioritize] <- %r' % ExtenderFilterResult)
+        log.debug('[Prioritize] <- %r', priorities)
         return priorities
 
     def get_metrics_registry(self) -> Optional[MetricRegistry]:
