@@ -42,7 +42,7 @@ class Fit(BaseAlgorithm):
         except ValueError as e:
             msg = 'cannot sum app=%s requested=%s and node=%s used=%s: %s' % (app_name, requested, node_name, used, e)
             log.error(msg)
-            raise DataMissingException(msg)
+            raise DataMissingException(msg) from e
 
         free_after_bind = substract_resources(
             capacity,

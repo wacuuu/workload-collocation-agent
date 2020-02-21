@@ -17,7 +17,7 @@ from typing import Tuple, Dict, List, Optional, Set
 
 from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
-from wca.scheduler.algorithms import Algorithm, log
+from wca.scheduler.algorithms import Algorithm, log, DataMissingException
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricRegistry, MetricName
 from wca.scheduler.types import NodeName, Resources, AppsCount, AppName, ResourceType as rt, \
@@ -107,6 +107,7 @@ class BaseAlgorithm(Algorithm):
         log.debug('[Prioritize] -> ExtenderArgs: %r' % extender_args)
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
+        log.log(TRACE, '[Prioritize] data_queried: %r', data_provider_queried)
 
         priorities = []
         for node_name in sorted(nodes_names):
@@ -293,9 +294,17 @@ def get_requested_fraction(app_name, apps_spec, assigned_apps_counts, node_name,
         used_free_requested(node_name, app_name, dimensions,
                             nodes_capacities, assigned_apps_counts, apps_spec)
 
+    try:
+        requested_and_used = sum_resources(requested, used)
+    except ValueError as e:
+        msg = 'cannot sum app=%s requested=%s and node=%s used=%s: %s' % (
+            app_name, requested, node_name, used, e)
+        log.error(msg)
+        raise DataMissingException(msg) from e
+
     # FRACTION
     requested_fraction = divide_resources(
-        sum_resources(requested, used), capacity,
+        requested_and_used, capacity,
         membw_read_write_ratio
     )
     for resource, fraction in requested_fraction.items():
