@@ -74,15 +74,20 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
         log.debug('Finished experiment.', experiment_name, exp_iter)
         log.debug('Stats:', stats)
         experiment_stats.append(stats)
+        return iterations_data
 
     if os.path.isdir('experiments_results/{}'.format(experiment_name)):
         shutil.rmtree('experiments_results/{}'.format(experiment_name))
+    iterations_data_list = []
     for exp_iter, params in enumerate(itertools.product(*args)):
-        experiment__generic(exp_iter, *params)
+        iterations_data = experiment__generic(exp_iter, *params)
+        iterations_data_list.append(iterations_data)
 
 
     exp_dir = '{}/{}'.format(reports_root_directory, experiment_name)
     generate_experiment_report(experiment_stats, exp_dir)
+
+    return iterations_data_list
 
 def run_n_iter(iterations_count: int, simulator: ClusterSimulator,
                task_creation_fun: Callable[[int], Task],

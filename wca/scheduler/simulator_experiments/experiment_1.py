@@ -21,8 +21,9 @@ import shutil
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.bar import BARGeneric
 from wca.scheduler.algorithms.fit import FitGeneric
-# from wca.scheduler.algorithms.friend import Friend
+from wca.scheduler.algorithms.static_assigner import StaticAssigner
 from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
+
 from wca.scheduler.cluster_simulator import \
         ClusterSimulator, Node, Resources, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
@@ -33,7 +34,7 @@ from wca.scheduler.simulator_experiments.reporting import IterationData, generat
     wrapper_iteration_finished_callback
 from wca.scheduler.simulator_experiments.task_generators import TaskGenerator_classes, \
     TaskGenerator_equal
-from wca.scheduler.simulator_experiments.tasksets import task_definitions__artificial
+from wca.scheduler.simulator_experiments.tasksets import task_definitions__artificial, task_definitions__artificial_2, taskset_dimensions
 from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
@@ -58,6 +59,32 @@ def experiment_debug():
         (30 * TASK_SCALE,),
         (
             (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial, replicas=10 * TASK_SCALE)),
+        ),
+        (
+            prepare_nodes(nodes_definitions,
+                dict(aep=2*MACHINE_SCALE, dram=6*MACHINE_SCALE),
+                nodes_dimensions,
+            ),
+        ),
+        (
+            (BARGeneric, dict(alias='BAR__LU_ON__WEIGHTS_UNUEQUAL', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1, bar_weights={rt.MEM:0.5})),
+            (BARGeneric, dict(alias='BAR__LU_ON__WEIGHTS_EQUAL', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=1)),
+            (BARGeneric, dict(alias='BAR__LU_ON__WEIGHTS_100x', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=100)),
+            (BARGeneric, dict(alias='BAR__LU_OFF', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, least_used_weight=0)),
+        ),
+    )
+
+
+def experiment_bar():
+    TASK_SCALE = 10
+    MACHINE_SCALE = 10
+
+    experiments_set__generic(
+        'bar_weights',
+        False,
+        (30 * TASK_SCALE,),
+        (
+            (TaskGenerator_classes, dict(task_definitions=task_definitions__artificial_2, counts=dict(mbw=20 * TASK_SCALE, cpu=5 * TASK_SCALE, mem=5 * TASK_SCALE))),
         ),
         (
             prepare_nodes(nodes_definitions,
@@ -129,6 +156,35 @@ def experiment_1():
     )
 
 
+def experiment_static_assigner():
+    targeted_assigned_apps_counts = \
+        {'aep_0': {'cpu': 1, 'mem': 2, 'mbw': 2},
+         'dram_0': {'cpu': 1, 'mem': 0, 'mbw': 0}}
+
+    iterations_data_list = experiments_set__generic(
+        'static_assigner',
+        False,
+        (6,),
+        (
+            (TaskGenerator_classes,
+             dict(task_definitions=taskset_dimensions(nodes_dimensions,
+                                                      task_definitions__artificial_2),
+                  counts=dict(mbw=2, cpu=2, mem=2))),
+        ),
+        (
+            prepare_nodes(nodes_definitions,
+                dict(aep=1, dram=1),
+                nodes_dimensions,
+            ),
+        ),
+        (
+            (StaticAssigner,
+             dict(alias='StaticAssigner',
+                  targeted_assigned_apps_counts=targeted_assigned_apps_counts)),
+        ),
+    )
+
+
 if __name__ == "__main__":
     try:
         import matplotlib.pyplot as plt
@@ -140,9 +196,11 @@ if __name__ == "__main__":
 
     # init_logging('trace', 'scheduler_extender_simulator_experiments')
     logging.basicConfig(level=logging.INFO)
-    # logging.getLogger('wca.scheduler').setLevel(logging.INFO)
-    # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(9)
-    # logging.getLogger('wca.scheduler.algorithms').setLevel(9)
+    logging.getLogger('wca.scheduler').setLevel(logging.INFO)
+    logging.getLogger('wca.scheduler.cluster_simulator').setLevel(9)
+    logging.getLogger('wca.scheduler.algorithms').setLevel(9)
 
     # experiment_debug()
-    experiment_1()
+    # experiment_1()
+    # experiment_bar()
+    experiment_static_assigner()

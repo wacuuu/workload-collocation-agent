@@ -181,9 +181,3 @@ def used_free_requested(
     free = substract_resources(nodes_capacities[node_name], used, membw_read_write_ratio)
     requested = apps_spec[app_name]
     return used, free, requested
-
-
-# from random import randint, seed
-# from datetime import datetime
-# seed(datetime.now())
-# return randint(1, 100)
