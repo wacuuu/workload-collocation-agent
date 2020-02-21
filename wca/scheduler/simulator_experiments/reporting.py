@@ -102,8 +102,8 @@ def generate_subexperiment_report(
                    .format(total_tasks_dict))
         # Check consistency of iterations data and data provider.
         if total_apps_count != total_tasks_dict:
-            fref.write("!Scheduled tasks different from total_apps_count from query!: {}\n"
-                       .format(total_apps_count))
+            fref.write("!Scheduled tasks different from total_apps_count from query! total_apps_count={}\n"
+                       .format(dict(total_apps_count)))
 
         scheduled_tasks = sum(total_tasks_dict.values())
         assignments_counts = iterations_data[-1].assignments_counts

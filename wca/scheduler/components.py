@@ -13,16 +13,20 @@
 # limitations under the License.
 
 from wca.config import register
+from wca.scheduler.algorithms.bar import LeastUsedBAR, LeastUsed, BAR
 from wca.scheduler.algorithms.fit import Fit
-from wca.scheduler.algorithms.bar import LeastUsedBar
+from wca.scheduler.algorithms.hierbar import HierBAR
 from wca.scheduler.algorithms.static_assigner import StaticAssigner
 from wca.scheduler.data_providers.cluster_data_provider import (
-        ClusterDataProvider, Kubeapi, Prometheus, Queries)
+    ClusterDataProvider, Kubeapi, Prometheus, Queries)
 
 
 def register_algorithms():
     register(Fit)
-    register(LeastUsedBar)
+    register(LeastUsedBAR)
+    register(LeastUsed)
+    register(BAR)
+    register(HierBAR)
     register(StaticAssigner)
 
 
