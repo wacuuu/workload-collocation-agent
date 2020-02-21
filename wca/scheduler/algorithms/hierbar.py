@@ -7,6 +7,7 @@ from wca.scheduler.algorithms.bar import BAR
 from wca.scheduler.algorithms.base import used_free_requested, divide_resources, \
     calculate_read_write_ratio
 from wca.scheduler.algorithms.fit import Fit
+from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.types import ResourceType as rt, NodeName
 
 log = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ log = logging.getLogger(__name__)
 class HierBAR(BAR):
 
     def __init__(self,
-                 data_provider,
+                 data_provider: DataProvider,
                  dimensions=(rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
                  alias=None,
                  ):
