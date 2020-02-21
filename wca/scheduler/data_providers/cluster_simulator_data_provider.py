@@ -1,6 +1,7 @@
 """
 Module for providing.
 """
+from collections import defaultdict
 from typing import Iterable, Dict, Tuple
 
 from dataclasses import dataclass
@@ -21,19 +22,20 @@ class ClusterSimulatorDataProvider(DataProvider):
         return r
 
     def get_apps_counts(self) -> Tuple[Dict[NodeName, AppsCount], AppsCount]:
-        apps_per_node = {}
-        for node in self.simulator.nodes:
-            node_name = node.name
-            apps_per_node[node_name] = {}
-            for task in self.simulator.tasks:
-                if task.assignment == node:
-                    app_name = task.get_core_name()
-                    if app_name in apps_per_node[node_name]:
-                        apps_per_node[node_name][app_name] += 1
-                    else:
-                        apps_per_node[node_name][app_name] = 1
-        # @TODO is it possible to simulate unassigned apps ?
-        return apps_per_node, {}
+        apps_per_node = {node.name: defaultdict(int) for node in self.simulator.nodes}
+        unassigned_tasks = defaultdict(int)
+        for task in self.simulator.tasks:
+            app_name = task.get_core_name()
+            if task.assignment is not None:
+                node = task.assignment
+                apps_per_node[node.name][app_name] += 1
+            else:
+                unassigned_tasks[app_name] += 1
+
+        # remove defaultdicts
+        apps_per_node_dict = {node_name:dict(apps_count) for node_name,apps_count in apps_per_node.items()}
+
+        return apps_per_node_dict, dict(unassigned_tasks)
 
     def get_apps_requested_resources(self, resources: Iterable[ResourceType]) \
             -> Dict[AppName, Resources]:

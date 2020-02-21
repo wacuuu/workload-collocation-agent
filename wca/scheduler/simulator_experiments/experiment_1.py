@@ -170,7 +170,7 @@ def experiment_static_assigner():
 
 def experiment_hierbar():
     nodes_dimensions = dim4
-    iterations = 100
+    iterations = 200
     experiments_set__generic(
         'hierbar',
         False,
