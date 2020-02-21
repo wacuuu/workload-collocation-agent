@@ -73,6 +73,7 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
                                               )
         log.debug('Finished experiment.', experiment_name, exp_iter)
         log.debug('Stats:', stats)
+        print('.', end='')
         experiment_stats.append(stats)
 
     if os.path.isdir('experiments_results/{}'.format(experiment_name)):
@@ -82,6 +83,7 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
 
 
     exp_dir = '{}/{}'.format(reports_root_directory, experiment_name)
+    print()
     generate_experiment_report(experiment_stats, exp_dir)
 
 def run_n_iter(iterations_count: int, simulator: ClusterSimulator,

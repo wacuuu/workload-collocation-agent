@@ -39,7 +39,7 @@ class NOPAlgorithm(BaseAlgorithm):
     def filter(self, extender_args: ExtenderArgs):
         _, nodes, _, _ = extract_common_input(extender_args)
 
-        return ExtenderFilterResult(Nodes=nodes)
+        return ExtenderFilterResult(NodeNames=nodes)
 
     def prioritize(self, extender_args: ExtenderArgs):
         _, nodes, _, _ = extract_common_input(extender_args)

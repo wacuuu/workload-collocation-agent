@@ -12,17 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from abc import ABC, abstractmethod
-from typing import List, Tuple, Iterable, Any, Optional, Set, Dict
 import logging
+from abc import ABC, abstractmethod
+from typing import List, Tuple, Optional, Set, Dict
 
-from wca.metrics import Metric
 from wca.logger import TRACE
-from wca.scheduler.metrics import MetricRegistry
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, \
-                                NodeName, Resources
-from wca.scheduler.types import ResourceType as rt, AppName
+from wca.metrics import Metric, MetricType
 from wca.scheduler.data_providers import DataProvider
+from wca.scheduler.metrics import MetricRegistry, MetricName
+from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, \
+    NodeName, Resources, AppsCount
+from wca.scheduler.types import ResourceType as rt, AppName
 from wca.scheduler.utils import extract_common_input
 
 log = logging.getLogger(__name__)
@@ -31,12 +31,12 @@ log = logging.getLogger(__name__)
 class Algorithm(ABC):
     @abstractmethod
     def filter(self, extender_args: ExtenderArgs) -> Tuple[
-            ExtenderFilterResult, List[Metric]]:
+        ExtenderFilterResult, List[Metric]]:
         pass
 
     @abstractmethod
     def prioritize(self, extender_args: ExtenderArgs) -> Tuple[
-            List[HostPriority], List[Metric]]:
+        List[HostPriority], List[Metric]]:
         pass
 
     @abstractmethod
@@ -47,6 +47,19 @@ class Algorithm(ABC):
     def get_metrics_names(self) -> List[str]:
         return []
 
+    @abstractmethod
+    def reinit_metrics(self):
+        pass
+
+
+
+QueryDataProviderInfo = Tuple[
+    Dict[NodeName, Resources],  # nodes_capacities
+    Dict[NodeName, AppsCount],  # assigned_apps_counts
+    Dict[AppName, Resources]  # apps_spec
+]
+
+
 class BaseAlgorithm(Algorithm):
     """Implementing some basic functionalities which probably
        each Algorithm subclass will need to do. However forcing
@@ -54,18 +67,22 @@ class BaseAlgorithm(Algorithm):
        not match everybody needs."""
 
     def __init__(self, data_provider: DataProvider,
-                 dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 dimensions: Tuple = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
                  alias: str = None
                  ):
         self.data_provider = data_provider
         self.dimensions = dimensions
-        self.metrics = MetricRegistry()
+        self.metrics = None
         self.alias = alias
+        self.reinit_metrics()
+
+    def reinit_metrics(self):
+        self.metrics = MetricRegistry()
 
     def __str__(self):
-        if self.alias is not None:
+        if self.alias:
             return self.alias
-        return super()
+        return '%s(%d)' % (self.__class__.__name__, len(self.dimensions))
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         log.debug('[Filter] ExtenderArgs: %r' % extender_args)
@@ -92,8 +109,12 @@ class BaseAlgorithm(Algorithm):
 
         data_provider_queried = self.query_data_provider()
 
+        if len(nodes_names) <= 1:
+            return priorities
+
+        # print('Number of nodes to prioritetize:', len(nodes_names))
         for node_name in sorted(nodes_names):
-            priority = self.priority_for_node(node_name, app_name, data_provider_queried)
+            priority = int(self.priority_for_node(node_name, app_name, data_provider_queried))
             priorities.append(HostPriority(node_name, priority))
 
         return priorities
@@ -104,19 +125,7 @@ class BaseAlgorithm(Algorithm):
     def get_metrics_names(self) -> List[str]:
         return self.metrics.get_names()
 
-    @abstractmethod
-    def app_fit_node(self, node_name: NodeName, app_name: str,
-                     data_provider_queried: Tuple[Any]) -> bool:
-        """Consider if the app match the given node."""
-        pass
-
-    @abstractmethod
-    def priority_for_node(self, node_name: str, app_name: str,
-                          data_provider_queried: Tuple[Any]) -> int:
-        """Considering priority of the given node."""
-        pass
-
-    def query_data_provider(self) -> Tuple:
+    def query_data_provider(self) -> QueryDataProviderInfo:
         """Should be overwritten if one needs more data from DataProvider."""
         dp = self.data_provider
         assigned_apps_counts, apps_unassigned = dp.get_apps_counts()
@@ -124,9 +133,19 @@ class BaseAlgorithm(Algorithm):
         apps_spec = dp.get_apps_requested_resources(self.dimensions)
         return nodes_capacities, assigned_apps_counts, apps_spec
 
+    @abstractmethod
+    def app_fit_node(self, node_name: NodeName, app_name: str,
+                     data_provider_queried: QueryDataProviderInfo) -> Tuple[bool, str]:
+        """Consider if the app match the given node."""
+
+    @abstractmethod
+    def priority_for_node(self, node_name: str, app_name: str,
+                          data_provider_queried: QueryDataProviderInfo) -> float:
+        """Considering priority of the given node."""
+
 
 def used_resources_on_node(
-        dimensions: Set[rt], 
+        dimensions: Set[rt],
         assigned_apps_counts: Dict[AppName, int],
         apps_spec: [Dict[AppName, Resources]]) -> Resources:
     """Calculate used resources on a given node using data returned by data provider."""
@@ -169,7 +188,7 @@ def calculate_read_write_ratio(capacity: Resources) -> Optional[float]:
     dimensions = capacity.keys()
     if rt.MEMBW_READ in dimensions:
         assert rt.MEMBW_WRITE in dimensions
-        return float(capacity[rt.MEMBW_READ])/float(capacity[rt.MEMBW_WRITE])
+        return float(capacity[rt.MEMBW_READ]) / float(capacity[rt.MEMBW_WRITE])
     else:
         return None
 
@@ -203,3 +222,66 @@ def divide_resources(a: Resources, b: Resources,
     for dimension in dimensions:
         c[dimension] = float(a[dimension]) / float(b[dimension])
     return c
+
+
+def used_free_requested(
+        node_name, app_name, dimensions,
+        nodes_capacities, assigned_apps_counts, apps_spec,
+):
+    """Helper function not making any new calculations.
+    All three values are returned in context of
+    specified node_name and app_name.
+    (Converts multiple nodes * apps to single)
+    """
+
+    capacity = nodes_capacities[node_name]
+    membw_read_write_ratio = calculate_read_write_ratio(capacity)
+    used = used_resources_on_node(dimensions, assigned_apps_counts[node_name], apps_spec)
+    requested = apps_spec[app_name]
+
+    # currently used and free currently
+    free = substract_resources(capacity,
+                               used,
+                               membw_read_write_ratio)
+
+    metrics = []
+    # Metrics: resources: used, free and requested
+    for resource in used:
+        metrics.append(
+            Metric(name=MetricName.NODE_USED_RESOURCE,
+                   value=used[resource],
+                   labels=dict(node=node_name, resource=resource),
+                   type=MetricType.GAUGE, ))
+    for resource in free:
+        metrics.append(
+            Metric(name=MetricName.NODE_FREE_RESOURCE,
+                   value=free[resource],
+                   labels=dict(node=node_name, resource=resource),
+                   type=MetricType.GAUGE, ))
+    for resource in requested:
+        metrics.append(
+            Metric(name=MetricName.APP_REQUESTED_RESOURCE,
+                   value=requested[resource],
+                   labels=dict(resource=resource, app=app_name),
+                   type=MetricType.GAUGE, ))
+    for resource in capacity:
+        metrics.append(
+            Metric(name=MetricName.NODE_CAPACITY_RESOURCE,
+                   value=capacity[resource],
+                   labels=dict(resource=resource, node=node_name),
+                   type=MetricType.GAUGE))
+
+    # Extra metric
+    free_membw_flat = flat_membw_read_write(free, membw_read_write_ratio)
+    if rt.MEMBW_FLAT in free_membw_flat:
+        metrics.append(Metric(
+            name=MetricName.FIT_PREDICTED_MEMBW_FLAT_USAGE,
+            value=free_membw_flat[rt.MEMBW_FLAT],
+            labels=dict(app=app_name, node=node_name),
+            type=MetricType.GAUGE))
+
+    # Requested fraction
+    log.log(TRACE,
+            "[Prioritize][app=%s][node=%s][least_used] Requested %s Free %s Used %s Capacity %s",
+            app_name, node_name, dict(requested), free, used, nodes_capacities[node_name])
+    return used, free, requested, capacity, membw_read_write_ratio, metrics

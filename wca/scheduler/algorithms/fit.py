@@ -13,43 +13,36 @@
 # limitations under the License.
 
 import logging
-from typing import List, Tuple
+from typing import Tuple
 
-from wca.metrics import Metric, MetricType
-from wca.logger import TRACE
 from wca.scheduler.algorithms import \
-    BaseAlgorithm, used_resources_on_node, calculate_read_write_ratio, \
-    substract_resources, sum_resources, flat_membw_read_write
-from wca.scheduler.metrics import MetricName
-from wca.scheduler.types import (ExtenderArgs, HostPriority, NodeName)
-from wca.scheduler.types import ResourceType as rt
+    BaseAlgorithm, substract_resources, sum_resources, used_free_requested
 
 log = logging.getLogger(__name__)
 
 
-class FitGeneric(BaseAlgorithm):
+class Fit(BaseAlgorithm):
     """Filter all nodes where the scheduled app does not fit.
        Supporting any number of dimensions.
        Treats MEMBW_READ and MEMBW_WRITE differently than other dimensions."""
 
-    def __str__(self):
-        if self.alias:
-            return super().__str__()
-        return '%s(%d)' % (self.__class__.__name__, len(self.dimensions))
-
-    def app_fit_node(self, node_name: NodeName, app_name: str,
-                     data_provider_queried: Tuple) -> Tuple[bool, str]:
+    def app_fit_node(self, node_name, app_name, data_provider_queried) -> Tuple[bool, str]:
         nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
 
-        used = used_resources_on_node(self.dimensions, assigned_apps_counts[node_name], apps_spec)
-        capacity = nodes_capacities[node_name]
-        requested = apps_spec[app_name]
-        membw_read_write_ratio = calculate_read_write_ratio(capacity)
+        # Current node context: used and free currently
+        used, free, requested, capacity, membw_read_write_ratio, metrics = \
+            used_free_requested(node_name, app_name, self.dimensions,
+                                nodes_capacities, assigned_apps_counts, apps_spec)
+        self.metrics.extend(metrics)
 
-        free = substract_resources(capacity, sum_resources(used, requested), membw_read_write_ratio)
-        broken_capacities = {r: abs(v) for r, v in free.items() if v < 0}
+        # SUBTRACT: "free" after simulated assigment of requested
+        free_after_bind = substract_resources(
+            capacity,
+            sum_resources(requested, used),
+            membw_read_write_ratio)
 
-        self._generate_internal_metrics(app_name, node_name, used, capacity, requested, free)
+        # CHECK
+        broken_capacities = {r: abs(v) for r, v in free_after_bind.items() if v < 0}
 
         if not broken_capacities:
             return True, ''
@@ -59,46 +52,9 @@ class FitGeneric(BaseAlgorithm):
             return False, 'Could not fit node for dimensions: ({}).'.format(broken_capacities_str)
 
     def priority_for_node(self, node_name: str, app_name: str,
-                          data_provider_queried: Tuple) -> int:
+                          data_provider_queried: Tuple) -> float:
         """no prioritization method for FitGeneric"""
-        return 0
-
-    def _generate_internal_metrics(self, app_name, node_name, used, capacity, requested, free):
-        log.log(TRACE, "[Filter][%s][%s] Requested %s Capacity %s Used %s",
-                app_name, node_name, dict(requested), capacity, used)
-
-        membw_read_write_ratio = calculate_read_write_ratio(capacity)
-        free_membw_flat = flat_membw_read_write(free, membw_read_write_ratio)
-
-        if rt.MEMBW_FLAT in free_membw_flat:
-            self.metrics.add(Metric(
-                name=MetricName.FIT_PREDICTED_MEMBW_FLAT_USAGE,
-                value=free_membw_flat[rt.MEMBW_FLAT],
-                labels=dict(app=app_name, node=node_name),
-                type=MetricType.GAUGE))
-
-        # Prepare metrics.
-        for resource in used:
-            self.metrics.add(
-                Metric(name=MetricName.NODE_USED_RESOURCE,
-                       value=used[resource],
-                       labels=dict(node=node_name, resource=resource),
-                       type=MetricType.GAUGE,))
-
-        for resource in capacity:
-            self.metrics.add(
-                Metric(name=MetricName.NODE_CAPACITY_RESOURCE,
-                       value=capacity[resource],
-                       labels=dict(node=node_name, resource=resource),
-                       type=MetricType.GAUGE,))
-
-        for resource in requested:
-            self.metrics.add(
-                Metric(name=MetricName.APP_REQUESTED_RESOURCE,
-                       value=requested[resource],
-                       labels=dict(resource=resource, app=app_name),
-                       type=MetricType.GAUGE,))
-
+        return 0.0
 
 # class FitGenericTesting(FitGeneric):
 #     """with some testing cluster specific hacks"""

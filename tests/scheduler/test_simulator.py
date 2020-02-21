@@ -1,7 +1,7 @@
 from typing import Dict, List, Callable
 
-from wca.scheduler.algorithms.fit import FitGeneric
-from wca.scheduler.algorithms.bar import BARGeneric
+from wca.scheduler.algorithms.fit import Fit
+from wca.scheduler.algorithms.bar import LeastUsedBar
 from wca.scheduler.cluster_simulator import Node, Resources, Task
 from wca.scheduler.types import ResourceType as rt
 
@@ -45,7 +45,7 @@ def test_single_run():
              Node('1', Resources({rt.CPU: 96, rt.MEM: 320}))]
     extra_simulator_args = {"allow_rough_assignment": False,
                             "dimensions": simulator_dimensions}
-    scheduler_class = FitGeneric
+    scheduler_class = Fit
     extra_scheduler_kwargs = {"dimensions": {rt.CPU, rt.MEM}}
 
     simulator = run_until_first_failure(
@@ -72,7 +72,7 @@ def test_single_run_membw_write_read():
                             "dimensions": simulator_dimensions}
 
     extra_scheduler_kwargs = {}
-    for scheduler_class, expected_count in ((FitGeneric, 14), (BARGeneric, 14)):
+    for scheduler_class, expected_count in ((Fit, 14), (LeastUsedBar, 14)):
         simulator = run_until_first_failure(
             nodes, task_creation_fun_aep, extra_simulator_args,
             scheduler_class, extra_scheduler_kwargs)

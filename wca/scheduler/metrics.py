@@ -49,6 +49,10 @@ class MetricRegistry:
     """Store metrics in prometheus way"""
     _storage: Dict[MetricName, List[Metric]] = field(default_factory=lambda: {})
 
+    def extend(self, metrics: List[Metric]):
+        for metric in metrics:
+            self.add(metric)
+
     def add(self, metric: Metric):
         # Check if metric is already in registry.
         if metric.name in self._storage:

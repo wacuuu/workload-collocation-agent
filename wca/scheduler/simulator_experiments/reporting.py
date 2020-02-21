@@ -120,36 +120,33 @@ def generate_subexperiment_report(
 
     with open('{}/{}.txt'.format(exp_dir, subtitle), 'w') as fref:
         t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
-        fref.write("Start of experiment: {}\n".format(t_))
-        fref.write("Run params: {}\n".format(pprint.pformat(run_params, indent=4)))
-        fref.write("Iterations: {}\n".format(len(iterations_data)))
         total_tasks_dict = dict(iterations_data[-1].tasks_types_count)
-        fref.write("Scheduled tasks (might not be successfully assigned): {}\n\n"
+        fref.write("Scheduled tasks (might not be successfully assigned): {}\n"
                    .format(total_tasks_dict))
 
         scheduled_tasks = sum(total_tasks_dict.values())
         assignments_counts = iterations_data[-1].assignments_counts
+        fref.write("Unassigned tasks: {}\n".format(dict(assignments_counts.unassigned)))
+        broken_assignments = sum(iterations_data[-1].broken_assignments.values())
+        fref.write("Broken assignments: {}\n".format(broken_assignments))
 
         total_nodes = len(assignments_counts.per_node.keys())
         node_names = assignments_counts.per_node.keys()
         nodes_info = ','.join('%s=%d'%(node_type, len(list(nodes))) for node_type, nodes
             in itertools.groupby(sorted(node_names), lambda x: x.split('_')[0]))
+        fref.write("\nAssigned tasks per cluster: {}\n".format(dict(assignments_counts.per_cluster)))
+
+        assigned_tasks = dict(assignments_counts.per_cluster)['__ALL__']
 
         fref.write("Assigned tasks per node:\n")
         for node, counters in assignments_counts.per_node.items():
             fref.write("   {}: {}\n".format(node, dict(counters)))
 
-        fref.write("\nAssigned tasks per cluster: {}\n".format(dict(assignments_counts.per_cluster)))
-        fref.write("Unassigned tasks: {}\n".format(dict(assignments_counts.unassigned)))
-
-        broken_assignments = sum(iterations_data[-1].broken_assignments.values())
-        fref.write("Broken assignments: {}\n".format(broken_assignments))
-        assigned_tasks = dict(assignments_counts.per_cluster)['__ALL__']
 
         rounded_last_iter_resources = \
             map(partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],))
         cpu_util, mem_util, bw_util = rounded_last_iter_resources
-        fref.write("resource_usage(cpu, mem, membw_flat) = ({}, {}, {})\n".format(
+        fref.write("\nresource_usage(cpu, mem, membw_flat) = ({}, {}, {})\n".format(
             cpu_util, mem_util, bw_util))
         nodes_avg_var = []
         nodes_utilization = []
@@ -159,7 +156,7 @@ def generate_subexperiment_report(
                 partial(round, ndigits=2),
                 (usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ],))
             fref.write(
-                "resource_usage_per_node(node={}, cpu, mem, membw_flat) = ({}, {}, {})\n".format(
+                "  {}: = ({}, {}, {})\n".format(
                     node.name, *rounded_last_iter_resources))
             nodes_utilization.extend([usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ]])
             nodes_utilization_avg.append((usages.data[rt.CPU] + usages.data[rt.MEM] + usages.data[rt.MEMBW_READ])/3)
@@ -170,7 +167,10 @@ def generate_subexperiment_report(
         util_var = statistics.variance(nodes_utilization)
 
         available_metrics = {m.split('{')[0] for iterdata in iterations_data for m in iterdata.metrics}
-        fref.write("available metrics: {}\n".format(', '.join(sorted(available_metrics))))
+        fref.write("\n\nAvailable metrics: {}\n".format(', '.join(sorted(available_metrics))))
+        fref.write("Start of experiment: {}\n".format(t_))
+        fref.write("Run params: {}\n".format(pprint.pformat(run_params, indent=4)))
+        fref.write("Iterations: {}\n".format(len(iterations_data)))
 
     with open('{}/README.txt'.format(exp_dir), 'a') as fref:
         fref.write("Subexperiment: {}\n".format(subtitle))
@@ -179,6 +179,7 @@ def generate_subexperiment_report(
     stats = {}
     stats['TASKS'] = str(task_gen) # sum(total_tasks_dict.values())
     stats['NODES'] = '%s(%s)' % (total_nodes, nodes_info)
+    stats['ALGO'] = str(scheduler)
     stats['balance'] = 1 - util_var
     stats['cpu_util%'] = cpu_util * 100
     stats['mem_util%'] = mem_util * 100
@@ -202,7 +203,6 @@ def generate_subexperiment_report(
     stats['scheduled'] = scheduled_tasks
     stats['assigned%'] = int((assigned_tasks/scheduled_tasks) * 100)
     stats['assigned_broken%'] = int((broken_assignments / scheduled_tasks) * 100)
-    stats['ALGO'] = str(scheduler)
     stats['utilization%'] = int(((cpu_util + mem_util + bw_util) / 3) * 100)
 
     return stats

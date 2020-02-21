@@ -20,7 +20,8 @@ from wca.logger import TRACE
 
 from wca.scheduler.algorithms import used_resources_on_node, \
     calculate_read_write_ratio, substract_resources, divide_resources
-from wca.scheduler.algorithms.fit import FitGeneric
+from wca.scheduler.algorithms.bar import LeastUsedBar
+from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricName
 from wca.scheduler.types import ResourceType as rt
@@ -28,13 +29,13 @@ from wca.scheduler.types import ResourceType as rt
 log = logging.getLogger(__name__)
 
 
-class Friend(FitGeneric):
+class Friend(LeastUsedBar):
     def __init__(self, data_provider: DataProvider,
                  dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
                  max_node_score: int = 10,
                  alias=None
                  ):
-        FitGeneric.__init__(self, data_provider, dimensions, alias=alias)
+        Fit.__init__(self, data_provider, dimensions, alias=alias)
         self.max_node_score = max_node_score
 
     def __str__(self):
