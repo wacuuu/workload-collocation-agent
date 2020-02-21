@@ -4,7 +4,7 @@ import logging
 import os
 import pprint
 import statistics
-from collections import Counter
+from collections import Counter, defaultdict
 from functools import partial, reduce
 from typing import Dict, List, Any
 
@@ -30,6 +30,24 @@ class IterationData:
     assignments_counts: AssignmentsCounts
     tasks_types_count: Dict[str, int]
     metrics: Dict[str, List[float]]
+
+
+def get_total_capacity_and_demand(nodes_capacities, assigned_apps_counts, unassigend_apps_count,
+                                  apps_spec):
+    """ Sum of total cluster capacity and sum of all requirments of all scheduled tasks"""
+    total_capacity = reduce(sum_resources, nodes_capacities.values())
+    total_apps_count = defaultdict(int)
+    for apps_count in list(assigned_apps_counts.values()) + [unassigend_apps_count]:
+        for app, count in apps_count.items():
+            total_apps_count[app] += count
+
+    total_demand = defaultdict(int)
+    for app, count in total_apps_count.items():
+        app_spec = apps_spec[app]
+        for res, value in app_spec.items():
+            total_demand[res] += value * count
+    total_demand = dict(total_demand)
+    return total_capacity, total_demand, total_apps_count
 
 
 def generate_subexperiment_report(
@@ -64,17 +82,27 @@ def generate_subexperiment_report(
     # ------------------ Text report -----------------------
 
     with open('{}/{}.txt'.format(exp_dir, subtitle), 'w') as fref:
-        # Total demand and total capacity
-        nodes_capacities, assigned_apps_counts, apps_spec, unassigend_apps_count = query_data_provider(
-            scheduler.data_provider, scheduler.dimensions)
+        # Total demand and total capacity based from data from scheduler
+        nodes_capacities, assigned_apps_counts, apps_spec, unassigend_apps_count = \
+            query_data_provider(scheduler.data_provider, scheduler.dimensions)
 
-        total_capacity = reduce(sum_resources, nodes_capacities.values())
+        total_capacity, total_demand, total_apps_count = \
+            get_total_capacity_and_demand(nodes_capacities, assigned_apps_counts,
+                                          unassigend_apps_count, apps_spec)
         fref.write('Total capacity: %s\n' % total_capacity)
+        fref.write('Total demand: %s\n' % total_demand)
+        ideal_utilization = {}  # for each resource
+        for r in total_demand:
+            if r in total_capacity:
+                ideal_utilization[r] = total_demand[r] / total_capacity[r]
+        fref.write('Ideal possible utilization %%: %s\n' % ideal_utilization)
 
-        t_ = datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')
         total_tasks_dict = dict(iterations_data[-1].tasks_types_count)
         fref.write("Scheduled tasks (might not be successfully assigned): {}\n"
                    .format(total_tasks_dict))
+
+        # Check consistency of iterations data and data provider.
+        assert total_apps_count == total_tasks_dict
 
         scheduled_tasks = sum(total_tasks_dict.values())
         assignments_counts = iterations_data[-1].assignments_counts
@@ -124,7 +152,8 @@ def generate_subexperiment_report(
         available_metrics = {m.split('{')[0] for iterdata in iterations_data for m in
                              iterdata.metrics}
         fref.write("\n\nAvailable metrics: {}\n".format(', '.join(sorted(available_metrics))))
-        fref.write("Start of experiment: {}\n".format(t_))
+        fref.write("Start of experiment: {}\n".format(
+            datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')))
         fref.write("Run params: {}\n".format(pprint.pformat(run_params, indent=4)))
         fref.write("Iterations: {}\n".format(len(iterations_data)))
 

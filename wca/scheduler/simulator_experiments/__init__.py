@@ -65,7 +65,7 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
                                for k,v in scheduler_kwargs.items() if k not in ['dimensions']])
         dimensions = len(scheduler_kwargs.get('dimensions', []))
         stats = generate_subexperiment_report(experiment_name,
-                                              '%d_%s_%s' % (exp_iter, task_creation_fun, simulator.scheduler),
+                                              '%d_%snodes_%s_%s' % (exp_iter, len(nodes), task_creation_fun, simulator.scheduler),
                                               input_args, iterations_data,
                                               reports_root_directory=reports_root_directory,
                                               filter_metrics=filter_metrics,

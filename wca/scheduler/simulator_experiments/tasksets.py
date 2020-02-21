@@ -55,7 +55,7 @@ task_definitions__artificial_3types = [
     Task(name='mbw', requested=Resources({rt.CPU: 1, rt.MEM: 1,   rt.MEMBW_READ: 10, rt.MEMBW_WRITE:5, rt.WSS: 1})),
 ]
 
-task_definitions__artificial_2dim = [
+task_definitions__artificial_2dim_2types = [
     Task(name='cputask', requested=Resources(
         {rt.CPU: 1, rt.MEM: 2, rt.MEMBW_READ: 0, rt.MEMBW_WRITE: 0, rt.WSS: 0})),
     Task(name='memtask', requested=Resources(

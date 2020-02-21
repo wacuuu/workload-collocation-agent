@@ -26,7 +26,7 @@ from wca.scheduler.simulator_experiments.nodesets import nodes_definitions_2type
 from wca.scheduler.simulator_experiments.task_generators import TaskGenerator_equal, \
     TaskGenerator_classes
 from wca.scheduler.simulator_experiments.tasksets import task_definitions__artificial_3types, \
-    task_definitions__artificial_2dim
+    task_definitions__artificial_2dim_2types
 from wca.scheduler.simulator_experiments.tasksets import task_definitions__artificial_2, \
     taskset_dimensions
 from wca.scheduler.types import ResourceType as rt
@@ -170,13 +170,13 @@ def experiment_static_assigner():
 
 def experiment_hierbar():
     nodes_dimensions = dim4
-    iterations = 10
+    iterations = 100
     experiments_set__generic(
         'hierbar',
         False,
         (iterations,),
         (
-            (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim, replicas=5)),
+            (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim_2types, replicas=50)),
         ),
         (
             prepare_nodes(nodes_definitions_artificial_2dim_2types, dict(cpuhost=1, memhost=1), nodes_dimensions),
@@ -202,8 +202,8 @@ if __name__ == "__main__":
     # logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
     # logging.getLogger('wca.scheduler.algorithms.bar').setLevel(9)
 
-    experiment_debug()
-    experiment_full()
+    # experiment_debug()
+    # experiment_full()
     experiment_hierbar()
     # experiment_bar() # Does not work !!!
-    experiment_static_assigner()
+    # experiment_static_assigner()
