@@ -38,6 +38,9 @@ spec:
       containers:
         - name: wca-scheduler
           image: 100.64.176.12:80/wca-scheduler:latest
+          envFrom:
+          - configMapRef:
+              name: wca-scheduler-env
           volumeMounts:
             - name: wca-scheduler-socket
               mountPath: /var/run/wca
@@ -46,7 +49,7 @@ spec:
           command:
             - /bin/bash
             - -c
-            - source ./env/bin/activate && gunicorn "wca.scheduler.main:main('/etc/wca-scheduler/wca-scheduler-config.yaml')" -b unix:/var/run/wca/wca-scheduler.sock && deactivate
+            - source ./env/bin/activate && gunicorn "wca.scheduler.main:main('/etc/wca-scheduler/${config_file}')" -b unix:/var/run/wca/wca-scheduler.sock && deactivate
         - name: nginx
           image: nginx:latest
           ports:

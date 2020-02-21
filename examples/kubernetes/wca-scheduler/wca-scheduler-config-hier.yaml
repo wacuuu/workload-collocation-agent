@@ -2,7 +2,7 @@ loggers:
   wca: INFO
   wca.scheduler.algorithms.fit: TRACE
   wca.scheduler.algorithms.bar: TRACE
-algorithm: !BARGeneric
+algorithm: !HierBAR
   data_provider: !ClusterDataProvider
     kubeapi: !Kubeapi
       host: !Env KUBERNETES_SERVICE_HOST
