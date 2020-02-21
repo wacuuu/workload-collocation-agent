@@ -11,9 +11,9 @@ configMapGenerator:
 
   - name: wca-scheduler-config
     files:
-      - wca-scheduler-config-bar.yaml
-      - wca-scheduler-config-hier.yaml
+      - config-bar.yaml
+      - config-hier.yaml
 
   - name: wca-scheduler-env
     literals:
-      - config_file=wca-scheduler-config-hier.yaml
+      - config_file=config-hier.yaml

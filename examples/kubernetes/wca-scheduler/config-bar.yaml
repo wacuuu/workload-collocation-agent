@@ -2,7 +2,7 @@ loggers:
   wca: INFO
   wca.scheduler.algorithms.fit: TRACE
   wca.scheduler.algorithms.bar: TRACE
-algorithm: !HierBAR
+algorithm: !BAR
   data_provider: !ClusterDataProvider
     kubeapi: !Kubeapi
       host: !Env KUBERNETES_SERVICE_HOST
@@ -17,4 +17,4 @@ algorithm: !HierBAR
               mem: 'max(max_over_time(task_requested_mem_bytes[20m])) by (app)'
               membw_read: 'max(max_over_time (task_membw_reads_bytes_per_second[20m])) by (app)'
               membw_write: 'max(max_over_time (task_membw_writes_bytes_per_second[20m])) by (app)'
-      time: '1582010491' # 18.02.2020 8:17 AM
+        time: '1582308900' # 21.02.2020 19:15
