@@ -135,7 +135,7 @@ class Kubeapi:
 def _convert_k8s_memory_capacity(memory: str) -> float:
     """ return as GB """
     # TODO: Consider if K8s return memory only in 'Ki' unit.
-    assert memory.endswith['Ki']
+    assert memory.endswith('Ki')
     return int((float(int(memory[:-2]) * _MEMORY_UNITS['Ki'])) / 1e9)
 
 
@@ -166,8 +166,8 @@ class ClusterDataProvider(DataProvider):
         # Check if maybe more resources
         if ResourceType.MEMBW_READ in resources and ResourceType.MEMBW_WRITE in resources:
             # TODO: Calculate it.
-            DRAM_MEMBW_READ_BYTES = 200 # +/- default for every DRAM type
-            DRAM_MEMBW_WRITE_BYTES = 200 
+            DRAM_MEMBW_READ_GBYTES = 200 # +/- default for every DRAM type
+            DRAM_MEMBW_WRITE_GBYTES = 200 
 
             # Check which nodes have PMM (in Memory Mode).
             query_result = self.prometheus.do_query(self.prometheus.queries.NODES_PMM_MEMORY_MODE)
@@ -179,8 +179,8 @@ class ClusterDataProvider(DataProvider):
             # Every other should have only DRAM.
             for node, capacities in node_capacities.items():
                 if node not in nodes_to_consider:
-                    capacities[ResourceType.MEMBW_READ] = int(DRAM_MEMBW_READ_BYTES)
-                    capacities[ResourceType.MEMBW_WRITE] = int(DRAM_MEMBW_WRITE_BYTES)
+                    capacities[ResourceType.MEMBW_READ] = int(DRAM_MEMBW_READ_GBYTES)
+                    capacities[ResourceType.MEMBW_WRITE] = int(DRAM_MEMBW_WRITE_GBYTES)
 
             # Read Memory Bandwidth from PMM nodes.
             if len(nodes_to_consider) > 0:
@@ -191,7 +191,7 @@ class ClusterDataProvider(DataProvider):
                     node = row['metric']['nodename']
                     if node in nodes_to_consider:
                         value = float(row['value'][1])
-                        node_capacities[node][ResourceType.MEMBW_READ] = value
+                        node_capacities[node][ResourceType.MEMBW_READ] = int(value)
                     else:
                         continue
 
@@ -202,7 +202,7 @@ class ClusterDataProvider(DataProvider):
                     node = row['metric']['nodename']
                     if node in nodes_to_consider:
                         value = float(row['value'][1])
-                        node_capacities[node][ResourceType.MEMBW_WRITE] = value
+                        node_capacities[node][ResourceType.MEMBW_WRITE] = int(value)
                     else:
                         continue
 
@@ -213,8 +213,15 @@ class ClusterDataProvider(DataProvider):
     def get_apps_counts(self) \
             -> Tuple[Dict[NodeName, Dict[AppName, int]], Dict[AppName, int]]:
 
-        assigned_apps = defaultdict(lambda: defaultdict(int))
         unassigned_apps = defaultdict(int)
+
+        target = '/api/v1/nodes'
+        nodes_data = list(self.kubeapi.request_kubeapi(target)['items'])
+        node_names = [node['metadata']['name']for node in nodes_data]
+
+        assigned_apps = {}
+        for node_name in node_names:
+            assigned_apps[node_name] = defaultdict(int) 
 
         for namespace in self.kubeapi.monitored_namespaces:
             target = '/api/v1/namespaces/{}/pods'.format(namespace)
@@ -237,10 +244,12 @@ class ClusterDataProvider(DataProvider):
                 else:
                     assigned_apps[node][app] += 1
 
+        # remove default dicts
+        assigned_apps = {k: dict(v) for k,v in assigned_apps.items()}
         log.debug('Assigned apps: %r' % assigned_apps)
         log.debug('Unassigned apps: %r' % unassigned_apps)
 
-        return assigned_apps, unassigned_apps
+        return assigned_apps, dict(unassigned_apps)
 
     def get_apps_requested_resources(self, resources: Iterable[ResourceType]) \
             -> Dict[AppName, Resources]:
@@ -254,8 +263,9 @@ class ClusterDataProvider(DataProvider):
                 app = result['metric'].get('app')
                 value = float(result['value'][1])
                 if app:
-                    app_requested_resources[app][resource] = value
+                    app_requested_resources[app][resource] = int(value)
 
+        app_requested_resources = {k: dict(v) for k,v in app_requested_resources.items()}
         log.debug('Apps requested resources: %r' % app_requested_resources)
 
         return app_requested_resources
