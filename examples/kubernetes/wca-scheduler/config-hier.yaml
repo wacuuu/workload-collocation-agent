@@ -1,7 +1,7 @@
 loggers:
   wca: INFO
-  wca.scheduler.algorithms.fit: TRACE
-  wca.scheduler.algorithms.bar: TRACE
+  wca.scheduler.server: INFO
+  wca.scheduler.algorithms: DEBUG
 algorithm: !HierBAR
   data_provider: !ClusterDataProvider
     kubeapi: !Kubeapi
