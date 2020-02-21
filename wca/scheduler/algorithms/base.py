@@ -156,9 +156,12 @@ def used_resources_on_node(
     return used
 
 
+def _check_keys(a, b: Resources):
+    if not set(a.keys()) == set(b.keys()):
+        raise ValueError('the same dimensions must be provided for both resources %r vs %r', a.keys(), b.keys())
+
 def sum_resources(a: Resources, b: Resources) -> Resources:
-    assert set(a.keys()) == set(b.keys()), \
-        'the same dimensions must be provided for both resources'
+    _check_keys(a, b)
     c = {}
     for resource in a.keys():
         c[resource] = a[resource] + b[resource]
@@ -167,8 +170,7 @@ def sum_resources(a: Resources, b: Resources) -> Resources:
 
 def substract_resources(a: Resources, b: Resources,
                         membw_read_write_ratio: Optional[float]) -> Resources:
-    assert set(a.keys()) == set(b.keys()), \
-        'the same dimensions must be provided for both resources'
+    _check_keys(a, b)
     dimensions = set(a.keys())
 
     c = a.copy()

@@ -15,6 +15,7 @@
 import logging
 from typing import Tuple
 
+from wca.scheduler.algorithms import DataMissingException
 from wca.scheduler.algorithms.base import BaseAlgorithm, sum_resources, substract_resources, \
     used_free_requested
 
@@ -36,10 +37,18 @@ class Fit(BaseAlgorithm):
         self.metrics.extend(metrics)
 
         # SUBTRACT: "free" after simulated assigment of requested
+        try:
+            requested_and_used = sum_resources(requested, used)
+        except ValueError as e:
+            msg = 'cannot sum app=%s requested=%s and node=%s used=%s: %s' % (app_name, requested, node_name, used, e)
+            log.error(msg)
+            raise DataMissingException(msg)
+
         free_after_bind = substract_resources(
             capacity,
-            sum_resources(requested, used),
-            membw_read_write_ratio)
+            requested_and_used,
+            membw_read_write_ratio,
+        )
 
         # CHECK
         broken_capacities = {r: abs(v) for r, v in free_after_bind.items() if v < 0}
