@@ -15,6 +15,7 @@
 from wca.config import register
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.algorithms.bar import LeastUsedBar
+from wca.scheduler.algorithms.static_assigner import StaticAssigner
 from wca.scheduler.data_providers.cluster_data_provider import (
         ClusterDataProvider, Kubeapi, Prometheus, Queries)
 
@@ -22,6 +23,7 @@ from wca.scheduler.data_providers.cluster_data_provider import (
 def register_algorithms():
     register(Fit)
     register(LeastUsedBar)
+    register(StaticAssigner)
 
 
 def register_dataproviders():

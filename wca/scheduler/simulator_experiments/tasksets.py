@@ -1,3 +1,4 @@
+from typing import Set
 from wca.scheduler.cluster_simulator import Task
 from wca.scheduler.types import ResourceType as rt
 from wca.scheduler.cluster_simulator import Resources
@@ -74,3 +75,13 @@ task_definitions__artificial_2 = [
     Task(name='mbw', requested=Resources({rt.CPU: 1, rt.MEM: 1, rt.MEMBW_READ: 10, rt.MEMBW_WRITE:5, rt.WSS: 1})),
     Task(name='mbw2', requested=Resources({rt.CPU: 1, rt.MEM: 1, rt.MEMBW_READ: 7, rt.MEMBW_WRITE:1, rt.WSS: 1})),
 ]
+
+def taskset_dimensions(dimensions: Set[rt], taskset):
+    new_taskset = []
+    dimensions_to_remove = set(taskset[0].requested.data.keys()).difference(dimensions)
+    for task in taskset:
+        task_copy = task.copy()
+        for dim in dimensions_to_remove:
+            task_copy.remove_dimension(dim)
+        new_taskset.append(task_copy)
+    return new_taskset 

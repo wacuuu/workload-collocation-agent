@@ -137,5 +137,3 @@ class TaskGenerator_equal:
         kinds = ','.join(['%s=%s' % (task_def.name, self.replicas)
                           for task_def in sorted(self.task_definitions, key=lambda t:t.name)])
         return '%d(%s)'%(total_tasks, kinds)
-
-
