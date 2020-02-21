@@ -32,7 +32,7 @@ class NOPAlgorithm(BaseAlgorithm):
 
     def app_fit_node(self, node_name: NodeName, app_name: str,
                      data_provider_queried: Tuple[Any]) -> bool:
-        return True
+        return True, ''
 
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: Tuple[Any]) -> int:

@@ -61,4 +61,4 @@ class StaticAssigner(BaseAlgorithm):
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: Tuple[Any]) -> float:
         """Considering priority of the given node."""
-        return 0
+        return 0.0
