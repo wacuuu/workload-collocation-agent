@@ -75,14 +75,27 @@ class BaseAlgorithm(Algorithm):
 
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
 
+        # First pass (parallelizable, fast K8S style)
+        accepted_node_names = []
         for node_name in nodes_names:
-            passed, message = self.app_fit_node(node_name, app_name, data_provider_queried)
-            if not passed:
+            # Gather individual failed
+            accepted, message = self.app_fit_node(node_name, app_name, data_provider_queried)
+            if not accepted:
                 log.log(TRACE, 'Failed Node %r, %r', node_name, message)
                 log.debug('Failed Node %r, %r', node_name, message)
                 extender_filter_result.FailedNodes[node_name] = message
             else:
-                extender_filter_result.NodeNames.append(node_name)
+                accepted_node_names.append(node_name)
+
+        # Second pass (choose best among) but filter with context of each node
+        # only if we have something to filter at all.
+        if accepted_node_names:
+            accepted_node_names, failed = self.app_fit_nodes(accepted_node_names, app_name, data_provider_queried)
+            for failed_node_name, failed_message in failed.items():
+                extender_filter_result.FailedNodes[failed_node_name] = failed_message
+
+        for node_name in accepted_node_names:
+            extender_filter_result.NodeNames.append(node_name)
 
         return extender_filter_result
 
@@ -116,6 +129,17 @@ class BaseAlgorithm(Algorithm):
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: QueryDataProviderInfo) -> float:
         """Considering priority of the given node."""
+
+    # To be refactored -  comeback to holistic view of all nodes.
+    # We need that app_fit_node thanks to fit implementation and then come back to list of nodes.
+    def app_fit_nodes(self, node_names: List[NodeName], app_name: str,
+                      data_provider_queried: QueryDataProviderInfo) -> Tuple[List[NodeName], Dict[NodeName, str]]:
+        """
+        return accepted and failed_nodes
+        Default implementation always accepts all nodes.
+        """
+        return node_names, {}
+
 
 
 def used_resources_on_node(

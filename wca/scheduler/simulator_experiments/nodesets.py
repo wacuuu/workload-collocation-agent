@@ -11,5 +11,5 @@ nodes_definitions_3types = dict(
 )
 nodes_definitions_artificial_2dim_2types = dict(
     cpuhost={rt.CPU: 100, rt.MEM: 200, rt.MEMBW_READ: 100, rt.MEMBW_WRITE: 100},
-    memhost={rt.CPU: 100, rt.MEM: 1000, rt.MEMBW_READ: 100, rt.MEMBW_WRITE: 100},
+    memhost={rt.CPU: 50, rt.MEM: 1000, rt.MEMBW_READ: 100, rt.MEMBW_WRITE: 100},
 )

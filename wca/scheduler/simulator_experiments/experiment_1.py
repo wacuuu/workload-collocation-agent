@@ -15,7 +15,7 @@
 import logging
 
 from wca.scheduler.algorithms.bar import LeastUsedBAR, LeastUsed, BAR
-from wca.scheduler.algorithms.hier import HierBAR
+from wca.scheduler.algorithms.hierbar import HierBAR
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
 from wca.scheduler.algorithms.static_assigner import StaticAssigner
@@ -176,10 +176,10 @@ def experiment_hierbar():
         False,
         (iterations,),
         (
-            (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim_2types, replicas=50)),
+            (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim_2types, replicas=5)),
         ),
         (
-            prepare_nodes(nodes_definitions_artificial_2dim_2types, dict(cpuhost=1, memhost=1), nodes_dimensions),
+            prepare_nodes(nodes_definitions_artificial_2dim_2types, dict(cpuhost=2, memhost=1), nodes_dimensions),
         ),
         (
             (HierBAR, dict(dimensions=nodes_dimensions)),
@@ -204,6 +204,7 @@ if __name__ == "__main__":
 
     # experiment_debug()
     # experiment_full()
+    logging.getLogger('wca.scheduler.algorithms.hierbar').setLevel(9)
     experiment_hierbar()
     # experiment_bar() # Does not work !!!
     # experiment_static_assigner()

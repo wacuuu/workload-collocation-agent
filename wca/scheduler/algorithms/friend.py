@@ -13,57 +13,14 @@
 # limitations under the License.
 
 import logging
-from typing import Tuple, Dict, Any, Iterable
+from typing import Tuple
 
-from wca.metrics import Metric, MetricType
-from wca.logger import TRACE
-
-from wca.scheduler.algorithms.base import used_resources_on_node, substract_resources, \
-    calculate_read_write_ratio, divide_resources
-from wca.scheduler.algorithms.bar import LeastUsedBar
-from wca.scheduler.algorithms.fit import Fit
-from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.metrics import MetricName
-from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.algorithms.bar import LeastUsedBAR
 
 log = logging.getLogger(__name__)
 
 
-class Friend(LeastUsedBar):
-    def __init__(self, data_provider: DataProvider,
-                 dimensions: Iterable[rt] = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
-                 max_node_score: int = 10,
-                 alias=None
-                 ):
+class Friend(LeastUsedBAR):
 
-        raise NotImplementedError
-        Fit.__init__(self, data_provider, dimensions, alias=alias)
-        self.max_node_score = max_node_score
-
-    def __str__(self):
-        if self.alias:
-            return super().__str__()
-        return '%s' % self.__class__.__name__
-
-    def priority_for_node(self, node_name: str, app_name: str,
-                          data_provider_queried: Tuple[Any]) -> int:
-        nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
-
-        used, free, requested = \
-            used_free_requested(node_name, app_name, self.dimensions,
-                                nodes_capacities, assigned_apps_counts, apps_spec)
-        membw_read_write_ratio = calculate_read_write_ratio(nodes_capacities[node_name])
-
-
-
-
-
-def used_free_requested(
-        node_name, app_name, dimensions,
-        nodes_capacities, assigned_apps_counts, apps_spec):
-    """Helper function not making any new calculations."""
-    membw_read_write_ratio = calculate_read_write_ratio(nodes_capacities[node_name])
-    used = used_resources_on_node(dimensions, assigned_apps_counts[node_name], apps_spec)
-    free = substract_resources(nodes_capacities[node_name], used, membw_read_write_ratio)
-    requested = apps_spec[app_name]
-    return used, free, requested
+    def app_fit_node(self, node_name, app_name, data_provider_queried) -> Tuple[bool, str]:
+        raise NotImplementedError('TODO')
