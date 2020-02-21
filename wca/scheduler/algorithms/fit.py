@@ -45,12 +45,13 @@ class Fit(BaseAlgorithm):
         broken_capacities = {r: abs(v) for r, v in free_after_bind.items() if v < 0}
 
         if not broken_capacities:
+            log.debug('[Filter][app=%s][node=%s] ok free_after_bind=%r', app_name, node_name, free_after_bind)
             return True, ''
         else:
             broken_capacities_str = \
                 ','.join(['({}: {})'.format(r, v) for r, v in broken_capacities.items()])
-            # print('broken capacity:', app_name, node_name, broken_capacities_str)
-            return False, 'Could not fit node for dimensions: ({}).'.format(broken_capacities_str)
+            log.debug('[Filter][app=%s][node=%s] broken capacities: missing %r', app_name, node_name, broken_capacities_str)
+            return False, 'Could not fit node for dimensions: missing {}.'.format(broken_capacities_str)
 
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: Tuple) -> float:

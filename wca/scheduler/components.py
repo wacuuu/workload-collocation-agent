@@ -13,7 +13,9 @@
 # limitations under the License.
 
 from wca.config import register
-from wca.scheduler.algorithms.bar import LeastUsedBAR, LeastUsed, BAR
+from wca.scheduler.algorithms.bar import BAR
+from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
+from wca.scheduler.algorithms.least_used import LeastUsed
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.algorithms.hierbar import HierBAR
 from wca.scheduler.algorithms.static_assigner import StaticAssigner

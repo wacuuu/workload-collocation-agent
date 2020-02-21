@@ -83,17 +83,17 @@ class Server:
             pod_namespace = extender_args.Pod['metadata']['namespace']
             pod_name = extender_args.Pod['metadata']['name']
 
-            log.debug('[Prioritize] %r ' % extender_args)
+            log.debug('[Prioritize-server] %r ' % extender_args)
 
             if DEFAULT_NAMESPACE == pod_namespace:
-                log.info('[Prioritize] Trying to prioritize nodes for Pod %r' % pod_name)
+                log.info('[Prioritize-server] Trying to prioritize nodes for Pod %r' % pod_name)
 
                 result = self.algorithm.prioritize(extender_args)
 
                 priorities = [asdict(host)
                               for host in result]
 
-                log.info('[Prioritize] Result: %r ' % priorities)
+                log.info('[Prioritize-server] Result: %r ' % priorities)
 
                 self.algorithm.metrics.add(Metric(
                     name=MetricName.PRIORITIZE,
@@ -103,7 +103,7 @@ class Server:
 
                 return jsonify(priorities)
             else:
-                log.info('[Prioritize] Ignoring Pod %r : Different namespace!' %
+                log.info('[Prioritize-server] Ignoring Pod %r : Different namespace!' %
                          pod_name)
 
                 self.algorithm.metrics.add(Metric(

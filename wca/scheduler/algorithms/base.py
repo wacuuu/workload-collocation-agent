@@ -27,7 +27,7 @@ from wca.scheduler.utils import extract_common_input
 QueryDataProviderInfo = Tuple[
     Dict[NodeName, Resources],  # nodes_capacities
     Dict[NodeName, AppsCount],  # assigned_apps_counts
-    Dict[AppName, Resources],   # apps_spec
+    Dict[AppName, Resources],  # apps_spec
     AppsCount
 ]
 
@@ -68,7 +68,7 @@ class BaseAlgorithm(Algorithm):
         return '%s(%d)' % (self.__class__.__name__, len(self.dimensions))
 
     def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
-        log.debug('[Filter] ExtenderArgs: %r' % extender_args)
+        log.debug('[Filter] -> %r' % extender_args)
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
 
         extender_filter_result = ExtenderFilterResult()
@@ -90,28 +90,30 @@ class BaseAlgorithm(Algorithm):
         # Second pass (choose best among) but filter with context of each node
         # only if we have something to filter at all.
         if accepted_node_names:
-            accepted_node_names, failed = self.app_fit_nodes(accepted_node_names, app_name, data_provider_queried)
+            accepted_node_names, failed = self.app_fit_nodes(accepted_node_names, app_name,
+                                                             data_provider_queried)
             for failed_node_name, failed_message in failed.items():
                 extender_filter_result.FailedNodes[failed_node_name] = failed_message
 
         for node_name in accepted_node_names:
             extender_filter_result.NodeNames.append(node_name)
 
+        log.debug('[Filter] <- %r' % extender_filter_result)
         return extender_filter_result
 
     def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
+        """Extract necessary data from query and gather data from data provider (once)."""
+        log.debug('[Prioritize] -> ExtenderArgs: %r' % extender_args)
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
-
-        priorities = []
-
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
 
+        priorities = []
         for node_name in sorted(nodes_names):
             priority = self.priority_for_node(node_name, app_name, data_provider_queried)
             priority_scaled = int(priority * self.max_node_score)
-            # print(app_name, node_name, priority_scaled)
             priorities.append(HostPriority(node_name, priority_scaled))
 
+        log.debug('[Prioritize] <- %r' % ExtenderFilterResult)
         return priorities
 
     def get_metrics_registry(self) -> Optional[MetricRegistry]:
@@ -133,13 +135,13 @@ class BaseAlgorithm(Algorithm):
     # To be refactored -  comeback to holistic view of all nodes.
     # We need that app_fit_node thanks to fit implementation and then come back to list of nodes.
     def app_fit_nodes(self, node_names: List[NodeName], app_name: str,
-                      data_provider_queried: QueryDataProviderInfo) -> Tuple[List[NodeName], Dict[NodeName, str]]:
+                      data_provider_queried: QueryDataProviderInfo) -> Tuple[
+        List[NodeName], Dict[NodeName, str]]:
         """
         return accepted and failed_nodes
         Default implementation always accepts all nodes.
         """
         return node_names, {}
-
 
 
 def used_resources_on_node(
@@ -278,8 +280,24 @@ def used_free_requested(
             labels=dict(app=app_name, node=node_name),
             type=MetricType.GAUGE))
 
-    # Requested fraction
-    log.log(TRACE,
-            "[Prioritize][app=%s][node=%s][least_used] Requested %s Free %s Used %s Capacity %s",
-            app_name, node_name, dict(requested), free, used, nodes_capacities[node_name])
     return used, free, requested, capacity, membw_read_write_ratio, metrics
+
+
+def get_requested_fraction(app_name, apps_spec, assigned_apps_counts, node_name,
+                           nodes_capacities, dimensions):
+    # Current node context: used and free currently
+    used, free, requested, capacity, membw_read_write_ratio, metrics = \
+        used_free_requested(node_name, app_name, dimensions,
+                            nodes_capacities, assigned_apps_counts, apps_spec)
+
+    # FRACTION
+    requested_fraction = divide_resources(
+        sum_resources(requested, used), capacity,
+        membw_read_write_ratio
+    )
+    for resource, fraction in requested_fraction.items():
+        metrics.append(
+            Metric(name=MetricName.BAR_REQUESTED_FRACTION,
+                   value=fraction, labels=dict(app=app_name, resource=resource),
+                   type=MetricType.GAUGE))
+    return requested_fraction, metrics

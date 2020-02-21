@@ -14,7 +14,9 @@
 
 import logging
 
-from wca.scheduler.algorithms.bar import LeastUsedBAR, LeastUsed, BAR
+from wca.scheduler.algorithms.bar import BAR
+from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
+from wca.scheduler.algorithms.least_used import LeastUsed
 from wca.scheduler.algorithms.hierbar import HierBAR
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.algorithms.nop_algorithm import NOPAlgorithm
@@ -196,15 +198,16 @@ if __name__ == "__main__":
         exit(1)
 
     # init_logging('trace', 'scheduler_extender_simulator_experiments')
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(module)s:%(funcName)s:%(lineno)d %(message)s')
+    # from wca.logger import TRACE
     # logging.getLogger('wca.scheduler').setLevel(logging.INFO)
-    # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(9)
+    # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(TRACE)
     # logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
-    # logging.getLogger('wca.scheduler.algorithms.bar').setLevel(9)
+    # logging.getLogger('wca.scheduler.algorithms.bar').setLevel(TRACE)
 
     # experiment_debug()
     # experiment_full()
-    logging.getLogger('wca.scheduler.algorithms.hierbar').setLevel(9)
+    logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
     experiment_hierbar()
     # experiment_bar() # Does not work !!!
     # experiment_static_assigner()
