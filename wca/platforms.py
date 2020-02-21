@@ -174,16 +174,67 @@ class MissingPlatformStaticInformation(Exception):
 _platform_static_information_initialized = False
 _platform_static_information = {}
 
+# Mapped dmidecode speed to real transfer rate
+# dmidecode speed: [MT/s]
+# real transfer rate: [B/s]
+data_transfer_rate = {'1600': 12800 * 1e6, '1866': 14933.33 * 1e6, '2133': 17066.67 * 1e6,
+                      '2400': 19200 * 1e6, '2666': 21333.33 * 1e6, '2933': 23466.67 * 1e6,
+                      '3200': 25600 * 1e6}
+
+
+def _parse_dmidecode_output(dmidecode_str):
+    nvm_dimm_count = 0
+    ram_dimm_count = 0
+    nvm_dimm_size = 0
+    ram_dimm_size = 0
+    ram_dimm_speed = 0
+    units = {'GB': 1e9, 'MB': 1e6, 'B': 1}
+
+    found_memory_device = False
+    memory_device_params = {}
+    for line in dmidecode_str.split('\n'):
+        if line.startswith('Memory Device'):
+            found_memory_device = True
+            continue
+        if found_memory_device:
+            split_line = line.split()
+            if 'Size:' in line:
+                memory_device_params.update(
+                    {'size': {'value': split_line[1], 'unit': split_line[2]}})
+            elif 'Type:' in line and split_line[1] == 'DDR4':
+                memory_device_params.update({'type': split_line[1]})
+            elif 'Type Detail:' in line and 'Non-Volatile' in line:
+                memory_device_params.update({'type': 'Non-Volatile'})
+            elif 'Speed:' in line and not ram_dimm_speed:
+                memory_device_params.update({'speed': split_line[1]})
+
+        if memory_device_params.get('size', None) and \
+                memory_device_params.get('type', None) and \
+                memory_device_params.get('speed', None):
+            if memory_device_params['type'] == 'DDR4':
+                ram_dimm_count += 1
+                ram_dimm_size += int(memory_device_params['size']['value']) * \
+                    units[memory_device_params['size']['unit']]
+                ram_dimm_speed = memory_device_params['speed']
+            elif memory_device_params['type'] == 'Non-Volatile':
+                nvm_dimm_count += 1
+                nvm_dimm_size += int(memory_device_params['size']['value']) * \
+                    units[memory_device_params['size']['unit']]
+            found_memory_device = False
+            memory_device_params = {}
+    return nvm_dimm_count, ram_dimm_count, nvm_dimm_size, \
+        ram_dimm_size, ram_dimm_speed
+
 
 def get_platform_static_information(strict_mode: bool) -> Measurements:
-    """Time-consuming gathering information function that calles external binaries e.g.
-    lshw and ipmctl. Assumption is that this information is not changing over life of WCA
+    """Time-consuming gathering information function that calls external binaries e.g.
+    dmidecode and ipmctl. Assumption is that this information is not changing over life of WCA
     application and should be called only once upon WCA starting.
     :param strict_mode: raise exception if collection
                         is not possible e.g. required binaries is missing
     :return: cached platform information
     """
-    # RETURN MEMORY DIMM DETAILS based on lshw
+    # RETURN MEMORY DIMM DETAILS based on dmidecode
     global _platform_static_information
     global _platform_static_information_initialized
     # TODO: PoC to be replaced with ACPI/HMAT table parsing if possible
@@ -203,47 +254,13 @@ def get_platform_static_information(strict_mode: bool) -> Measurements:
             log.warning('ipmctl unavailable, cannot read memory mode size')
             if strict_mode:
                 raise MissingPlatformStaticInformation('ipmctl binary is missing!')
-
         try:
             # nosec: B603. We deliberately use 'subprocess'. There is a permanent input.
             dmidecode_raw = subprocess.check_output(  # nosec
                 shlex.split('dmidecode --quiet'))
             dmidecode_str = dmidecode_raw.decode("utf-8")
-
-            nvm_dimm_count = 0
-            ram_dimm_count = 0
-            nvm_dimm_size = 0
-            ram_dimm_size = 0
-            units = {'GB': 1e9, 'MB': 1e6, 'B': 1}
-
-            found_memory_device = False
-            memory_device_params = {}
-            for line in dmidecode_str.split('\n'):
-                if line.startswith('Memory Device'):
-                    found_memory_device = True
-                    continue
-                if found_memory_device:
-                    split_line = line.split()
-                    if 'Size:' in line:
-                        memory_device_params.update(
-                            {'size': {'value': split_line[1], 'unit': split_line[2]}})
-                    elif 'Type:' in line and split_line[1] == 'DDR4':
-                        memory_device_params.update({'type': split_line[1]})
-                    elif 'Type Detail:' in line and 'Non-Volatile' in line:
-                        memory_device_params.update({'type': 'Non-Volatile'})
-
-                if memory_device_params.get('size', None) and \
-                        memory_device_params.get('type', None):
-                    if memory_device_params['type'] == 'DDR4':
-                        ram_dimm_count += 1
-                        ram_dimm_size += int(memory_device_params['size']['value']) * \
-                            units[memory_device_params['size']['unit']]
-                    elif memory_device_params['type'] == 'Non-Volatile':
-                        nvm_dimm_count += 1
-                        nvm_dimm_size += int(memory_device_params['size']['value']) * \
-                            units[memory_device_params['size']['unit']]
-                    found_memory_device = False
-                    memory_device_params = {}
+            nvm_dimm_count, ram_dimm_count, nvm_dimm_size, \
+                ram_dimm_size, ram_dimm_speed = _parse_dmidecode_output(dmidecode_str)
 
             _platform_static_information[MetricName.PLATFORM_DIMM_COUNT] = {}
             _platform_static_information[MetricName.PLATFORM_DIMM_COUNT]['ram'] = int(
@@ -255,6 +272,8 @@ def get_platform_static_information(strict_mode: bool) -> Measurements:
                 ram_dimm_size)
             _platform_static_information[MetricName.PLATFORM_DIMM_TOTAL_SIZE_BYTES]['nvm'] = int(
                 nvm_dimm_size)
+            _platform_static_information[MetricName.PLATFORM_DIMM_SPEED_BYTES_PER_SECOND] = \
+                data_transfer_rate[ram_dimm_speed] * ram_dimm_count
         except FileNotFoundError:
             log.warning('dmidecode unavailable, cannot read memory topology size!')
             if strict_mode:
@@ -575,7 +594,7 @@ def _collect_rdt_information() -> RDTInformation:
         mb_bandwidth_gran, mb_min_bandwidth, mb_num_closids = None, None, None
 
     if rdt_cache_control_enabled or rdt_mb_control_enabled:
-        # Minimum of available closids readt from MB or L3
+        # Minimum of available closids read from MB or L3
         num_closids = min(filter(None, [cache_num_closids, mb_num_closids]))
     else:
         num_closids = None
