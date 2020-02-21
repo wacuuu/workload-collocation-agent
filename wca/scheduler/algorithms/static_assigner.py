@@ -37,7 +37,7 @@ class StaticAssigner(BaseAlgorithm):
     def app_fit_node(self, node_name: NodeName, app_name: str,
                      data_provider_queried) -> Tuple[bool, str]:
         """Consider if the app match the given node."""
-        nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
+        nodes_capacities, assigned_apps_counts, apps_spec, _ = data_provider_queried
         log.debug(assigned_apps_counts)
         if node_name not in self.targeted_assigned_apps_counts:
             return False, 'node {} not specified in self.targeted_assigned_apps_counts'.format(node_name)

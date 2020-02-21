@@ -27,7 +27,7 @@ class Fit(BaseAlgorithm):
        Treats MEMBW_READ and MEMBW_WRITE differently than other dimensions."""
 
     def app_fit_node(self, node_name, app_name, data_provider_queried) -> Tuple[bool, str]:
-        nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
+        nodes_capacities, assigned_apps_counts, apps_spec, _ = data_provider_queried
 
         # Current node context: used and free currently
         used, free, requested, capacity, membw_read_write_ratio, metrics = \

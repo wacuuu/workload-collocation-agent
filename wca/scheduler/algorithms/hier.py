@@ -20,9 +20,7 @@ class HierBAR(Fit):
         # BAR
         # ---
         """
-        nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
-        total_demand = {}
-        total_capacity = {}
+        nodes_capacities, assigned_apps_counts, apps_spec, _ = data_provider_queried
 
         used, free, requested, capacity, membw_read_write_ratio, metrics = \
             used_free_requested(node_name, app_name, self.dimensions,

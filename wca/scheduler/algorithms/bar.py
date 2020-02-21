@@ -79,7 +79,7 @@ class LeastUsed(Fit):
         # Least used
         # ----------
         """
-        nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
+        nodes_capacities, assigned_apps_counts, apps_spec, unassigned_apps_counts = data_provider_queried
         requested_fraction, metrics = get_requested_fraction(
             app_name, apps_spec, assigned_apps_counts, node_name, nodes_capacities, self.dimensions)
         self.metrics.extend(metrics)
@@ -122,7 +122,7 @@ class BAR(Fit):
         # BAR
         # ---
         """
-        nodes_capacities, assigned_apps_counts, apps_spec = data_provider_queried
+        nodes_capacities, assigned_apps_counts, apps_spec, _ = data_provider_queried
         requested_fraction, metrics = get_requested_fraction(
             app_name, apps_spec, assigned_apps_counts, node_name, nodes_capacities, self.dimensions)
         self.metrics.extend(metrics)

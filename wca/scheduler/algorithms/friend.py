@@ -35,6 +35,8 @@ class Friend(LeastUsedBar):
                  max_node_score: int = 10,
                  alias=None
                  ):
+
+        raise NotImplementedError
         Fit.__init__(self, data_provider, dimensions, alias=alias)
         self.max_node_score = max_node_score
 

@@ -27,8 +27,18 @@ from wca.scheduler.utils import extract_common_input
 QueryDataProviderInfo = Tuple[
     Dict[NodeName, Resources],  # nodes_capacities
     Dict[NodeName, AppsCount],  # assigned_apps_counts
-    Dict[AppName, Resources]  # apps_spec
+    Dict[AppName, Resources],   # apps_spec
+    AppsCount
 ]
+
+
+# Convert data provider to common tupple
+def query_data_provider(data_provider, dimensions) -> QueryDataProviderInfo:
+    """Should be overwritten if one needs more data from DataProvider."""
+    assigned_apps_counts, apps_unassigned = data_provider.get_apps_counts()
+    nodes_capacities = data_provider.get_nodes_capacities(dimensions)
+    apps_spec = data_provider.get_apps_requested_resources(dimensions)
+    return nodes_capacities, assigned_apps_counts, apps_spec, apps_unassigned
 
 
 class BaseAlgorithm(Algorithm):
@@ -63,7 +73,7 @@ class BaseAlgorithm(Algorithm):
 
         extender_filter_result = ExtenderFilterResult()
 
-        data_provider_queried = self.query_data_provider()
+        data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
 
         for node_name in nodes_names:
             passed, message = self.app_fit_node(node_name, app_name, data_provider_queried)
@@ -81,7 +91,7 @@ class BaseAlgorithm(Algorithm):
 
         priorities = []
 
-        data_provider_queried = self.query_data_provider()
+        data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
 
         for node_name in sorted(nodes_names):
             priority = self.priority_for_node(node_name, app_name, data_provider_queried)
@@ -96,14 +106,6 @@ class BaseAlgorithm(Algorithm):
 
     def get_metrics_names(self) -> List[str]:
         return self.metrics.get_names()
-
-    def query_data_provider(self) -> QueryDataProviderInfo:
-        """Should be overwritten if one needs more data from DataProvider."""
-        dp = self.data_provider
-        assigned_apps_counts, apps_unassigned = dp.get_apps_counts()
-        nodes_capacities = dp.get_nodes_capacities(self.dimensions)
-        apps_spec = dp.get_apps_requested_resources(self.dimensions)
-        return nodes_capacities, assigned_apps_counts, apps_spec
 
     @abstractmethod
     def app_fit_node(self, node_name: NodeName, app_name: str,
