@@ -86,6 +86,10 @@ def generate_subexperiment_report(
         nodes_capacities, assigned_apps_counts, apps_spec, unassigend_apps_count = \
             query_data_provider(scheduler.data_provider, scheduler.dimensions)
 
+        # fref.write('Nodes capacities: %s\n' % nodes_capacities)
+        # fref.write('Assigned_apps_counts %s\n' % assigned_apps_counts)
+        # fref.write('Unassigned_apps_counts %s\n' % unassigend_apps_count)
+
         total_capacity, total_demand, total_apps_count = \
             get_total_capacity_and_demand(nodes_capacities, assigned_apps_counts,
                                           unassigend_apps_count, apps_spec)
@@ -104,6 +108,7 @@ def generate_subexperiment_report(
         if total_apps_count != total_tasks_dict:
             fref.write("!Scheduled tasks different from total_apps_count from query! total_apps_count={}\n"
                        .format(dict(total_apps_count)))
+            assert False, 'should not happen!'
 
         scheduled_tasks = sum(total_tasks_dict.values())
         assignments_counts = iterations_data[-1].assignments_counts

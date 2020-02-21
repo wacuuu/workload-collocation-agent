@@ -22,6 +22,8 @@ from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority
 
 log = logging.getLogger(__name__)
 
+class DataMissingException(Exception):
+    pass
 
 class Algorithm(ABC):
     @abstractmethod

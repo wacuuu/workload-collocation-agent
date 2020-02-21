@@ -3,6 +3,7 @@ from collections import Counter
 from typing import Tuple, List, Dict
 import logging
 
+from wca.logger import TRACE
 from wca.scheduler.algorithms.bar import BAR
 from wca.scheduler.algorithms.base import used_free_requested, divide_resources, \
     calculate_read_write_ratio
@@ -37,7 +38,7 @@ class HierBAR(BAR):
         requested = apps_spec[app_name]
 
         # Calculate all classes bar (fitness) score
-        class_bar_scores = {}  # class_shape: fit
+        class_bar_variances = {}  # class_shape: fit
         for class_shape, number_of_nodes in nodes_classes.items():
             class_capacity = dict(class_shape) # reverse from shape->resources
             membw_read_write_ratio = calculate_read_write_ratio(class_capacity)
@@ -46,33 +47,34 @@ class HierBAR(BAR):
                 membw_read_write_ratio
             )
             variance = statistics.variance(requested_empty_fraction.values())
-            class_bar_scores[class_shape] = variance
+            class_bar_variances[class_shape] = variance
 
-        log.debug('task %s (shape=%s) scores for each class of nodes: %s',
-                  app_name, requested, class_bar_scores)
+        log.log(TRACE, '[Prioritize] Task %s (shape=%s) scores for each class of nodes: %s',
+                  app_name, requested, class_bar_variances)
 
         # Start with best class (least variance)
         accepted_node_names = []
         failed = {} # node_name to error string
-        for class_shape, class_bar_score in sorted(class_bar_scores.items(), key=lambda x:x[1]):
+        for class_shape, class_bar_variance in sorted(class_bar_variances.items(), key=lambda x:x[1]):
 
             # Check one class
             # Find node from this class
             for node_name in node_names:
                 node_capacity = nodes_capacities[node_name]
                 node_shape = resources_to_shape(node_capacity)
-                node_score = class_bar_scores[node_shape]
+                node_score = class_bar_variances[node_shape]
                 if node_shape == class_shape:
                     accepted_node_names.append(node_name)
                 elif not node_name in failed:
                     # From worse class
-                    failed[node_name] = 'Not best shape (has=%s best=%s)' % (node_score, class_bar_score)
+                    failed[node_name] = 'Not best shape (variance=%s best=%s)' % (node_score, class_bar_variance)
 
             # if we found at least on node is this class then leave
             if accepted_node_names:
                 break
         else:
             assert False, 'last class has to match!'
+        log.debug('[Prioritize][app=%s][nodes=%s] best_class=%r best_class_variance=%s best_nodes=%s',  app_name, ','.join(node_names), dict(class_shape), class_bar_variance, ','.join(accepted_node_names))
 
         return accepted_node_names, failed
 

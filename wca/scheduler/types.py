@@ -51,10 +51,6 @@ class HostPriority():
         assure_type(self.Host, str)
         assure_type(self.Score, int)
 
-    def __repr__(self):
-        return '%s=%s' % (self.Host, self.Score)
-
-
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L284
 @dataclass
 class ExtenderArgs:

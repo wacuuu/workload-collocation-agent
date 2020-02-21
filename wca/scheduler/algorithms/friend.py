@@ -15,7 +15,7 @@
 import logging
 from typing import Tuple
 
-from wca.scheduler.algorithms.bar import LeastUsedBAR
+from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
 
 log = logging.getLogger(__name__)
 

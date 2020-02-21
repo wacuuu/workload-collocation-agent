@@ -59,7 +59,7 @@ task_definitions__artificial_2dim_2types = [
     Task(name='cputask', requested=Resources(
         {rt.CPU: 20, rt.MEM: 40, rt.MEMBW_READ: 0, rt.MEMBW_WRITE: 0, rt.WSS: 0})),
     Task(name='memtask', requested=Resources(
-        {rt.CPU: 20, rt.MEM: 400, rt.MEMBW_READ: 0, rt.MEMBW_WRITE: 0, rt.WSS: 0})),
+        {rt.CPU: 10, rt.MEM: 200, rt.MEMBW_READ: 0, rt.MEMBW_WRITE: 0, rt.WSS: 0})),
 ]
 
 task_definitions__artificial_2 = [
