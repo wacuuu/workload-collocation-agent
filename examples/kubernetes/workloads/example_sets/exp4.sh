@@ -9,7 +9,10 @@ workloads_set=$i
 zero_workloads_sleep=120
 workloads_sleep=1200
 
+
 python3 workloads.py >workloads${workloads_set}.sh
+
+chmod +x workloads${workloads_set}.sh
 
 kubectl scale sts --all --replicas=0;sleep $zero_workloads_sleep
 
