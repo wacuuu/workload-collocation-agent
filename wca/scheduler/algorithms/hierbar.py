@@ -49,7 +49,7 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
         nodes = [nodes_capacities[n] for n in node_names_for_new_shape]
         avg_resources = calc_average_resources_of_nodes(nodes)
         new_shape = resources_to_shape(avg_resources)
-        log.log(TRACE, '[Filter2][less_shapes] shapes=%s  new_shape=%s with nodes=%s', shapes, new_shape, node_names_for_new_shape)
+        # log.log(TRACE, '[Filter2][less_shapes] shapes=%s  new_shape=%s with nodes=%s', shapes, new_shape, node_names_for_new_shape)
         return new_shape, node_names_for_new_shape
 
     new_shapes_to_nodes = {}
