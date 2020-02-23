@@ -56,8 +56,8 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
             return
         elif len(shapes) == 2:
             if shape_diff(*shapes) < merge_threshold:
-                shape, nodes = create_new_shape(*shapes)
-                new_shapes_to_nodes[shape] = nodes
+                shape, node_names = create_new_shape(*shapes)
+                new_shapes_to_nodes[shape] = node_names
         else:  # >2
             for cl in range(2, len(shapes)):
                 for shapes in combinations(shapes_to_nodes.keys(), cl):
@@ -67,7 +67,11 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
     merge_shapes(shapes_to_nodes.keys())
 
     # All node names.
-    all_new_nodes = reduce(sum, new_shapes_to_nodes.values())
+    try:
+        all_new_nodes = reduce(sum, new_shapes_to_nodes.values())
+    except TypeError as e:
+        log.error('cannot reduce:%s', new_shapes_to_nodes)
+        raise
 
     # Retain all shapes if not used in new merged shapes
     for shape, nodes in shapes_to_nodes.items():
