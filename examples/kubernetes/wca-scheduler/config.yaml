@@ -1,8 +1,8 @@
 loggers:
-  wca: INFO
   wca.scheduler.server: INFO
   wca.scheduler.algorithms: TRACE
 algorithm: !HierBAR
+  merge_threshold: 50.0
   data_provider: !ClusterDataProvider
     kubeapi: !Kubeapi
       host: !Env KUBERNETES_SERVICE_HOST
