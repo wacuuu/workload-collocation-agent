@@ -38,7 +38,7 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
         res1 = dict(shape1)
         res2 = dict(shape2)
         resdiff = substract_resources(res1, res2)
-        diffvariance = statistics.variance(resdiff.values())
+        diffvariance = statistics.stdev(resdiff.values())
         log.log(TRACE, '[Filter2][less_shapes] shape1=%s shape=%s shape_diff=%s', shape1, shape2, diffvariance)
         return diffvariance
 
@@ -139,7 +139,7 @@ class HierBAR(LeastUsedBAR):
                 calculate_read_write_ratio(averaged_resources_of_class)
             )
 
-            variance = statistics.variance(requested_empty_fraction.values())
+            variance = statistics.stdev(requested_empty_fraction.values())
             # log.log(TRACE, '[Prioritize] class_shape=%s average_resources_of_class=%s requested=%s requested_fraction=%s variance=%s', class_shape, averaged_resources_of_class, requested, requested_empty_fraction, variance)
             class_bar_variances[class_shape] = variance
 
