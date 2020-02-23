@@ -14,6 +14,7 @@
 
 import logging
 
+from wca.logger import TRACE
 from wca.scheduler.algorithms.bar import BAR
 from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
 from wca.scheduler.algorithms.least_used import LeastUsed
@@ -207,7 +208,8 @@ if __name__ == "__main__":
 
     # experiment_debug()
     # experiment_full()
-    logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
+    # logging.getLogger('wca.scheduler.algorithms.hierbar').setLevel(TRACE)
+    logging.getLogger('wca.scheduler.algorithms.hierbar').setLevel(logging.DEBUG)
     experiment_hierbar()
     # experiment_bar() # Does not work !!!
     # experiment_static_assigner()

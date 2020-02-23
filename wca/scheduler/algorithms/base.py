@@ -212,12 +212,12 @@ def flat_membw_read_write(a: Resources, membw_read_write_ratio: Optional[float])
 
 
 def divide_resources(a: Resources, b: Resources,
-                     membw_read_write_ratio: Optional[float]) -> Resources:
-    """Flattens rt.MEMBW_READ and rt.MEMBW_WRITE to rt.MEMBW_FLAT."""
+                     membw_read_write_ratio: Optional[float] = None) -> Resources:
+    """if ratio is provided then Flattens rt.MEMBW_READ and rt.MEMBW_WRITE to rt.MEMBW_FLAT."""
     assert set(a.keys()) == set(b.keys()), \
         'the same dimensions must be provided for both resources'
     # must flatten membw_read_write
-    if rt.MEMBW_READ in a.keys():
+    if rt.MEMBW_READ in a.keys() and membw_read_write_ratio is not None:
         a = flat_membw_read_write(a, membw_read_write_ratio)
         b = flat_membw_read_write(b, membw_read_write_ratio)
 
