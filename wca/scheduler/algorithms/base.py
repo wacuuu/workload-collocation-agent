@@ -172,15 +172,15 @@ def sum_resources(a: Resources, b: Resources) -> Resources:
 
 
 def substract_resources(a: Resources, b: Resources,
-                        membw_read_write_ratio: Optional[float]) -> Resources:
+                        membw_read_write_ratio: Optional[float] = None) -> Resources:
     _check_keys(a, b)
     dimensions = set(a.keys())
 
     c = a.copy()
     for dimension in dimensions:
-        if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE):
+        if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE) or membw_read_write_ratio is None:
             c[dimension] = a[dimension] - b[dimension]
-    if rt.MEMBW_READ in dimensions:
+    if rt.MEMBW_READ in dimensions and membw_read_write_ratio is not None:
         assert rt.MEMBW_WRITE in dimensions
         assert type(membw_read_write_ratio) == float
         read, write = rt.MEMBW_READ, rt.MEMBW_WRITE
