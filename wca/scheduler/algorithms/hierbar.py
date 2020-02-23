@@ -97,6 +97,7 @@ class HierBAR(LeastUsedBAR):
     def app_fit_nodes(self, node_names, app_name, data_provider_queried
                       ) -> Tuple[List[NodeName], Dict[NodeName, str]]:
 
+        log.log(TRACE, '[Filter2] -> nodes_names=[%s]', ','.join(node_names))
         # TODO: optimize this context should be calculated eariler (add passed for every node)
         nodes_capacities, assigned_apps_counts, apps_spec, _ = data_provider_queried
 
@@ -118,10 +119,10 @@ class HierBAR(LeastUsedBAR):
                 for node in nodes:
                     node_shapes[node] = shape
             if old_number_of_shapes != len(shapes_to_nodes):
-                log.debug('[Filter] Merged shapes: %s->%s, new_shapes: %s', old_number_of_shapes , len(shapes_to_nodes), shapes_to_nodes)
+                log.debug('[Filter2] Merged shapes: %s->%s, new_shapes: %s', old_number_of_shapes , len(shapes_to_nodes), shapes_to_nodes)
 
         # Number of nodes of each class
-        log.log(TRACE, '[Filter] Number of nodes in classes: %r', dict(Counter(node_shapes.values())))
+        log.log(TRACE, '[Filter2] Number of nodes in classes: %r', dict(Counter(node_shapes.values())))
 
         requested = apps_spec[app_name]
         # Calculate all classes bar (fitness) score
@@ -139,7 +140,7 @@ class HierBAR(LeastUsedBAR):
             # log.log(TRACE, '[Prioritize] class_shape=%s average_resources_of_class=%s requested=%s requested_fraction=%s variance=%s', class_shape, averaged_resources_of_class, requested, requested_empty_fraction, variance)
             class_bar_variances[class_shape] = variance
 
-        log.log(TRACE, '[Filter][app=%s] app_shape=%s scores for each class of nodes: %s',
+        log.log(TRACE, '[Filter2][app=%s] app_shape=%s scores for each class of nodes: %s',
                   app_name, resources_to_shape(requested), class_bar_variances)
 
         # Start with best class (least variance)
@@ -153,7 +154,7 @@ class HierBAR(LeastUsedBAR):
             if accepted_node_names:
                 break
             else:
-                log.debug('[Filter][app=%s] no enough nodes in best class (shape=%s, nodes=[%s]), take next class',
+                log.debug('[Filter2][app=%s] no enough nodes in best class (shape=%s, nodes=[%s]), take next class',
                           app_name, class_shape, ','.join(best_node_names_according_shape))
         else:
             assert False, 'last class has to match!'
@@ -164,9 +165,10 @@ class HierBAR(LeastUsedBAR):
             failed[failed_node_name] = 'Not best class (best_variance=%.2f this=%.2f)' % (class_bar_variance,  failed_node_variance)
 
         log.debug(
-            '[Filter][app=%s] nodes=[%s] best_class=%r best_class_variance=%.3f best_nodes=[%s]',
+            '[Filter2][app=%s] nodes=[%s] best_class=%r best_class_variance=%.3f best_nodes=[%s]',
             app_name, ','.join(node_names), dict(class_shape),
             class_bar_variance, ','.join(accepted_node_names))
 
+        log.log(TRACE, '[Filter2] <- accepted_node_names=[%s]', ','.join(accepted_node_names))
         return accepted_node_names, failed
 
