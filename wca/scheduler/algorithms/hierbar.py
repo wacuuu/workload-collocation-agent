@@ -4,6 +4,7 @@ from functools import reduce
 from itertools import combinations
 from typing import Tuple, List, Dict
 import logging
+import operator
 
 from wca.logger import TRACE
 from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
@@ -38,6 +39,7 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
         res2 = dict(shape2)
         resdiff = substract_resources(res1, res2)
         diffvariance = statistics.variance(resdiff.values())
+        log.log(TRACE, '[Filter2][less_shapes] shape1=%s shape=%2 shape_diff=%s', shape1, shape2, diffvariance)
         return diffvariance
 
     def create_new_shape(*shapes):
@@ -47,6 +49,7 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
         nodes = [nodes_capacities[n] for n in node_names_for_new_shape]
         avg_resources = calc_average_resources_of_nodes(nodes)
         new_shape = resources_to_shape(avg_resources)
+        log.log(TRACE, '[Filter2][less_shapes] shapes=%s  new_shape=%s with nodes=%s', shapes, new_shape, node_names_for_new_shape)
         return new_shape, node_names_for_new_shape
 
     new_shapes_to_nodes = {}
@@ -61,13 +64,13 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
         else:  # >2
             for cl in range(2, len(shapes)):
                 for shapes in combinations(shapes_to_nodes.keys(), cl):
+                    log.log(TRACE, '[Filter2][less shapes] merging shapes:  %s', shapes)
                     merge_shapes(shapes)
 
     # Do the recursive merging
     merge_shapes(shapes_to_nodes.keys())
 
     # All node names.
-    import operator
     all_new_nodes = reduce(operator.add, new_shapes_to_nodes.values(), [])
 
     # Retain all shapes if not used in new merged shapes
