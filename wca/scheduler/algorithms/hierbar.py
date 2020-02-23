@@ -68,7 +68,7 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
 
     # All node names.
     import operator
-    all_new_nodes = reduce(operator.add, new_shapes_to_nodes.values())
+    all_new_nodes = reduce(operator.add, new_shapes_to_nodes.values(), [])
 
     # Retain all shapes if not used in new merged shapes
     for shape, nodes in shapes_to_nodes.items():
