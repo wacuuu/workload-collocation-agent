@@ -39,7 +39,7 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
         res2 = dict(shape2)
         resdiff = substract_resources(res1, res2)
         diffvariance = statistics.variance(resdiff.values())
-        log.log(TRACE, '[Filter2][less_shapes] shape1=%s shape=%2 shape_diff=%s', shape1, shape2, diffvariance)
+        log.log(TRACE, '[Filter2][less_shapes] shape1=%s shape=%s shape_diff=%s', shape1, shape2, diffvariance)
         return diffvariance
 
     def create_new_shape(*shapes):
