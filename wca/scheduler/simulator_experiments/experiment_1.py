@@ -25,7 +25,7 @@ from wca.scheduler.algorithms.static_assigner import StaticAssigner
 from wca.scheduler.simulator_experiments import experiments_set__generic
 from wca.scheduler.simulator_experiments.nodes_generators import prepare_nodes
 from wca.scheduler.simulator_experiments.nodesets import nodes_definitions_2types, \
-    nodes_definitions_artificial_2dim_2types
+    nodes_definitions_artificial_2dim_2types, nodes_definitions_3types
 from wca.scheduler.simulator_experiments.task_generators import TaskGenerator_equal, \
     TaskGenerator_classes
 from wca.scheduler.simulator_experiments.tasksets import task_definitions__artificial_3types, \
@@ -173,17 +173,15 @@ def experiment_static_assigner():
 
 def experiment_hierbar():
     nodes_dimensions = dim4
-    iterations = 200
+    iterations = 30
     experiments_set__generic(
         'hierbar',
         False,
         (iterations,),
-        (
-            (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim_2types, replicas=5)),
-        ),
-        (
-            prepare_nodes(nodes_definitions_artificial_2dim_2types, dict(cpuhost=2, memhost=1), nodes_dimensions),
-        ),
+        # [(TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim_2types, replicas=5))],
+        # [prepare_nodes(nodes_definitions_artificial_2dim_2types, dict(cpuhost=2, memhost=1), nodes_dimensions)],
+        [(TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_3types, replicas=10))],
+        [prepare_nodes(nodes_definitions_3types, dict(aep=2, dram_sml=4, dram_big=2), nodes_dimensions)],
         (
             (HierBAR, dict(dimensions=nodes_dimensions)),
         ),
@@ -204,11 +202,11 @@ if __name__ == "__main__":
     # logging.getLogger('wca.scheduler').setLevel(logging.INFO)
     # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(TRACE)
     # logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
-    # logging.getLogger('wca.scheduler.algorithms.bar').setLevel(TRACE)
 
     # experiment_debug()
     # experiment_full()
     # logging.getLogger('wca.scheduler.algorithms.hierbar').setLevel(TRACE)
+    logging.getLogger('wca.scheduler.algorithms.bar').setLevel(logging.DEBUG)
     logging.getLogger('wca.scheduler.algorithms.hierbar').setLevel(logging.DEBUG)
     experiment_hierbar()
     # experiment_bar() # Does not work !!!
