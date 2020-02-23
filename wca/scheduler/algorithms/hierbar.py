@@ -28,8 +28,8 @@ def calc_average_resources_of_nodes(nodes):
 
 def resources_to_shape(resources: Dict[rt, float]):
     # for visualization reasons always normalized to 1 cpu
-    cpus = resources[rt.CPU]
-    return tuple(sorted({r: int(v / cpus) for r, v in resources.items()}.items()))
+    # cpus = resources[rt.CPU]
+    return tuple(sorted({r: int(v) for r, v in resources.items()}.items()))
 
 
 def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
@@ -67,11 +67,8 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
     merge_shapes(shapes_to_nodes.keys())
 
     # All node names.
-    try:
-        all_new_nodes = reduce(sum, new_shapes_to_nodes.values())
-    except TypeError as e:
-        log.error('cannot reduce:%s', new_shapes_to_nodes)
-        raise
+    import operator
+    all_new_nodes = reduce(operator.add, new_shapes_to_nodes.values())
 
     # Retain all shapes if not used in new merged shapes
     for shape, nodes in shapes_to_nodes.items():
