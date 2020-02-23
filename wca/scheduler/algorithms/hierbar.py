@@ -39,7 +39,7 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
         res2 = dict(shape2)
         resdiff = substract_resources(res1, res2)
         diffvariance = statistics.stdev(resdiff.values())
-        log.log(TRACE, '[Filter2][less_shapes] shape1=%s shape=%s shape_diff=%s', shape1, shape2, diffvariance)
+        # log.log(TRACE, '[Filter2][less_shapes] shape1=%s shape=%s shape_diff=%s', shape1, shape2, diffvariance)
         return diffvariance
 
     def create_new_shape(*shapes):
@@ -53,22 +53,27 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
         return new_shape, node_names_for_new_shape
 
     new_shapes_to_nodes = {}
+    diffs = []
 
     def merge_shapes(shapes):
         if len(shapes) < 2:
             return
         elif len(shapes) == 2:
-            if shape_diff(*shapes) < merge_threshold:
+            d = shape_diff(*shapes)
+            diffs.append(d)
+            if d < merge_threshold:
                 shape, node_names = create_new_shape(*shapes)
                 new_shapes_to_nodes[shape] = node_names
         else:  # >2
             for cl in range(2, len(shapes)):
                 for shapes in combinations(shapes_to_nodes.keys(), cl):
-                    log.log(TRACE, '[Filter2][less shapes] merging shapes:  %s', shapes)
+                    # log.log(TRACE, '[Filter2][less shapes] comparing shapes:  %s', shapes)
                     merge_shapes(shapes)
 
     # Do the recursive merging
     merge_shapes(shapes_to_nodes.keys())
+
+    log.log(TRACE, '[Filter2][less shapes] found diffs: %s', list(set(diffs)))
 
     # All node names.
     all_new_nodes = reduce(operator.add, new_shapes_to_nodes.values(), [])
