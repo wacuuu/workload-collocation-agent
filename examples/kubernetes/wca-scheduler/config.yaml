@@ -19,4 +19,4 @@ algorithm: !HierBAR
               membw_write: 'ceil(max(max_over_time (task_membw_writes_bytes_per_second[20m])) by (app) / 1e9)'
         MEMBW_CAPACITY_READ: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename) / 1e9)'
         MEMBW_CAPACITY_WRITE: 'ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename) / 1e9)'
-      time: '1582308900' # 21.02.2020 19:15
+      time: '1582328115' # 22.02.2020 00:35
