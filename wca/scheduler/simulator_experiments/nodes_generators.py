@@ -14,6 +14,9 @@ def prepare_nodes(
     {A: 2, B: 3} result in
     A1, A2, B1, B2, B3 machines
     """
+    for name in node_specs:
+        assert '_' not in name, '_ used as separator for class later in reporting'
+
 
     # Filter only dimensions required.
     node_specs = {node_type: {dim: val for dim, val in node_spec.items() if dim in dimensions}
