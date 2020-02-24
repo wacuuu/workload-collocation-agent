@@ -28,4 +28,4 @@ algorithm: !Fit
         MEMBW_CAPACITY_WRITE: 'ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename) / 1e9)'
         NODES_PMM_MEMORY_MODE: 'sum(platform_mem_mode_size_bytes) by (nodename) != 0'
         NODE_CAPACITY_MEM_WSS: 'sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (nodename) / 1e9'
-      time: '1582565538' # 2020-02-24 18:32:18
+      time: '1582574823' # 2020-02-24 21:07:03
