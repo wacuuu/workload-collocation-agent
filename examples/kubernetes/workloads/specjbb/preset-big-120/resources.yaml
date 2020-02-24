@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: specjbb
+spec:
+  template:
+    spec:
+      containers:
+      # specjbb.controller.preset.ir=30000
+        - name: backend
+          resources:
+            requests:
+              cpu: 10
+              memory: 120G
+            limits:
+              cpu: 10
+              memory: 120G
+        - name: injector
+          resources:
+            requests:
+              cpu: 1
+              memory: 3G
+            limits:
+              cpu: 1
+              memory: 3G
+        - name: controller
+          resources:
+            requests:
+              cpu: 1
+              memory: 3G
+            limits:
+              cpu: 1
+              memory: 3G
