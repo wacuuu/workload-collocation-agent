@@ -20,6 +20,7 @@ from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
 from wca.scheduler.algorithms import Algorithm, log, DataMissingException
 from wca.scheduler.data_providers import DataProvider
+from wca.scheduler.types import ResourceType
 from wca.scheduler.metrics import MetricRegistry, MetricName
 from wca.scheduler.types import NodeName, Resources, AppsCount, AppName, ResourceType as rt, \
     ExtenderArgs, ExtenderFilterResult, HostPriority

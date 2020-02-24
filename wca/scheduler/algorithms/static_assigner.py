@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from typing import Tuple, Any, Dict, Iterable
+from typing import Tuple, Any, Dict, Iterable, List
 import logging
 
 from wca.scheduler.algorithms import Algorithm
@@ -20,6 +20,7 @@ from wca.scheduler.utils import extract_common_input
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, \
         HostPriority, NodeName, ResourceType as rt, AppName
 from wca.scheduler.data_providers import DataProvider
+from wca.scheduler.types import ResourceType
 from wca.logger import TRACE
 
 log = logging.getLogger(__name__)
@@ -28,7 +29,7 @@ log = logging.getLogger(__name__)
 class StaticAssigner(BaseAlgorithm):
     def __init__(self, data_provider: DataProvider,
                  targeted_assigned_apps_counts: Dict[NodeName, Dict[AppName, int]],
-                 dimensions = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
                  alias=None
                  ):
         BaseAlgorithm.__init__(self, data_provider, dimensions, alias=alias)

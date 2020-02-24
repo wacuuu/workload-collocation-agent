@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Dict
+from typing import Tuple, Dict, List, Optional, Set
 
 from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
@@ -22,6 +22,7 @@ from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricName
 from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.types import ResourceType
 
 log = logging.getLogger(__name__)
 

@@ -12,6 +12,7 @@ from wca.scheduler.algorithms.base import used_free_requested, divide_resources,
     calculate_read_write_ratio, sum_resources, substract_resources
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.types import ResourceType as rt, NodeName, Resources
+from wca.scheduler.types import ResourceType
 
 log = logging.getLogger(__name__)
 

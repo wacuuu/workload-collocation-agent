@@ -1,4 +1,4 @@
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, List
 
 from wca.metrics import Metric, MetricType
 from wca.scheduler.algorithms.bar import BAR, log
@@ -6,7 +6,7 @@ from wca.scheduler.algorithms.least_used import LeastUsed
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricName
 from wca.scheduler.types import ResourceType as rt
-
+from wca.scheduler.types import ResourceType
 
 class LeastUsedBAR(LeastUsed, BAR):
     def __init__(self, data_provider: DataProvider,
