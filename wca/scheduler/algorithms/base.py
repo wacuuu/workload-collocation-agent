@@ -49,7 +49,7 @@ class BaseAlgorithm(Algorithm):
        not match everybody needs."""
 
     def __init__(self, data_provider: DataProvider,
-                 dimensions: Tuple = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
                  max_node_score: float = 10,
                  alias: str = None
                  ):

@@ -73,11 +73,13 @@ class ExtenderArgs:
 class ResourceType(str, Enum):
     MEM = 'mem'
     CPU = 'cpu'
-    MEMBW = 'membw'
-    MEMBW_FLAT = 'membw_flat'
     MEMBW_WRITE = 'membw_write'
     MEMBW_READ = 'membw_read'
     WSS = 'wss'
+
+    # Only for internal use
+    MEMBW = 'membw'
+    MEMBW_FLAT = 'membw_flat'
 
     def __repr__(self):
         return self.value

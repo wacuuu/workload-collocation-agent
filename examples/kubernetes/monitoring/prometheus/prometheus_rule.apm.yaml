@@ -75,7 +75,7 @@ spec:
           expr: ceil(rate(apm_specjbb_stdout_lines[15s])>0)
         - record: apm_specjbb_ops
           expr: avg_over_time(apm_specjbb_PR[90s]) and apm_specjbb_alive
-        # usec conver to msec
+        # usec(microseconds) convert to miliseconds (msec)
         - record: apm_specjbb_latency
           expr: avg_over_time(apm_specjbb_p95[90s])/1000 and apm_specjbb_alive
         - record: apm_specjbb_ops_per_task

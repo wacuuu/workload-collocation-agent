@@ -2,7 +2,13 @@ loggers:
   wca.scheduler.server: INFO
   wca.scheduler.algorithms: TRACE
 algorithm: !HierBAR
-  merge_threshold: 50.0
+  merge_threshold: 200.0
+  dimensions:
+    - mem
+    - cpu
+    - membw_write
+    - membw_read
+    - wss
   data_provider: !ClusterDataProvider
     kubeapi: !Kubeapi
       host: !Env KUBERNETES_SERVICE_HOST
@@ -17,6 +23,9 @@ algorithm: !HierBAR
               mem: 'ceil(max(max_over_time(task_requested_mem_bytes[20m])) by (app) / 1e9)'
               membw_read: 'ceil(max(max_over_time (task_membw_reads_bytes_per_second[20m])) by (app) / 1e9)'
               membw_write: 'ceil(max(max_over_time (task_membw_writes_bytes_per_second[20m])) by (app) / 1e9)'
+              wss: 'ceil(max(max_over_time(task_wss_referenced_bytes[3h])) by (app) / 1e9)'
         MEMBW_CAPACITY_READ: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename) / 1e9)'
         MEMBW_CAPACITY_WRITE: 'ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename) / 1e9)'
+        NODES_PMM_MEMORY_MODE: 'sum(platform_mem_mode_size_bytes) by (nodename) != 0'
+        NODE_CAPACITY_MEM_WSS: 'sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (nodename) / 1e9'
       time: '1582328115' # 22.02.2020 00:35

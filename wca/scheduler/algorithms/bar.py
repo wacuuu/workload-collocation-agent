@@ -29,7 +29,7 @@ log = logging.getLogger(__name__)
 class BAR(Fit):
     def __init__(self,
                  data_provider: DataProvider,
-                 dimensions=(rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
                  bar_weights: Dict[rt, float] = None,
                  alias=None,
                  ):

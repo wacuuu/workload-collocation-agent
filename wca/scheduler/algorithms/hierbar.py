@@ -90,7 +90,7 @@ class HierBAR(LeastUsedBAR):
 
     def __init__(self,
                  data_provider: DataProvider,
-                 dimensions=(rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
                  alias=None,
                  merge_threshold: float = None
                  ):

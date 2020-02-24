@@ -45,13 +45,14 @@ class Queries:
     MEMBW_CAPACITY_WRITE: str =\
         'sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename)'
 
+    NODE_CAPACITY_MEM_WSS: str = 'sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (nodename)'
+
     APP_REQUESTED_RESOURCES_QUERY_MAP: Dict[ResourceType, str] = field(default_factory=lambda: {
             ResourceType.CPU: 'max(max_over_time(task_requested_cpus[3h])) by (app)',
             ResourceType.MEM: 'max(max_over_time(task_requested_mem_bytes[3h])) by (app)',
-            ResourceType.MEMBW_READ: 'max(max_over_time'
-            '(task_membw_reads_bytes_per_second[3h])) by (app)',
-            ResourceType.MEMBW_WRITE: 'max(max_over_time'
-            '(task_membw_writes_bytes_per_second[3h])) by (app)'
+            ResourceType.MEMBW_READ: 'max(max_over_time(task_membw_reads_bytes_per_second[3h])) by (app)',
+            ResourceType.MEMBW_WRITE: 'max(max_over_time(task_membw_writes_bytes_per_second[3h])) by (app)',
+            ResourceType.WSS: 'max(max_over_time(task_wss_referenced_bytes[3h])) by (app)',
     })
 
 
@@ -163,6 +164,9 @@ class ClusterDataProvider(DataProvider):
                 for node in kubeapi_nodes_data
         }
 
+
+
+
         # Check if maybe more resources
         if ResourceType.MEMBW_READ in resources and ResourceType.MEMBW_WRITE in resources:
             # TODO: Calculate it.
@@ -171,40 +175,40 @@ class ClusterDataProvider(DataProvider):
 
             # Check which nodes have PMM (in Memory Mode).
             query_result = self.prometheus.do_query(self.prometheus.queries.NODES_PMM_MEMORY_MODE)
-            nodes_to_consider = []
-
+            nodes_with_pmm = []
             for row in query_result:
-                nodes_to_consider.append(row['metric']['nodename'])
+                nodes_with_pmm.append(row['metric']['nodename'])
 
             # Every other should have only DRAM.
             for node, capacities in node_capacities.items():
-                if node not in nodes_to_consider:
+                if node not in nodes_with_pmm:
                     capacities[ResourceType.MEMBW_READ] = int(DRAM_MEMBW_READ_GBYTES)
                     capacities[ResourceType.MEMBW_WRITE] = int(DRAM_MEMBW_WRITE_GBYTES)
+                    if ResourceType.WSS in resources:
+                        capacities[ResourceType.WSS] = capacities[ResourceType.MEM]
 
             # Read Memory Bandwidth from PMM nodes.
-            if len(nodes_to_consider) > 0:
+            if len(nodes_with_pmm) > 0:
 
-                query_result = self.prometheus.do_query(self.prometheus.queries.MEMBW_CAPACITY_READ)
+                def fill_capacity_from_query(resource_type, query):
+                    query_result = self.prometheus.do_query(query)
+                    for row in query_result:
+                        node = row['metric']['nodename']
+                        if node in nodes_with_pmm:
+                            value = float(row['value'][1])
+                            node_capacities[node][resource_type] = int(value)
+                        else:
+                            continue
 
-                for row in query_result:
-                    node = row['metric']['nodename']
-                    if node in nodes_to_consider:
-                        value = float(row['value'][1])
-                        node_capacities[node][ResourceType.MEMBW_READ] = int(value)
-                    else:
-                        continue
+                fill_capacity_from_query(ResourceType.MEMBW_READ, self.prometheus.queries.MEMBW_CAPACITY_READ)
+                fill_capacity_from_query(ResourceType.MEMBW_WRITE, self.prometheus.queries.MEMBW_CAPACITY_WRITE)
 
-                query_result = self.prometheus.do_query(
-                    self.prometheus.queries.MEMBW_CAPACITY_WRITE)
+                if ResourceType.WSS in resources:
+                    fill_capacity_from_query(ResourceType.WSS, self.prometheus.queries.NODE_CAPACITY_MEM_WSS)
 
-                for row in query_result:
-                    node = row['metric']['nodename']
-                    if node in nodes_to_consider:
-                        value = float(row['value'][1])
-                        node_capacities[node][ResourceType.MEMBW_WRITE] = int(value)
-                    else:
-                        continue
+        elif ResourceType.WSS in resources:
+            assert 'Cannot calculate WSS without MEMBW READS and WRITES!'
+
 
         log.debug('Node capacities: %r' % node_capacities)
 

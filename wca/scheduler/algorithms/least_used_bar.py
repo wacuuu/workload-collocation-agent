@@ -10,7 +10,7 @@ from wca.scheduler.types import ResourceType as rt
 
 class LeastUsedBAR(LeastUsed, BAR):
     def __init__(self, data_provider: DataProvider,
-                 dimensions: Tuple = (rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE),
+                 dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
                  least_used_weights: Dict[rt, float] = None,
                  bar_weights: Dict[rt, float] = None,
                  least_used_weight=1,
