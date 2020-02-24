@@ -68,9 +68,11 @@ pipeline {
                   docker push $WCA_IMAGE:${GIT_BRANCH}
 
                   # Just for completeness (not used later)
-                  export WCA_TAG=${GIT_BRANCH}-devel 
+                  export WCA_TAG=${GIT_BRANCH}-devel
                   make _wca_docker_devel
                   docker push $WCA_IMAGE:$WCA_TAG
+                  # Delete all wca images from Jenkins nodes
+                  docker rmi $WCA_IMAGE:${GIT_COMMIT} $WCA_IMAGE:${GIT_BRANCH} $WCA_IMAGE:${WCA_TAG}
                 '''
             }
         }
@@ -130,6 +132,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -146,6 +149,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -162,6 +166,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -178,6 +183,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -194,6 +200,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -210,6 +217,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -226,6 +234,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -242,6 +251,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -258,6 +268,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -274,6 +285,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -289,6 +301,7 @@ pipeline {
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                     '''
                     }
                 }
@@ -308,6 +321,7 @@ pipeline {
                             docker push ${IMAGE_NAME}
                             docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                             docker push ${BRANCH_IMAGE_NAME}
+                            docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
                             '''
                         }
                     }

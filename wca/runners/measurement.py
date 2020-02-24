@@ -115,8 +115,8 @@ class MeasurementRunner(Runner):
 
     - ``gather_hw_mm_topology``: **Optional[bool]** = *None*
 
-        Gather hardware/memory topology based on lshw and ipmctl.
-        (defaults to None(auto) based on lshw and ipmctl binaries availability)
+        Gather hardware/memory topology based on dmidecode and ipmctl.
+        (defaults to None(auto) based on dmidecode and ipmctl binaries availability)
 
     - ``extra_labels``: **Optional[Dict[Str, Str]]** = *None*
 

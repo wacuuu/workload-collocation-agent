@@ -94,6 +94,7 @@ class MetricName(str, Enum):
     PLATFORM_DIMM_COUNT = 'platform_dimm_count'
     PLATFORM_DIMM_TOTAL_SIZE_BYTES = 'platform_dimm_total_size_bytes'
     PLATFORM_MEM_MODE_SIZE_BYTES = 'platform_mem_mode_size_bytes'
+    PLATFORM_DIMM_SPEED_BYTES_PER_SECOND = 'platform_dimm_speed_bytes_per_second'
 
     # /proc based (platform scope).
     # Utilization (usage): counter like, sum of all modes based on /proc/stat
@@ -206,7 +207,7 @@ class MetricSource(str, Enum):
     DERIVED_PERF_WITH_CGROUPS = 'derived from perf subsystem with cgroups'
     DERIVED_PERF_UNCORE = 'derived from perf uncore'
     ORCHESTRATOR = 'orchestrator'
-    LSHW_BINARY = 'lshw binary output'
+    DMIDECODE_BINARY = 'dmidecode binary output'
     IPMCTL_BINARY = 'ipmctl binary output'
 
     def __repr__(self):
@@ -705,7 +706,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Number of RAM DIMM (all types memory modules)',
             MetricType.GAUGE,
             MetricUnit.NUMERIC,
-            MetricSource.LSHW_BINARY,
+            MetricSource.DMIDECODE_BINARY,
             MetricGranularity.PLATFORM,
             ['dimm_type'],
             'no (gather_hw_mm_topology)'
@@ -715,7 +716,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             'Total RAM size (all types memory modules)',
             MetricType.GAUGE,
             MetricUnit.BYTES,
-            MetricSource.LSHW_BINARY,
+            MetricSource.DMIDECODE_BINARY,
             MetricGranularity.PLATFORM,
             ['dimm_type'],
             'no (gather_hw_mm_topology)',
@@ -729,6 +730,16 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricGranularity.PLATFORM,
             [],
             'no (gather_hw_mm_topology)',
+        ),
+    MetricName.PLATFORM_DIMM_SPEED_BYTES_PER_SECOND:
+        MetricMetadata(
+            'Total platform DRAM speed',
+            MetricType.GAUGE,
+            MetricUnit.BYTES_PER_SECOND,
+            MetricSource.DMIDECODE_BINARY,
+            MetricGranularity.PLATFORM,
+            [],
+            'no (gather_hw_mm_topology)'
         ),
     # /proc fs based
     MetricName.PLATFORM_CPU_USAGE:
