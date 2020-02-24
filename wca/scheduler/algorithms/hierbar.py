@@ -11,12 +11,12 @@ from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
 from wca.scheduler.algorithms.base import used_free_requested, divide_resources, \
     calculate_read_write_ratio, sum_resources, substract_resources
 from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.types import ResourceType as rt, NodeName
+from wca.scheduler.types import ResourceType as rt, NodeName, Resources
 
 log = logging.getLogger(__name__)
 
 
-def calc_average_resources_of_nodes(nodes):
+def calc_average_resources_of_nodes(nodes: List[Resources]) -> Resources:
     """ sum resources of all nodes and divied by number of nodes
     return new resources
     """
@@ -121,7 +121,7 @@ class HierBAR(LeastUsedBAR):
             old_number_of_shapes = len(shapes_to_nodes)
             shapes_to_nodes = less_shapes(shapes_to_nodes, nodes_capacities, self.merge_threshold)
 
-            # after shape merging build inverse relatoin node->shape
+            # after shape merging build inverse relation node->shape
             node_shapes = {}
             for shape, nodes in shapes_to_nodes.items():
                 for node in nodes:
@@ -136,8 +136,8 @@ class HierBAR(LeastUsedBAR):
         # Calculate all classes bar (fitness) score
         class_bar_variances = {}  # class_shape: fit
         for class_shape, node_names_of_this_shape in shapes_to_nodes.items():
-            nodes_of_this_shape = [nodes_capacities[node_name] for node_name in node_names_of_this_shape]
-            averaged_resources_of_class = calc_average_resources_of_nodes(nodes_of_this_shape)
+            nodes_capacities_of_this_shape = [nodes_capacities[node_name] for node_name in node_names_of_this_shape]
+            averaged_resources_of_class = calc_average_resources_of_nodes(nodes_capacities_of_this_shape)
             requested_empty_fraction = divide_resources(
                 requested,
                 averaged_resources_of_class,
@@ -154,7 +154,6 @@ class HierBAR(LeastUsedBAR):
         # Start with best class (least variance)
         failed = {} # node_name to error string
         for class_shape, class_bar_variance in sorted(class_bar_variances.items(), key=lambda x:x[1]):
-
             best_node_names_according_shape = shapes_to_nodes[class_shape]
 
             accepted_node_names = list(set(node_names) & set(best_node_names_according_shape))
