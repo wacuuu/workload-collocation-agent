@@ -84,9 +84,9 @@ spec:
           expr: apm_specjbb_latency * on(task_name) group_right() task_up
         # common apm metrics
         - record: apm_specjbb_latency_per_task
-          expr: apm_specjbb_ops * on(task_name) group_right() task_up
+          expr:  apm_specjbb_latency * on(task_name) group_right() task_up
         - record: apm_specjbb_ops_per_task
-          expr: apm_specjbb_latency * on(task_name) group_right() task_up
+          expr: apm_specjbb_ops * on(task_name) group_right() task_up
           # T & L
         - record: apm_throughput
           expr: apm_specjbb_ops_per_task
