@@ -16,7 +16,7 @@ kind: Deployment
 metadata:
   name: wca-scheduler
 spec:
-  replicas: 0
+  replicas: 1
   revisionHistoryLimit: 0
   selector:
     matchLabels:
@@ -31,14 +31,74 @@ spec:
     spec:
       hostNetwork: true
       serviceAccountName: wca-scheduler
-      terminationGracePeriodSeconds: 1
-      nodeName: node36
-      # nodeSelector:
-      #   kubernetes.io/hostname: node36
-      tolerations:
-        - key: "master"
-          operator: "Exists"
-          effect: "NoSchedule"
+      terminationGracePeriodSeconds: 0
+      initContainers:
+        - name: prep
+          image: centos:7
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          command:
+            - sh
+            - -c
+            - >
+              set -x;
+
+#              yum install -y wget
+#
+#              wget https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 -O cfssljson;
+#              wget https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 -O cfssl;
+#              chmod u+x cfssljson cfssl;
+#
+#              cat <<EOF | ./cfssl genkey - | ./cfssljson -bare server
+#              {
+#                "hosts": [
+#                  "${MY_POD_NAME}.default.svc.cluster.local",
+#                  "${MY_POD_NAME}.default.pod.cluster.local",
+#                  "${MY_POD_IP}"
+#                ],
+#                "CN": "${MY_POD_NAME}.default.pod.cluster.local",
+#                "key": {
+#                  "algo": "ecdsa",
+#                  "size": 256
+#                }
+#              }
+#              EOF
+
+#              curl -k
+#              -X POST
+#              -d @-
+#              -H "Authorization: Bearer $TOKEN"
+#              -H 'Accept: application/json'
+#              -H 'Content-Type: application/json'
+#              https://$ENDPOINT/apis/certificates.k8s.io/v1beta1/certificatesigningrequests <<'EOF'
+#              {
+#                "kind": "CertificateSigningRequest",
+#                "apiVersion": "certificates.k8s.io/v1beta1",
+#                "metadata": {
+#                  "name": "${MY_POD_NAME}.default"
+#                },
+#                "spec": {
+#                  "request": "$(cat server.csr | base64 | tr -d '\n')",
+#                  "usages": [
+#                      "digital signature",
+#                      "key encipherment",
+#                      "server auth"
+#                  ]
+#                }
+#              }
+#              EOF
+
       containers:
         - name: wca-scheduler
           image: 100.64.176.12:80/wca-scheduler:latest
@@ -50,10 +110,15 @@ spec:
               mountPath: /var/run/wca
             - name: wca-scheduler-config
               mountPath: /etc/wca-scheduler
+            - name: wca-scheduler-certs
+              mountPath: /var/run/secrets/kubernetes.io/certs
+            - name: wca-scheduler-prep
+              mountPath: /var/run/secrets/kubernetes.io/prep
           command:
             - /bin/bash
             - -c
             - source ./env/bin/activate && gunicorn "wca.scheduler.main:main('/etc/wca-scheduler/${config_file}')" -b unix:/var/run/wca/wca-scheduler.sock && deactivate
+
         - name: nginx
           image: nginx:latest
           ports:
@@ -65,6 +130,10 @@ spec:
               mountPath: /var/run/wca
             - name: wca-scheduler-server
               mountPath: /etc/nginx/conf.d
+            - name: wca-scheduler-certs
+              mountPath: /var/run/secrets/kubernetes.io/certs
+            - name: wca-scheduler-prep
+              mountPath: /var/run/secrets/kubernetes.io/prep
 
       volumes:
         - name: wca-scheduler-socket
@@ -74,4 +143,9 @@ spec:
             name: wca-scheduler-server 
         - name: wca-scheduler-config
           configMap:
-            name: wca-scheduler-config 
+            name: wca-scheduler-config
+        - name: wca-scheduler-certs
+          configMap:
+            name: wca-scheduler-certs
+        - name: wca-scheduler-prep
+          emptyDir: {}

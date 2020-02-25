@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wca-scheduler
+spec:
+  replicas: 1
+  revisionHistoryLimit: 0
+  selector:
+    matchLabels:
+      app: wca-scheduler
+  template:
+    metadata:
+      labels:
+        app: wca-scheduler
+    spec:
+      hostNetwork: true
+      serviceAccountName: wca-scheduler
+      initContainers:
+        - name: prepare-certs
+          env:
+            - name: MY_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: MY_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          command:
+            - >
+              wget https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 -O cfssljson;
+              wget https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 -O cfssl;
+
+              cat <<EOF | ./cfssl genkey - | ./cfssljson -bare server
+              {
+                "hosts": [
+                  "${MY_POD_NAME}.default.svc.cluster.local",
+                  "${MY_POD_NAME}.default.pod.cluster.local",
+                  "${MY_POD_IP}"
+                ],
+                "CN": "${MY_POD_NAME}.default.pod.cluster.local",
+                "key": {
+                  "algo": "ecdsa",
+                  "size": 256
+                }
+              }
+
+
+      containers:
+        - name: nginx
+          image: nginx:latest
+          ports:
+            - name: wca-scheduler
+              containerPort: 30180
+              hostPort: 30180
+          volumeMounts:
+            - name: wca-scheduler-certs
+              mountPath: /etc/secret
+#            - name: wca-scheduler-socket
+#              mountPath: /var/run/wca
+#            - name: wca-scheduler-server
+#              mountPath: /etc/nginx/conf.d
+
+      volumes:
+#        - name: wca-scheduler-socket
+#          emptyDir: {}
+#        - name: wca-scheduler-server
+#          configMap:
+#            name: wca-scheduler-server
+#        - name: wca-scheduler-config
+#          configMap:
+#            name: wca-scheduler-config
+        - name: wca-scheduler-certs
+          configMap:
+            name: wca-scheduler-certs

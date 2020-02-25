@@ -1,14 +1,12 @@
-namespace: wca-scheduler
 resources:
   - wca-scheduler-deployment.yaml
-  - pod_monitor.yaml
+#  - pod_monitor.yaml
   - service_account.yaml
-configMapGenerator:
 
+configMapGenerator:
   - name: wca-scheduler-server
     files:
       - wca-scheduler-server.conf
-
   - name: wca-scheduler-config
     files:
       - config.yaml
@@ -16,3 +14,8 @@ configMapGenerator:
   - name: wca-scheduler-env
     literals:
       - config_file=config.yaml
+      - wca-scheduler-config.yaml
+  - name: wca-scheduler-certs
+    files:
+      - security/server.crt
+      - security/server-key.pem
