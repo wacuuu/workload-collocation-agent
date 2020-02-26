@@ -33,8 +33,9 @@ class BAR(Fit):
                  dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
                  bar_weights: Dict[rt, float] = None,
                  alias=None,
+                 max_node_score: float = 10.,
                  ):
-        Fit.__init__(self, data_provider, dimensions, alias=alias)
+        Fit.__init__(self, data_provider, dimensions, alias=alias, max_node_score=max_node_score)
         self.bar_weights = bar_weights or {}
 
     def priority_for_node(self, node_name, app_name, data_provider_queried) -> float:

@@ -20,6 +20,8 @@ spec:
       containers:
         - name: redis
           image: redis
+          securityContext:
+            privileged: true
           envFrom:
             - configMapRef:
                 name: redis
@@ -30,6 +32,8 @@ spec:
             - sh
             - -c
             - >
+              echo 1024 >/proc/sys/net/core/somaxconn
+
               redis-server
               --save ''
               --loglevel
@@ -38,6 +42,8 @@ spec:
               $redis_extra
         - name: memtier
           image: redislabs/memtier_benchmark
+          securityContext:
+            privileged: true
           envFrom:
             - configMapRef:
                 name: memtier
@@ -49,6 +55,8 @@ spec:
             - bash
             - -c
             - >
+              echo 1024 >/proc/sys/net/core/somaxconn
+
               echo sleeping...;
               sleep 30;
               shopt -s extglob;
@@ -68,7 +76,7 @@ spec:
               --data-size=$datasize
               --hide-histogram
               --key-pattern=P:P
-              --key-maximum=$keymaximum
+              --key-maximum=$keymaximum_gen
               --ratio 1:0
 
               echo loading...;
@@ -83,7 +91,7 @@ spec:
               --pipeline=$pipeline
               --data-size=$datasize
               --key-pattern=G:G
-              --key-maximum=$keymaximum
+              --key-maximum=$keymaximum_load
               --ratio $ratio
               2>&1 | stdbuf -e0 -o0 awk 'BEGIN { RS = "\r" } { print $0; fflush(); system("") }'
 

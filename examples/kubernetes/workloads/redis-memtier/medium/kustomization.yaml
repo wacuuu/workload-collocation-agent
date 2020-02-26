@@ -13,7 +13,8 @@ configMapGenerator:
   literals:
     - clients=50
     - threads=5
-    - keymaximum=5000000   # 5M
+    - keymaximum_gen=5000000   # 5M
+    - keymaximum_load=5000000   # 5M
     - datasize=1024        # 5.5-6GB
 
 patchesStrategicMerge:

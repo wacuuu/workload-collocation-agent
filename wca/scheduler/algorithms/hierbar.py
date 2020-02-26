@@ -93,7 +93,8 @@ class HierBAR(LeastUsedBAR):
                  data_provider: DataProvider,
                  dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
                  alias=None,
-                 merge_threshold: float = None
+                 merge_threshold: float = None,
+                 max_node_score: float = 10.
                  ):
         LeastUsedBAR.__init__(self, data_provider, dimensions, alias=alias)
         self.merge_threshold = merge_threshold
@@ -172,7 +173,7 @@ class HierBAR(LeastUsedBAR):
             failed_node_variance = class_bar_variances[node_shapes[failed_node_name]]
             failed[failed_node_name] = 'Not best class (best_variance=%.2f this=%.2f)' % (class_bar_variance,  failed_node_variance)
 
-        log.debug(
+        log.info(
             '[Filter2][app=%s] nodes=[%s] best_class=%r best_class_variance=%.3f best_nodes=[%s]',
             app_name, ','.join(node_names), dict(class_shape),
             class_bar_variance, ','.join(accepted_node_names))
