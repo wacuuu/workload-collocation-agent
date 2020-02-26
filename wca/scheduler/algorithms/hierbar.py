@@ -138,8 +138,8 @@ class HierBAR(LeastUsedBAR):
                 log.debug('[Filter2] Merged shapes: %s->%s, new_shapes: %s', old_number_of_shapes , len(shapes_to_nodes), shapes_to_nodes)
 
         # Number of nodes of each class
-        number_of_nodes_each_shape = dict(Counter(node_shapes.values()))
-        log.log(TRACE, '[Filter2] Number of nodes in classes: %r', number_of_nodes_each_shape)
+        # number_of_nodes_each_shape = dict(Counter(node_shapes.values()))
+        # log.log(TRACE, '[Filter2] Number of nodes in classes: %r', number_of_nodes_each_shape)
 
         requested = apps_spec[app_name]
         # Calculate all classes bar (fitness) score
@@ -166,8 +166,8 @@ class HierBAR(LeastUsedBAR):
                 ),
                 Metric(
                     name='wca_scheduler_hierbar_node_shape_numbers',
-                    labels=dict(shape=class_shape),
-                    value=number_of_nodes_each_shape[class_shape]
+                    labels=dict(shape=class_shape_str),
+                    value=len(nodes_capacities_of_this_shape),
                 )
             ])
 
