@@ -25,8 +25,8 @@ class DataProvider(ABC):
 
     @abstractmethod
     def get_apps_counts(self) -> Tuple[Dict[NodeName, AppsCount], AppsCount]:
-        """First tuple item assigned to nodes, second item unassigned yet
-           {'node_0': {'memcached_small': 3, 'stress_ng': 5}}, {'memcached_big': 8}
+        """Return apps assigned to nodes and usassigned yet.
+        e.g. {'node_0': {'memcached_small': 3, 'stress_ng': 5}}, {'memcached_big': 8}
         """
         raise Exception('PROPOSAL FOR NEW API')
 

@@ -8,7 +8,7 @@ wca-scheduler
 
 Introduction
 ============
-wca-scheduler is special type of controller that assigns pods to nodes using provided algorithms. 
+wca-scheduler is special type of controller that assigns pods to nodes using algorithms provided by user. 
 
 Configuration
 =============

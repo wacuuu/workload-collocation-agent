@@ -164,14 +164,11 @@ class ClusterDataProvider(DataProvider):
                 for node in kubeapi_nodes_data
         }
 
-
-
-
         # Check if maybe more resources
         if ResourceType.MEMBW_READ in resources and ResourceType.MEMBW_WRITE in resources:
             # TODO: Calculate it.
-            DRAM_MEMBW_READ_GBYTES = 200 # +/- default for every DRAM type
-            DRAM_MEMBW_WRITE_GBYTES = 200 
+            DRAM_MEMBW_READ_GBYTES = 200  # +/- default for every DRAM type
+            DRAM_MEMBW_WRITE_GBYTES = 200
 
             # Check which nodes have PMM (in Memory Mode).
             query_result = self.prometheus.do_query(self.prometheus.queries.NODES_PMM_MEMORY_MODE)
@@ -204,11 +201,11 @@ class ClusterDataProvider(DataProvider):
                 fill_capacity_from_query(ResourceType.MEMBW_WRITE, self.prometheus.queries.MEMBW_CAPACITY_WRITE)
 
                 if ResourceType.WSS in resources:
-                    fill_capacity_from_query(ResourceType.WSS, self.prometheus.queries.NODE_CAPACITY_MEM_WSS)
+                    fill_capacity_from_query(
+                            ResourceType.WSS, self.prometheus.queries.NODE_CAPACITY_MEM_WSS)
 
         elif ResourceType.WSS in resources:
             assert 'Cannot calculate WSS without MEMBW READS and WRITES!'
-
 
         log.debug('Node capacities: %r' % node_capacities)
 
@@ -219,17 +216,16 @@ class ClusterDataProvider(DataProvider):
 
         unassigned_apps = defaultdict(int)
 
-        target = '/api/v1/nodes'
-        nodes_data = list(self.kubeapi.request_kubeapi(target)['items'])
+        nodes_data = list(self.kubeapi.request_kubeapi('/api/v1/nodes')['items'])
         node_names = [node['metadata']['name']for node in nodes_data]
 
         assigned_apps = {}
         for node_name in node_names:
-            assigned_apps[node_name] = defaultdict(int) 
+            assigned_apps[node_name] = defaultdict(int)
 
         for namespace in self.kubeapi.monitored_namespaces:
-            target = '/api/v1/namespaces/{}/pods'.format(namespace)
-            pods_data = list(self.kubeapi.request_kubeapi(target)['items'])
+            pods_data = list(self.kubeapi.request_kubeapi(
+                '/api/v1/namespaces/{}/pods'.format(namespace))['items'])
 
             for pod in pods_data:
                 name = pod['metadata']['name']
@@ -249,7 +245,7 @@ class ClusterDataProvider(DataProvider):
                     assigned_apps[node][app] += 1
 
         # remove default dicts
-        assigned_apps = {k: dict(v) for k,v in assigned_apps.items()}
+        assigned_apps = {k: dict(v) for k, v in assigned_apps.items()}
         log.debug('Assigned apps: %r' % assigned_apps)
         log.debug('Unassigned apps: %r' % unassigned_apps)
 
@@ -269,7 +265,7 @@ class ClusterDataProvider(DataProvider):
                 if app:
                     app_requested_resources[app][resource] = int(value)
 
-        app_requested_resources = {k: dict(v) for k,v in app_requested_resources.items()}
+        app_requested_resources = {k: dict(v) for k, v in app_requested_resources.items()}
         log.debug('Apps requested resources: %r' % app_requested_resources)
 
         return app_requested_resources
