@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import logging
-from typing import Tuple, Dict, List, Optional, Set
+from typing import Dict, List
 
 from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
@@ -21,8 +21,8 @@ from wca.scheduler.algorithms.base import get_requested_fraction
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricName
-from wca.scheduler.types import ResourceType as rt
 from wca.scheduler.types import ResourceType
+from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
 
@@ -73,12 +73,11 @@ class BAR(Fit):
                    type=MetricType.GAUGE))
 
         bar_score = (1.0 - variance)
-        log.debug("[Prioritize][app=%s][node=%s][bar] Bar score: %s", app_name, node_name, bar_score)
+        log.debug("[Prioritize][app=%s][node=%s][bar] Bar score: %s", app_name, node_name,
+                  bar_score)
         self.metrics.add(
             Metric(name=MetricName.BAR_SCORE,
                    value=bar_score, labels=dict(app=app_name, node=node_name),
                    type=MetricType.GAUGE))
 
         return bar_score
-
-

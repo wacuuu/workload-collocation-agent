@@ -7,6 +7,7 @@ import logging
 import operator
 
 from wca.logger import TRACE
+from wca.metrics import Metric
 from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
 from wca.scheduler.algorithms.base import used_free_requested, divide_resources, \
     calculate_read_write_ratio, sum_resources, substract_resources
@@ -87,6 +88,10 @@ def less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
     return new_shapes_to_nodes
 
 
+def shape_to_str(shape):
+    return ','.join('%r=%.0f'%(r,v) for r, v in shape)
+
+
 class HierBAR(LeastUsedBAR):
 
     def __init__(self,
@@ -119,6 +124,7 @@ class HierBAR(LeastUsedBAR):
             shapes_to_nodes[shape].append(node_name)
         shapes_to_nodes = dict(shapes_to_nodes)
 
+        # Merging similar node shapes (less_shapes)
         if self.merge_threshold is not None:
             old_number_of_shapes = len(shapes_to_nodes)
             shapes_to_nodes = less_shapes(shapes_to_nodes, nodes_capacities, self.merge_threshold)
@@ -132,7 +138,8 @@ class HierBAR(LeastUsedBAR):
                 log.debug('[Filter2] Merged shapes: %s->%s, new_shapes: %s', old_number_of_shapes , len(shapes_to_nodes), shapes_to_nodes)
 
         # Number of nodes of each class
-        log.log(TRACE, '[Filter2] Number of nodes in classes: %r', dict(Counter(node_shapes.values())))
+        number_of_nodes_each_shape = dict(Counter(node_shapes.values()))
+        log.log(TRACE, '[Filter2] Number of nodes in classes: %r', number_of_nodes_each_shape)
 
         requested = apps_spec[app_name]
         # Calculate all classes bar (fitness) score
@@ -150,8 +157,23 @@ class HierBAR(LeastUsedBAR):
             # log.log(TRACE, '[Prioritize] class_shape=%s average_resources_of_class=%s requested=%s requested_fraction=%s variance=%s', class_shape, averaged_resources_of_class, requested, requested_empty_fraction, variance)
             class_bar_variances[class_shape] = variance
 
-        log.log(TRACE, '[Filter2][app=%s] app_shape=%s scores for each class of nodes: %s',
+            class_shape_str = shape_to_str(class_shape)
+            self.metrics.extend([
+                Metric(
+                    name='wca_scheduler_hierbar_node_shape_app_variance',
+                    labels=dict(app=app_name, shape=class_shape_str),
+                    value=variance
+                ),
+                Metric(
+                    name='wca_scheduler_hierbar_node_shape_numbers',
+                    labels=dict(shape=class_shape),
+                    value=number_of_nodes_each_shape[class_shape]
+                )
+            ])
+
+            log.log(TRACE, '[Filter2][app=%s] app_shape=%s scores for each class of nodes: %s',
                   app_name, resources_to_shape(requested), class_bar_variances)
+
 
         # Start with best class (least variance)
         failed = {} # node_name to error string

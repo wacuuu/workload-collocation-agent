@@ -20,7 +20,7 @@ class LeastUsedBAR(LeastUsed, BAR):
         LeastUsed.__init__(self, data_provider, dimensions, least_used_weights, 
                            alias=alias, max_node_score=max_node_score)
         BAR.__init__(self, data_provider, dimensions, 
-                     bar_weights, max_node_score=max_node_score)
+                     bar_weights, alias=alias, max_node_score=max_node_score)
         self.least_used_weight = least_used_weight
 
     def __str__(self):

@@ -127,7 +127,7 @@ def generate_subexperiment_report(
 
         fref.write("Assigned tasks per node:\n")
         for node, counters in assignments_counts.per_node.items():
-            fref.write("   {}: {}\n".format(node, dict(counters)))
+            fref.write("   {}: {}\n".format(node, ' '.join('%s=%d'%(k,v) for k,v in sorted(dict(counters).items()) if k!='__ALL__')))
 
         rounded_last_iter_resources = \
             map(partial(round, ndigits=2), (cpu_usage[-1], mem_usage[-1], membw_usage[-1],))

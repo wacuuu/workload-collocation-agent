@@ -56,7 +56,7 @@ class BaseAlgorithm(Algorithm):
                  ):
         self.data_provider = data_provider
         self.dimensions = dimensions
-        self.metrics = None
+        self.metrics: MetricRegistry = None
         self.alias = alias
         self.reinit_metrics()
         self.max_node_score = max_node_score
