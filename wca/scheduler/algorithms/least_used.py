@@ -17,7 +17,7 @@ class LeastUsed(Fit):
     def __init__(self, data_provider: DataProvider,
                  dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
                  least_used_weights: Dict[rt, float] = None,
-                 alias=None
+                 alias=None,
                  max_node_score: float = 10.,
                  ):
         Fit.__init__(self, data_provider, dimensions, alias=alias, max_node_score=max_node_score)
