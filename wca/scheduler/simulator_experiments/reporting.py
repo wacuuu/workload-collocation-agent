@@ -19,7 +19,7 @@ from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
 
-CHARTS = False
+CHARTS = True
 
 
 @dataclass

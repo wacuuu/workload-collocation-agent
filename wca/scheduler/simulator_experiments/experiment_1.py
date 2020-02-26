@@ -178,7 +178,7 @@ def experiment_hierbar():
     iterations = 60
     experiments_set__generic(
         'hierbar',
-        False,
+        True, # extra charts
         (iterations,),
         # [(TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim_2types, replicas=5))],
         # [prepare_nodes(nodes_definitions_artificial_2dim_2types, dict(cpuhost=2, memhost=1), nodes_dimensions)],
