@@ -4,6 +4,7 @@ loggers:
 algorithm: !HierBAR
   merge_threshold: 200.0
 # algorithm: !Fit
+  max_node_score: 10000.
   dimensions:
     - mem
     - cpu
@@ -25,8 +26,8 @@ algorithm: !HierBAR
               membw_read: 'ceil(max(max_over_time (task_membw_reads_bytes_per_second[10m])) by (app) / 1e9)'
               membw_write: 'ceil(max(max_over_time (task_membw_writes_bytes_per_second[10m])) by (app) / 1e9)'
               wss: 'ceil(max(max_over_time(task_wss_referenced_bytes[10m])) by (app) / 1e9)'
-        MEMBW_CAPACITY_READ: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename) / 1e9)/2'
-        MEMBW_CAPACITY_WRITE: 'ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename) / 1e9)/2'
+        MEMBW_CAPACITY_READ: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename) / 1e9)*0.7'
+        MEMBW_CAPACITY_WRITE: 'ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename) / 1e9)*0.7'
         NODES_PMM_MEMORY_MODE: 'sum(platform_mem_mode_size_bytes) by (nodename) != 0'
-        NODE_CAPACITY_MEM_WSS: '(sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (nodename) / 1e9)/5'
+        NODE_CAPACITY_MEM_WSS: '(sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (nodename) / 1e9)*0.3'
       time: '1582733480' # 2020-02-26 17:11:20

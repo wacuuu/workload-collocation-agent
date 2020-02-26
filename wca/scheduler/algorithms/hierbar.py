@@ -101,7 +101,8 @@ class HierBAR(LeastUsedBAR):
                  merge_threshold: float = None,
                  max_node_score: float = 10.
                  ):
-        LeastUsedBAR.__init__(self, data_provider, dimensions, alias=alias)
+        LeastUsedBAR.__init__(self, data_provider, dimensions, alias=alias, 
+                              max_node_score=max_node_score)
         self.merge_threshold = merge_threshold
 
     def __str__(self):
