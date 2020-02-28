@@ -1,9 +1,7 @@
 import logging
-import operator
 import statistics
 from collections import defaultdict
 from functools import reduce
-from itertools import combinations
 from typing import Tuple, List, Dict
 
 from wca.logger import TRACE
@@ -72,7 +70,6 @@ def create_new_shape(shapes_to_nodes: ShapeToNodes,
     return new_shape, node_names_for_new_shape
 
 
-
 def merge_shapes(merge_threshold: float, node_capacities: NodeCapacities,
                  shapes_to_nodes: ShapeToNodes) -> ShapeToNodes:
     """"""
@@ -87,6 +84,9 @@ def merge_shapes(merge_threshold: float, node_capacities: NodeCapacities,
     for shape in shapes_to_nodes.keys():
         shape_resources = dict(shape)
         ratio = calculate_read_write_ratio(shape_resources)
+        if ratio is None:
+            log.warning('unmergable shape=%r found in shape_to_nodes=%r!: ', shape, shapes_to_nodes)
+            return shapes_to_nodes
         if ratio > merge_threshold:
             above_shapes.append(shape)
         else:
