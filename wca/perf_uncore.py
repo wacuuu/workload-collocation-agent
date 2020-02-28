@@ -261,6 +261,8 @@ class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
                 dram_write,
                 add, max_depth)
             measurements[MetricName.PLATFORM_DRAM_TOTAL_BYTES_PER_SECOND] = total_dram_bps
+        else:
+            log.debug('dram metrics not available!')
 
         # PMM
         if available(MetricName.PLATFORM_PMM_BANDWIDTH_WRITES,
@@ -295,7 +297,7 @@ class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
                 truediv, max_depth)
             measurements[MetricName.PLATFORM_DRAM_HIT_RATIO] = dram_hit
         else:
-            log.warning('pmm metrics not available!')
+            log.debug('pmm metrics not available!')
 
         # UPI bandwidth
         if available(MetricName.PLATFORM_UPI_RXL_FLITS, MetricName.PLATFORM_UPI_TXL_FLITS):
@@ -327,6 +329,8 @@ class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
                                                     max_depth)
             _operation_on_leveled_metric(bandwidth, rate_for_upi, max_depth)
             measurements[MetricName.PLATFORM_UPI_BANDWIDTH_BYTES_PER_SECOND] = bandwidth
+        else:
+            log.debug('upi metrics not available!')
 
         # IMC RPQ
         if available(MetricName.PLATFORM_RPQ_INSERTS,
@@ -349,3 +353,5 @@ class UncoreDerivedMetricsGenerator(BaseDerivedMetricsGenerator):
                                    (clockticks / number_of_channels)
                 measurements[MetricName.PLATFORM_RPQ_READ_LATENCY_SECONDS].update(
                     {socket: rpq_read_latency})
+        else:
+            log.debug('imc metrics not available!')

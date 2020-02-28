@@ -128,7 +128,7 @@ Platform's metrics
 	"platform_rpq_occupancy", "Pending queue occupancy", "no (uncore_event_names)", "numeric",  "gauge", "perf subsystem with dynamic PMUs (uncore)", "socket, pmu_type"
 	"platform_rpq_inserts", "Pending queue allocations", "no (uncore_event_names)", "numeric",  "gauge", "perf subsystem with dynamic PMUs (uncore)", "socket, pmu_type"
 	"platform_imc_clockticks", "IMC clockticks", "no (uncore_event_names)", "numeric",  "counter", "perf subsystem with dynamic PMUs (uncore)", "socket, pmu_type"
-	"platform_rpq_read_latency_seconds", "Read latency", "no (uncore_event_names: platform_dram_clockticks, platform_dram_clockticks, platform_rpq_inserts and set enable_derived_metrics)", "seconds",  "gauge", "derived from perf uncore", "socket"
+	"platform_rpq_read_latency_seconds", "Read latency", "no (uncore_event_names: platform_imc_clockticks, platform_rpq_occupancy, platform_rpq_inserts and set enable_derived_metrics)", "seconds",  "gauge", "derived from perf uncore", "socket"
 	"platform_pmm_reads_bytes_per_second", "TBD", "no (uncore_event_names: platform_pmm_bandwidth_reads and set enable_derived_metrics)", "numeric",  "gauge", "derived from perf uncore", "socket, pmu_type"
 	"platform_pmm_writes_bytes_per_second", "TBD", "no (uncore_event_names: platform_pmm_bandwidth_writes and set enable_derived_metrics)", "numeric",  "gauge", "derived from perf uncore", "socket, pmu_type"
 	"platform_pmm_total_bytes_per_second", "TBD", "no (uncore_event_names: platform_pmm_bandwidth_reads, platform_pmm_bandwidth_writes and set enable_derived_metrics)", "numeric",  "gauge", "derived from perf uncore", "socket, pmu_type"
