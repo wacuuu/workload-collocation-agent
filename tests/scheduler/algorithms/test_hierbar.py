@@ -12,15 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging
-from typing import Tuple
-
-from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
-
-log = logging.getLogger(__name__)
+from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.algorithms.hierbar import merge_shapes, _less_shapes
 
 
-class Friend(LeastUsedBAR):
+def test_less_shapes():
+    pass
 
-    def app_fit_node(self, node_name, app_name, data_provider_queried) -> Tuple[bool, str]:
-        raise NotImplementedError('TODO')
+
+

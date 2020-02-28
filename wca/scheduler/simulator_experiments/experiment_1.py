@@ -213,11 +213,11 @@ if __name__ == "__main__":
     # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(TRACE)
     # logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
 
-    # experiment_debug()
-    # experiment_full()
+    experiment_debug()
+    experiment_full()
     # logging.getLogger('wca.scheduler.algorithms.hierbar').setLevel(TRACE)
     logging.getLogger('wca.scheduler.algorithms.bar').setLevel(logging.DEBUG)
     logging.getLogger('wca.scheduler.algorithms.hierbar').setLevel(DEBUG)
     experiment_hierbar()
     # experiment_bar() # Does not work !!!
-    # experiment_static_assigner()
+    experiment_static_assigner()
