@@ -9,16 +9,16 @@ spec:
         - name: memcached
           resources:
             requests:
-              cpu: 2
+              cpu: 4
               memory: 50G # valueSize*records = 40kB * 1M <= 50GB
             limits:
-              cpu: 2
+              cpu: 4
               memory: 50G
         - name: mutilate
           resources:
             requests:
-              cpu: 5
+              cpu: 6
               memory: 1G
             limits:
-              cpu: 5
+              cpu: 6
               memory: 1G

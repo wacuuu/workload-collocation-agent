@@ -2,7 +2,7 @@ loggers:
   wca.scheduler.server: INFO
   wca.scheduler.algorithms: TRACE
 algorithm: !HierBAR
-  merge_threshold: 200.0
+  merge_threshold: 1.
 # algorithm: !Fit
   max_node_score: 10000.
   dimensions:

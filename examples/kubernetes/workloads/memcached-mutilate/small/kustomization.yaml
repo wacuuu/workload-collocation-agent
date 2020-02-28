@@ -9,6 +9,7 @@ configMapGenerator:
 - name: mutilate
   behavior: merge
   literals:
+  - records=10000           # 100k
   - value=20000       # 20kB * 1M <= 25GB
   - qps=50000       # 50k per second
 

@@ -10,7 +10,7 @@ configMapGenerator:
 
 - name: mutilate
   literals:
-    - threads=16
+    - threads=6
     - value=10000              # 10k
     - load_records=1000000     # 1M = 10GB
     - records=100000           # 100k

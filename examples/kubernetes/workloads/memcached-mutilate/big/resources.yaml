@@ -9,10 +9,10 @@ spec:
         - name: memcached
           resources:
             requests:
-              cpu: 2
+              cpu: 4
               memory: 90G
             limits:
-              cpu: 2
+              cpu: 4
               memory: 90G
         - name: mutilate
           resources:
