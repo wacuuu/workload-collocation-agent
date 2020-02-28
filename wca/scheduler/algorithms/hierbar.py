@@ -49,7 +49,8 @@ def _shape_diff(shape1, shape2: Shape) -> float:
     assert len(res2.keys()) > 1, 'variance requires at least 2 data points'
     resdiff = substract_resources(res1, res2)
     diffvariance = statistics.stdev(resdiff.values())
-    # log.log(TRACE, '[Filter2][less_shapes] shape1=%s shape=%s shape_diff=%s', shape1, shape2, diffvariance)
+    log.log(TRACE, '[Filter2][shape_diff] shape1=%s shape=%s shape_diff=%s',
+            shape1, shape2, diffvariance)
     return diffvariance
 
 
@@ -65,7 +66,8 @@ def create_new_shape(shapes_to_nodes: ShapeToNodes,
     nodes = [node_capacities[n] for n in node_names_for_new_shape]
     avg_resources = _calc_average_resources(nodes)
     new_shape = _resources_to_shape(avg_resources)
-    # log.log(TRACE, '[Filter1][less_shapes] shapes=%s  new_shape=%s with nodes=%s', shapes, new_shape, node_names_for_new_shape)
+    log.log(TRACE, '[Filter2][create_new_shape] shapes=%s new_shape=%s with nodes=%s',
+            shapes, new_shape, node_names_for_new_shape)
 
     return new_shape, node_names_for_new_shape
 
@@ -88,6 +90,8 @@ def merge_shapes(merge_threshold: float, node_capacities: NodeCapacities,
             log.warning('unmergable shape=%r found in shape_to_nodes=%r! ignored!: ', shape,
                         shapes_to_nodes)
             continue
+        log.log(TRACE, '[Filter2][merge_shapes] shape=%s ratio=%r merge_threshold=%r',
+                shape, ratio, merge_threshold)
         if ratio > merge_threshold:
             above_shapes.append(shape)
         else:
@@ -103,7 +107,7 @@ def merge_shapes(merge_threshold: float, node_capacities: NodeCapacities,
 
     if old_number_of_shapes != len(new_shapes_to_nodes):
         log.debug('[Filter2] Merged shapes: %s->%s, new_shapes: %s', old_number_of_shapes,
-                  len(shapes_to_nodes), shapes_to_nodes)
+                  len(new_shapes_to_nodes), new_shapes_to_nodes)
 
     return new_shapes_to_nodes
 
@@ -136,7 +140,9 @@ def calculate_class_variances(app_name: str,
         )
 
         variance = statistics.stdev(requested_empty_fraction.values())
-        # log.log(TRACE, '[Prioritize] class_shape=%s average_resources_of_class=%s requested=%s requested_fraction=%s variance=%s', class_shape, averaged_resources_of_class, requested, requested_empty_fraction, variance)
+        log.log(TRACE, '[Filter2] class_shape=%s average_resources_of_class=%s '
+                'requested=%s requested_fraction=%s variance=%s', class_shape,
+                averaged_resources_of_class, requested, requested_empty_fraction, variance)
         class_variances[class_shape] = variance
 
         class_shape_str = shape_to_str(class_shape)
@@ -144,7 +150,7 @@ def calculate_class_variances(app_name: str,
             Metric(
                 name='wca_scheduler_hierbar_node_shape_app_variance',
                 labels=dict(app=app_name,
-                            app_requested=_resources_to_shape(requested),
+                            app_requested=resource_to_str(requested),
                             shape=class_shape_str),
                 value=variance
             ),
