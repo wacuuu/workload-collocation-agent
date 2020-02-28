@@ -49,15 +49,19 @@ spec:
             - bash
             - -c
             - >
-              echo sleeping...;
-              sleep 30;
               shopt -s extglob;
               identifier=${podname#memtier-};
               service=${identifier%-+([[:digit:]])};
               target='127.0.0.1';
-              echo targeting: $target;
+              test=0;
+              until [ "$test" = "PONG" ];
+              do
+                test=$(redis-cli PING);
+                sleep 5;
+              done
 
-              echo preparing data...;
+              # preparing data
+
               memtier_benchmark
               --run-count=1
               --requests=allkeys
@@ -70,8 +74,14 @@ spec:
               --key-pattern=P:P
               --key-maximum=$keymaximum
               --ratio 1:0
+              &> /dev/null
 
-              echo loading...;
+              # Clear possible output from previous job on the same node
+
+              echo "[RUN #0 0%,   0 secs]  0 threads:           0 ops,       0 (avg:       0) ops/sec, 0.00KB/sec (avg: 0.00KB/sec),  0.00 (avg:  0.00) msec latency";
+
+              # loading
+
               stdbuf -e0 -o0
               memtier_benchmark
               --run-count=9999
