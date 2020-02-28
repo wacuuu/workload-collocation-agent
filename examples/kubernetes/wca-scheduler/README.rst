@@ -44,3 +44,48 @@ Push image to repository:
 Check if wca-scheduler pod is running:
 
 ``kubectl apply -k .``
+
+
+SSL connection
+--------------
+
+
+
+.. code-block:: shell
+    # https://pkg.cfssl.org/
+    wget https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 -O cfssljson
+    wget https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 -O cfssl
+    sudo chmod u+x cfssljson cfssl
+
+    cat <<EOF | ./cfssl genkey - | ./cfssljson -bare server
+    {
+      "hosts": [
+        "wca-scheduler.wca-scheduler.pod",
+        "100.64.176.35"
+      ],
+      "CN": "wca-scheduler.wca-scheduler.pod",
+      "key": {
+        "algo": "ecdsa",
+        "size": 256
+      }
+    }
+    EOF
+
+    cat <<EOF | kubectl apply -f -
+    apiVersion: certificates.k8s.io/v1beta1
+    kind: CertificateSigningRequest
+    metadata:
+      name: wca-scheduler.default
+    spec:
+      request: $(cat server.csr | base64 | tr -d '\n')
+      usages:
+      - digital signature
+      - key encipherment
+      - server auth
+    EOF
+
+    kubectl certificate approve wca-scheduler.default
+
+    kubectl get csr wca-scheduler.default -o jsonpath='{.status.certificate}' | base64 --decode > server.crt
+
+    kubectl create secret generic wca-scheduler-cert --from-file server.crt --from-file server-key.pem --namespace wca-scheduler
