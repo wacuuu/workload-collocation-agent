@@ -3,7 +3,7 @@ Example deployment
 Lets assume that:
 
 - ``100.64.176.12`` - is node with docker image repository.
-- ``100.64.176.36`` - is kubernetes master node with `kubernetes.io/hostname` = `node36`
+- ``100.64.176.36`` - is kubernetes master node with label `kubernetes.io/hostname` = `node36`
 
 kube-scheduler configuration
 ----------------------------

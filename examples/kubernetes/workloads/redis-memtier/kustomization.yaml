@@ -2,6 +2,7 @@ bases:
 - small
 - medium
 - big
+- big-wss
 
 commonLabels:
   fit: 2lm

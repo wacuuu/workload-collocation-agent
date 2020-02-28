@@ -15,4 +15,5 @@ configMapGenerator:
     - threads=4              # TO OVERRIDE
     - clients=200            # TO OVERRIDE
     - datasize=32            # TO OVERRIDE (default)
-    - keymaximum=50000000    # TO OVERRIDE
+    - keymaximum_gen=50000000    # TO OVERRIDE
+    - keymaximum_load=50000000    # TO OVERRIDE

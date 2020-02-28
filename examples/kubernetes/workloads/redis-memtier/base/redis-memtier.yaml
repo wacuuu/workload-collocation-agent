@@ -20,6 +20,8 @@ spec:
       containers:
         - name: redis
           image: redis
+          securityContext:
+            privileged: true
           envFrom:
             - configMapRef:
                 name: redis
@@ -30,6 +32,8 @@ spec:
             - sh
             - -c
             - >
+              echo 1024 >/proc/sys/net/core/somaxconn
+
               redis-server
               --save ''
               --loglevel
@@ -38,6 +42,8 @@ spec:
               $redis_extra
         - name: memtier
           image: redislabs/memtier_benchmark
+          securityContext:
+            privileged: true
           envFrom:
             - configMapRef:
                 name: memtier
@@ -49,14 +55,15 @@ spec:
             - bash
             - -c
             - >
+              echo sleeping...;
               sleep 30;
               shopt -s extglob;
               identifier=${podname#memtier-};
               service=${identifier%-+([[:digit:]])};
               target='127.0.0.1';
+              echo targeting: $target;
 
-              # preparing data
-
+              echo preparing data...;
               memtier_benchmark
               --run-count=1
               --requests=allkeys
@@ -67,16 +74,10 @@ spec:
               --data-size=$datasize
               --hide-histogram
               --key-pattern=P:P
-              --key-maximum=$keymaximum
+              --key-maximum=$keymaximum_gen
               --ratio 1:0
-              &> /dev/null
 
-              # Clear eventually output from previous job on the same node
-
-              echo "[RUN #1 0%,   0 secs]  0 threads:           0 ops,       0 (avg:       0) ops/sec, 0.00KB/sec (avg: 0.00KB/sec),  0.00 (avg:  0.00) msec latency";
-
-              # loading
-
+              echo loading...;
               stdbuf -e0 -o0
               memtier_benchmark
               --run-count=9999
@@ -88,7 +89,7 @@ spec:
               --pipeline=$pipeline
               --data-size=$datasize
               --key-pattern=G:G
-              --key-maximum=$keymaximum
+              --key-maximum=$keymaximum_load
               --ratio $ratio
               2>&1 | stdbuf -e0 -o0 awk 'BEGIN { RS = "\r" } { print $0; fflush(); system("") }'
 

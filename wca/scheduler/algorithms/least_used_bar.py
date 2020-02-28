@@ -15,10 +15,12 @@ class LeastUsedBAR(LeastUsed, BAR):
                  bar_weights: Dict[rt, float] = None,
                  least_used_weight=1,
                  alias=None,
-                 max_node_score: float = 10,
+                 max_node_score: float = 10.,
                  ):
-        LeastUsed.__init__(self, data_provider, dimensions, least_used_weights, alias=alias)
-        BAR.__init__(self, data_provider, dimensions, bar_weights)
+        LeastUsed.__init__(self, data_provider, dimensions, least_used_weights, 
+                           alias=alias, max_node_score=max_node_score)
+        BAR.__init__(self, data_provider, dimensions, 
+                     bar_weights, alias=alias, max_node_score=max_node_score)
         self.least_used_weight = least_used_weight
 
     def __str__(self):

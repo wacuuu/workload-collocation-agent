@@ -1,0 +1,20 @@
+nameSuffix: -big-wss
+bases:
+- ../base
+
+commonLabels:
+  app: redis-memtier-big-wss
+  size: big
+
+configMapGenerator:
+- name: memtier
+  behavior: merge
+  literals:
+    - clients=50
+    - threads=16
+    - keymaximum_gen=800000       # 40M
+    - keymaximum_load=800000       # 40M
+    - datasize=50000          # 45-50GB
+
+patchesStrategicMerge:
+  - resources.yaml

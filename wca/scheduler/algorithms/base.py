@@ -51,12 +51,12 @@ class BaseAlgorithm(Algorithm):
 
     def __init__(self, data_provider: DataProvider,
                  dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
-                 max_node_score: float = 10,
+                 max_node_score: float = 10.,
                  alias: str = None
                  ):
         self.data_provider = data_provider
         self.dimensions = dimensions
-        self.metrics = None
+        self.metrics: MetricRegistry = None
         self.alias = alias
         self.reinit_metrics()
         self.max_node_score = max_node_score

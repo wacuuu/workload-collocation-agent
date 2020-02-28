@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,7 +11,22 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pytest
+
+from wca.scheduler.types import HostPriority
+from wca.config import ValidationError
 
 
-def test_do_raw_query():
-    assert True
+@pytest.mark.parametrize(
+    'host, score', (
+            (0, 1),
+            (0, 1.1),
+            (0, 'node1'),
+            ('node1', 1.1),
+            ('node1', '1'),
+            ('node1', '1.1'),
+    )
+)
+def test_improper_host_priority(host, score):
+    with pytest.raises(ValidationError):
+        HostPriority(host, score)

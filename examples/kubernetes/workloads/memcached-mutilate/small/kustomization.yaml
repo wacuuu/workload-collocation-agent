@@ -4,7 +4,6 @@ bases:
 
 commonLabels:
   app: memcached-mutilate-small
-  size: small
 
 configMapGenerator:
 - name: mutilate

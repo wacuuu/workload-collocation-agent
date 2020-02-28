@@ -178,15 +178,22 @@ def experiment_hierbar():
     iterations = 60
     experiments_set__generic(
         'hierbar',
-        False,
+        True, # extra charts
         (iterations,),
         # [(TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim_2types, replicas=5))],
         # [prepare_nodes(nodes_definitions_artificial_2dim_2types, dict(cpuhost=2, memhost=1), nodes_dimensions)],
-        [(TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_3types, replicas=20))],
-        [prepare_nodes(nodes_definitions_3types, dict(aep=2, dramsml=4, drambig=2), nodes_dimensions)],
+        [
+            (TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_3types, replicas=10)),
+            (TaskGenerator_classes, dict(task_definitions=taskset_dimensions(nodes_dimensions, task_definitions__artificial_3types), counts=dict(mem=30))), # AEP
+            (TaskGenerator_classes, dict(task_definitions=taskset_dimensions(nodes_dimensions, task_definitions__artificial_3types), counts=dict(mbw=30))), # no AEP
+            (TaskGenerator_classes, dict(task_definitions=taskset_dimensions(nodes_dimensions, task_definitions__artificial_3types), counts=dict(cpu=5, mem=5, mbw=20))),
+            (TaskGenerator_classes, dict(task_definitions=taskset_dimensions(nodes_dimensions, task_definitions__artificial_3types), counts=dict(cpu=5, mem=20, mbw=5))),
+        ],
+        [prepare_nodes(nodes_definitions_3types, dict(aep=2, sml=4, big=2), nodes_dimensions)],
         (
-            (HierBAR, dict(dimensions=nodes_dimensions)),
-            (HierBAR, dict(dimensions=nodes_dimensions, merge_threshold=5)),
+            (LeastUsedBAR, dict(dimensions=dim2, alias='native')),
+            # (HierBAR, dict(dimensions=nodes_dimensions)),
+            (HierBAR, dict(dimensions=nodes_dimensions, merge_threshold=100, alias='extender')),
         ),
     )
 
