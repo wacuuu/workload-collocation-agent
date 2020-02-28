@@ -1,4 +1,4 @@
-
+import pytest
 from wca.scheduler.data_providers.cluster_data_provider import (
         ClusterDataProvider, MissingBasicResources, Kubeapi, Prometheus,
         Queries)
