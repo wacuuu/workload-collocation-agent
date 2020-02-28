@@ -178,7 +178,7 @@ def experiment_hierbar():
     iterations = 60
     experiments_set__generic(
         'hierbar',
-        True, # extra charts
+        False, # extra charts
         (iterations,),
         # [(TaskGenerator_equal, dict(task_definitions=task_definitions__artificial_2dim_2types, replicas=5))],
         # [prepare_nodes(nodes_definitions_artificial_2dim_2types, dict(cpuhost=2, memhost=1), nodes_dimensions)],
@@ -193,7 +193,7 @@ def experiment_hierbar():
         (
             (LeastUsedBAR, dict(dimensions=dim2, alias='native')),
             # (HierBAR, dict(dimensions=nodes_dimensions)),
-            (HierBAR, dict(dimensions=nodes_dimensions, merge_threshold=100, alias='extender')),
+            (HierBAR, dict(dimensions=nodes_dimensions, merge_threshold=1, alias='extender')),
         ),
     )
 
@@ -213,11 +213,11 @@ if __name__ == "__main__":
     # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(TRACE)
     # logging.getLogger('wca.scheduler.algorithms').setLevel(logging.DEBUG)
 
-    experiment_debug()
-    experiment_full()
+    # experiment_debug()
+    # experiment_full()
     # logging.getLogger('wca.scheduler.algorithms.hierbar').setLevel(TRACE)
     # logging.getLogger('wca.scheduler.algorithms.bar').setLevel(logging.DEBUG)
     # logging.getLogger('wca.scheduler.algorithms.hierbar').setLevel(DEBUG)
     experiment_hierbar()
     # experiment_bar() # Does not work !!!
-    experiment_static_assigner()
+    # experiment_static_assigner()
