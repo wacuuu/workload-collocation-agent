@@ -85,8 +85,9 @@ def merge_shapes(merge_threshold: float, node_capacities: NodeCapacities,
         shape_resources = dict(shape)
         ratio = calculate_read_write_ratio(shape_resources)
         if ratio is None:
-            log.warning('unmergable shape=%r found in shape_to_nodes=%r!: ', shape, shapes_to_nodes)
-            return shapes_to_nodes
+            log.warning('unmergable shape=%r found in shape_to_nodes=%r! ignored!: ', shape,
+                        shapes_to_nodes)
+            continue
         if ratio > merge_threshold:
             above_shapes.append(shape)
         else:
