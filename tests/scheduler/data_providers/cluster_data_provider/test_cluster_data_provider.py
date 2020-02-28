@@ -1,4 +1,8 @@
+from unittest.mock import MagicMock, Mock
+
 import pytest
+
+from tests.testing import create_json_fixture_mock
 from wca.scheduler.data_providers.cluster_data_provider import (
         ClusterDataProvider, MissingBasicResources, Kubeapi, Prometheus,
         Queries)
