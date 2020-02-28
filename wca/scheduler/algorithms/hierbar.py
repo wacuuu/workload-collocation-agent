@@ -18,14 +18,16 @@ from wca.scheduler.types import ResourceType as rt, NodeName, Resources
 log = logging.getLogger(__name__)
 
 
-def _calc_average_resources_of_nodes(nodes: List[Resources]) -> Resources:
+def _calc_average_resources(list_of_resources: List[Resources]) -> Resources:
     """ Sum resources of all nodes and divied by number of nodes
     return new resources
     """
-    sum_resources_of_nodes = reduce(sum_resources, nodes)
+    if not list_of_resources:
+        return {}
+    sum_of_resources = reduce(sum_resources, list_of_resources)
     averaged_resources_of_class = divide_resources(
-        sum_resources_of_nodes,
-        {r: len(nodes) for r in sum_resources_of_nodes.keys()},
+        sum_of_resources,
+        {r: len(list_of_resources) for r in sum_of_resources.keys()},
     )
     return averaged_resources_of_class
 
@@ -41,6 +43,8 @@ def _shape_diff(shape1, shape2):
     """
     res1 = dict(shape1)
     res2 = dict(shape2)
+    assert len(res1.keys()) > 1, 'variance requires at least 2 data points'
+    assert len(res2.keys()) > 1, 'variance requires at least 2 data points'
     resdiff = substract_resources(res1, res2)
     diffvariance = statistics.stdev(resdiff.values())
     # log.log(TRACE, '[Filter2][less_shapes] shape1=%s shape=%s shape_diff=%s', shape1, shape2, diffvariance)
@@ -53,7 +57,7 @@ def create_new_shape(shapes_to_nodes, nodes_capacities, *shapes):
     for shape in shapes:
         node_names_for_new_shape.extend(shapes_to_nodes[shape])
     nodes = [nodes_capacities[n] for n in node_names_for_new_shape]
-    avg_resources = _calc_average_resources_of_nodes(nodes)
+    avg_resources = _calc_average_resources(nodes)
     new_shape = _resources_to_shape(avg_resources)
     # log.log(TRACE, '[Filter1][less_shapes] shapes=%s  new_shape=%s with nodes=%s', shapes, new_shape, node_names_for_new_shape)
 
@@ -64,7 +68,7 @@ def _less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
     new_shapes_to_nodes = {}
     diffs = []
 
-    def merge_shapes(shapes):
+    def _merge_shapes_recursive(shapes):
         if len(shapes) < 2:
             return
         elif len(shapes) == 2:
@@ -77,10 +81,10 @@ def _less_shapes(shapes_to_nodes, nodes_capacities, merge_threshold):
             for cl in range(2, len(shapes)):
                 for shapes in combinations(shapes_to_nodes.keys(), cl):
                     # log.log(TRACE, '[Filter2][less shapes] comparing shapes:  %s', shapes)
-                    merge_shapes(shapes)
+                    _merge_shapes_recursive(shapes)
 
     # Do the recursive merging
-    merge_shapes(shapes_to_nodes.keys())
+    _merge_shapes_recursive(shapes_to_nodes.keys())
 
     log.log(TRACE, '[Filter2][less shapes] found diffs: %s', list(set(diffs)))
 
@@ -124,7 +128,7 @@ def calculate_class_variances(app_name, nodes_capacities, requested, shapes_to_n
     for class_shape, node_names_of_this_shape in shapes_to_nodes.items():
         nodes_capacities_of_this_shape = [nodes_capacities[node_name] for node_name in
                                           node_names_of_this_shape]
-        averaged_resources_of_class = _calc_average_resources_of_nodes(
+        averaged_resources_of_class = _calc_average_resources(
             nodes_capacities_of_this_shape)
         requested_empty_fraction = divide_resources(
             requested,
@@ -192,7 +196,7 @@ class HierBAR(LeastUsedBAR):
 
         # Merging similar node shapes (less_shapes)
         if self.merge_threshold is not None:
-            node_shapes, shapes_to_nodes = self.merge_shapes(nodes_capacities, shapes_to_nodes)
+            node_shapes, shapes_to_nodes = merge_shapes(self.merge_threshold, nodes_capacities, shapes_to_nodes)
 
         # Number of nodes of each class
         # number_of_nodes_each_shape = dict(Counter(node_shapes.values()))
@@ -200,8 +204,10 @@ class HierBAR(LeastUsedBAR):
 
         requested = apps_spec[app_name]
 
-        class_bar_variances = calculate_class_variances(
+        class_bar_variances, metrics = calculate_class_variances(
             app_name, nodes_capacities, requested, shapes_to_nodes)
+
+        self.metrics.extend(metrics)
 
         log.log(TRACE, '[Filter2][app=%s] app_shape=%s scores for each class of nodes: %s',
                 app_name, _resources_to_shape(requested), class_bar_variances)
