@@ -4,12 +4,12 @@ bases:
 
 commonLabels:
   app: memcached-mutilate-big
-  size: big
 
 configMapGenerator:
 - name: mutilate
   behavior: merge
   literals:
+  - records=10000           # 100k
   - value=80000    # 80kB * 1M  <= 100GB
   - qps=20000      # 2M
 

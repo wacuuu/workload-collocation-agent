@@ -239,3 +239,17 @@ spec:
         # NORMALIZED ACCORDING THE GOALS 2
         - record: apm_sli2_normalized_per_mode
           expr: apm_sli2_per_mode / on (app) group_left apm_slo2
+
+    - name: ipc-mode
+      rules:
+        - record: apm_ipc
+          expr: avg(rate(task_instructions[15s]) / rate(task_cycles[15s])) by (app, nodename)
+
+        - record: apm_ipc_per_mode
+          expr: avg(apm_ipc) by (nodename, app) * on (nodename) group_left() (sum(platform_mem_mode_size_bytes > 0) by (nodename) / sum(platform_mem_mode_size_bytes > 0) by (nodename))
+          labels:
+            mode: 2lm
+        - record: apm_ipc_per_mode
+          expr: avg(apm_ipc) by (nodename, app) * on (nodename) group_left() (sum(platform_mem_mode_size_bytes == 0) by (nodename) + 1)
+          labels:
+            mode: 1lm
