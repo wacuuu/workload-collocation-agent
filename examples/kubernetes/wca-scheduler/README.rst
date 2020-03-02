@@ -46,22 +46,47 @@ Check if wca-scheduler pod is running:
 ``kubectl apply -k .``
 
 
-SSL connection
---------------
+TLS connection wca-scheduler with kube-scheduler
+------------------------------------------------
 
+TLS is required to secure a connection between wca-scheduler and kube-scheduler.
 
+Instructions are based on https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/
+
+Required are the cfssl tools from https://pkg.cfssl.org/ to generate the private key and
+next create a Certificate Signing Request (CSR).
+More information about the tools https://blog.cloudflare.com/introducing-cfssl/ .
+
+After download and install the cfssl tools, you can generate a private key and
+Certificate Signing Request based on the private key. In ``hosts``,
+``wca-scheduler.wca-scheduler.pod`` is name pod and after dot namespace, which is pod's DNS name;
+``100.64.176.36`` is IP address, where wca-scheduler will be deployed.
+You should change this IP address.
+
+The next step is to create CSR Kubernetes object and send it to apiserver.
+It contains previously created CSR.
+Created Kubernetes CertificateSigningRequest must be approved.
+It can be done by an automated approval process or by a cluster administrator.
+In below script is used example certificate approved by the administrator.
+
+Now, you can download the signed certificate.
+When you have a set of the certificate and the private key, you can create Secret with them.
+The Secret will be forwarded to wca-scheduler and files,
+which is contained used to create TLS connection.
 
 .. code-block:: shell
-    # https://pkg.cfssl.org/
+
+    # Download the cfssl tools
     wget https://pkg.cfssl.org/R1.2/cfssljson_linux-amd64 -O cfssljson
     wget https://pkg.cfssl.org/R1.2/cfssl_linux-amd64 -O cfssl
     sudo chmod u+x cfssljson cfssl
 
+    # Generate a private key and CSR. Change IP address to wca-scheduler node address!
     cat <<EOF | ./cfssl genkey - | ./cfssljson -bare server
     {
       "hosts": [
         "wca-scheduler.wca-scheduler.pod",
-        "100.64.176.35"
+        "100.64.176.36"
       ],
       "CN": "wca-scheduler.wca-scheduler.pod",
       "key": {
@@ -71,11 +96,12 @@ SSL connection
     }
     EOF
 
+    # Create CSR K8S object
     cat <<EOF | kubectl apply -f -
     apiVersion: certificates.k8s.io/v1beta1
     kind: CertificateSigningRequest
     metadata:
-      name: wca-scheduler.default
+      name: wca-scheduler.wca-scheduler
     spec:
       request: $(cat server.csr | base64 | tr -d '\n')
       usages:
@@ -84,8 +110,11 @@ SSL connection
       - server auth
     EOF
 
-    kubectl certificate approve wca-scheduler.default
+    # The CSR must be approved by administrator (or automated approval process)
+    kubectl certificate approve wca-scheduler.wca-scheduler
 
-    kubectl get csr wca-scheduler.default -o jsonpath='{.status.certificate}' | base64 --decode > server.crt
+    # Download the Certificate
+    kubectl get csr wca-scheduler.wca-scheduler -o jsonpath='{.status.certificate}' | base64 --decode > server.crt
 
+    # Create Secret with the certificate and the private key
     kubectl create secret generic wca-scheduler-cert --from-file server.crt --from-file server-key.pem --namespace wca-scheduler
