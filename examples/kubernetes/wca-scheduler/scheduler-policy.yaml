@@ -9,7 +9,7 @@ data:
       "AlwaysCheckAllPredicates": true,
       "ExtenderConfigs": [
         {
-          "URLPrefix": "https://100.64.176.35:30180",
+          "URLPrefix": "https://100.64.176.36:30180",
           "FilterVerb": "filter",
           "PrioritizeVerb": "prioritize",
           "Weight": 1,
