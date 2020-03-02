@@ -18,11 +18,17 @@ spec:
     spec:
       hostNetwork: true
       serviceAccountName: wca-scheduler
-      terminationGracePeriodSeconds: 0
-      nodeName: node35
+      terminationGracePeriodSeconds: 1
+      nodeName: node36
+      # nodeSelector:
+      #   kubernetes.io/hostname: node36
+      tolerations:
+        - key: "master"
+          operator: "Exists"
+          effect: "NoSchedule"
       containers:
         - name: wca-scheduler
-          image: 100.64.176.12:80/wca-scheduler:latest
+          image: wca-scheduler
           envFrom:
           - configMapRef:
               name: wca-scheduler-env
