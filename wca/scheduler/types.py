@@ -24,6 +24,10 @@ TaskName = str
 AppName = str
 FailureMessage = str
 
+
+class UnsupportedCase(Exception):
+    pass
+
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L299
 @dataclass
 class ExtenderFilterResult():
@@ -34,7 +38,7 @@ class ExtenderFilterResult():
 
     def __post_init__(self):
         if self.Nodes:
-            assure_type(self.Nodes, List[Dict])
+            raise UnsupportedCase()
 
         assure_type(self.NodeNames, List[NodeName])
         assure_type(self.FailedNodes, Dict[NodeName, FailureMessage])
@@ -51,21 +55,20 @@ class HostPriority():
         assure_type(self.Host, str)
         assure_type(self.Score, int)
 
+
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L284
 @dataclass
 class ExtenderArgs:
     Nodes: Optional[List[Dict]]
-    Pod: Optional[Dict]
+    Pod: Dict
     NodeNames: List[NodeName]
 
     def __post_init__(self):
 
         if self.Nodes:
-            assure_type(self.Nodes, List[dict])
+            raise UnsupportedCase()
 
-        if self.Pod:
-            assure_type(self.Pod, dict)
-
+        assure_type(self.Pod, dict)
         assure_type(self.NodeNames, List[str])
 
 
