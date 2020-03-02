@@ -145,6 +145,10 @@ class MissingBasicResources(Exception):
     pass
 
 
+class GatheringWSSwithoutMemoryBandwidth(Exception):
+    pass
+
+
 @dataclass
 class ClusterDataProvider(DataProvider):
     kubeapi: Kubeapi
@@ -219,7 +223,8 @@ class ClusterDataProvider(DataProvider):
                                 node_capacities[node][ResourceType.MEM]
 
         elif ResourceType.WSS in resources:
-            assert 'Cannot calculate WSS without MEMBW READS and WRITES!'
+            raise GatheringWSSwithoutMemoryBandwidth(
+                    'Cannot calculate WSS without MEMBW READS and WRITES!')
 
         log.debug('Node capacities: %r' % node_capacities)
 
