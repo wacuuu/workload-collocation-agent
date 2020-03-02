@@ -55,6 +55,8 @@ spec:
             - bash
             - -c
             - >
+              echo 1024 >/proc/sys/net/core/somaxconn
+
               echo sleeping...;
               sleep 30;
               shopt -s extglob;
