@@ -26,6 +26,8 @@ FailureMessage = str
 
 
 class UnsupportedCase(Exception):
+    """Raised when kube-scheduler passes information about nodes rather
+    than list of node names which wca-scheduler supports."""
     pass
 
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L299
