@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: wca-scheduler
 spec:
-  replicas: 1
+  replicas: 0
   revisionHistoryLimit: 0
   selector:
     matchLabels:
