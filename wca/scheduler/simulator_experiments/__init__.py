@@ -64,6 +64,7 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
             filter_metrics = []
 
         dimensions = len(scheduler_kwargs.get('dimensions', []))
+
         stats = generate_subexperiment_report(
             experiment_name,
             '%d_%snodes_%s_%s' % (exp_iter, len(nodes), task_creation_fun, simulator.scheduler),
@@ -72,7 +73,9 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
             filter_metrics=filter_metrics,
             task_gen=task_creation_fun,
             scheduler=simulator.scheduler,
+            charts=False,
         )
+
         log.debug('Finished experiment.', experiment_name, exp_iter)
         log.debug('Stats:', stats)
         print('.', end='', flush=True)

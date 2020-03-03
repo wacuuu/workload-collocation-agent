@@ -198,13 +198,6 @@ def experiment_hierbar():
     )
 
 if __name__ == "__main__":
-    try:
-        import matplotlib.pyplot as plt
-        import numpy as np
-    except ImportError:
-        # No installed packages required for report generation.
-        print('numpy and matplotlib are required!')
-        exit(1)
 
     # init_logging('trace', 'scheduler_extender_simulator_experiments')
     logging.basicConfig(level=logging.INFO, format='%(levelname)s:%(module)s:%(funcName)s:%(lineno)d %(message)s')
