@@ -29,7 +29,7 @@ class IterationData:
 
 def get_total_capacity_and_demand(nodes_capacities, assigned_apps_counts, unassigend_apps_count,
                                   apps_spec):
-    """ Sum of total cluster capacity and sum of all requirments of all scheduled tasks"""
+    """ Sum of total cluster capacity and sum of all requirements of all scheduled tasks"""
     total_capacity = reduce(sum_resources, nodes_capacities.values())
     total_apps_count = defaultdict(int)
     for apps_count in list(assigned_apps_counts.values()) + [unassigend_apps_count]:
@@ -82,10 +82,6 @@ def generate_subexperiment_report(
         nodes_capacities, assigned_apps_counts, apps_spec, unassigend_apps_count = \
             query_data_provider(scheduler.data_provider, scheduler.dimensions)
 
-        # fref.write('Nodes capacities: %s\n' % nodes_capacities)
-        # fref.write('Assigned_apps_counts %s\n' % assigned_apps_counts)
-        # fref.write('Unassigned_apps_counts %s\n' % unassigend_apps_count)
-
         total_capacity, total_demand, total_apps_count = \
             get_total_capacity_and_demand(nodes_capacities, assigned_apps_counts,
                                           unassigend_apps_count, apps_spec)
@@ -104,7 +100,7 @@ def generate_subexperiment_report(
         if total_apps_count != total_tasks_dict:
             fref.write(
                 "!Scheduled tasks different from total_apps_count from query! total_apps_count={}\n"
-                    .format(dict(total_apps_count)))
+                .format(dict(total_apps_count)))
             assert False, 'should not happen!'
 
         scheduled_tasks = sum(total_tasks_dict.values())
@@ -149,8 +145,6 @@ def generate_subexperiment_report(
             nodes_avg_var.append(statistics.variance(
                 [usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ]]))
 
-        util_var_avg = statistics.variance(nodes_utilization_avg)
-        util_avg_var = statistics.mean(nodes_avg_var)
         util_var = statistics.variance(nodes_utilization)
 
         available_metrics = {m.split('{')[0] for iterdata in iterations_data for m in
@@ -212,10 +206,11 @@ def generate_charts(cpu_usage, exp_dir, filter_metrics, iterations, iterations_d
         import matplotlib.pyplot as plt
         import seaborn as sns
         import pandas as pd
+        import numpy as np
     except ImportError:
         # No installed packages required for report generation.
         log.warning(
-            'matplotlib, seaborn or pandas not installed, charts will not be generated!')
+            'matplotlib, seaborn, pandas or numpy not installed, charts will not be generated!')
         exit(1)
     filter_metrics = filter_metrics or []
     plt.style.use('ggplot')
@@ -263,7 +258,6 @@ def generate_charts(cpu_usage, exp_dir, filter_metrics, iterations, iterations_d
         x.set_title(filter)
         x.set_xlim(iterations.min(), iterations.max())
 
-    # plt.show()
     fig.savefig('{}/{}.png'.format(exp_dir, subtitle))
 
 
@@ -300,7 +294,7 @@ def generate_experiment_report(stats_dicts, exp_dir):
         _pivot_ui(
             df,
             totals=True,
-            rowTotals=False,
+            row_totals=False,
             rows=['TASKS', 'NODES'],
             cols=['ALGO'],
             vals=[val], aggregatorName=aggr,
@@ -340,7 +334,7 @@ def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
     return iteration_finished_callback
 
 
-def _pivot_ui(df, totals=True, rowTotals=True, **options):
+def _pivot_ui(df, totals=True, row_totals=True, **options):
     """ Interactive pivot table for data analysis.
     # Example options:
     rows=['x', 'y'),
@@ -357,14 +351,14 @@ def _pivot_ui(df, totals=True, rowTotals=True, **options):
     iframe = pivot_ui(df, **options)
     if not totals:
         with open(iframe.src) as f:
-            replacedHtml = f.read().replace('</style>',
-                                            '.pvtTotal, .pvtTotalLabel, .pvtGrandTotal {display: none}</style>')
+            replaced_html = f.read().replace(
+                '</style>', '.pvtTotal, .pvtTotalLabel, .pvtGrandTotal {display: none}</style>')
         with open(iframe.src, "w") as f:
-            f.write(replacedHtml)
-    if not rowTotals:
+            f.write(replaced_html)
+    if not row_totals:
         with open(iframe.src) as f:
-            replacedHtml = f.read().replace('</style>',
-                                            '.rowTotal, .pvtRowTotalLabel, .pvtGrandTotal {display: none}</style>')
+            replaced_html = f.read().replace(
+                '</style>', '.rowTotal, .pvtRowTotalLabel, .pvtGrandTotal {display: none}</style>')
         with open(iframe.src, "w") as f:
-            f.write(replacedHtml)
+            f.write(replaced_html)
     return iframe

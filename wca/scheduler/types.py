@@ -32,7 +32,7 @@ class UnsupportedCase(Exception):
 
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L299
 @dataclass
-class ExtenderFilterResult():
+class ExtenderFilterResult:
     Nodes: Optional[List[Dict]] = None
     NodeNames: List[NodeName] = field(default_factory=lambda: [])
     FailedNodes: Dict[NodeName, FailureMessage] = field(default_factory=lambda: {})
@@ -49,7 +49,7 @@ class ExtenderFilterResult():
 
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L331
 @dataclass
-class HostPriority():
+class HostPriority:
     Host: str
     Score: int
 

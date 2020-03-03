@@ -78,7 +78,6 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
 
         log.debug('Finished experiment.', experiment_name, exp_iter)
         log.debug('Stats:', stats)
-        print('.', end='', flush=True)
         experiment_stats.append(stats)
         return iterations_data
 
