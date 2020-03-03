@@ -71,6 +71,7 @@ def experiments_set__generic(experiment_name, extra_charts, *args):
                                               filter_metrics=filter_metrics,
                                               task_gen=task_creation_fun,
                                               scheduler=simulator.scheduler,
+                                              charts=False,
                                               )
         log.debug('Finished experiment.', experiment_name, exp_iter)
         log.debug('Stats:', stats)
