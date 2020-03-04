@@ -20,8 +20,6 @@ spec:
       serviceAccountName: wca-scheduler
       terminationGracePeriodSeconds: 1
       nodeName: node36
-      # nodeSelector:
-      #   kubernetes.io/hostname: node36
       tolerations:
         - key: "master"
           operator: "Exists"
