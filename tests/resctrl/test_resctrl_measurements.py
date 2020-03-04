@@ -24,13 +24,15 @@ from tests.testing import create_open_mock
 import pytest
 
 
+@patch('os.path.exists', return_vaule=True)
 @patch('os.path.isdir', return_value=True)
 @patch('os.rmdir')
 @patch('wca.resctrl.SetEffectiveRootUid')
 @patch('os.listdir', side_effects=lambda path: {
     '/sys/fs/resctrl/best_efforts/mon_groups/some_container': [],
 })
-def test_resgroup_remove(listdir_mock, set_effective_root_uid_mock, rmdir_mock, isdir_mock):
+def test_resgroup_remove(listdir_mock, set_effective_root_uid_mock,
+                         rmdir_mock, isdir_mock, exists_mock):
     open_mock = create_open_mock({
         "/sys/fs/resctrl": "0",
         "/sys/fs/resctrl/best_efforts/mon_groups/some_container/tasks": "123\n124\n",

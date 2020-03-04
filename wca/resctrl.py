@@ -192,10 +192,13 @@ class ResGroup:
                 log.debug('resctrl: remove just mon_group %r in %r', mongroup_name, self.name)
                 dir_to_remove = self._get_mongroup_fullpath(mongroup_name)
 
-        # Remove the mongroup directory.
+        # Remove the mongroup directory if exists.
         with SetEffectiveRootUid():
             log.log(logger.TRACE, 'resctrl: rmdir(%r)', dir_to_remove)
-            os.rmdir(dir_to_remove)
+            if os.path.exists(dir_to_remove):
+                os.rmdir(dir_to_remove)
+            else:
+                log.debug("Directory: {} already removed. Ignoring!".format(dir_to_remove))
 
     def get_measurements(self, mongroup_name, mb_monitoring_enabled,
                          cache_monitoring_enabled) -> Measurements:
