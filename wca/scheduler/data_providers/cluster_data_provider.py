@@ -148,7 +148,7 @@ class MissingBasicResources(Exception):
     pass
 
 
-class GatheringWSSwithoutMemoryBandwidth(Exception):
+class WSSWithoutMemoryBandwidth(Exception):
     pass
 
 
@@ -263,7 +263,7 @@ class ClusterDataProvider(DataProvider):
                 for node in nodes}
 
         elif ResourceType.WSS in resources:
-            raise GatheringWSSwithoutMemoryBandwidth(
+            raise WSSWithoutMemoryBandwidth(
                     'Cannot calculate WSS without MEMBW READS and WRITES!')
 
         log.debug('Node capacities: %r' % node_capacities)
