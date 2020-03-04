@@ -92,3 +92,4 @@ class ResourceType(str, Enum):
 
 AppsCount = Dict[AppName, int]
 Resources = Dict[ResourceType, float]
+NodeCapacities = Dict[NodeName, Resources]
