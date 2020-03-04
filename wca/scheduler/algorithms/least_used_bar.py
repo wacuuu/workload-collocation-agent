@@ -1,3 +1,16 @@
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 from typing import Tuple, Dict, Any, List
 
 from wca.metrics import Metric, MetricType
@@ -5,21 +18,23 @@ from wca.scheduler.algorithms.bar import BAR, log
 from wca.scheduler.algorithms.least_used import LeastUsed
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricName
-from wca.scheduler.types import ResourceType as rt
 from wca.scheduler.types import ResourceType
+
 
 class LeastUsedBAR(LeastUsed, BAR):
     def __init__(self, data_provider: DataProvider,
-                 dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
-                 least_used_weights: Dict[rt, float] = None,
-                 bar_weights: Dict[rt, float] = None,
+                 dimensions: List[ResourceType] = [
+                     ResourceType.CPU, ResourceType.MEM,
+                     ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE],
+                 least_used_weights: Dict[ResourceType, float] = None,
+                 bar_weights: Dict[ResourceType, float] = None,
                  least_used_weight=1,
                  alias=None,
                  max_node_score: float = 10.,
                  ):
-        LeastUsed.__init__(self, data_provider, dimensions, least_used_weights, 
+        LeastUsed.__init__(self, data_provider, dimensions, least_used_weights,
                            alias=alias, max_node_score=max_node_score)
-        BAR.__init__(self, data_provider, dimensions, 
+        BAR.__init__(self, data_provider, dimensions,
                      bar_weights, alias=alias, max_node_score=max_node_score)
         self.least_used_weight = least_used_weight
 

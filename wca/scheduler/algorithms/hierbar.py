@@ -10,20 +10,17 @@ from wca.scheduler.algorithms.base import divide_resources, \
     calculate_read_write_ratio, sum_resources, substract_resources
 from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
 from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.types import ResourceType
-from wca.scheduler.types import ResourceType as rt, NodeName, Resources
+from wca.scheduler.types import ResourceType, NodeName, Resources
 
 log = logging.getLogger(__name__)
 
-Shape = Tuple[Tuple[rt, float], ...]
+Shape = Tuple[Tuple[ResourceType, float], ...]
 ShapeToNodes = Dict[Shape, List[NodeName]]
 NodeCapacities = Dict[NodeName, Resources]
 
 
 def _calc_average_resources(list_of_resources: List[Resources]) -> Resources:
-    """ Sum resources of all nodes and divided by number of nodes
-    return new resources
-    """
+    """Return average resources as sum of all nodes resources divided by number of nodes."""
     if not list_of_resources:
         return {}
     sum_of_resources = reduce(sum_resources, list_of_resources)
@@ -34,24 +31,23 @@ def _calc_average_resources(list_of_resources: List[Resources]) -> Resources:
     return averaged_resources_of_class
 
 
-def _resources_to_shape(resources: Dict[rt, float]) -> Shape:
+def _resources_to_shape(resources: Dict[ResourceType, float]) -> Shape:
     # for visualization reasons always normalized to 1 cpu
     # cpus = resources[rt.CPU]
     return tuple(sorted({r: int(v) for r, v in resources.items()}.items()))
 
 
-def _shape_diff(shape1, shape2: Shape) -> float:
-    """Return Variance between shape1 and shape2 for each resource.
-    """
-    res1 = dict(shape1)
-    res2 = dict(shape2)
-    assert len(res1.keys()) > 1, 'variance requires at least 2 data points'
-    assert len(res2.keys()) > 1, 'variance requires at least 2 data points'
-    resdiff = substract_resources(res1, res2)
-    diffvariance = statistics.stdev(resdiff.values())
-    log.log(TRACE, '[Filter2][shape_diff] shape1=%s shape=%s shape_diff=%s',
-            shape1, shape2, diffvariance)
-    return diffvariance
+def _shape_diff(first: Shape, second: Shape) -> float:
+    """Return resources variance between first and second."""
+    first_resources = dict(first)
+    second_resources = dict(second)
+    assert len(first_resources.keys()) > 1, 'variance requires at least 2 data points'
+    assert len(second_resources.keys()) > 1, 'variance requires at least 2 data points'
+    resdiff = substract_resources(first_resources, second_resources)
+    diff_variance = statistics.stdev(resdiff.values())
+    log.log(TRACE, '[Filter2][shape_diff] first=%s second=%s shape_diff=%s',
+            first, second, diff_variance)
+    return diff_variance
 
 
 def create_new_shape(shapes_to_nodes: ShapeToNodes,
@@ -72,9 +68,8 @@ def create_new_shape(shapes_to_nodes: ShapeToNodes,
     return new_shape, node_names_for_new_shape
 
 
-def merge_shapes(merge_threshold: float, node_capacities: NodeCapacities,
-                 shapes_to_nodes: ShapeToNodes) -> ShapeToNodes:
-    """"""
+def _merge_shapes(merge_threshold: float, node_capacities: NodeCapacities,
+                  shapes_to_nodes: ShapeToNodes) -> ShapeToNodes:
     old_number_of_shapes = len(shapes_to_nodes)
     if old_number_of_shapes < 2:
         return shapes_to_nodes
@@ -87,7 +82,7 @@ def merge_shapes(merge_threshold: float, node_capacities: NodeCapacities,
         shape_resources = dict(shape)
         ratio = calculate_read_write_ratio(shape_resources)
         if ratio is None:
-            log.warning('unmergable shape=%r found in shape_to_nodes=%r! ignored!: ', shape,
+            log.warning('not mergable shape=%r found in shape_to_nodes=%r! ignored!: ', shape,
                         shapes_to_nodes)
             continue
         log.log(TRACE, '[Filter2][merge_shapes] shape=%s ratio=%r merge_threshold=%r',
@@ -183,7 +178,9 @@ class HierBAR(LeastUsedBAR):
 
     def __init__(self,
                  data_provider: DataProvider,
-                 dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
+                 dimensions: List[ResourceType] = [
+                     ResourceType.CPU, ResourceType.MEM,
+                     ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE],
                  alias=None,
                  merge_threshold: float = None,
                  max_node_score: float = 10.
@@ -203,7 +200,8 @@ class HierBAR(LeastUsedBAR):
                       ) -> Tuple[List[NodeName], Dict[NodeName, str]]:
 
         log.log(TRACE, '[Filter2] -> nodes_names=[%s]', ','.join(node_names))
-        # TODO: optimize this context should be calculated eariler (add passed for every node)
+
+        # TODO: Optimize - this context should be calculated earlier (add passed for every node)
         node_capacities, assigned_apps_counts, apps_spec, _ = data_provider_queried
 
         node_shapes = _create_shapes_from_nodes(node_capacities)
@@ -211,7 +209,7 @@ class HierBAR(LeastUsedBAR):
 
         # Merging similar node shapes (less_shapes)
         if self.merge_threshold is not None:
-            shapes_to_nodes = merge_shapes(self.merge_threshold, node_capacities, shapes_to_nodes)
+            shapes_to_nodes = _merge_shapes(self.merge_threshold, node_capacities, shapes_to_nodes)
             # After shape merging build inverse relation node->shape.
             node_shapes = {}
             for shape, nodes in shapes_to_nodes.items():
@@ -220,7 +218,6 @@ class HierBAR(LeastUsedBAR):
 
         # Number of nodes of each class
         # number_of_nodes_each_shape = dict(Counter(node_shapes.values()))
-        # log.log(TRACE, '[Filter2] Number of nodes in classes: %r', number_of_nodes_each_shape)
 
         requested = apps_spec[app_name]
 
@@ -234,7 +231,7 @@ class HierBAR(LeastUsedBAR):
 
         # Start with best class (least variance)
         failed = {}  # node_name to error string
-        matching_class_variance: float = None
+
         for class_shape, class_variance in sorted(class_variances.items(),
                                                   key=lambda x: x[1]):
             class_shape: Shape

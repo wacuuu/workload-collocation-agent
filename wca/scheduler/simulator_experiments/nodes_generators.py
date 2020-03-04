@@ -14,13 +14,13 @@
 from typing import Dict, Set, List
 
 from wca.scheduler.cluster_simulator import Node, Resources
-from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.types import ResourceType as ResourceType
 
 
 def prepare_nodes(
         node_specs: Dict[str, Dict],  # node_type to resource dict,
         type_counts: Dict[str, int],  # node_type to number of nodes,
-        dimensions: Set[rt]
+        dimensions: Set[ResourceType]
         ) -> List[Node]:
     """Create cluster with node_specs with number of each kind (node_spec are sorted by name).
     A: {ram: 1}, B: {ram: 10}

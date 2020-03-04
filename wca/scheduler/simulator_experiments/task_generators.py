@@ -17,7 +17,7 @@ from collections import defaultdict
 from typing import List, Dict
 
 from wca.scheduler.cluster_simulator import Task
-from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.types import ResourceType as ResourceType
 
 
 def extend_membw_dimensions_to_write_read(taskset):
@@ -25,10 +25,10 @@ def extend_membw_dimensions_to_write_read(taskset):
     new_taskset = []
     for task in taskset:
         task_ = task.copy()
-        membw = task_.requested.data[rt.MEMBW]
-        task_.remove_dimension(rt.MEMBW)
-        task_.add_dimension(rt.MEMBW_READ, membw)
-        task_.add_dimension(rt.MEMBW_WRITE, 0)
+        membw = task_.requested.data[ResourceType.MEMBW]
+        task_.remove_dimension(ResourceType.MEMBW)
+        task_.add_dimension(ResourceType.MEMBW_READ, membw)
+        task_.add_dimension(ResourceType.MEMBW_WRITE, 0)
         new_taskset.append(task_)
     return new_taskset
 
@@ -72,7 +72,7 @@ class TaskGeneratorRandom:
     def rand_from_taskset(self, name_suffix: str):
         return randomly_choose_from_taskset_single(
                 extend_membw_dimensions_to_write_read(self.task_definitions),
-                {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}, name_suffix)
+                {ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE}, name_suffix)
 
 
 class TaskGeneratorClasses:
@@ -117,8 +117,8 @@ class TaskGeneratorEqual:
         self.alias = alias
 
         for task_def in task_definitions:
-            if rt.WSS in task_def.requested.data:
-                task_def.remove_dimension(rt.WSS)
+            if ResourceType.WSS in task_def.requested.data:
+                task_def.remove_dimension(ResourceType.WSS)
 
         for r in range(replicas):
             for task_def in task_definitions:

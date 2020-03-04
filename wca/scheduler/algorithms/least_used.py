@@ -1,5 +1,18 @@
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import logging
-from typing import Tuple, Dict, List
+from typing import Dict, List
 
 from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
@@ -7,7 +20,6 @@ from wca.scheduler.algorithms.base import get_requested_fraction
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricName
-from wca.scheduler.types import ResourceType as rt
 from wca.scheduler.types import ResourceType
 
 log = logging.getLogger(__name__)
@@ -15,34 +27,39 @@ log = logging.getLogger(__name__)
 
 class LeastUsed(Fit):
     def __init__(self, data_provider: DataProvider,
-                 dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
-                 least_used_weights: Dict[rt, float] = None,
+                 dimensions: List[ResourceType] = [
+                     ResourceType.CPU, ResourceType.MEM,
+                     ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE],
+                 least_used_weights: Dict[ResourceType, float] = None,
                  alias=None,
                  max_node_score: float = 10.,
                  ):
         Fit.__init__(self, data_provider, dimensions, alias=alias, max_node_score=max_node_score)
         if least_used_weights is None:
             self.least_used_weights = {dim: 1 for dim in self.dimensions}
-            self.least_used_weights[rt.MEMBW_FLAT] = 1
+            self.least_used_weights[ResourceType.MEMBW_FLAT] = 1
         else:
             self.least_used_weights = least_used_weights
 
     def priority_for_node(self, node_name, app_name, data_provider_queried) -> float:
         """ Least used """
-        nodes_capacities, assigned_apps_counts, apps_spec, unassigned_apps_counts = data_provider_queried
+        nodes_capacities, assigned_apps_counts, apps_spec, unassigned_apps_counts =\
+            data_provider_queried
         requested_fraction, metrics = get_requested_fraction(
             app_name, apps_spec, assigned_apps_counts, node_name, nodes_capacities, self.dimensions)
         self.metrics.extend(metrics)
 
         log.log(TRACE,
-                "[Prioritize][app=%s][node=%s] (requested+used) fraction ((requested+used)/capacity): %s",
+                "[Prioritize][app=%s][node=%s] (requested+used) "
+                "fraction ((requested+used)/capacity): %s",
                 app_name, node_name, requested_fraction)
 
         weights = self.least_used_weights
         weights_sum = sum([weight for weight in weights.values()])
         free_fraction = {dim: 1.0 - fraction for dim, fraction in requested_fraction.items()}
         log.log(TRACE,
-                "[Prioritize][app=%s][node=%s][least_used] free fraction (after new scheduling new pod) (1-requested_fraction): %s",
+                "[Prioritize][app=%s][node=%s][least_used] "
+                "free fraction (after new scheduling new pod) (1-requested_fraction): %s",
                 app_name, node_name, free_fraction)
         log.log(TRACE, "[Prioritize][app=%s][node=%s][least_used] free fraction linear sum: %s",
                 app_name, node_name, sum(free_fraction.values()))
@@ -50,7 +67,8 @@ class LeastUsed(Fit):
             sum([free_fraction * weights[dim] for dim, free_fraction in free_fraction.items()]) \
             / weights_sum
         log.debug(
-            "[Prioritize][app=%s][node=%s][least_used] Least used score (weighted linear sum of free_fraction): %s",
+            "[Prioritize][app=%s][node=%s][least_used] "
+            "Least used score (weighted linear sum of free_fraction): %s",
             app_name, node_name, least_used_score)
         self.metrics.add(
             Metric(name=MetricName.BAR_LEAST_USED_SCORE,

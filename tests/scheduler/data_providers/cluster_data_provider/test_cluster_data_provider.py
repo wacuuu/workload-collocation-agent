@@ -5,7 +5,7 @@ import pytest
 from tests.testing import create_json_fixture_mock
 from wca.scheduler.data_providers.cluster_data_provider import (
         ClusterDataProvider, MissingBasicResources, Kubeapi, Prometheus,
-        Queries, GatheringWSSwithoutMemoryBandwidth)
+        Queries, WSSWithoutMemoryBandwidth)
 from wca.scheduler.types import ResourceType
 
 
@@ -23,14 +23,14 @@ def get_mocked_cluster_data_provider():
     return cluster_dp
 
 
-def request_kubeapi_side_effect(*args, **kwargs):
+def request_kubeapi_side_effect(*args):
     if args[0] == '/api/v1/nodes':
         return create_json_fixture_mock('kubeapi_nodes').json()
     elif args[0] == '/api/v1/namespaces/default/pods':
         return create_json_fixture_mock('kubeapi_default_ns_pods').json()
 
 
-def do_query_side_effect(*args, **kwargs):
+def do_query_side_effect(*args):
     if args[0] == Prometheus.queries.NODES_PMM_MEMORY_MODE:
         return create_json_fixture_mock('prometheus_nodes_pmm_memory_mode').json()['data']['result']
     elif args[0] == Prometheus.queries.MEMBW_CAPACITY_READ:
@@ -79,7 +79,7 @@ def test_get_nodes_capacities_raise_exception_no_cpu_or_mem(resources):
 def test_get_nodes_capacities_raise_exception_wss_without_mb(resources):
     cluster_dp = get_mocked_cluster_data_provider()
 
-    with pytest.raises(GatheringWSSwithoutMemoryBandwidth):
+    with pytest.raises(WSSWithoutMemoryBandwidth):
         cluster_dp.get_nodes_capacities(resources)
 
 

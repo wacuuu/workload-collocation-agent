@@ -31,14 +31,14 @@ from wca.scheduler.simulator_experiments.task_generators import TaskGeneratorEqu
 from wca.scheduler.simulator_experiments.tasksets import TASK_DEFINITIONS__ARTIFICIAL_3TYPES
 from wca.scheduler.simulator_experiments.tasksets import TASK_DEFINITIONS__ARTIFICIAL_2, \
     taskset_dimensions
-from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.types import ResourceType as ResourceType
 
 x = DEBUG, TRACE  # to not be auto removed during import cleanup
 
 log = logging.getLogger(__name__)
 
-DIM4 = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
-DIM2 = {rt.CPU, rt.MEM}
+DIM4 = {ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE}
+DIM2 = {ResourceType.CPU, ResourceType.MEM}
 
 
 def experiment_debug():
@@ -60,7 +60,7 @@ def experiment_debug():
         (
             (LeastUsedBAR,
              dict(alias='BAR__LU_ON__WEIGHTS_UNEQUAL', dimensions=DIM4, least_used_weight=1,
-                  bar_weights={rt.MEM: 0.5})),
+                  bar_weights={ResourceType.MEM: 0.5})),
             (LeastUsedBAR,
              dict(alias='BAR__LU_ON__WEIGHTS_EQUAL', dimensions=DIM4, least_used_weight=1)),
             (LeastUsedBAR,
@@ -87,16 +87,16 @@ def experiment_bar():
         ),
         (
             (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_UNEQUAL',
-                              dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE},
-                              least_used_weight=1, bar_weights={rt.MEM: 0.5})),
+                              dimensions={ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE},
+                              least_used_weight=1, bar_weights={ResourceType.MEM: 0.5})),
             (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_EQUAL',
-                              dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE},
+                              dimensions={ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE},
                               least_used_weight=1)),
             (LeastUsedBAR, dict(alias='BAR__LU_ON__WEIGHTS_100x',
-                              dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE},
+                              dimensions={ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE},
                               least_used_weight=100)),
             (LeastUsedBAR,
-             dict(alias='BAR__LU_OFF', dimensions={rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE},
+             dict(alias='BAR__LU_OFF', dimensions={ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE},
                   least_used_weight=0)),
         ),
     )
@@ -129,13 +129,13 @@ def experiment_full(task_scale=1, cluster_scale=1):
             (LeastUsed, dict(dimensions=DIM4)),
             (BAR, dict(dimensions=DIM2)),
             (HierBAR, dict(dimensions=DIM2)),
-            (LeastUsedBAR, dict(alias='kubernetes_baseline', dimensions={rt.CPU, rt.MEM})),
+            (LeastUsedBAR, dict(alias='kubernetes_baseline', dimensions={ResourceType.CPU, ResourceType.MEM})),
             (LeastUsedBAR, dict(alias='BAR__LU_OFF', dimensions=DIM4, least_used_weight=0)),
             (LeastUsedBAR,
              dict(alias='BAR__LU_ON__WEIGHTS_EQUAL', dimensions=DIM4, least_used_weight=1)),
             (LeastUsedBAR,
              dict(alias='BAR__LU_ON__WEIGHTS_UNEQUAL', dimensions=DIM4, least_used_weight=1,
-                  bar_weights={rt.MEM: 0.5})),
+                  bar_weights={ResourceType.MEM: 0.5})),
         ),
     )
 

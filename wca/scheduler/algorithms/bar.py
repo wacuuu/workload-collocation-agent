@@ -22,7 +22,6 @@ from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricName
 from wca.scheduler.types import ResourceType
-from wca.scheduler.types import ResourceType as rt
 
 log = logging.getLogger(__name__)
 
@@ -30,8 +29,10 @@ log = logging.getLogger(__name__)
 class BAR(Fit):
     def __init__(self,
                  data_provider: DataProvider,
-                 dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
-                 bar_weights: Dict[rt, float] = None,
+                 dimensions: List[ResourceType] = [
+                     ResourceType.CPU, ResourceType.MEM,
+                     ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE],
+                 bar_weights: Dict[ResourceType, float] = None,
                  alias=None,
                  max_node_score: float = 10.,
                  ):

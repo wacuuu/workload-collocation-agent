@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Set
 import logging
@@ -20,7 +19,7 @@ from collections import Counter
 from wca.logger import TRACE
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.types import ExtenderArgs, NodeName, AppName
-from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.types import ResourceType as ResourceType
 
 
 log = logging.getLogger(__name__)
@@ -68,14 +67,14 @@ class Resources:
         """Mutates self. """
         assert set(self.data.keys()) == set(b.data.keys())
         for key in self.data.keys():
-            if key == rt.MEMBW_READ or key == rt.MEMBW_WRITE:
+            if key == ResourceType.MEMBW_READ or key == ResourceType.MEMBW_WRITE:
                 continue
             self.data[key] -= b.data[key]
 
         # Special case for MEMBW
-        if rt.MEMBW_READ in self.data and rt.MEMBW_WRITE in self.data:
-            READ = rt.MEMBW_READ
-            WRITE = rt.MEMBW_WRITE
+        if ResourceType.MEMBW_READ in self.data and ResourceType.MEMBW_WRITE in self.data:
+            READ = ResourceType.MEMBW_READ
+            WRITE = ResourceType.MEMBW_WRITE
             x = self.data
             y = b.data
             # mirror calculations for WRITE from READ; that are not two separate dimensions;
@@ -119,12 +118,12 @@ class Task:
         self.real: Resources = Resources.create_empty(requested.data.keys())
         self.life_time: int = 0
 
-    def remove_dimension(self, resource_type: rt):
+    def remove_dimension(self, resource_type: ResourceType):
         """Post-creation removal of one of the dimensions."""
         for resources_ in (self.requested, self.real):
             del resources_.data[resource_type]
 
-    def add_dimension(self, resource_type: rt, requested_val):
+    def add_dimension(self, resource_type: ResourceType, requested_val):
         """Post-creation addition of a dimension."""
         self.requested.data[resource_type] = requested_val
         self.real.data[resource_type] = 0
@@ -169,8 +168,8 @@ class Node:
 
     def get_membw_read_write_ratio(self):
         d_ = self.initial.data
-        if rt.MEMBW_READ in d_ and rt.MEMBW_WRITE in d_:
-            return d_[rt.MEMBW_READ] / d_[rt.MEMBW_WRITE]
+        if ResourceType.MEMBW_READ in d_ and ResourceType.MEMBW_WRITE in d_:
+            return d_[ResourceType.MEMBW_READ] / d_[ResourceType.MEMBW_WRITE]
         return 1
 
     def validate_assignment(self, tasks, new_task):
@@ -244,9 +243,9 @@ class ClusterSimulator:
     nodes: List[Node]
     scheduler: Optional[Algorithm]
     allow_rough_assignment: bool = True
-    dimensions: Set[rt] = \
-        field(default_factory=lambda: {rt.CPU, rt.MEM,
-                                       rt.MEMBW_READ, rt.MEMBW_WRITE})
+    dimensions: Set[ResourceType] = \
+        field(default_factory=lambda: {ResourceType.CPU, ResourceType.MEM,
+                                       ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE})
 
     def __post_init__(self):
         self.time = 0

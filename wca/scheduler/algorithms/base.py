@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 from abc import abstractmethod
 from typing import Tuple, Dict, List, Optional, Set
 import pprint
@@ -20,9 +19,8 @@ from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
 from wca.scheduler.algorithms import Algorithm, log, DataMissingException
 from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.types import ResourceType
 from wca.scheduler.metrics import MetricRegistry, MetricName
-from wca.scheduler.types import NodeName, Resources, AppsCount, AppName, ResourceType as rt, \
+from wca.scheduler.types import NodeName, Resources, AppsCount, AppName, ResourceType, \
     ExtenderArgs, ExtenderFilterResult, HostPriority
 from wca.scheduler.utils import extract_common_input
 
@@ -34,7 +32,7 @@ QueryDataProviderInfo = Tuple[
 ]
 
 
-# Convert data provider to common tupple
+# Convert data provider to common tuple.
 def query_data_provider(data_provider, dimensions) -> QueryDataProviderInfo:
     """Should be overwritten if one needs more data from DataProvider."""
     assigned_apps_counts, apps_unassigned = data_provider.get_apps_counts()
@@ -50,7 +48,9 @@ class BaseAlgorithm(Algorithm):
        not match everybody needs."""
 
     def __init__(self, data_provider: DataProvider,
-                 dimensions: List[ResourceType] = [rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE],
+                 dimensions: List[ResourceType] = [
+                     ResourceType.CPU, ResourceType.MEM,
+                     ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE],
                  max_node_score: float = 10.,
                  alias: str = None
                  ):
@@ -140,16 +140,16 @@ class BaseAlgorithm(Algorithm):
     # We need that app_fit_node thanks to fit implementation and then come back to list of nodes.
     def app_fit_nodes(self, node_names: List[NodeName], app_name: str,
                       data_provider_queried: QueryDataProviderInfo) -> Tuple[
-        List[NodeName], Dict[NodeName, str]]:
+            List[NodeName], Dict[NodeName, str]]:
         """
-        return accepted and failed_nodes
+        Return accepted and failed nodes.
         Default implementation always accepts all nodes.
         """
         return node_names, {}
 
 
 def used_resources_on_node(
-        dimensions: Set[rt],
+        dimensions: Set[ResourceType],
         assigned_apps_counts: Dict[AppName, int],
         apps_spec: [Dict[AppName, Resources]]) -> Resources:
     """Calculate used resources on a given node using data returned by data provider."""
@@ -162,7 +162,10 @@ def used_resources_on_node(
 
 def _check_keys(a, b: Resources):
     if not set(a.keys()) == set(b.keys()):
-        raise ValueError('the same dimensions must be provided for both resources %r vs %r', a.keys(), b.keys())
+        raise ValueError(
+                'the same dimensions must be provided for both resources %r vs %r',
+                a.keys(), b.keys())
+
 
 def sum_resources(a: Resources, b: Resources) -> Resources:
     _check_keys(a, b)
@@ -179,12 +182,15 @@ def substract_resources(a: Resources, b: Resources,
 
     c = a.copy()
     for dimension in dimensions:
-        if dimension not in (rt.MEMBW_READ, rt.MEMBW_WRITE) or membw_read_write_ratio is None:
+        if dimension not in (
+                ResourceType.MEMBW_READ,
+                ResourceType.MEMBW_WRITE) or membw_read_write_ratio is None:
             c[dimension] = a[dimension] - b[dimension]
-    if rt.MEMBW_READ in dimensions and membw_read_write_ratio is not None:
-        assert rt.MEMBW_WRITE in dimensions
+
+    if ResourceType.MEMBW_READ in dimensions and membw_read_write_ratio is not None:
+        assert ResourceType.MEMBW_WRITE in dimensions
         assert type(membw_read_write_ratio) == float
-        read, write = rt.MEMBW_READ, rt.MEMBW_WRITE
+        read, write = ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE
         c[read] = a[read] - (b[read] + b[write] * membw_read_write_ratio)
         c[write] = a[write] - (b[write] + b[read] / membw_read_write_ratio)
     return c
@@ -192,9 +198,9 @@ def substract_resources(a: Resources, b: Resources,
 
 def calculate_read_write_ratio(capacity: Resources) -> Optional[float]:
     dimensions = capacity.keys()
-    if rt.MEMBW_READ in dimensions:
-        assert rt.MEMBW_WRITE in dimensions
-        return float(capacity[rt.MEMBW_READ]) / float(capacity[rt.MEMBW_WRITE])
+    if ResourceType.MEMBW_READ in dimensions:
+        assert ResourceType.MEMBW_WRITE in dimensions
+        return float(capacity[ResourceType.MEMBW_READ]) / float(capacity[ResourceType.MEMBW_WRITE])
     else:
         return None
 
@@ -203,12 +209,13 @@ def flat_membw_read_write(a: Resources, membw_read_write_ratio: Optional[float])
     """Takes >>a<< and replace rt.MEMBW_WRITE and rt.MEMBW_READ with single value rt.MEMBW_FLAT."""
     dimensions = a.keys()
     b = a.copy()
-    if rt.MEMBW_READ in dimensions:
-        assert rt.MEMBW_WRITE in dimensions
+    if ResourceType.MEMBW_READ in dimensions:
+        assert ResourceType.MEMBW_WRITE in dimensions
         assert type(membw_read_write_ratio) == float
-        del b[rt.MEMBW_READ]
-        del b[rt.MEMBW_WRITE]
-        b[rt.MEMBW_FLAT] = a[rt.MEMBW_READ] + membw_read_write_ratio * a[rt.MEMBW_WRITE]
+        del b[ResourceType.MEMBW_READ]
+        del b[ResourceType.MEMBW_WRITE]
+        b[ResourceType.MEMBW_FLAT] = \
+            a[ResourceType.MEMBW_READ] + membw_read_write_ratio * a[ResourceType.MEMBW_WRITE]
     return b
 
 
@@ -218,7 +225,7 @@ def divide_resources(a: Resources, b: Resources,
     assert set(a.keys()) == set(b.keys()), \
         'the same dimensions must be provided for both resources'
     # must flatten membw_read_write
-    if rt.MEMBW_READ in a.keys() and membw_read_write_ratio is not None:
+    if ResourceType.MEMBW_READ in a.keys() and membw_read_write_ratio is not None:
         a = flat_membw_read_write(a, membw_read_write_ratio)
         b = flat_membw_read_write(b, membw_read_write_ratio)
 
@@ -279,10 +286,10 @@ def used_free_requested(
 
     # Extra metric
     free_membw_flat = flat_membw_read_write(free, membw_read_write_ratio)
-    if rt.MEMBW_FLAT in free_membw_flat:
+    if ResourceType.MEMBW_FLAT in free_membw_flat:
         metrics.append(Metric(
             name=MetricName.FIT_PREDICTED_MEMBW_FLAT_USAGE,
-            value=free_membw_flat[rt.MEMBW_FLAT],
+            value=free_membw_flat[ResourceType.MEMBW_FLAT],
             labels=dict(app=app_name, node=node_name),
             type=MetricType.GAUGE))
 

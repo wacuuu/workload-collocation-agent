@@ -25,7 +25,7 @@ from dataclasses import dataclass
 
 from wca.scheduler.algorithms.base import query_data_provider, sum_resources
 from wca.scheduler.cluster_simulator import Resources, Node, AssignmentsCounts, ClusterSimulator
-from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.types import ResourceType as ResourceType
 
 log = logging.getLogger(__name__)
 
@@ -74,14 +74,14 @@ def generate_subexperiment_report(
     """
 
     iterations = [0 for _ in range(len(iterations_data))]
-    cpu_usage = [iter_.cluster_resource_usage.data[rt.CPU] for iter_ in iterations_data]
-    mem_usage = [iter_.cluster_resource_usage.data[rt.MEM] for iter_ in iterations_data]
+    cpu_usage = [iter_.cluster_resource_usage.data[ResourceType.CPU] for iter_ in iterations_data]
+    mem_usage = [iter_.cluster_resource_usage.data[ResourceType.MEM] for iter_ in iterations_data]
 
-    if rt.MEMBW_READ in iterations_data[0].cluster_resource_usage.data:
-        membw_usage = [iter_.cluster_resource_usage.data[rt.MEMBW_READ]
+    if ResourceType.MEMBW_READ in iterations_data[0].cluster_resource_usage.data:
+        membw_usage = [iter_.cluster_resource_usage.data[ResourceType.MEMBW_READ]
                        for iter_ in iterations_data]
     else:
-        membw_usage = [iter_.cluster_resource_usage.data[rt.MEMBW] for iter_ in iterations_data]
+        membw_usage = [iter_.cluster_resource_usage.data[ResourceType.MEMBW] for iter_ in iterations_data]
 
     # experiment directory
     exp_dir = '{}/{}'.format(reports_root_directory, title)
@@ -147,16 +147,16 @@ def generate_subexperiment_report(
         for node, usages in iterations_data[-1].per_node_resource_usage.items():
             rounded_last_iter_resources = map(
                 partial(round, ndigits=2),
-                (usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ],))
+                (usages.data[ResourceType.CPU], usages.data[ResourceType.MEM], usages.data[ResourceType.MEMBW_READ],))
             fref.write(
                 "  {}: = ({}, {}, {})\n".format(
                     node.name, *rounded_last_iter_resources))
             nodes_utilization.extend(
-                [usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ]])
+                [usages.data[ResourceType.CPU], usages.data[ResourceType.MEM], usages.data[ResourceType.MEMBW_READ]])
             nodes_utilization_avg.append(
-                (usages.data[rt.CPU] + usages.data[rt.MEM] + usages.data[rt.MEMBW_READ]) / 3)
+                (usages.data[ResourceType.CPU] + usages.data[ResourceType.MEM] + usages.data[ResourceType.MEMBW_READ]) / 3)
             nodes_avg_var.append(statistics.variance(
-                [usages.data[rt.CPU], usages.data[rt.MEM], usages.data[rt.MEMBW_READ]]))
+                [usages.data[ResourceType.CPU], usages.data[ResourceType.MEM], usages.data[ResourceType.MEMBW_READ]]))
 
         util_var = statistics.variance(nodes_utilization)
 
@@ -185,13 +185,13 @@ def generate_subexperiment_report(
 
     if any('aep' in node.name for node, _ in iterations_data[-1].per_node_resource_usage.items()):
         stats['cpu_util(AEP)%'] = 100 * statistics.mean(
-            resources.data[rt.CPU] for node, resources in
+            resources.data[ResourceType.CPU] for node, resources in
             iterations_data[-1].per_node_resource_usage.items() if 'aep' in node.name)
         stats['mem_util(AEP)%'] = 100 * statistics.mean(
-            resources.data[rt.MEM] for node, resources in
+            resources.data[ResourceType.MEM] for node, resources in
             iterations_data[-1].per_node_resource_usage.items() if 'aep' in node.name)
         stats['bw_util(AEP)%'] = 100 * statistics.mean(
-            resources.data[rt.MEMBW_READ] for node, resources in
+            resources.data[ResourceType.MEMBW_READ] for node, resources in
             iterations_data[-1].per_node_resource_usage.items() if 'aep' in node.name)
     else:
         stats['cpu_util(AEP)%'] = float('nan')
