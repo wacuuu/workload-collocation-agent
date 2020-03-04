@@ -14,9 +14,10 @@
 
 FROM centos:7 as base
 RUN yum update -y
-RUN yum install -y wget && \
-    yum install -y libtool libevent libevent-devel openssl-devel && \
-    yum install -y autoconf automake make gcc-c++
+RUN yum install -y wget \
+    libtool libevent libevent-devel openssl-devel \
+    autoconf automake make gcc-c++
+
 
 RUN wget https://github.com/downloads/libevent/libevent/libevent-2.0.21-stable.tar.gz && \
     tar xfz libevent-2.0.21-stable.tar.gz && \
@@ -28,7 +29,7 @@ RUN wget https://github.com/downloads/libevent/libevent/libevent-2.0.21-stable.t
     export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}
 
 FROM base as builder
-RUN yum install -y pcre-devel zlib-devel libmemcached-devel
+RUN yum install -y pcre-devel zlib-devel libmemcached-devel libjemalloc1 libjemalloc-dev gcc
 RUN wget https://github.com/RedisLabs/memtier_benchmark/archive/1.2.17.tar.gz && \
     tar xfz 1.2.17.tar.gz && \
     cd ./memtier_benchmark-1.2.17 && \
@@ -36,6 +37,11 @@ RUN wget https://github.com/RedisLabs/memtier_benchmark/archive/1.2.17.tar.gz &&
     ./configure && \
     make && \
     make install
+
+RUN wget http://download.redis.io/redis-stable.tar.gz && \
+    tar xvzf redis-stable.tar.gz && \
+    cd redis-stable && \
+    make
 
 FROM base
 RUN yum install -y epel-release && \
@@ -46,5 +52,6 @@ RUN useradd -M memtier
 
 COPY --from=builder /usr/local/bin/memtier_benchmark /usr/local/bin/memtier_benchmark
 COPY /dist/memtier_benchmark_wrapper.pex /usr/bin/
+COPY --from=builder redis-stable/src/redis-cli /usr/local/bin/
 
 ENTRYPOINT ["memtier_benchmark"]

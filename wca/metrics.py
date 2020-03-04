@@ -946,7 +946,7 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricSource.DERIVED_PERF_UNCORE,
             MetricGranularity.PLATFORM,
             ['socket'],
-            'no (uncore_event_names: platform_dram_clockticks, platform_dram_clockticks, '
+            'no (uncore_event_names: platform_imc_clockticks, platform_rpq_occupancy, '
             'platform_rpq_inserts and set enable_derived_metrics)'
         ),
     # Perf uncore derived
