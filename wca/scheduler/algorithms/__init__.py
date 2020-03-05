@@ -44,6 +44,3 @@ class Algorithm(ABC):
     def get_metrics_names(self) -> List[str]:
         return []
 
-    @abstractmethod
-    def reinit_metrics(self):
-        pass

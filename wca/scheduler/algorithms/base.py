@@ -31,7 +31,7 @@ QueryDataProviderInfo = Tuple[
     AppsCount
 ]
 
-DEFUALT_DIMENSIONS: List[ResourceType] = [
+DEFAULT_DIMENSIONS: List[ResourceType] = [
     ResourceType.CPU, ResourceType.MEM,
     ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE
 ]
@@ -53,7 +53,7 @@ class BaseAlgorithm(Algorithm):
        not match everybody needs."""
 
     def __init__(self, data_provider: DataProvider,
-                 dimensions: List[ResourceType] = DEFUALT_DIMENSIONS,
+                 dimensions: List[ResourceType] = DEFAULT_DIMENSIONS,
                  max_node_score: float = 10.,
                  alias: str = None
                  ):
@@ -244,16 +244,19 @@ def divide_resources(a: Resources, b: Resources,
 def used_free_requested(
         node_name, app_name, dimensions,
         nodes_capacities, assigned_apps_counts, apps_spec,
-):
+) -> Tuple[dict, dict, dict, dict, float, List[Metric]]:
     """Helper function not making any new calculations.
     All three values are returned in context of
     specified node_name and app_name.
     (Converts multiple nodes * apps to single)
+    return used, free, requested, capacity, membw_read_write_ratio, metrics
+    used:
     """
 
     capacity = nodes_capacities[node_name]
     membw_read_write_ratio = calculate_read_write_ratio(capacity)
-    used = used_resources_on_node(dimensions, assigned_apps_counts[node_name], apps_spec)
+    node_apps_count = assigned_apps_counts[node_name]
+    used = used_resources_on_node(dimensions, node_apps_count, apps_spec)
     requested = apps_spec[app_name]
 
     # currently used and free currently
@@ -301,12 +304,16 @@ def used_free_requested(
 
 
 def get_requested_fraction(app_name, apps_spec, assigned_apps_counts, node_name,
-                           nodes_capacities, dimensions):
+                           nodes_capacities, dimensions) -> Tuple[Resources, List[Metric]]:
+    """
+    returns requested_fraction, metrics
+    """
     # Current node context: used and free currently
     used, free, requested, capacity, membw_read_write_ratio, metrics = \
         used_free_requested(node_name, app_name, dimensions,
                             nodes_capacities, assigned_apps_counts, apps_spec)
 
+    # SUM requested by app and already used on node
     try:
         requested_and_used = sum_resources(requested, used)
     except ValueError as e:

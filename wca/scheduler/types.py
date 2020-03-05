@@ -90,6 +90,15 @@ class ResourceType(str, Enum):
         return self.value
 
 
+# Very helpful aliases to improve readability.
+MEM = ResourceType.MEM
+CPU = ResourceType.CPU
+MEMBW_WRITE = ResourceType.MEMBW_WRITE
+MEMBW_READ = ResourceType.MEMBW_READ
+WSS = ResourceType.CPU
+MEMBW = ResourceType.MEMBW
+MEMBW_FLAT = ResourceType.MEMBW_FLAT
+
 AppsCount = Dict[AppName, int]
 Resources = Dict[ResourceType, float]
 NodeCapacities = Dict[NodeName, Resources]

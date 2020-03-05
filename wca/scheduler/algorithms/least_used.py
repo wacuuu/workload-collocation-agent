@@ -12,11 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
-from wca.scheduler.algorithms.base import get_requested_fraction
+from wca.scheduler.algorithms.base import get_requested_fraction, DEFAULT_DIMENSIONS
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricName
@@ -25,11 +25,21 @@ from wca.scheduler.types import ResourceType
 log = logging.getLogger(__name__)
 
 
+def calculate_least_used_score(
+        requested_fraction: Dict[ResourceType, float], weights: Dict[ResourceType, float]) \
+        -> Tuple[Dict[ResourceType, float], float]:
+    """Least used score based on requested_fraction and weigths for resources."""
+    weights_sum = sum([weight for weight in weights.values()])
+    free_fraction = {dim: 1.0 - fraction for dim, fraction in requested_fraction.items()}
+    least_used_score = \
+        sum([free_fraction * weights[dim] for dim, free_fraction in free_fraction.items()]) \
+        / weights_sum
+    return free_fraction, least_used_score
+
+
 class LeastUsed(Fit):
     def __init__(self, data_provider: DataProvider,
-                 dimensions: List[ResourceType] = [
-                     ResourceType.CPU, ResourceType.MEM,
-                     ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE],
+                 dimensions: List[ResourceType] = DEFAULT_DIMENSIONS,
                  least_used_weights: Dict[ResourceType, float] = None,
                  alias=None,
                  max_node_score: float = 10.,
@@ -43,7 +53,7 @@ class LeastUsed(Fit):
 
     def priority_for_node(self, node_name, app_name, data_provider_queried) -> float:
         """ Least used """
-        nodes_capacities, assigned_apps_counts, apps_spec, unassigned_apps_counts =\
+        nodes_capacities, assigned_apps_counts, apps_spec, unassigned_apps_counts = \
             data_provider_queried
         requested_fraction, metrics = get_requested_fraction(
             app_name, apps_spec, assigned_apps_counts, node_name, nodes_capacities, self.dimensions)
@@ -54,18 +64,14 @@ class LeastUsed(Fit):
                 "fraction ((requested+used)/capacity): %s",
                 app_name, node_name, requested_fraction)
 
-        weights = self.least_used_weights
-        weights_sum = sum([weight for weight in weights.values()])
-        free_fraction = {dim: 1.0 - fraction for dim, fraction in requested_fraction.items()}
+        free_fraction, least_used_score = calculate_least_used_score(
+            requested_fraction, self.least_used_weights)
         log.log(TRACE,
                 "[Prioritize][app=%s][node=%s][least_used] "
                 "free fraction (after new scheduling new pod) (1-requested_fraction): %s",
                 app_name, node_name, free_fraction)
         log.log(TRACE, "[Prioritize][app=%s][node=%s][least_used] free fraction linear sum: %s",
                 app_name, node_name, sum(free_fraction.values()))
-        least_used_score = \
-            sum([free_fraction * weights[dim] for dim, free_fraction in free_fraction.items()]) \
-            / weights_sum
         log.debug(
             "[Prioritize][app=%s][node=%s][least_used] "
             "Least used score (weighted linear sum of free_fraction): %s",

@@ -11,9 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from wca.scheduler.types import ResourceType as rt
 from wca.scheduler.algorithms.base import used_resources_on_node, sum_resources, \
-    subtract_resources, flat_membw_read_write, divide_resources
+    subtract_resources, flat_membw_read_write, divide_resources, used_free_requested, \
+    get_requested_fraction
+from wca.scheduler.types import ResourceType as rt
 
 
 def build_resources(cpu=None, mem=None, membw_read=None, membw_write=None):
@@ -47,7 +48,7 @@ def test_divide_resources():
     a = build_resources(3, 3, 4, 1)
     b = build_resources(2, 2, 8, 2)
     c = divide_resources(a, b, 4.0)
-    assert c[rt.CPU] == 3.0/2.0 and c[rt.MEM] == 3.0/2.0
+    assert c[rt.CPU] == 3.0 / 2.0 and c[rt.MEM] == 3.0 / 2.0
     assert c[rt.MEMBW_FLAT] == 0.5
 
 
@@ -58,3 +59,28 @@ def test_used_resources_on_node():
     r = used_resources_on_node(dimensions, assigned_apps_counts, apps_spec)
     assert r[rt.CPU] == 64
     assert r[rt.MEM] == 80
+
+
+def test_used_free_requested_and_requested_fraction():
+    dimensions = {rt.CPU, rt.MEM}
+    app_name = 'app1'
+    node_name = 'node1'
+    # Assuming app2 is already scheduled.
+    apps_spec = {app_name: {rt.CPU: 2, rt.MEM: 2}, 'app2': {rt.CPU: 1, rt.MEM: 1}}
+    node_capacities = {node_name: {rt.CPU: 20, rt.MEM: 20}}
+    assigned_apps_counts = {node_name: {'app2': 6}}
+    r = used_free_requested(node_name, app_name, dimensions, node_capacities, assigned_apps_counts,
+                            apps_spec)
+    used, free, requested, capacity, membw_read_write_ratio, metrics = r
+    assert used == {rt.CPU: 6, rt.MEM: 6}  # 6 x app2
+    assert free == {rt.CPU: 14, rt.MEM: 14}  # 20 - 6 x app2
+    assert requested == {rt.CPU: 2, rt.MEM: 2}  # app1 requested
+    assert capacity == {rt.CPU: 20, rt.MEM: 20}  # node1 capacity
+    assert membw_read_write_ratio == None
+
+    # Assuming app2 is already assigned, do the calculation for app1
+    requested_fraction, _ = get_requested_fraction(app_name, apps_spec, assigned_apps_counts,
+                                                   node_name,
+                                                   node_capacities, dimensions)
+    #
+    assert requested_fraction == {'cpu': 0.4, 'mem': 0.4}
