@@ -162,8 +162,7 @@ class Node:
         self.unassigned = available_resources.copy()
 
     def __repr__(self):
-        return "Node(name: {}, initial: {}, unassigned: {})".format(
-            self.name, str(self.initial), str(self.unassigned))
+        return "Node(name: {}, initial: {})".format(self.name, str(self.initial))
 
     def get_membw_read_write_ratio(self):
         d_ = self.initial.data
@@ -184,14 +183,6 @@ class Node:
         unassigned = self._calculate_unassigned(tasks)
         unassigned.subtract_aep_aware(new_task.requested, self.get_membw_read_write_ratio())
         return bool(unassigned)
-
-    def update(self, tasks):
-        """Update usages of resources (recalculate self.free and self.unassigned)"""
-        self.unassigned = self.initial.copy()
-        for task in tasks:
-            if task.assignment == self:
-                self.unassigned.subtract_aep_aware(task.requested,
-                                                   self.get_membw_read_write_ratio())
 
 
 @dataclass
@@ -254,9 +245,6 @@ class ClusterSimulator:
             new_task.assignment = None
             self.tasks.append(new_task)
 
-    def update_nodes_state(self):
-        for node in self.nodes:
-            node.update(self.tasks)
 
     def perform_assignments(self, assignments: Dict[Task, Node]) -> int:
         """Perform binding with rough_assigment_check"""
@@ -314,8 +302,6 @@ class ClusterSimulator:
         self.update_tasks_usage()
         self.update_tasks_list(deleted_tasks, new_tasks)
 
-        # Update state after deleting tasks.
-        self.update_nodes_state()
         log.debug("Changes: deleted_tasks={} new_tasks={}".format(deleted_tasks, new_tasks))
 
         # Assignments
@@ -326,11 +312,8 @@ class ClusterSimulator:
                 assignments[task] = node
 
         assigned_count = self.perform_assignments(assignments)
+
         log.debug("Assignments count: {}".format(assigned_count))
-
-        # Recalculating state after assignments being performed.
-        self.update_nodes_state()
-
         log.debug("Tasks assigned count: {}".format(
             len([task for task in self.tasks if task.assignment is not None])))
 

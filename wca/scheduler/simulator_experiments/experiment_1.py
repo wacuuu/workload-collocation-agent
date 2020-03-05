@@ -216,5 +216,5 @@ if __name__ == "__main__":
     experiment_bar()
     experiment_hierbar()
     experiment_debug()
-    experiment_full()
     experiment_static_assigner()
+    # experiment_full() # takes about 30 seconds

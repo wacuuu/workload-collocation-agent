@@ -79,7 +79,8 @@ class BaseAlgorithm(Algorithm):
         extender_filter_result = ExtenderFilterResult()
 
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
-        log.log(TRACE, '[Filter] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
+        if log.getEffectiveLevel() <= TRACE:
+            log.log(TRACE, '[Filter] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
 
         # First pass (parallelizable, fast K8S style)
         accepted_node_names = []
@@ -112,7 +113,8 @@ class BaseAlgorithm(Algorithm):
         log.debug('[Prioritize] -> ExtenderArgs: %r' % extender_args)
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
-        log.log(TRACE, '[Prioritize] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
+        if log.getEffectiveLevel() <= TRACE:
+            log.log(TRACE, '[Prioritize] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
 
         priorities = []
         for node_name in sorted(nodes_names):
