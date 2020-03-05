@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
+
+from dataclasses import dataclass, field
 
 from wca.config import assure_type
 
@@ -29,6 +30,7 @@ class UnsupportedCase(Exception):
     """Raised when kube-scheduler passes information about nodes rather
     than list of node names which wca-scheduler supports."""
     pass
+
 
 #  https://github.com/kubernetes/kubernetes/blob/release-1.15/pkg/scheduler/api/types.go#L299
 @dataclass
@@ -66,7 +68,6 @@ class ExtenderArgs:
     NodeNames: List[NodeName]
 
     def __post_init__(self):
-
         if self.Nodes:
             raise UnsupportedCase()
 

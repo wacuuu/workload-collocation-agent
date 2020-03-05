@@ -76,7 +76,7 @@ def test_used_free_requested_and_requested_fraction():
     assert free == {rt.CPU: 14, rt.MEM: 14}  # 20 - 6 x app2
     assert requested == {rt.CPU: 2, rt.MEM: 2}  # app1 requested
     assert capacity == {rt.CPU: 20, rt.MEM: 20}  # node1 capacity
-    assert membw_read_write_ratio == None
+    assert membw_read_write_ratio is None
 
     # Assuming app2 is already assigned, do the calculation for app1
     requested_fraction, _ = get_requested_fraction(app_name, apps_spec, assigned_apps_counts,

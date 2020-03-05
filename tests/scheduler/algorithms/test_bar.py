@@ -18,7 +18,7 @@ from wca.scheduler.algorithms.bar import calculate_variance
 from wca.scheduler.types import CPU, MEM, MEMBW
 
 
-@pytest.mark.parametrize('requested_fraction,bar_weights,expected_variance',[
+@pytest.mark.parametrize('requested_fraction,bar_weights,expected_variance', [
     ({CPU: 0.4, MEM: 0.4}, {CPU: 1, MEM: 1}, 0),
     ({CPU: 0.5, MEM: 0.6}, {CPU: 1, MEM: 1}, approx(0.1, abs=0.01)),
     ({CPU: 0.4, MEM: 0.4, MEMBW: 0.6}, {CPU: 1, MEM: 1, MEMBW: 1}, approx(0.01, abs=0.01)),
@@ -27,7 +27,6 @@ from wca.scheduler.types import CPU, MEM, MEMBW
     ({CPU: 0.1, MEM: 0.5, MEMBW: 0.6}, {CPU: 0, MEM: 1, MEMBW: 1}, approx(0.02, abs=0.01)),
     ({CPU: 0.1, MEM: 0.5, MEMBW: 0.6}, {CPU: 0.5, MEM: 1, MEMBW: 1}, approx(0.04, abs=0.01)),
 ])
-def test_calculate_variance(requested_fraction , bar_weights, expected_variance):
+def test_calculate_variance(requested_fraction, bar_weights, expected_variance):
     got_variance, _ = calculate_variance('app1', 'node1', requested_fraction, bar_weights)
     assert got_variance == expected_variance
-

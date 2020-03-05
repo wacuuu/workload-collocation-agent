@@ -44,18 +44,6 @@ def test_resources_to_shape(resources, expected_shape):
 
 @pytest.mark.parametrize('resources1, resources2, expected_diff', [
     [dict(x=1, y=2), dict(x=1, y=2), 0],
-    [dict(x=1, y=2), dict(x=1, y=1), pytest.approx(0.7, 0.1)],
-    [dict(x=1, y=10), dict(x=1, y=1), pytest.approx(6, 1)],
-])
-def test_shape_diff(resources1, resources2, expected_diff):
-    shape1 = _resources_to_shape(resources1)
-    shape2 = _resources_to_shape(resources2)
-    got_diff = _shape_diff(shape1, shape2)
-    assert got_diff == expected_diff
-
-
-@pytest.mark.parametrize('resources1, resources2, expected_diff', [
-    [dict(x=1, y=2), dict(x=1, y=2), 0],
     [dict(x=1, y=2), dict(x=1, y=3), pytest.approx(0.7, 0.1)],
     [dict(x=1, y=2), dict(x=1, y=1), pytest.approx(0.7, 0.1)],
     [dict(x=1, y=10), dict(x=1, y=1), pytest.approx(6, 1)],

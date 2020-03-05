@@ -142,8 +142,8 @@ class BaseAlgorithm(Algorithm):
     # To be refactored -  comeback to holistic view of all nodes.
     # We need that app_fit_node thanks to fit implementation and then come back to list of nodes.
     def app_fit_nodes(self, node_names: List[NodeName], app_name: str,
-                      data_provider_queried: QueryDataProviderInfo) -> Tuple[
-        List[NodeName], Dict[NodeName, str]]:
+                      data_provider_queried: QueryDataProviderInfo) -> \
+            Tuple[List[NodeName], Dict[NodeName, str]]:
         """
         Return accepted and failed nodes.
         Default implementation always accepts all nodes.

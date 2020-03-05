@@ -13,17 +13,16 @@
 # limitations under the License.
 from typing import Tuple, Any
 
-from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.base import BaseAlgorithm
 from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.utils import extract_common_input
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority, NodeName
+from wca.scheduler.types import NodeName
 
 
 class NOPAlgorithm(BaseAlgorithm):
     """rst
     NOP algorithm.
     """
+
     def __str__(self):
         return 'NOP'
 
@@ -37,4 +36,3 @@ class NOPAlgorithm(BaseAlgorithm):
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: Tuple[Any]) -> int:
         return 0
-

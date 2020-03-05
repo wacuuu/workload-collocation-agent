@@ -14,11 +14,11 @@
 import pytest
 from pytest import approx
 
-from wca.scheduler.algorithms.bar import calculate_variance
 from wca.scheduler.algorithms.least_used import calculate_least_used_score
-from wca.scheduler.types import CPU, MEM, MEMBW
+from wca.scheduler.types import CPU, MEM
 
-@pytest.mark.parametrize('requested_fraction,weights,expected_score',[
+
+@pytest.mark.parametrize('requested_fraction,weights,expected_score', [
     ({CPU: 0.5, MEM: 0.6}, {CPU: 1, MEM: 1}, 0.45),
     ({CPU: 0.4, MEM: 0.4}, {CPU: 1, MEM: 1}, 0.6),
     ({CPU: 0.1, MEM: 0.6}, {CPU: 1, MEM: 1}, 0.65),
