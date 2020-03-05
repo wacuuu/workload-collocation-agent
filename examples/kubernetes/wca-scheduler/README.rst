@@ -72,7 +72,7 @@ You should change this IP address to address, where the wca-scheduler will be de
     sudo chmod u+x cfssljson cfssl
 
     # Generate a private key and CSR. Change IP address to wca-scheduler node address!
-    cat <<EOF | ./cfssl genkey - | ./cfssljson -bare server
+    cat << EOF | ./cfssl genkey - | ./cfssljson -bare server
     {
       "hosts": [
         "wca-scheduler.wca-scheduler.pod",
