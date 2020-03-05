@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pprint
 from abc import abstractmethod
 from typing import Tuple, Dict, List, Optional, Set
-import pprint
 
 from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
@@ -29,6 +29,11 @@ QueryDataProviderInfo = Tuple[
     Dict[NodeName, AppsCount],  # assigned_apps_counts
     Dict[AppName, Resources],  # apps_spec
     AppsCount
+]
+
+DEFUALT_DIMENSIONS: List[ResourceType] = [
+    ResourceType.CPU, ResourceType.MEM,
+    ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE
 ]
 
 
@@ -48,9 +53,7 @@ class BaseAlgorithm(Algorithm):
        not match everybody needs."""
 
     def __init__(self, data_provider: DataProvider,
-                 dimensions: List[ResourceType] = [
-                     ResourceType.CPU, ResourceType.MEM,
-                     ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE],
+                 dimensions: List[ResourceType] = DEFUALT_DIMENSIONS,
                  max_node_score: float = 10.,
                  alias: str = None
                  ):
@@ -140,7 +143,7 @@ class BaseAlgorithm(Algorithm):
     # We need that app_fit_node thanks to fit implementation and then come back to list of nodes.
     def app_fit_nodes(self, node_names: List[NodeName], app_name: str,
                       data_provider_queried: QueryDataProviderInfo) -> Tuple[
-            List[NodeName], Dict[NodeName, str]]:
+        List[NodeName], Dict[NodeName, str]]:
         """
         Return accepted and failed nodes.
         Default implementation always accepts all nodes.
@@ -163,8 +166,8 @@ def used_resources_on_node(
 def _check_keys(a, b: Resources):
     if not set(a.keys()) == set(b.keys()):
         raise ValueError(
-                'the same dimensions must be provided for both resources %r vs %r',
-                a.keys(), b.keys())
+            'the same dimensions must be provided for both resources %r vs %r',
+            a.keys(), b.keys())
 
 
 def sum_resources(a: Resources, b: Resources) -> Resources:
@@ -176,7 +179,7 @@ def sum_resources(a: Resources, b: Resources) -> Resources:
 
 
 def subtract_resources(a: Resources, b: Resources,
-                        membw_read_write_ratio: Optional[float] = None) -> Resources:
+                       membw_read_write_ratio: Optional[float] = None) -> Resources:
     _check_keys(a, b)
     dimensions = set(a.keys())
 
@@ -255,8 +258,8 @@ def used_free_requested(
 
     # currently used and free currently
     free = subtract_resources(capacity,
-                               used,
-                               membw_read_write_ratio)
+                              used,
+                              membw_read_write_ratio)
 
     metrics = []
     # Metrics: resources: used, free and requested

@@ -57,13 +57,6 @@ def experiment_debug():
                           nodes_dimensions, ),
         ],
         [
-            (LeastUsedBAR,
-             dict(alias='BAR__LU_ON__WEIGHTS_UNEQUAL', dimensions=DIM4, least_used_weight=1,
-                  bar_weights={ResourceType.MEM: 0.5})),
-            (LeastUsedBAR,
-             dict(alias='BAR__LU_ON__WEIGHTS_EQUAL', dimensions=DIM4, least_used_weight=1)),
-            (LeastUsedBAR,
-             dict(alias='BAR__LU_ON__WEIGHTS_100x', dimensions=DIM4, least_used_weight=100)),
             (LeastUsedBAR, dict(alias='BAR__LU_OFF', dimensions=DIM4, least_used_weight=0)),
         ],
     )
@@ -183,8 +176,8 @@ if __name__ == "__main__":
         level=logging.WARN, format='%(levelname)s:%(module)s:%(funcName)s:%(lineno)d %(message)s')
     logging.getLogger('wca.algorithms').setLevel(logging.INFO)
     # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(logging.DEBUG)
-    experiment_bar()
+    # experiment_bar()
     # experiment_hierbar()
-    # experiment_debug()
+    experiment_debug()
     # experiment_full()
     # experiment_static_assigner()
