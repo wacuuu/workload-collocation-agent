@@ -45,7 +45,7 @@ class Fit(BaseAlgorithm):
             log.error(msg)
             raise DataMissingException(msg) from e
 
-        free_after_bind = substract_resources(
+        free_after_bind = subtract_resources(
             capacity,
             requested_and_used,
             membw_read_write_ratio,
