@@ -35,7 +35,7 @@ def run_until_first_failure(
         scheduler=None,
         **extra_simulator_args)
     data_proxy = ClusterSimulatorDataProvider(simulator)
-    simulator.scheduler = scheduler_class(data_provider=data_proxy, **extra_scheduler_kwargs)
+    simulator.algorithm = scheduler_class(data_provider=data_proxy, **extra_scheduler_kwargs)
 
     iteration = 0
     while simulator.iterate_single_task(task_creation_fun(iteration)) == 1:

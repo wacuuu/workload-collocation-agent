@@ -15,19 +15,59 @@ import datetime
 import itertools
 import logging
 import os
-import pprint
 import statistics
 from collections import Counter, defaultdict
 from functools import partial, reduce
-from typing import Dict, List, Any
+from typing import Dict, List
 
 from dataclasses import dataclass
 
 from wca.scheduler.algorithms.base import query_data_provider, sum_resources
-from wca.scheduler.cluster_simulator import Resources, Node, AssignmentsCounts, ClusterSimulator
-from wca.scheduler.types import ResourceType as ResourceType
+from wca.scheduler.cluster_simulator import Resources, Node, ClusterSimulator, Task
+from wca.scheduler.types import ResourceType as ResourceType, NodeName, AppName
 
 log = logging.getLogger(__name__)
+
+
+class AssignmentsCounts:
+    def __init__(self, tasks: List[Task], nodes: List[Node]):
+        per_node: Dict[NodeName, Counter]
+        per_cluster: Counter
+        unassigned: Counter
+
+        # represents sum of all other siblings in the tree
+        ALL = '__ALL__'
+
+        # 1) assignments per node per app
+        per_node: Dict[NodeName, Counter[AppName]] = {}
+        for node in nodes:
+            per_node[node.name] = Counter(Counter({ALL: 0}))
+            for task in tasks:
+                if task.assignment == node:
+                    app_name = task.get_core_name()
+                    per_node[node.name].update([app_name])
+                    per_node[node.name].update([ALL])
+        assert sum([leaf for node_assig in per_node.values()
+                    for _, leaf in node_assig.items()]) == len(
+            [task for task in tasks if task.assignment is not None]) * 2
+
+        # 2) assignments per app (for the whole cluster)
+        per_cluster: Counter[AppName] = Counter({ALL: 0})
+        # 3) unassigned apps
+        unassigned: Counter[AppName] = Counter({ALL: 0})
+        for task in tasks:
+            app_name = task.get_core_name()
+            if task.assignment is not None:
+                per_cluster.update([app_name])
+                per_cluster.update([ALL])
+            else:
+                unassigned.update([app_name])
+                unassigned.update([ALL])
+        assert sum(per_cluster.values()) + sum(unassigned.values()) == len(tasks) * 2
+
+        self.per_node = per_node
+        self.per_cluster = per_cluster
+        self.unassigned = unassigned
 
 
 @dataclass
@@ -59,20 +99,16 @@ def get_total_capacity_and_demand(nodes_capacities, assigned_apps_counts, unassi
 
 
 def generate_subexperiment_report(
-        title: str, subtitle: str, run_params: Dict[str, Any],
+        exp_name: str,
+        exp_dir: str,
+        subtitle: str,
         iterations_data: List[IterationData],
-        reports_root_directory: str = 'experiments_results',
-        filter_metrics=None, task_gen=None, scheduler=None,
-        charts=False,
+        task_gen,
+        algorithm,
+        charts,
+        extra_charts
 ) -> dict:
-    """
-        Results will be saved to location:
-        {reports_root_directory}/{title}/{subtitle}.{extension}
-        where extensions='png'|'txt'
-
-        >>run_params<< is dict of params used to run experiment
-    """
-
+    extra_metrics = algorithm.get_metrics_names()
     iterations = [0 for _ in range(len(iterations_data))]
     cpu_usage = [iter_.cluster_resource_usage.data[ResourceType.CPU] for iter_ in iterations_data]
     mem_usage = [iter_.cluster_resource_usage.data[ResourceType.MEM] for iter_ in iterations_data]
@@ -81,19 +117,15 @@ def generate_subexperiment_report(
         membw_usage = [iter_.cluster_resource_usage.data[ResourceType.MEMBW_READ]
                        for iter_ in iterations_data]
     else:
-        membw_usage = [iter_.cluster_resource_usage.data[ResourceType.MEMBW] for iter_ in iterations_data]
-
-    # experiment directory
-    exp_dir = '{}/{}'.format(reports_root_directory, title)
-    if not os.path.isdir(exp_dir):
-        os.makedirs(exp_dir)
+        membw_usage = [iter_.cluster_resource_usage.data[ResourceType.MEMBW] for iter_ in
+                       iterations_data]
 
     # ------------------ Text report -----------------------
 
     with open('{}/{}.txt'.format(exp_dir, subtitle), 'w') as fref:
         # Total demand and total capacity based from data from scheduler
         nodes_capacities, assigned_apps_counts, apps_spec, unassigend_apps_count = \
-            query_data_provider(scheduler.data_provider, scheduler.dimensions)
+            query_data_provider(algorithm.data_provider, algorithm.dimensions)
 
         total_capacity, total_demand, total_apps_count = \
             get_total_capacity_and_demand(nodes_capacities, assigned_apps_counts,
@@ -113,7 +145,7 @@ def generate_subexperiment_report(
         if total_apps_count != total_tasks_dict:
             fref.write(
                 "!Scheduled tasks different from total_apps_count from query! total_apps_count={}\n"
-                .format(dict(total_apps_count)))
+                    .format(dict(total_apps_count)))
             assert False, 'should not happen!'
 
         scheduled_tasks = sum(total_tasks_dict.values())
@@ -147,16 +179,20 @@ def generate_subexperiment_report(
         for node, usages in iterations_data[-1].per_node_resource_usage.items():
             rounded_last_iter_resources = map(
                 partial(round, ndigits=2),
-                (usages.data[ResourceType.CPU], usages.data[ResourceType.MEM], usages.data[ResourceType.MEMBW_READ],))
+                (usages.data[ResourceType.CPU], usages.data[ResourceType.MEM],
+                 usages.data[ResourceType.MEMBW_READ],))
             fref.write(
                 "  {}: = ({}, {}, {})\n".format(
                     node.name, *rounded_last_iter_resources))
             nodes_utilization.extend(
-                [usages.data[ResourceType.CPU], usages.data[ResourceType.MEM], usages.data[ResourceType.MEMBW_READ]])
+                [usages.data[ResourceType.CPU], usages.data[ResourceType.MEM],
+                 usages.data[ResourceType.MEMBW_READ]])
             nodes_utilization_avg.append(
-                (usages.data[ResourceType.CPU] + usages.data[ResourceType.MEM] + usages.data[ResourceType.MEMBW_READ]) / 3)
+                (usages.data[ResourceType.CPU] + usages.data[ResourceType.MEM] + usages.data[
+                    ResourceType.MEMBW_READ]) / 3)
             nodes_avg_var.append(statistics.variance(
-                [usages.data[ResourceType.CPU], usages.data[ResourceType.MEM], usages.data[ResourceType.MEMBW_READ]]))
+                [usages.data[ResourceType.CPU], usages.data[ResourceType.MEM],
+                 usages.data[ResourceType.MEMBW_READ]]))
 
         util_var = statistics.variance(nodes_utilization)
 
@@ -165,19 +201,17 @@ def generate_subexperiment_report(
         fref.write("\n\nAvailable metrics: {}\n".format(', '.join(sorted(available_metrics))))
         fref.write("Start of experiment: {}\n".format(
             datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')))
-        fref.write("Run params: {}\n".format(pprint.pformat(run_params, indent=4)))
         fref.write("Iterations: {}\n".format(len(iterations_data)))
 
     with open('{}/README.txt'.format(exp_dir), 'a') as fref:
         fref.write("Subexperiment: {}\n".format(subtitle))
-        fref.write("Run params: {}\n\n".format(pprint.pformat(run_params, indent=4)))
 
     # ----------------------- Stats --------------------------------------
 
     stats = {}
     stats['TASKS'] = str(task_gen)  # sum(total_tasks_dict.values())
     stats['NODES'] = '%s(%s)' % (total_nodes, nodes_info)
-    stats['ALGO'] = str(scheduler)
+    stats['ALGO'] = str(algorithm)
     stats['balance'] = 1 - util_var
     stats['cpu_util%'] = cpu_util * 100
     stats['mem_util%'] = mem_util * 100
@@ -206,13 +240,16 @@ def generate_subexperiment_report(
     # Chart report
 
     if charts:
-        generate_charts(cpu_usage, exp_dir, filter_metrics, iterations, iterations_data, mem_usage,
-                        membw_usage, subtitle, title)
+        generate_charts(cpu_usage, exp_dir,
+                        extra_metrics if extra_charts else None,
+                        iterations,
+                        iterations_data, mem_usage,
+                        membw_usage, subtitle, exp_name)
 
     return stats
 
 
-def generate_charts(cpu_usage, exp_dir, filter_metrics, iterations, iterations_data, mem_usage,
+def generate_charts(cpu_usage, exp_dir, extra_metrics, iterations, iterations_data, mem_usage,
                     membw_usage, subtitle, title):
     """Generate charts if optional libraries are available!"""
     try:
@@ -225,9 +262,9 @@ def generate_charts(cpu_usage, exp_dir, filter_metrics, iterations, iterations_d
         log.warning(
             'matplotlib, seaborn, pandas or numpy not installed, charts will not be generated!')
         exit(1)
-    filter_metrics = filter_metrics or []
+    extra_metrics = extra_metrics or []
     plt.style.use('ggplot')
-    number_of_metrics = len(filter_metrics)
+    number_of_metrics = len(extra_metrics)
     fig, axs = plt.subplots(2 + number_of_metrics)
     fig.set_size_inches(20, 20 + 6 * number_of_metrics)
     axs[0].plot(iterations, cpu_usage, 'r--')
@@ -247,7 +284,7 @@ def generate_charts(cpu_usage, exp_dir, filter_metrics, iterations, iterations_d
     axs[1].set_xlim(iterations.min(), iterations.max())
     axs[1].set_ylim(broken_assignments.min() - 1, broken_assignments.max() + 1)
     # Visualize metrics
-    for pidx, filter in enumerate(filter_metrics):
+    for pidx, filter in enumerate(extra_metrics):
         dicts = []
         for iteration, idata in enumerate(iterations_data):
             d = {k.split('{')[1][:-1]: v
@@ -329,10 +366,10 @@ def wrapper_iteration_finished_callback(iterations_data: List[IterationData]):
         per_node_resource_usage = simulator.per_node_resource_usage(True)
         cluster_resource_usage = simulator.cluster_resource_usage(True)
         broken_assignments = simulator.rough_assignments_per_node.copy()
-        assignments_counts = simulator.assignments_counts()
+        assignments_counts = AssignmentsCounts(simulator.tasks, simulator.nodes)
         tasks_types_count = Counter([task.get_core_name() for task in simulator.tasks])
 
-        metrics_registry = simulator.scheduler.get_metrics_registry()
+        metrics_registry = simulator.algorithm.get_metrics_registry()
         if metrics_registry is not None:
             metrics = metrics_registry.as_dict()
         else:

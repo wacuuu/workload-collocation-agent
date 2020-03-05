@@ -56,8 +56,12 @@ def randomly_choose_from_taskset_single(taskset, dimensions, name_suffix):
 
     return task
 
+class TaskGenerator:
 
-class TaskGeneratorRandom:
+    def __call__(self, index: int) -> Task:
+        raise NotImplementedError
+
+class TaskGeneratorRandom(TaskGenerator):
     """Takes randomly from given task_definitions"""
     def __init__(self, task_definitions, max_items, seed):
         self.max_items = max_items
@@ -75,7 +79,7 @@ class TaskGeneratorRandom:
                 {ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE}, name_suffix)
 
 
-class TaskGeneratorClasses:
+class TaskGeneratorClasses(TaskGenerator):
     """Multiple each possible kind of tasks by replicas"""
     def __init__(self, task_definitions: List[Task], counts: Dict[str, int]):
         self.counts = counts
@@ -108,7 +112,7 @@ class TaskGeneratorClasses:
         return '%d(%s)' % (total_tasks, kinds)
 
 
-class TaskGeneratorEqual:
+class TaskGeneratorEqual(TaskGenerator):
     """Multiple each possible kind of tasks by replicas"""
     def __init__(self, task_definitions: List[Task], replicas, alias=None):
         self.replicas = replicas
