@@ -175,7 +175,7 @@ def sum_resources(a: Resources, b: Resources) -> Resources:
     return c
 
 
-def substract_resources(a: Resources, b: Resources,
+def subtract_resources(a: Resources, b: Resources,
                         membw_read_write_ratio: Optional[float] = None) -> Resources:
     _check_keys(a, b)
     dimensions = set(a.keys())
@@ -206,7 +206,8 @@ def calculate_read_write_ratio(capacity: Resources) -> Optional[float]:
 
 
 def flat_membw_read_write(a: Resources, membw_read_write_ratio: Optional[float]) -> Resources:
-    """Takes >>a<< and replace rt.MEMBW_WRITE and rt.MEMBW_READ with single value rt.MEMBW_FLAT."""
+    """Return resources with replaced memorybandwidth writes and reads """
+    """with counted flat value."""
     dimensions = a.keys()
     b = a.copy()
     if ResourceType.MEMBW_READ in dimensions:
@@ -253,7 +254,7 @@ def used_free_requested(
     requested = apps_spec[app_name]
 
     # currently used and free currently
-    free = substract_resources(capacity,
+    free = subtract_resources(capacity,
                                used,
                                membw_read_write_ratio)
 

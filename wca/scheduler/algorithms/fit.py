@@ -16,7 +16,7 @@ import logging
 from typing import Tuple
 
 from wca.scheduler.algorithms import DataMissingException
-from wca.scheduler.algorithms.base import BaseAlgorithm, sum_resources, substract_resources, \
+from wca.scheduler.algorithms.base import BaseAlgorithm, sum_resources, subtract_resources, \
     used_free_requested
 
 log = logging.getLogger(__name__)

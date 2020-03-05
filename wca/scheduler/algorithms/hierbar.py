@@ -1,3 +1,16 @@
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 import logging
 import statistics
 from collections import defaultdict
@@ -7,7 +20,7 @@ from typing import Tuple, List, Dict
 from wca.logger import TRACE
 from wca.metrics import Metric
 from wca.scheduler.algorithms.base import divide_resources, \
-    calculate_read_write_ratio, sum_resources, substract_resources
+    calculate_read_write_ratio, sum_resources, subtract_resources
 from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.types import ResourceType, NodeName, Resources
@@ -43,7 +56,7 @@ def _shape_diff(first: Shape, second: Shape) -> float:
     second_resources = dict(second)
     assert len(first_resources.keys()) > 1, 'variance requires at least 2 data points'
     assert len(second_resources.keys()) > 1, 'variance requires at least 2 data points'
-    resdiff = substract_resources(first_resources, second_resources)
+    resdiff = subtract_resources(first_resources, second_resources)
     diff_variance = statistics.stdev(resdiff.values())
     log.log(TRACE, '[Filter2][shape_diff] first=%s second=%s shape_diff=%s',
             first, second, diff_variance)
