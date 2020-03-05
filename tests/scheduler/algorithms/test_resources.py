@@ -13,7 +13,7 @@
 # limitations under the License.
 from wca.scheduler.types import ResourceType as rt
 from wca.scheduler.algorithms.base import used_resources_on_node, sum_resources, \
-    substract_resources, flat_membw_read_write, divide_resources
+    flat_membw_read_write, divide_resources, subtract_resources
 
 
 def build_resources(cpu=None, mem=None, membw_read=None, membw_write=None):
@@ -32,7 +32,7 @@ def test_sum_resources():
 
 
 def test_substract_resources():
-    sub_ = substract_resources(build_resources(cpu=3, mem=3), build_resources(cpu=2, mem=2), 4.0)
+    sub_ = subtract_resources(build_resources(cpu=3, mem=3), build_resources(cpu=2, mem=2), 4.0)
     assert sub_[rt.CPU] == 1 and sub_[rt.MEM] == 1
 
 

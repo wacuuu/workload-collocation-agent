@@ -16,7 +16,7 @@ import pytest
 
 from wca.scheduler.algorithms.hierbar import (
     _calc_average_resources, _resources_to_shape, _shape_diff,
-    _create_shapes_from_nodes, reverse_node_shapes, merge_shapes)
+    _create_shapes_from_nodes, reverse_node_shapes, _merge_shapes)
 from wca.scheduler.types import ResourceType as rt
 
 
@@ -81,5 +81,5 @@ def test_merge_shapes(merge_threshold: float, nodes, expected_shapes_number):
     node_capacities = {'n%i' % i: resources for i, resources in enumerate(nodes)}
     node_shapes = _create_shapes_from_nodes(node_capacities)
     shape_to_nodes = reverse_node_shapes(node_shapes)
-    new_shape_to_nodes = merge_shapes(merge_threshold, node_capacities, shape_to_nodes)
+    new_shape_to_nodes = _merge_shapes(merge_threshold, node_capacities, shape_to_nodes)
     assert len(new_shape_to_nodes) == expected_shapes_number
