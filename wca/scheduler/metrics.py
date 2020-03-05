@@ -44,6 +44,13 @@ class MetricName(str, Enum):
         return repr(self.value)
 
 
+def check_metric_metadata(first: Metric, second: Metric):
+    assert first.help == second.help, 'improper help for %r' % first.name
+    assert first.unit == second.unit, 'improper unit for %r' % first.name
+    assert first.type == second.type, 'improper type for %r' % first.name
+    assert first.granularity == second.granularity, 'improper granularity for %r' % first.name
+
+
 @dataclass
 class MetricRegistry:
     """Store metrics in prometheus way"""
@@ -61,6 +68,10 @@ class MetricRegistry:
             metric_already_here = False
             for registered_metric in self._storage[metric.name]:
                 if registered_metric.labels == metric.labels:
+
+                    # Check if metric have same metadata.
+                    check_metric_metadata(registered_metric, metric)
+
                     metric_already_here = True
                     # Check metric type.
                     if metric.type == MetricType.GAUGE:
