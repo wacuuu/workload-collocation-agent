@@ -11,23 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from wca.scheduler.types import ResourceType as ResourceType
+from wca.scheduler.types import CPU, MEM, MEMBW_READ, MEMBW_WRITE, WSS
 
 NODES_DEFINITIONS_2TYPES = dict(
-    aep={ResourceType.CPU: 40, ResourceType.MEM: 1000, ResourceType.MEMBW: 40, ResourceType.MEMBW_READ: 40, ResourceType.MEMBW_WRITE: 10},
-    dram={ResourceType.CPU: 80, ResourceType.MEM: 192, ResourceType.MEMBW: 200, ResourceType.MEMBW_READ: 150, ResourceType.MEMBW_WRITE: 150},
+    aep={CPU: 40, MEM: 1000, MEMBW_READ: 40, MEMBW_WRITE: 10},
+    dram={CPU: 80, MEM: 192, MEMBW_READ: 150, MEMBW_WRITE: 150},
 )
 
 NODES_DEFINITIONS_3TYPES = dict(
-    aep={ResourceType.CPU: 40, ResourceType.MEM: 1000, ResourceType.MEMBW: 40,
-         ResourceType.MEMBW_READ: 40, ResourceType.MEMBW_WRITE: 10, ResourceType.WSS: 256},
-    sml={ResourceType.CPU: 48, ResourceType.MEM: 192, ResourceType.MEMBW: 200,
-         ResourceType.MEMBW_READ: 150, ResourceType.MEMBW_WRITE: 150, ResourceType.WSS: 192},
-    big={ResourceType.CPU: 40, ResourceType.MEM: 394, ResourceType.MEMBW: 200,
-         ResourceType.MEMBW_READ: 200, ResourceType.MEMBW_WRITE: 200, ResourceType.WSS: 394}
+    aep={CPU: 40, MEM: 1000, MEMBW_READ: 40, MEMBW_WRITE: 10, WSS: 256},
+    sml={CPU: 48, MEM: 192, MEMBW_READ: 150, MEMBW_WRITE: 150, WSS: 192},
+    big={CPU: 40, MEM: 394, MEMBW_READ: 200, MEMBW_WRITE: 200, WSS: 394}
 )
 
 NODES_DEFINITIONS_ARTIFICIAL_2DIM_2TYPES = dict(
-    cpuhost={ResourceType.CPU: 100, ResourceType.MEM: 200, ResourceType.MEMBW_READ: 100, ResourceType.MEMBW_WRITE: 100},
-    memhost={ResourceType.CPU: 50, ResourceType.MEM: 1000, ResourceType.MEMBW_READ: 100, ResourceType.MEMBW_WRITE: 100},
+    cpuhost={CPU: 100, MEM: 200, MEMBW_READ: 100, MEMBW_WRITE: 100},
+    memhost={CPU: 50, MEM: 1000, MEMBW_READ: 100, MEMBW_WRITE: 100},
 )

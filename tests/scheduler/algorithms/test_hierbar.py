@@ -17,7 +17,7 @@ import pytest
 from wca.scheduler.algorithms.hierbar import (
     _calc_average_resources, _resources_to_shape, _shape_diff,
     _create_shapes_from_nodes, reverse_node_shapes, _merge_shapes)
-from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.types import MEMBW_READ, MEMBW_WRITE
 
 
 @pytest.mark.parametrize('list_of_resources, expected_avg', [
@@ -58,12 +58,12 @@ def test_shape_diff(resources1, resources2, expected_diff):
 @pytest.mark.parametrize(
     'merge_threshold, nodes, expected_shapes_number', [
         [0, [], 0],
-        [0, [{rt.MEMBW_READ: 1, rt.MEMBW_WRITE: 1}], 1],
-        [1, [{rt.MEMBW_READ: 1, rt.MEMBW_WRITE: 1}, {rt.MEMBW_READ: 1, rt.MEMBW_WRITE: 1}], 1],
-        [1, [{rt.MEMBW_READ: 1, rt.MEMBW_WRITE: 1}, {rt.MEMBW_READ: 10, rt.MEMBW_WRITE: 10}], 1],
-        [1, [{rt.MEMBW_READ: 1, rt.MEMBW_WRITE: 1}, {rt.MEMBW_READ: 15, rt.MEMBW_WRITE: 10}], 2],
-        [1, [{rt.MEMBW_READ: 1, rt.MEMBW_WRITE: 1}, {rt.MEMBW_READ: 10, rt.MEMBW_WRITE: 10},
-             {rt.MEMBW_READ: 15, rt.MEMBW_WRITE: 10}], 2],
+        [0, [{MEMBW_READ: 1, MEMBW_WRITE: 1}], 1],
+        [1, [{MEMBW_READ: 1, MEMBW_WRITE: 1}, {MEMBW_READ: 1, MEMBW_WRITE: 1}], 1],
+        [1, [{MEMBW_READ: 1, MEMBW_WRITE: 1}, {MEMBW_READ: 10, MEMBW_WRITE: 10}], 1],
+        [1, [{MEMBW_READ: 1, MEMBW_WRITE: 1}, {MEMBW_READ: 15, MEMBW_WRITE: 10}], 2],
+        [1, [{MEMBW_READ: 1, MEMBW_WRITE: 1}, {MEMBW_READ: 10, MEMBW_WRITE: 10},
+             {MEMBW_READ: 15, MEMBW_WRITE: 10}], 2],
     ])
 def test_merge_shapes(merge_threshold: float, nodes, expected_shapes_number):
     node_capacities = {'n%i' % i: resources for i, resources in enumerate(nodes)}
