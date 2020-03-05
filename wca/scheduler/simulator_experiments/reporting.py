@@ -80,8 +80,8 @@ class IterationData:
     metrics: Dict[str, List[float]]
 
 
-def get_total_capacity_and_demand(nodes_capacities, assigned_apps_counts, unassigend_apps_count,
-                                  apps_spec):
+def get_total_capacity_and_demand(
+        nodes_capacities, assigned_apps_counts, unassigend_apps_count, apps_spec):
     """ Sum of total cluster capacity and sum of all requirements of all scheduled tasks"""
     total_capacity = reduce(sum_resources, nodes_capacities.values())
     total_apps_count = defaultdict(int)
@@ -202,9 +202,6 @@ def generate_subexperiment_report(
         fref.write("Start of experiment: {}\n".format(
             datetime.datetime.strftime(datetime.datetime.now(), '%Y%m%d_%H%M')))
         fref.write("Iterations: {}\n".format(len(iterations_data)))
-
-    with open('{}/README.txt'.format(exp_dir), 'a') as fref:
-        fref.write("Subexperiment: {}\n".format(subtitle))
 
     # ----------------------- Stats --------------------------------------
 

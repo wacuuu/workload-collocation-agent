@@ -64,7 +64,10 @@ class Resources:
 
     def subtract_aep_aware(self, b, membw_read_write_ratio):
         """Mutates self. """
-        assert set(self.data.keys()) == set(b.data.keys())
+        self_keys = set(self.data.keys())
+        b_keys = set(b.data.keys())
+        assert self_keys == b_keys, 'two different set of keys for resources %s vs %s' % (
+            self_keys, b_keys)
         for key in self.data.keys():
             if key == ResourceType.MEMBW_READ or key == ResourceType.MEMBW_WRITE:
                 continue
