@@ -245,7 +245,6 @@ class ClusterSimulator:
             new_task.assignment = None
             self.tasks.append(new_task)
 
-
     def perform_assignments(self, assignments: Dict[Task, Node]) -> int:
         """Perform binding with rough_assigment_check"""
         assigned_count = 0
