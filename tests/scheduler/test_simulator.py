@@ -26,16 +26,16 @@ from wca.scheduler.data_providers.cluster_simulator_data_provider import (
 
 def run_until_first_failure(
         nodes: List[Node], task_creation_fun: Callable[[int], Task],
-        extra_simulator_args: Dict, scheduler_class: Algorithm,
+        extra_simulator_args: Dict, algorithm_class: Algorithm,
         extra_scheduler_kwargs: Dict, iteration_finished_callback: Callable = None):
     """Compare standard algorithm with the algorithm which looks also at MEMBW"""
     simulator = ClusterSimulator(
         tasks=[],
         nodes=nodes,
-        scheduler=None,
+        algorithm=None,
         **extra_simulator_args)
     data_proxy = ClusterSimulatorDataProvider(simulator)
-    simulator.algorithm = scheduler_class(data_provider=data_proxy, **extra_scheduler_kwargs)
+    simulator.algorithm = algorithm_class(data_provider=data_proxy, **extra_scheduler_kwargs)
 
     iteration = 0
     while simulator.iterate_single_task(task_creation_fun(iteration)) == 1:
