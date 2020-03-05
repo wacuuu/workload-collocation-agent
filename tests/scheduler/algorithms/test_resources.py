@@ -13,7 +13,7 @@
 # limitations under the License.
 from wca.scheduler.types import ResourceType as rt
 from wca.scheduler.algorithms.base import used_resources_on_node, sum_resources, \
-    flat_membw_read_write, divide_resources, subtract_resources
+    subtract_resources, flat_membw_read_write, divide_resources
 
 
 def build_resources(cpu=None, mem=None, membw_read=None, membw_write=None):
