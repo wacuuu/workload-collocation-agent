@@ -33,7 +33,7 @@ log = logging.getLogger(__name__)
 reports_root_directory: str = 'experiments_results'
 
 
-def experiments_iterator(exp_name,
+def experiments_iterator(exp_name, simulator_args,
                          lengths: List[int], # max iterations
                          task_gen_func_defs: List[Tuple[Type[TaskGenerator], dict]],
                          nodes_sets: List[List[Node]],
@@ -56,7 +56,7 @@ def experiments_iterator(exp_name,
     )):
         length, task_gen_func_def, nodes, algorithm_def = args
         iterations_data, task_gen, simulator = \
-            perform_one_experiment(length, task_gen_func_def, nodes, algorithm_def)
+            perform_one_experiment(simulator_args, length, task_gen_func_def, nodes, algorithm_def)
 
         # Sub experiment report
         subexp_title = '%d_%snodes_%s_%s' % (
@@ -81,6 +81,7 @@ def experiments_iterator(exp_name,
 
 
 def perform_one_experiment(
+        simulator_args: dict,
         length: int,
         task_generator_def: Tuple[Callable, Dict],
         nodes: List[Node],
@@ -90,7 +91,7 @@ def perform_one_experiment(
     iterations_data: List[IterationData] = []
 
     # Back reference between data proxy and simulator.
-    simulator = ClusterSimulator(tasks=[], nodes=nodes, algorithm=None)
+    simulator = ClusterSimulator(tasks=[], nodes=nodes, algorithm=None, **simulator_args)
     data_proxy = ClusterSimulatorDataProvider(simulator)
     simulator.algorithm = algorithm_class(data_provider=data_proxy, **algorithm_args)
 

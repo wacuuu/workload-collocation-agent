@@ -113,11 +113,12 @@ class Resources:
 
 
 class Task:
-    def __init__(self, name, requested, assignment=None):
+    def __init__(self, name, requested, duration=None, assignment=None):
         self.name: str = name
         self.assignment: Node = assignment
         self.requested: Resources = requested
         self.life_time: int = 0
+        self.duration: int = duration
 
     def __hash__(self):
         return id(self.name)
@@ -139,7 +140,11 @@ class Task:
 
     def update(self):
         """Update state of task when it becomes older by delta_time."""
-        self.life_time += 1
+        if self.assignment is not None:
+            self.life_time += 1
+            if self.duration is not None and self.life_time > self.duration:
+                self.assignment = None
+
 
     def __repr__(self):
         return "(name: {}, assignment: {}, requested: {})".format(
@@ -191,6 +196,8 @@ class ClusterSimulator:
     nodes: List[Node]
     algorithm: Algorithm
     allow_rough_assignment: bool = True
+    # If there is no new tasks, should it try reassign unassigned tasks.
+    retry_scheduling: bool = False
     dimensions: Set[ResourceType] = \
         field(default_factory=lambda: {ResourceType.CPU, ResourceType.MEM,
                                        ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE})
@@ -258,7 +265,7 @@ class ClusterSimulator:
                     self.rough_assignments_per_node[node] += 1
         return assigned_count
 
-    def call_scheduler(self, new_task: Task) -> Tuple[Task, Node]:
+    def call_scheduler(self, new_task: Task) -> Node:
         """To map simulator structure into required by scheduler.Algorithm interface.
         Returns task_name -> node_name.
         """
@@ -292,8 +299,8 @@ class ClusterSimulator:
         log.debug("Best node chosen in prioritize step: {}".format(best_node))
 
         if best_node is None:
-            return None, None
-        return (new_task, self.get_node_by_name(best_node))
+            return None
+        return self.get_node_by_name(best_node)
 
     def iterate(self, deleted_tasks, new_tasks) -> int:
         log.debug("--- Iteration starts ---")
@@ -303,11 +310,16 @@ class ClusterSimulator:
 
         log.debug("Changes: deleted_tasks={} new_tasks={}".format(deleted_tasks, new_tasks))
 
+        if not new_tasks and self.retry_scheduling:
+            unassigned_tasks = [task for task in self.tasks if task.assignment is None]
+        else:
+            unassigned_tasks = new_tasks
+
         # Assignments
         assignments = {}
-        for new_task in new_tasks:
-            task, node = self.call_scheduler(new_task)
-            if task and node:
+        for task in unassigned_tasks:
+            node = self.call_scheduler(task)
+            if node is not None:
                 assignments[task] = node
 
         assigned_count = self.perform_assignments(assignments)
@@ -328,4 +340,5 @@ class ClusterSimulator:
                 'Tasks names must be unique, use suffixes'
             assert new_task not in self.tasks, \
                 'Each Task must be separate object (deep copy)'
+
         return self.iterate(deleted_tasks=[], new_tasks=new_tasks)

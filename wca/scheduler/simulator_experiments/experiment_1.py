@@ -42,16 +42,45 @@ DIM4 = {CPU, MEM, MEMBW_READ, MEMBW_WRITE}
 DIM2 = {CPU, MEM}
 
 
+def experiment_mini():
+    nodes_dimensions = DIM2
+    experiments_iterator(
+        'debug', dict(retry_scheduling=True),
+        [4],
+        [
+            (TaskGeneratorEqual, dict(task_definitions=taskset_dimensions(nodes_dimensions,
+                                                                          TASK_DEFINITIONS__ARTIFICIAL_3TYPES),
+                                      replicas=1, duration=0)),
+        ],
+        [
+            prepare_nodes(NODES_DEFINITIONS_2TYPES,
+                          dict(aep=1, dram=1),
+                          nodes_dimensions, ),
+        ],
+        [
+            (LeastUsedBAR, dict(alias='BAR__LU_OFF', dimensions=DIM4, least_used_weight=0)),
+        ],
+    )
+
+
 def experiment_debug():
     task_scale = 1
     cluster_scale = 1
     nodes_dimensions = DIM4
+    length = 90
     experiments_iterator(
-        'debug',
-        [30 * task_scale],
+        'debug', dict(retry_scheduling=True),
+        [length * task_scale],
         [
             (TaskGeneratorEqual,
-             dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES, replicas=10 * task_scale)),
+             dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES, replicas=10 * task_scale,
+                  duration=30, alias='long')),
+            (TaskGeneratorEqual,
+             dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES, replicas=10 * task_scale,
+                  duration=5, alias='short')),
+            (TaskGeneratorEqual,
+             dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES, replicas=10 * task_scale,
+                  duration=None)),
         ],
         [
             prepare_nodes(NODES_DEFINITIONS_2TYPES,
@@ -70,7 +99,7 @@ def experiment_bar():
     nodes_dimensions = DIM4
 
     experiments_iterator(
-        'bar_weights',
+        'bar_weights', {},
         [30 * task_scale, ],
         [
             (TaskGeneratorClasses, dict(task_definitions=taskset_dimensions(nodes_dimensions,
@@ -98,7 +127,7 @@ def experiment_bar():
 def experiment_full(task_scale=1, cluster_scale=1):
     nodes_dimensions = DIM4
     experiments_iterator(
-        'intel_demo_local',
+        'intel_demo_local', {},
         [30 * task_scale],
         [
             (TaskGeneratorEqual,
@@ -179,7 +208,7 @@ def experiment_hierbar():
     nodes_dimensions = DIM4
     iterations = 60
     experiments_iterator(
-        'hierbar',
+        'hierbar', {},
         [iterations],
         [
             (TaskGeneratorEqual,
@@ -213,8 +242,9 @@ if __name__ == "__main__":
         level=logging.WARN, format='%(levelname)s:%(module)s:%(funcName)s:%(lineno)d %(message)s')
     logging.getLogger('wca.algorithms').setLevel(logging.INFO)
     # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(logging.DEBUG)
-    experiment_bar()
-    experiment_hierbar()
-    experiment_debug()
-    experiment_static_assigner()
-    # experiment_full() # takes about 30 seconds
+    experiment_mini()
+    # experiment_debug()
+    # experiment_bar()
+    # experiment_hierbar()
+    # experiment_static_assigner()
+    # # experiment_full() # takes about 30 seconds

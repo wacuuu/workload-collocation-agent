@@ -114,11 +114,12 @@ class TaskGeneratorClasses(TaskGenerator):
 
 class TaskGeneratorEqual(TaskGenerator):
     """Multiple each possible kind of tasks by replicas"""
-    def __init__(self, task_definitions: List[Task], replicas, alias=None):
+    def __init__(self, task_definitions: List[Task], replicas, alias=None, duration=None):
         self.replicas = replicas
         self.tasks = []
         self.task_definitions = task_definitions
         self.alias = alias
+        self.duration = duration
 
         for task_def in task_definitions:
             if ResourceType.WSS in task_def.requested.data:
@@ -127,6 +128,7 @@ class TaskGeneratorEqual(TaskGenerator):
         for r in range(replicas):
             for task_def in task_definitions:
                 task_copy = task_def.copy()
+                task_copy.duration = self.duration
                 task_copy.name += Task.CORE_NAME_SEP + str(r)
                 self.tasks.append(task_copy)
 
