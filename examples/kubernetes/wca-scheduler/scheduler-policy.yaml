@@ -9,11 +9,11 @@ data:
       "AlwaysCheckAllPredicates": true,
       "ExtenderConfigs": [
         {
-          "URLPrefix": "http://100.64.176.36:30180",
+          "URLPrefix": "https://100.64.176.36:30180",
           "FilterVerb": "filter",
           "PrioritizeVerb": "prioritize",
           "Weight": 1,
-          "EnableHTTPS": false,
+          "EnableHTTPS": true,
           "Ignorable": true,
           "NodeCacheCapable": true
         }

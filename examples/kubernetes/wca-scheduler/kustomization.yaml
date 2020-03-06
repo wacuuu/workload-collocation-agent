@@ -5,6 +5,11 @@ resources:
   - pod_monitor.yaml
   - service_account.yaml
 
+images:
+- name: wca-scheduler
+  newName: 100.64.176.12:80/wca-scheduler
+  newTag: latest
+
 configMapGenerator:
   - name: wca-scheduler-server
     files:

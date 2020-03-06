@@ -26,7 +26,7 @@ spec:
           effect: "NoSchedule"
       containers:
         - name: wca-scheduler
-          image: 100.64.176.12:80/wca-scheduler:latest
+          image: wca-scheduler
           envFrom:
           - configMapRef:
               name: wca-scheduler-env
@@ -39,6 +39,7 @@ spec:
             - /bin/bash
             - -c
             - source ./env/bin/activate && gunicorn "wca.scheduler.main:main('/etc/wca-scheduler/${config_file}')" -b unix:/var/run/wca/wca-scheduler.sock && deactivate
+
         - name: nginx
           image: nginx:latest
           ports:
@@ -50,6 +51,9 @@ spec:
               mountPath: /var/run/wca
             - name: wca-scheduler-server
               mountPath: /etc/nginx/conf.d
+            - name: wca-scheduler-cert
+              mountPath: /var/run/secrets/kubernetes.io/cert
+              readOnly: true
 
       volumes:
         - name: wca-scheduler-socket
@@ -59,4 +63,7 @@ spec:
             name: wca-scheduler-server 
         - name: wca-scheduler-config
           configMap:
-            name: wca-scheduler-config 
+            name: wca-scheduler-config
+        - name: wca-scheduler-cert
+          secret:
+            secretName: wca-scheduler-cert
