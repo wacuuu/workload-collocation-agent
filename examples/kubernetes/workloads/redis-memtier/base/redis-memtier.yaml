@@ -41,7 +41,7 @@ spec:
               --databases 1
               $redis_extra
         - name: memtier
-          image: redislabs/memtier_benchmark
+          image: memtier_benchmark
           securityContext:
             privileged: true
           envFrom:
