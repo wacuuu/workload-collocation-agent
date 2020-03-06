@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from typing import Dict, List, Tuple, Optional, Set
+from typing import Dict, List, Optional
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from wca.logger import TRACE
 from wca.scheduler.algorithms import Algorithm
@@ -37,7 +37,7 @@ class Resources:
         self.data = resources
 
     def __repr__(self):
-        return str({key: round(val, 2) for key, val in self.data.items()})
+        return repr(self.data)
 
     @staticmethod
     def create_empty(dimensions):
@@ -145,7 +145,6 @@ class Task:
             if self.duration is not None and self.life_time > self.duration:
                 self.assignment = None
 
-
     def __repr__(self):
         return "(name: {}, assignment: {}, requested: {})".format(
             self.name, 'None' if self.assignment is None else self.assignment.name,
@@ -198,15 +197,9 @@ class ClusterSimulator:
     allow_rough_assignment: bool = True
     # If there is no new tasks, should it try reassign unassigned tasks.
     retry_scheduling: bool = False
-    dimensions: Set[ResourceType] = \
-        field(default_factory=lambda: {ResourceType.CPU, ResourceType.MEM,
-                                       ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE})
 
     def __post_init__(self):
         self.time = 0
-        # Make sure node and tasks dimensions matches.
-        assert all([set(node.initial.data.keys()) == self.dimensions for node in self.nodes])
-        assert all([set(task.requested.data.keys()) == self.dimensions for task in self.tasks])
         self.rough_assignments_per_node: Dict[Node, int] = {node: 0 for node in self.nodes}
 
     def get_task_by_name(self, task_name: str) -> Optional[Task]:
@@ -221,7 +214,9 @@ class ClusterSimulator:
 
     def per_node_resource_usage(self, if_percentage: bool = False) -> Dict[Node, Resources]:
         """if_percentage: if output in percentage or original resource units"""
-        node_resource_usage = {node: Resources.create_empty(self.dimensions) for node in self.nodes}
+        first_node_dimensions = self.nodes[0].initial.data.keys()
+        node_resource_usage = {node: Resources.create_empty(first_node_dimensions) for node in
+                               self.nodes}
         for task in self.tasks:
             if task.assignment is None:
                 continue
@@ -230,7 +225,9 @@ class ClusterSimulator:
         if if_percentage:
             return {node: node_resource_usage[node] / node.initial
                     for node in node_resource_usage.keys()}
-        return {node: node_resource_usage[node] for node in node_resource_usage.keys()}
+        node_usage = {node: node_resource_usage[node] for node in node_resource_usage.keys()}
+        log.log(TRACE, 'Per node resource usage: %r', node_usage)
+        return node_usage
 
     def cluster_resource_usage(self, if_percentage: bool = False) -> Dict[Node, Resources]:
         node_resource_usage = self.per_node_resource_usage()
@@ -252,18 +249,16 @@ class ClusterSimulator:
             new_task.assignment = None
             self.tasks.append(new_task)
 
-    def perform_assignments(self, assignments: Dict[Task, Node]) -> int:
+    def perform_assignment(self, task, node) -> bool:
         """Perform binding with rough_assigment_check"""
-        assigned_count = 0
-        for task, node in assignments.items():
-            # Taking all dimensions supported by Simulator whether the app fit the node.
-            task_fits_node = node.validate_assignment(self.tasks, task)
-            if task_fits_node or self.allow_rough_assignment:
-                task.assignment = node
-                assigned_count += 1
-                if not task_fits_node:
-                    self.rough_assignments_per_node[node] += 1
-        return assigned_count
+        # Taking all dimensions supported by Simulator whether the app fit the node.
+        task_fits_node = node.validate_assignment(self.tasks, task)
+        if task_fits_node or self.allow_rough_assignment:
+            task.assignment = node
+            if not task_fits_node:
+                self.rough_assignments_per_node[node] += 1
+            return True
+        return False
 
     def call_scheduler(self, new_task: Task) -> Node:
         """To map simulator structure into required by scheduler.Algorithm interface.
@@ -272,10 +267,6 @@ class ClusterSimulator:
 
         log.log(TRACE, "State before calling scheduler; new_task={}; nodes={}".format(
             new_task, self.nodes))
-
-        assert self.dimensions.issubset(set(new_task.requested.data.keys())), \
-            '{} {}'.format(set(new_task.requested.data.keys()),
-                           self.dimensions)
 
         node_names = [node.name for node in self.nodes]
         pod = {'metadata': {'labels': {'app': new_task.get_core_name()},
@@ -312,19 +303,22 @@ class ClusterSimulator:
 
         if not new_tasks and self.retry_scheduling:
             unassigned_tasks = [task for task in self.tasks if task.assignment is None]
+            if unassigned_tasks:
+                log.debug('Rescheduling unassigned tasks: %s', [t.name for t in unassigned_tasks])
+
         else:
             unassigned_tasks = new_tasks
 
         # Assignments
         assignments = {}
+        assigned_count = 0
         for task in unassigned_tasks:
             node = self.call_scheduler(task)
             if node is not None:
                 assignments[task] = node
+                assigned_count += self.perform_assignment(task, node)
 
-        assigned_count = self.perform_assignments(assignments)
-
-        log.debug("Assignments count: {}".format(assigned_count))
+        log.log(TRACE, "Tried assignments %r: succesful = %d" % (assignments, assigned_count))
         log.debug("Tasks assigned count: {}".format(
             len([task for task in self.tasks if task.assignment is not None])))
 

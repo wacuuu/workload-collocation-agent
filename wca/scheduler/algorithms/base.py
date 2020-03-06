@@ -32,8 +32,10 @@ QueryDataProviderInfo = Tuple[
 ]
 
 DEFAULT_DIMENSIONS: List[ResourceType] = [
-    ResourceType.CPU, ResourceType.MEM,
-    ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE
+    ResourceType.CPU,
+    ResourceType.MEM,
+    ResourceType.MEMBW_READ,
+    ResourceType.MEMBW_WRITE
 ]
 
 
@@ -47,7 +49,7 @@ def query_data_provider(data_provider, dimensions) -> QueryDataProviderInfo:
 
 
 class BaseAlgorithm(Algorithm):
-    """Implementing some basic functionalities which probably
+    """Implementing some basic functionalists which probably
        each Algorithm subclass will need to do. However forcing
        some way of implementing filtering and prioritizing which may
        not match everybody needs."""

@@ -16,7 +16,7 @@ import itertools
 import logging
 import os
 import shutil
-from typing import List, Tuple, Callable, Dict, Type
+from typing import List, Tuple, Callable, Dict, Type, Union
 
 from wca.nodes import Node, Task
 from wca.scheduler.algorithms import Algorithm
@@ -34,45 +34,47 @@ reports_root_directory: str = 'experiments_results'
 
 
 def experiments_iterator(exp_name, simulator_args,
-                         lengths: List[int], # max iterations
+                         lengths: List[int],  # max iterations
                          task_gen_func_defs: List[Tuple[Type[TaskGenerator], dict]],
                          nodes_sets: List[List[Node]],
-                         algorithm_defs: List[Tuple[Type[Algorithm], dict]]
+                         algorithm_defs: List[Tuple[Type[Algorithm], dict]],
+                         rmtree: bool = True,
+                         charts: bool = False,
+                         metrics: Union[bool, List[str]] = False,
                          ):
-
     exp_stats: List[dict] = []
 
     # Recreate results directory.
     exp_dir = '{}/{}'.format(reports_root_directory, exp_name)
-    if os.path.isdir(exp_dir):
-        shutil.rmtree(exp_dir)
-    os.makedirs(exp_dir)
+    if rmtree:
+        if os.path.isdir(exp_dir):
+            shutil.rmtree(exp_dir)
+    os.makedirs(exp_dir, exist_ok=True)
 
-    for exp_iter, args in enumerate(itertools.product(
-        lengths,
-        task_gen_func_defs,
-        nodes_sets,
-        algorithm_defs
+    for n, args in enumerate(itertools.product(
+            lengths,
+            task_gen_func_defs,
+            nodes_sets,
+            algorithm_defs
     )):
         length, task_gen_func_def, nodes, algorithm_def = args
         iterations_data, task_gen, simulator = \
             perform_one_experiment(simulator_args, length, task_gen_func_def, nodes, algorithm_def)
 
         # Sub experiment report
-        subexp_title = '%d_%snodes_%s_%s' % (
-        exp_iter, len(simulator.nodes), task_gen, simulator.algorithm)
+        subexp_name = '%d_%snodes_%s_%s' % (n, len(simulator.nodes), task_gen, simulator.algorithm)
         stats = generate_subexperiment_report(
             exp_name,
             exp_dir,
-            subexp_title,
+            subexp_name,
             iterations_data,
             task_gen=task_gen,
             algorithm=simulator.algorithm,
-            charts=False,
-            extra_charts=False,
+            charts=charts,
+            metrics=metrics,
         )
 
-        log.debug('Finished experiment.', exp_iter)
+        log.debug('Finished experiment.', n)
         log.debug('Stats:', stats)
         exp_stats.append(stats)
 
@@ -83,7 +85,7 @@ def experiments_iterator(exp_name, simulator_args,
 def perform_one_experiment(
         simulator_args: dict,
         length: int,
-        task_generator_def: Tuple[Callable, Dict],
+        task_gen_def: Tuple[Type[TaskGenerator], Dict],
         nodes: List[Node],
         algorithm_def: Tuple[Type[Algorithm], Dict],
 ):
@@ -95,7 +97,7 @@ def perform_one_experiment(
     data_proxy = ClusterSimulatorDataProvider(simulator)
     simulator.algorithm = algorithm_class(data_provider=data_proxy, **algorithm_args)
 
-    task_gen_class, task_gen_args = task_generator_def
+    task_gen_class, task_gen_args = task_gen_def
     task_gen = task_gen_class(**task_gen_args)
 
     run_n_iter(length, simulator, task_gen,

@@ -14,7 +14,7 @@
 import itertools
 import random
 from collections import defaultdict
-from typing import List, Dict
+from typing import List, Dict, Set
 
 from wca.scheduler.cluster_simulator import Task
 from wca.scheduler.types import ResourceType as ResourceType
@@ -56,13 +56,16 @@ def randomly_choose_from_taskset_single(taskset, dimensions, name_suffix):
 
     return task
 
+
 class TaskGenerator:
 
     def __call__(self, index: int) -> Task:
         raise NotImplementedError
 
+
 class TaskGeneratorRandom(TaskGenerator):
     """Takes randomly from given task_definitions"""
+
     def __init__(self, task_definitions, max_items, seed):
         self.max_items = max_items
         self.task_definitions = task_definitions
@@ -75,16 +78,21 @@ class TaskGeneratorRandom(TaskGenerator):
 
     def rand_from_taskset(self, name_suffix: str):
         return randomly_choose_from_taskset_single(
-                extend_membw_dimensions_to_write_read(self.task_definitions),
-                {ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE}, name_suffix)
+            extend_membw_dimensions_to_write_read(self.task_definitions),
+            {ResourceType.CPU, ResourceType.MEM, ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE},
+            name_suffix)
 
 
 class TaskGeneratorClasses(TaskGenerator):
     """Multiple each possible kind of tasks by replicas"""
-    def __init__(self, task_definitions: List[Task], counts: Dict[str, int]):
+
+    def __init__(self, task_definitions: List[Task], counts: Dict[str, int], dimensions=None):
         self.counts = counts
         self.tasks = []
-        self.task_definitions = task_definitions
+        if dimensions is not None:
+            self.task_definitions = taskset_dimensions(dimensions, task_definitions)
+        else:
+            self.task_definitions = task_definitions
 
         classes = defaultdict(list)  # task_name: List[Tasks]
         for task_def_name, replicas in counts.items():
@@ -114,16 +122,17 @@ class TaskGeneratorClasses(TaskGenerator):
 
 class TaskGeneratorEqual(TaskGenerator):
     """Multiple each possible kind of tasks by replicas"""
-    def __init__(self, task_definitions: List[Task], replicas, alias=None, duration=None):
+
+    def __init__(self, task_definitions: List[Task], replicas, alias=None,
+                 duration=None, dimensions=None):
         self.replicas = replicas
         self.tasks = []
         self.task_definitions = task_definitions
         self.alias = alias
         self.duration = duration
 
-        for task_def in task_definitions:
-            if ResourceType.WSS in task_def.requested.data:
-                task_def.remove_dimension(ResourceType.WSS)
+        if dimensions is not None:
+            task_definitions = taskset_dimensions(dimensions, task_definitions)
 
         for r in range(replicas):
             for task_def in task_definitions:
@@ -142,5 +151,16 @@ class TaskGeneratorEqual(TaskGenerator):
             return self.alias
         total_tasks = len(self.task_definitions) * self.replicas
         kinds = ','.join(['%s=%s' % (task_def.name, self.replicas)
-                          for task_def in sorted(self.task_definitions, key=lambda t:t.name)])
+                          for task_def in sorted(self.task_definitions, key=lambda t: t.name)])
         return '%d(%s)' % (total_tasks, kinds)
+
+
+def taskset_dimensions(dimensions: Set[ResourceType], taskset):
+    new_taskset = []
+    dimensions_to_remove = set(taskset[0].requested.data.keys()).difference(dimensions)
+    for task in taskset:
+        task_copy = task.copy()
+        for dim in dimensions_to_remove:
+            task_copy.remove_dimension(dim)
+        new_taskset.append(task_copy)
+    return new_taskset
