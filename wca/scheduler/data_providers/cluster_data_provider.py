@@ -225,8 +225,7 @@ class ClusterDataProvider(DataProvider):
 
             if gather_wss:
                 for node in nodes_with_dram:
-                    node_capacities[node][ResourceType.WSS] =\
-                            memory_node_capacities[node][ResourceType.MEM]
+                    node_capacities[node][ResourceType.WSS] = memory_node_capacities[node]
 
         return node_capacities
 
