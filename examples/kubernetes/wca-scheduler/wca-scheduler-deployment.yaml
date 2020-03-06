@@ -26,7 +26,7 @@ spec:
           effect: "NoSchedule"
       containers:
         - name: wca-scheduler
-          image: wca-scheduler
+          image: 100.64.176.12:80/wca-scheduler:latest
           envFrom:
           - configMapRef:
               name: wca-scheduler-env
