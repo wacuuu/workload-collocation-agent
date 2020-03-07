@@ -67,9 +67,10 @@ class Prometheus:
     timeout: Optional[Numeric(1, 60)] = 1.0
     ssl: Optional[SSL] = None
     queries: Optional[Queries] = Queries()
-    time: Optional[str] = None
+    time: Optional[str] = None  # Evaluation timestamp.
 
     def do_query(self, query: str):
+        """ Implements: https://prometheus.io/docs/prometheus/2.16/querying/api/#instant-queries"""
         url = URL_TPL.format(
                 prometheus_ip='{}:{}'.format(self.host, str(self.port)),
                 path=QUERY_PATH,
@@ -225,8 +226,7 @@ class ClusterDataProvider(DataProvider):
 
             if gather_wss:
                 for node in nodes_with_dram:
-                    node_capacities[node][ResourceType.WSS] =\
-                            memory_node_capacities[node][ResourceType.MEM]
+                    node_capacities[node][ResourceType.WSS] = memory_node_capacities[node]
 
         return node_capacities
 

@@ -98,7 +98,7 @@ pipeline {
                 pip install wheel==0.33.6 bandit==1.6.2;
 
                 echo Checking code with bandit.
-                bandit -r wca -s B101 -f html -o wca-bandit.html
+                bandit -r wca -x wca/scheduler/simulator_experiments -s B101 -f html -o wca-bandit.html
 
                 echo Checking pex with bandit.
                 unzip dist/wca.pex -d dist/wca-pex-bandit
