@@ -61,13 +61,9 @@ class BaseAlgorithm(Algorithm):
                  ):
         self.data_provider = data_provider
         self.dimensions = dimensions
-        self.metrics: MetricRegistry = None
+        self.metrics: MetricRegistry = MetricRegistry()
         self.alias = alias
-        self.reinit_metrics()
         self.max_node_score = max_node_score
-
-    def reinit_metrics(self):
-        self.metrics = MetricRegistry()
 
     def __str__(self):
         if self.alias:
@@ -154,6 +150,20 @@ class BaseAlgorithm(Algorithm):
         Default implementation always accepts all nodes.
         """
         return node_names, {}
+
+    def reschedule(self) -> List[str]:
+        data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
+        if log.getEffectiveLevel() <= TRACE:
+            log.log(TRACE,
+                    '[Reschedule] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
+        pods_to_remove, metrics = self.reschedule_with_metrics(data_provider_queried)
+        self.metrics.extend(metrics)
+        log.debug('[Reschedule] <- Remove: %s', ','.join(pods_to_remove))
+        return pods_to_remove
+
+    def reschedule_with_metrics(self, data_provider_queried: QueryDataProviderInfo
+                                ) -> Tuple[List[str], List[Metric]]:
+        return [], []
 
 
 def used_resources_on_node(

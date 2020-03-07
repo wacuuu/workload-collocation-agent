@@ -29,12 +29,16 @@ class DataMissingException(Exception):
 
 class Algorithm(ABC):
     @abstractmethod
-    def filter(self, extender_args: ExtenderArgs) -> Tuple[ExtenderFilterResult, List[Metric]]:
+    def filter(self, extender_args: ExtenderArgs) -> List[Metric]:
         pass
 
     @abstractmethod
-    def prioritize(self, extender_args: ExtenderArgs) -> Tuple[List[HostPriority], List[Metric]]:
+    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
         pass
+
+    @abstractmethod
+    def reschedule(self) -> List[str]:
+        """Returns lists of Pods to reschedule."""
 
     @abstractmethod
     def get_metrics_registry(self) -> Optional[MetricRegistry]:

@@ -12,11 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from dataclasses import asdict
-from flask import Flask, request, jsonify
 from typing import Dict
 
+from dataclasses import asdict
+from flask import Flask, request, jsonify
+
 from wca.metrics import Metric, MetricType
+from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.metrics import MetricName
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult
 
@@ -29,7 +31,10 @@ DEFAULT_METRIC_LABELS = {}
 class Server:
     def __init__(self, configuration: Dict[str, str]):
         self.app = Flask('k8s scheduler extender')
-        self.algorithm = configuration['algorithm']
+        self.algorithm: Algorithm = configuration['algorithm']
+
+        # TODO: start thread to call Algorithm.rescheule interval according defined interval.
+        # THREAD with given interval that calles algorithm.reschedule and deletes pods.
 
         @self.app.route('/status')
         def status():
@@ -50,6 +55,7 @@ class Server:
             pod_name = extender_args.Pod['metadata']['name']
 
             log.debug('[Filter] %r ' % extender_args)
+            metrics_registry = self.algorithm.get_metrics_registry()
 
             if DEFAULT_NAMESPACE == pod_namespace:
                 log.info('[Filter] Trying to filter nodes for Pod %r' % pod_name)
@@ -58,22 +64,24 @@ class Server:
 
                 log.info('[Filter] Result: %r' % result)
 
-                self.algorithm.metrics.add(Metric(
-                    name=MetricName.FILTER,
-                    value=1,
-                    labels=DEFAULT_METRIC_LABELS,
-                    type=MetricType.COUNTER))
+                if metrics_registry:
+                    metrics_registry.add(Metric(
+                        name=MetricName.FILTER,
+                        value=1,
+                        labels=DEFAULT_METRIC_LABELS,
+                        type=MetricType.COUNTER))
 
                 return jsonify(asdict(result))
             else:
                 log.info('[Filter] Ignoring Pod %r : Different namespace!' %
                          pod_name)
 
-                self.algorithm.metrics.add(Metric(
-                    name=MetricName.POD_IGNORE_FILTER,
-                    value=1,
-                    labels=DEFAULT_METRIC_LABELS,
-                    type=MetricType.COUNTER))
+                if metrics_registry:
+                    metrics_registry.add(Metric(
+                        name=MetricName.POD_IGNORE_FILTER,
+                        value=1,
+                        labels=DEFAULT_METRIC_LABELS,
+                        type=MetricType.COUNTER))
 
                 return jsonify(ExtenderFilterResult(NodeNames=extender_args.NodeNames))
 
@@ -83,6 +91,7 @@ class Server:
             pod_namespace = extender_args.Pod['metadata']['namespace']
             pod_name = extender_args.Pod['metadata']['name']
 
+            metrics_registry = self.algorithm.get_metrics_registry()
             log.debug('[Prioritize-server] %r ' % extender_args)
 
             if DEFAULT_NAMESPACE == pod_namespace:
@@ -95,21 +104,23 @@ class Server:
 
                 log.info('[Prioritize-server] Result: %r ' % priorities)
 
-                self.algorithm.metrics.add(Metric(
-                    name=MetricName.PRIORITIZE,
-                    value=1,
-                    labels=DEFAULT_METRIC_LABELS,
-                    type=MetricType.COUNTER))
+                if metrics_registry:
+                    metrics_registry.add(Metric(
+                        name=MetricName.PRIORITIZE,
+                        value=1,
+                        labels=DEFAULT_METRIC_LABELS,
+                        type=MetricType.COUNTER))
 
                 return jsonify(priorities)
             else:
                 log.info('[Prioritize-server] Ignoring Pod %r : Different namespace!' %
                          pod_name)
 
-                self.algorithm.metrics.add(Metric(
-                    name=MetricName.POD_IGNORE_PRIORITIZE,
-                    value=1,
-                    labels=DEFAULT_METRIC_LABELS,
-                    type=MetricType.COUNTER))
+                if metrics_registry:
+                    metrics_registry.add(Metric(
+                        name=MetricName.POD_IGNORE_PRIORITIZE,
+                        value=1,
+                        labels=DEFAULT_METRIC_LABELS,
+                        type=MetricType.COUNTER))
 
                 return jsonify([])

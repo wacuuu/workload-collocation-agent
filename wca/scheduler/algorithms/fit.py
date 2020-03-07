@@ -13,11 +13,12 @@
 # limitations under the License.
 
 import logging
-from typing import Tuple
+from typing import Tuple, List
 
+from wca.metrics import Metric
 from wca.scheduler.algorithms import DataMissingException
 from wca.scheduler.algorithms.base import BaseAlgorithm, sum_resources, subtract_resources, \
-    used_free_requested
+    used_free_requested, QueryDataProviderInfo
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ class Fit(BaseAlgorithm):
             requested_and_used = sum_resources(requested, used)
         except ValueError as e:
             msg = 'cannot sum app=%s requested=%s and node=%s used=%s: %s' % (
-                    app_name, requested, node_name, used, e)
+                app_name, requested, node_name, used, e)
             log.error(msg)
             raise DataMissingException(msg) from e
 
@@ -64,9 +65,16 @@ class Fit(BaseAlgorithm):
             log.debug('[Filter][app=%s][node=%s] broken capacities: missing %r',
                       app_name, node_name, broken_capacities_str)
             return False, 'Could not fit node for dimensions: missing {}.'.format(
-                    broken_capacities_str)
+                broken_capacities_str)
 
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: Tuple) -> float:
         """no prioritization method for FitGeneric"""
         return 0.0
+
+    def reschedule_with_metrics(self, data_provider_queried: QueryDataProviderInfo,
+                                ) -> Tuple[List[str], List[Metric]]:
+
+        nodes_capacities, assigned_apps_counts, apps_spec, unassigned_apps_count = data_provider_queried
+        # DO THE MAGIC - generate metrics to choose best apps for nodes
+        return [], []
