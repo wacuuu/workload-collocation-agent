@@ -12,21 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+from collections import defaultdict
 from typing import Dict, List, Optional
 
 from dataclasses import dataclass
 
 from wca.logger import TRACE
-from wca.scheduler.algorithms import Algorithm
-from wca.scheduler.types import ExtenderArgs
+from wca.scheduler.algorithms import Algorithm, RescheduleResult
+from wca.scheduler.types import ExtenderArgs, NodeName
 from wca.scheduler.types import ResourceType
 
 log = logging.getLogger(__name__)
-
-# Internal simulator structures
-TaskId = str
-NodeId = int
-Assignments = Dict[TaskId, NodeId]
 
 
 class Resources:
@@ -113,9 +109,13 @@ class Resources:
 
 
 class Task:
-    def __init__(self, name, requested, duration=None, assignment=None):
+    def __init__(self, name, requested, duration=None, assignment=None, node_name: NodeName = None):
         self.name: str = name
+        # assigment is binding done by scheudler and algorithm
         self.assignment: Node = assignment
+        # node name simulates nodeName fomr K8S, which means binding without scheduler
+        # https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#nodename
+        self.node_name: NodeName = node_name
         self.requested: Resources = requested
         self.life_time: int = 0
         self.duration: int = duration
@@ -143,6 +143,7 @@ class Task:
         if self.assignment is not None:
             self.life_time += 1
             if self.duration is not None and self.life_time > self.duration:
+                log.debug('task=%r end of life - unassigned', self.name)
                 self.assignment = None
 
     def __repr__(self):
@@ -199,7 +200,6 @@ class ClusterSimulator:
     retry_scheduling: bool = False
 
     def __post_init__(self):
-        self.time = 0
         self.rough_assignments_per_node: Dict[Node, int] = {node: 0 for node in self.nodes}
 
     def get_task_by_name(self, task_name: str) -> Optional[Task]:
@@ -226,7 +226,7 @@ class ClusterSimulator:
             return {node: node_resource_usage[node] / node.initial
                     for node in node_resource_usage.keys()}
         node_usage = {node: node_resource_usage[node] for node in node_resource_usage.keys()}
-        log.log(TRACE, 'Per node resource usage: %r', node_usage)
+        log.log(TRACE, 'Per node resource usage: %r', {n.name: u for n, u in node_usage.items()})
         return node_usage
 
     def cluster_resource_usage(self, if_percentage: bool = False) -> Dict[Node, Resources]:
@@ -237,17 +237,9 @@ class ClusterSimulator:
             r = r / Resources.sum([node.initial for node in self.nodes])
         return r
 
-    def update_tasks_usage(self):
+    def update_tasks_life(self):
         for task in self.tasks:
             task.update()
-
-    def update_tasks_list(self, deleted_tasks, new_tasks):
-        # Handled deleted
-        self.tasks = [task for task in self.tasks if task not in deleted_tasks]
-        # Handle new
-        for new_task in new_tasks:
-            new_task.assignment = None
-            self.tasks.append(new_task)
 
     def perform_assignment(self, task, node) -> bool:
         """Perform binding with rough_assigment_check"""
@@ -293,38 +285,64 @@ class ClusterSimulator:
             return None
         return self.get_node_by_name(best_node)
 
-    def iterate(self, deleted_tasks, new_tasks) -> int:
+    def iterate(self, new_tasks) -> int:
         log.debug("--- Iteration starts ---")
-        self.time += 1
-        self.update_tasks_usage()
-        self.update_tasks_list(deleted_tasks, new_tasks)
 
-        log.debug("Changes: deleted_tasks={} new_tasks={}".format(deleted_tasks, new_tasks))
+        # Handle new
+        log.debug("New_tasks={}".format(new_tasks))
+        new_unassigned_tasks = []
+        for new_task in new_tasks:
+            self.tasks.append(new_task)
+            if new_task.node_name is not None:
+                node = self.get_node_by_name(new_task.node_name)
+                assert node is not Node
+                new_task.assignment = node
+                new_task.node_name = None  # node_name bindings happens only once
+                log.debug('iteration: %s -> node=%s (by node_name)', new_task.name, node.name)
+            else:
+                new_unassigned_tasks.append(new_task)
 
-        if not new_tasks and self.retry_scheduling:
+        # Retry scheduling for unassigned tasks.
+        if not new_unassigned_tasks and self.retry_scheduling:
             unassigned_tasks = [task for task in self.tasks if task.assignment is None]
             if unassigned_tasks:
                 log.debug('Rescheduling unassigned tasks: %s', [t.name for t in unassigned_tasks])
-
         else:
-            unassigned_tasks = new_tasks
+            unassigned_tasks = new_unassigned_tasks
 
-        # Assignments
-        assignments = {}
-        assigned_count = 0
-        for task in unassigned_tasks:
-            node = self.call_scheduler(task)
-            if node is not None:
-                assignments[task] = node
-                assigned_count += self.perform_assignment(task, node)
+        if unassigned_tasks:
+            # Assignments
+            assignments = {}
+            assigned_count = 0
+            for task in unassigned_tasks:
+                node = self.call_scheduler(task)
+                if node is not None:
+                    assignments[task] = node
+                    assigned_count += self.perform_assignment(task, node)
 
-        log.log(TRACE, "Tried assignments %r: succesful = %d" % (assignments, assigned_count))
-        log.debug("Tasks assigned count: {}".format(
-            len([task for task in self.tasks if task.assignment is not None])))
+            log.log(TRACE, "Tried assignments %r: successful = %d" % (assignments, assigned_count))
+        elif not new_tasks:
+            # Rescheduling - unassign task from given nodes.
+            reschedule_result: RescheduleResult = self.algorithm.reschedule()
+
+            if reschedule_result:
+                log.debug('iteration: rescheduling: %s', reschedule_result)
+                # build a mapping from nodes to apps
+                d = defaultdict(lambda: defaultdict(list))
+                for task in self.tasks:
+                    if task.assignment:
+                        d[task.assignment.name][task.get_core_name()].append(task)
+
+                for node_name, apps_to_remove in reschedule_result.items():
+                    for app_name, apps_to_remove_count in apps_to_remove.items():
+                        for i in range(apps_to_remove_count):
+                            task: Task = d[node_name][app_name].pop()
+                            task.assignment = None
+
+        # Can unbind tasks if task lived long enough.
+        self.update_tasks_life()
 
         log.debug("--- Iteration ends ---")
-
-        return assigned_count
 
     def iterate_single_task(self, new_task: Optional[Task]):
         """Try to assign new_task"""
@@ -335,4 +353,4 @@ class ClusterSimulator:
             assert new_task not in self.tasks, \
                 'Each Task must be separate object (deep copy)'
 
-        return self.iterate(deleted_tasks=[], new_tasks=new_tasks)
+        self.iterate(new_tasks=new_tasks)

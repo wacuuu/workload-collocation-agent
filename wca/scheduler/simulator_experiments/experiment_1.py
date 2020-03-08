@@ -46,11 +46,11 @@ def experiment_mini():
     experiments_iterator(
         'mini',
         dict(retry_scheduling=True),  # Simulator configuration
-        [50],
+        [10],
         [
             (TaskGeneratorEqual,
-             dict(task_definitions=TASKS_2TYPES, dimensions=dim, replicas=10,
-                  duration=3)),
+             dict(task_definitions=TASKS_2TYPES, dimensions=dim, replicas=3,
+                  duration=None, node_name='dram_0')),
         ],
         [
             prepare_nodes(NODES_DEFINITIONS_2TYPES, dict(aep=1, dram=1), dim),

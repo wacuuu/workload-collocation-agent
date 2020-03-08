@@ -17,7 +17,7 @@ from collections import defaultdict
 from typing import List, Dict, Set
 
 from wca.scheduler.cluster_simulator import Task
-from wca.scheduler.types import ResourceType as ResourceType
+from wca.scheduler.types import ResourceType as ResourceType, NodeName
 
 
 def extend_membw_dimensions_to_write_read(taskset):
@@ -86,13 +86,18 @@ class TaskGeneratorRandom(TaskGenerator):
 class TaskGeneratorClasses(TaskGenerator):
     """Multiple each possible kind of tasks by replicas"""
 
-    def __init__(self, task_definitions: List[Task], counts: Dict[str, int], dimensions=None):
+    def __init__(self, task_definitions: List[Task], counts: Dict[str, int], dimensions=None,
+                 class_node_names: Dict[str, NodeName] = None
+                 ):
         self.counts = counts
         self.tasks = []
         if dimensions is not None:
             self.task_definitions = taskset_dimensions(dimensions, task_definitions)
         else:
             self.task_definitions = task_definitions
+
+        # default node binding for each class
+        class_node_names = class_node_names or {}
 
         classes = defaultdict(list)  # task_name: List[Tasks]
         for task_def_name, replicas in counts.items():
@@ -101,6 +106,7 @@ class TaskGeneratorClasses(TaskGenerator):
                     for r in range(replicas):
                         task_copy = task_def.copy()
                         task_copy.name += Task.CORE_NAME_SEP + str(r)
+                        task_copy.node_name = class_node_names.get(task_def_name)
                         classes[task_def_name].append(task_copy)
 
         # merge with zip
@@ -124,7 +130,7 @@ class TaskGeneratorEqual(TaskGenerator):
     """Multiple each possible kind of tasks by replicas"""
 
     def __init__(self, task_definitions: List[Task], replicas, alias=None,
-                 duration=None, dimensions=None):
+                 duration=None, dimensions=None, node_name: NodeName = None):
         self.replicas = replicas
         self.tasks = []
         self.task_definitions = task_definitions
@@ -139,6 +145,7 @@ class TaskGeneratorEqual(TaskGenerator):
                 task_copy = task_def.copy()
                 task_copy.duration = self.duration
                 task_copy.name += Task.CORE_NAME_SEP + str(r)
+                task_copy.node_name = node_name
                 self.tasks.append(task_copy)
 
     def __call__(self, index: int):

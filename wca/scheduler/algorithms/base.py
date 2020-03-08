@@ -17,7 +17,7 @@ from typing import Tuple, Dict, List, Optional, Set
 
 from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
-from wca.scheduler.algorithms import Algorithm, log, DataMissingException
+from wca.scheduler.algorithms import Algorithm, log, DataMissingException, RescheduleResult
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricRegistry, MetricName
 from wca.scheduler.types import NodeName, Resources, AppsCount, AppName, ResourceType, \
@@ -151,19 +151,19 @@ class BaseAlgorithm(Algorithm):
         """
         return node_names, {}
 
-    def reschedule(self) -> List[str]:
+    def reschedule(self) -> RescheduleResult:
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
         if log.getEffectiveLevel() <= TRACE:
             log.log(TRACE,
                     '[Reschedule] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
-        pods_to_remove, metrics = self.reschedule_with_metrics(data_provider_queried)
+        apps_to_reschedule, metrics = self.reschedule_with_metrics(data_provider_queried)
         self.metrics.extend(metrics)
-        log.debug('[Reschedule] <- Remove: %s', ','.join(pods_to_remove))
-        return pods_to_remove
+        log.debug('[Reschedule] <- Remove: %r', ','.join(apps_to_reschedule))
+        return apps_to_reschedule
 
     def reschedule_with_metrics(self, data_provider_queried: QueryDataProviderInfo
-                                ) -> Tuple[List[str], List[Metric]]:
-        return [], []
+                                ) -> Tuple[RescheduleResult, List[Metric]]:
+        return {}, []
 
 
 def used_resources_on_node(
