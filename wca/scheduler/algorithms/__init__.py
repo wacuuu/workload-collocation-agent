@@ -16,13 +16,13 @@ import logging
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict
 
-from wca.metrics import Metric
 from wca.scheduler.metrics import MetricRegistry
-from wca.scheduler.types import ExtenderArgs, HostPriority, NodeName, AppName
+from wca.scheduler.types import ExtenderArgs, HostPriority, NodeName, AppName, ExtenderFilterResult
 
 log = logging.getLogger(__name__)
 
 RescheduleResult = Dict[NodeName, Dict[AppName, int]]
+
 
 class DataMissingException(Exception):
     pass
@@ -30,7 +30,7 @@ class DataMissingException(Exception):
 
 class Algorithm(ABC):
     @abstractmethod
-    def filter(self, extender_args: ExtenderArgs) -> List[Metric]:
+    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         pass
 
     @abstractmethod
