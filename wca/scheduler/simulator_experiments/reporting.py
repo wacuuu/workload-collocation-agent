@@ -306,9 +306,9 @@ def generate_experiment_report(stats_dicts, exp_dir):
     try:
         import pandas as pd
     except ImportError:
-        # No installed packages required for report generation.
-        print('numpy and matplotlib are required!')
-        exit(1)
+        log.warn('cannot generate reports (require pandas, numpy and pivottablejs')
+        return
+
     pd.set_option('display.max_columns', None)
     pd.set_option('display.width', 200)
     df = pd.DataFrame(stats_dicts)
