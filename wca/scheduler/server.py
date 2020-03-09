@@ -12,15 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
+import time
+import threading
 from typing import Dict
 
 from dataclasses import asdict
 from flask import Flask, request, jsonify
 
+from wca.config import Numeric
 from wca.metrics import Metric, MetricType
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.metrics import MetricName
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult
+from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, RescheduleResult
 
 log = logging.getLogger(__name__)
 
@@ -29,12 +32,23 @@ DEFAULT_METRIC_LABELS = {}
 
 
 class Server:
+    def reschedule(self, interval: Numeric(0, 60)):
+        while True:
+            time.sleep(interval)
+            reschedule_result: RescheduleResult = self.algorithm.reschedule()
+
+            for node in reschedule_result:
+                # TODO: kubeapi delete task
+                pass
+
     def __init__(self, configuration: Dict[str, str]):
         self.app = Flask('k8s scheduler extender')
         self.algorithm: Algorithm = configuration['algorithm']
 
-        # TODO: start thread to call Algorithm.rescheule interval according defined interval.
-        # THREAD with given interval that calles algorithm.reschedule and deletes pods.
+        interval = configuration.get('reschedule_interval', 5)
+
+        reschedule_thread = threading.Thread(target=self.reschedule, args=[interval])
+        reschedule_thread.start()
 
         @self.app.route('/status')
         def status():
