@@ -81,12 +81,15 @@ class IterationData:
 
 
 def get_total_capacity_and_demand(
-        nodes_capacities, assigned_apps_counts, unassigned_apps_count, apps_spec):
+        nodes_capacities, assigned_apps, unassigned_apps_count, apps_spec):
     """Sum of total cluster capacity and sum of all requirements of all scheduled tasks"""
     total_capacity = reduce(sum_resources, nodes_capacities.values())
 
     # Total demand
     total_apps_count = defaultdict(int)
+    assigned_apps_counts = {node_name: {app: len(tasks)
+                                        for app, tasks in apps.items()}
+                            for node_name, apps in assigned_apps.items()}
     for apps_count in list(assigned_apps_counts.values()) + [unassigned_apps_count]:
         for app, count in apps_count.items():
             total_apps_count[app] += count
@@ -124,11 +127,11 @@ def generate_subexperiment_report(
 
     with open('{}/{}.txt'.format(exp_dir, subexp_name), 'w') as fref:
         # Total demand and total capacity based from data from scheduler
-        nodes_capacities, assigned_apps_counts, apps_spec, unassigend_apps_count = \
+        nodes_capacities, assigned_apps, apps_spec, unassigend_apps_count = \
             query_data_provider(algorithm.data_provider, algorithm.dimensions)
 
         total_capacity, total_demand, total_apps_count = \
-            get_total_capacity_and_demand(nodes_capacities, assigned_apps_counts,
+            get_total_capacity_and_demand(nodes_capacities, assigned_apps,
                                           unassigend_apps_count, apps_spec)
         fref.write('Total capacity: %s\n' % total_capacity)
         fref.write('Total demand: %s\n' % total_demand)

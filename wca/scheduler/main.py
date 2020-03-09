@@ -19,7 +19,6 @@ from wca.config import load_config, ConfigLoadError
 from wca.scheduler.components import register_algorithms, register_dataproviders
 from wca.scheduler.server import Server
 
-
 DEFAULT_MODULE = 'wca.scheduler'
 
 log = logging.getLogger(DEFAULT_MODULE + '.main')
@@ -55,7 +54,6 @@ def main(config):
 
         log_levels = dict(log_levels, **log_levels_config)
         logger.configure_loggers_from_dict(log_levels)
-
 
     server = Server(configuration)
 

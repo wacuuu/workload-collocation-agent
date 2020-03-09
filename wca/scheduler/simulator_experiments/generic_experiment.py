@@ -18,7 +18,7 @@ import os
 import shutil
 from typing import List, Tuple, Callable, Dict, Type, Union
 
-from wca.nodes import Node, Task
+from wca.nodes import Node
 from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.cluster_simulator import ClusterSimulator
 from wca.scheduler.data_providers.cluster_simulator_data_provider import \
@@ -108,11 +108,13 @@ def perform_one_experiment(
 
 def run_n_iter(length: int,
                simulator: ClusterSimulator,
-               task_gen: Callable[[int], Task],
+               task_gen: TaskGenerator,
                iteration_finished_callback: Callable):
     iteration = 0
     while iteration < length:
-        simulator.iterate_single_task(task_gen(iteration))
+        new_task = task_gen(iteration)
+        assert new_task is not None or iteration > 0, 'in first iteration we need at least one task'
+        simulator.iterate_single_task(new_task)
         iteration_finished_callback(iteration, simulator)
         iteration += 1
     return simulator

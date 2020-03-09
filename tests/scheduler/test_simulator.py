@@ -13,15 +13,14 @@
 # limitations under the License.
 from typing import Dict, List, Callable
 
+from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
-from wca.scheduler.cluster_simulator import Node, Resources, Task
-from wca.scheduler.types import ResourceType as rt
-
-from wca.scheduler.algorithms import Algorithm
 from wca.scheduler.cluster_simulator import ClusterSimulator
+from wca.scheduler.cluster_simulator import Node, Resources, Task
 from wca.scheduler.data_providers.cluster_simulator_data_provider import (
     ClusterSimulatorDataProvider)
+from wca.scheduler.types import CPU, MEM, MEMBW_READ, MEMBW_WRITE
 
 
 def run_until_first_failure(
@@ -46,47 +45,40 @@ def run_until_first_failure(
     return simulator
 
 
-def task_creation_fun(identifier):
-    r = Resources({rt.CPU: 8, rt.MEM: 10})
-    t = Task('stress_ng_{}'.format(identifier), r)
-    return t
-
-
 def test_single_run():
-    simulator_dimensions = {rt.CPU, rt.MEM}
-    nodes = [Node('0', Resources({rt.CPU: 96, rt.MEM: 1000})),
-             Node('1', Resources({rt.CPU: 96, rt.MEM: 320}))]
-    extra_simulator_args = {"allow_rough_assignment": False,
-                            "dimensions": simulator_dimensions}
-    scheduler_class = Fit
-    extra_scheduler_kwargs = {"dimensions": {rt.CPU, rt.MEM}}
+    nodes = [Node('0', Resources({CPU: 96, MEM: 1000})),
+             Node('1', Resources({CPU: 96, MEM: 320}))]
+    algorithm_class = Fit
+    algorithm_args = {'dimensions': {CPU, MEM}}
 
+    def task_creation_fun(identifier):
+        r = Resources({CPU: 8, MEM: 10})
+        t = Task('stress_ng_{}'.format(identifier), r)
+        return t
+
+    extra_simulator_args = {"allow_rough_assignment": False}
     simulator = run_until_first_failure(
         nodes, task_creation_fun, extra_simulator_args,
-        scheduler_class, extra_scheduler_kwargs)
+        algorithm_class, algorithm_args)
     assert len(simulator.tasks) == 25
-
-
-def task_creation_fun_aep(identifier):
-    r = Resources({rt.CPU: 8, rt.MEM: 10,
-                   rt.MEMBW_WRITE: 5, rt.MEMBW_READ: 5})
-    t = Task('stress_ng_{}'.format(identifier), r)
-    return t
 
 
 def test_single_run_membw_write_read():
     """check code membw write/read specific"""
-    simulator_dimensions = {rt.CPU, rt.MEM, rt.MEMBW_READ, rt.MEMBW_WRITE}
-    nodes = [Node('0', Resources(
-        {rt.CPU: 96, rt.MEM: 1000, rt.MEMBW_READ: 40, rt.MEMBW_WRITE: 10})),
-             Node('1', Resources({rt.CPU: 96, rt.MEM: 320, rt.MEMBW_READ: 150,
-                                  rt.MEMBW_WRITE: 150}))]
-    extra_simulator_args = {"allow_rough_assignment": True,
-                            "dimensions": simulator_dimensions}
+    dimensions = {CPU, MEM, MEMBW_READ, MEMBW_WRITE}
+    nodes = [Node('0', Resources({CPU: 96, MEM: 1000, MEMBW_READ: 40, MEMBW_WRITE: 10})),
+             Node('1', Resources({CPU: 96, MEM: 320, MEMBW_READ: 150, MEMBW_WRITE: 150}))]
 
-    extra_scheduler_kwargs = {}
+    algorithm_args = {'dimensions': dimensions}
+
+    def task_creation_fun_aep(identifier):
+        r = Resources({CPU: 8, MEM: 10, MEMBW_WRITE: 5, MEMBW_READ: 5})
+        t = Task('stress_ng_{}'.format(identifier), r)
+        return t
+
+    extra_simulator_args = {"allow_rough_assignment": True}
     for scheduler_class, expected_count in ((Fit, 14), (LeastUsedBAR, 14)):
         simulator = run_until_first_failure(
             nodes, task_creation_fun_aep, extra_simulator_args,
-            scheduler_class, extra_scheduler_kwargs)
+            scheduler_class, algorithm_args)
         assert len(simulator.tasks) == expected_count

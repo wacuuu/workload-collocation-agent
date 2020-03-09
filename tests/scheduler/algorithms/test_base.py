@@ -11,10 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from typing import Dict
+
 from wca.scheduler.algorithms.base import used_resources_on_node, sum_resources, \
     subtract_resources, flat_membw_read_write, divide_resources, used_free_requested, \
     get_requested_fraction
-from wca.scheduler.types import ResourceType as rt
+from wca.scheduler.types import ResourceType as rt, Apps, NodeName
 
 
 def build_resources(cpu=None, mem=None, membw_read=None, membw_write=None):
@@ -68,8 +70,9 @@ def test_used_free_requested_and_requested_fraction():
     # Assuming app2 is already scheduled.
     apps_spec = {app_name: {rt.CPU: 2, rt.MEM: 2}, 'app2': {rt.CPU: 1, rt.MEM: 1}}
     node_capacities = {node_name: {rt.CPU: 20, rt.MEM: 20}}
-    assigned_apps_counts = {node_name: {'app2': 6}}
-    r = used_free_requested(node_name, app_name, dimensions, node_capacities, assigned_apps_counts,
+    assigned_apps: Dict[NodeName, Apps] = {
+        node_name: {'app2': ['app2_0', 'app2_1', 'app2_2', 'app2_3', 'app2_4', 'app2_5']}}
+    r = used_free_requested(node_name, app_name, dimensions, node_capacities, assigned_apps,
                             apps_spec)
     used, free, requested, capacity, membw_read_write_ratio, metrics = r
     assert used == {rt.CPU: 6, rt.MEM: 6}  # 6 x app2
@@ -79,7 +82,7 @@ def test_used_free_requested_and_requested_fraction():
     assert membw_read_write_ratio is None
 
     # Assuming app2 is already assigned, do the calculation for app1
-    requested_fraction, _ = get_requested_fraction(app_name, apps_spec, assigned_apps_counts,
+    requested_fraction, _ = get_requested_fraction(app_name, apps_spec, assigned_apps,
                                                    node_name,
                                                    node_capacities, dimensions)
     #

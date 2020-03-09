@@ -101,7 +101,7 @@ class TaskGeneratorClasses(TaskGenerator):
 
         classes = defaultdict(list)  # task_name: List[Tasks]
         for task_def_name, replicas in counts.items():
-            for task_def in task_definitions:
+            for task_def in self.task_definitions:
                 if task_def.name == task_def_name:
                     for r in range(replicas):
                         task_copy = task_def.copy()

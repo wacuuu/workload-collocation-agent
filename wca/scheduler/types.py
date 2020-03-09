@@ -100,6 +100,7 @@ WSS = ResourceType.WSS
 # MEMBW = ResourceType.MEMBW
 MEMBW_FLAT = ResourceType.MEMBW_FLAT
 
+Apps = Dict[AppName, List[TaskName]]
 AppsCount = Dict[AppName, int]
 Resources = Dict[ResourceType, float]
 NodeCapacities = Dict[NodeName, Resources]
