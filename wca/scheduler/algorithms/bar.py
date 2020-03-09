@@ -74,9 +74,9 @@ class BAR(Fit):
         """ Return priority for node_name for app_name according data from data_provider.
         Priority is based on variance of fraction of requested resources.
         """
-        nodes_capacities, assigned_apps_counts, apps_spec, _ = data_provider_queried
+        nodes_capacities, assigned_apps, apps_spec, _ = data_provider_queried
         requested_fraction, metrics = get_requested_fraction(
-            app_name, apps_spec, assigned_apps_counts, node_name, nodes_capacities, self.dimensions)
+            app_name, apps_spec, assigned_apps, node_name, nodes_capacities, self.dimensions)
         self.metrics.extend(metrics)
 
         variance, metrics = calculate_variance(

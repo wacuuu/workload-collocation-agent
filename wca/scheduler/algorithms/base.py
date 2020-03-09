@@ -21,14 +21,14 @@ from wca.scheduler.algorithms import Algorithm, log, DataMissingException, Resch
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricRegistry, MetricName
 from wca.scheduler.types import NodeName, Resources, AppsCount, AppName, ResourceType, \
-    ExtenderArgs, ExtenderFilterResult, HostPriority
+    ExtenderArgs, ExtenderFilterResult, HostPriority, Apps
 from wca.scheduler.utils import extract_common_input
 
 QueryDataProviderInfo = Tuple[
     Dict[NodeName, Resources],  # nodes_capacities
-    Dict[NodeName, AppsCount],  # assigned_apps_counts
+    Dict[NodeName, Apps],  # assigned_app count
     Dict[AppName, Resources],  # apps_spec
-    AppsCount
+    AppsCount  # unassigend apps cout
 ]
 
 DEFAULT_DIMENSIONS: List[ResourceType] = [
@@ -42,10 +42,10 @@ DEFAULT_DIMENSIONS: List[ResourceType] = [
 # Convert data provider to common tuple.
 def query_data_provider(data_provider, dimensions) -> QueryDataProviderInfo:
     """Should be overwritten if one needs more data from DataProvider."""
-    assigned_apps_counts, apps_unassigned = data_provider.get_apps_counts()
+    assigned_apps, apps_unassigned = data_provider.get_apps_counts()
     nodes_capacities = data_provider.get_nodes_capacities(dimensions)
     apps_spec = data_provider.get_apps_requested_resources(dimensions)
-    return nodes_capacities, assigned_apps_counts, apps_spec, apps_unassigned
+    return nodes_capacities, assigned_apps, apps_spec, apps_unassigned
 
 
 class BaseAlgorithm(Algorithm):
@@ -168,7 +168,7 @@ class BaseAlgorithm(Algorithm):
 
 def used_resources_on_node(
         dimensions: Set[ResourceType],
-        assigned_apps_counts: Dict[AppName, int],
+        assigned_apps_counts: AppsCount,
         apps_spec: [Dict[AppName, Resources]]) -> Resources:
     """Calculate used resources on a given node using data returned by data provider."""
     used = {dim: 0 for dim in dimensions}
@@ -258,7 +258,7 @@ def divide_resources(a: Resources, b: Resources,
 
 def used_free_requested(
         node_name, app_name, dimensions,
-        nodes_capacities, assigned_apps_counts, apps_spec,
+        nodes_capacities, assigned_apps, apps_spec,
 ) -> Tuple[dict, dict, dict, dict, float, List[Metric]]:
     """Helper function not making any new calculations.
     All three values are returned in context of
@@ -270,8 +270,9 @@ def used_free_requested(
 
     capacity = nodes_capacities[node_name]
     membw_read_write_ratio = calculate_read_write_ratio(capacity)
-    node_apps_count = assigned_apps_counts[node_name]
-    used = used_resources_on_node(dimensions, node_apps_count, apps_spec)
+    apps = assigned_apps[node_name]
+    appscount = {app: len(tasks) for app, tasks in apps.items()}
+    used = used_resources_on_node(dimensions, appscount, apps_spec)
     requested = apps_spec[app_name]
 
     # currently used and free currently
@@ -318,7 +319,7 @@ def used_free_requested(
     return used, free, requested, capacity, membw_read_write_ratio, metrics
 
 
-def get_requested_fraction(app_name, apps_spec, assigned_apps_counts, node_name,
+def get_requested_fraction(app_name, apps_spec, assigned_apps, node_name,
                            nodes_capacities, dimensions) -> Tuple[Resources, List[Metric]]:
     """
     returns requested_fraction, metrics
@@ -326,7 +327,7 @@ def get_requested_fraction(app_name, apps_spec, assigned_apps_counts, node_name,
     # Current node context: used and free currently
     used, free, requested, capacity, membw_read_write_ratio, metrics = \
         used_free_requested(node_name, app_name, dimensions,
-                            nodes_capacities, assigned_apps_counts, apps_spec)
+                            nodes_capacities, assigned_apps, apps_spec)
 
     # SUM requested by app and already used on node
     try:

@@ -147,7 +147,7 @@ class Task:
                 self.assignment = None
 
     def __repr__(self):
-        return "(name: {}, assignment: {}, requested: {})".format(
+        return "Task(name: {}, assignment: {}, requested: {})".format(
             self.name, 'None' if self.assignment is None else self.assignment.name,
             str(self.requested))
 

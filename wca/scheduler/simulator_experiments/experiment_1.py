@@ -67,26 +67,18 @@ def experiment_mini():
 def experiment_debug():
     task_scale = 1
     cluster_scale = 1
-    nodes_dimensions = DIM4
+    dim = DIM4
     length = 90
     experiments_iterator(
         'debug', dict(retry_scheduling=True),
         [length * task_scale],
         [
-            (TaskGeneratorEqual,
-             dict(task_definitions=TASKS_3TYPES, replicas=10 * task_scale,
-                  duration=30, alias='long')),
-            (TaskGeneratorEqual,
-             dict(task_definitions=TASKS_3TYPES, replicas=10 * task_scale,
-                  duration=5, alias='short')),
-            (TaskGeneratorEqual,
-             dict(task_definitions=TASKS_3TYPES, replicas=10 * task_scale,
-                  duration=None)),
+            (TaskGeneratorEqual, dict(task_definitions=TASKS_3TYPES, replicas=10 * task_scale, duration=30, alias='long')),
+            (TaskGeneratorEqual, dict(task_definitions=TASKS_3TYPES, replicas=10 * task_scale, duration=5, alias='short')),
+            (TaskGeneratorEqual, dict(task_definitions=TASKS_3TYPES, replicas=10 * task_scale, duration=None)),
         ],
         [
-            prepare_nodes(NODES_DEFINITIONS_2TYPES,
-                          dict(aep=2 * cluster_scale, dram=6 * cluster_scale),
-                          nodes_dimensions, ),
+            prepare_nodes(NODES_DEFINITIONS_2TYPES, dict(aep=2 * cluster_scale, dram=6 * cluster_scale), dim),
         ],
         [
             (LeastUsedBAR, dict(alias='BAR__LU_OFF', dimensions=DIM4, least_used_weight=0)),
@@ -208,17 +200,11 @@ def experiment_hierbar():
         'hierbar', {},
         [iterations],
         [
-            (TaskGeneratorEqual, dict(task_definitions=TASKS_3TYPES, replicas=10)),
-            (TaskGeneratorClasses,
-             dict(task_definitions=TASKS_3TYPES, counts=dict(mem=30), dimensions=dim)),  # AEP
-            (TaskGeneratorClasses,
-             dict(task_definitions=TASKS_3TYPES, counts=dict(mbw=30), dimensions=dim)),  # no AEP
-            (TaskGeneratorClasses,
-             dict(task_definitions=TASKS_3TYPES, counts=dict(cpu=5, mem=5, mbw=20),
-                  dimensions=dim)),
-            (TaskGeneratorClasses,
-             dict(task_definitions=TASKS_3TYPES, counts=dict(cpu=5, mem=20, mbw=5),
-                  dimensions=dim)),
+            (TaskGeneratorEqual, dict(task_definitions=TASKS_3TYPES, replicas=10, dimensions=dim)),
+            (TaskGeneratorClasses, dict(task_definitions=TASKS_3TYPES, counts=dict(mem=30), dimensions=dim)),  # AEP
+            (TaskGeneratorClasses, dict(task_definitions=TASKS_3TYPES, counts=dict(mbw=30), dimensions=dim)),  # no AEP
+            (TaskGeneratorClasses, dict(task_definitions=TASKS_3TYPES, counts=dict(cpu=5, mem=5, mbw=20), dimensions=dim)),
+            (TaskGeneratorClasses, dict(task_definitions=TASKS_3TYPES, counts=dict(cpu=5, mem=20, mbw=5), dimensions=dim)),
         ],
         [
             prepare_nodes(NODES_DEFINITIONS_3TYPES, dict(aep=2, sml=4, big=2), dim)
@@ -234,11 +220,11 @@ def experiment_hierbar():
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.WARN, format='%(levelname)s:%(module)s:%(funcName)s:%(lineno)d %(message)s')
-    logging.getLogger('wca.algorithms').setLevel(logging.INFO)
-    logging.getLogger('wca.scheduler.cluster_simulator').setLevel(TRACE)
-    experiment_mini()
-    # experiment_debug()
-    # experiment_bar()
-    # experiment_hierbar()
-    # experiment_static_assigner()
-    # # experiment_full() # takes about 30 seconds
+    # logging.getLogger('wca.algorithms').setLevel(logging.INFO)
+    # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(TRACE)
+    # experiment_mini()
+    experiment_debug()
+    experiment_bar()
+    experiment_hierbar()
+    experiment_static_assigner()
+    experiment_full() # takes about 30 seconds

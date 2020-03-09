@@ -17,11 +17,12 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Dict
 
 from wca.scheduler.metrics import MetricRegistry
-from wca.scheduler.types import ExtenderArgs, HostPriority, NodeName, AppName, ExtenderFilterResult
+from wca.scheduler.types import ExtenderArgs, HostPriority, NodeName, ExtenderFilterResult, \
+    AppsCount
 
 log = logging.getLogger(__name__)
 
-RescheduleResult = Dict[NodeName, Dict[AppName, int]]
+RescheduleResult = Dict[NodeName, AppsCount]
 
 
 class DataMissingException(Exception):

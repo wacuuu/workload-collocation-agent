@@ -20,7 +20,7 @@ from typing import Tuple, List, Dict
 from wca.logger import TRACE
 from wca.metrics import Metric
 from wca.scheduler.algorithms.base import divide_resources, \
-    calculate_read_write_ratio, sum_resources, subtract_resources
+    calculate_read_write_ratio, sum_resources, subtract_resources, DEFAULT_DIMENSIONS
 from wca.scheduler.algorithms.least_used_bar import LeastUsedBAR
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.types import ResourceType, NodeName, Resources
@@ -149,7 +149,7 @@ def calculate_class_variances(app_name: str,
 
         variance = statistics.stdev(requested_empty_fraction.values())
         log.log(TRACE, '[Filter2] class_shape=%s average_resources_of_class=%s '
-                'requested=%s requested_fraction=%s variance=%s', class_shape,
+                       'requested=%s requested_fraction=%s variance=%s', class_shape,
                 averaged_resources_of_class, requested, requested_empty_fraction, variance)
         class_variances[class_shape] = variance
 
@@ -191,9 +191,7 @@ class HierBAR(LeastUsedBAR):
 
     def __init__(self,
                  data_provider: DataProvider,
-                 dimensions: List[ResourceType] = [
-                     ResourceType.CPU, ResourceType.MEM,
-                     ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE],
+                 dimensions: List[ResourceType] = DEFAULT_DIMENSIONS,
                  alias=None,
                  merge_threshold: float = None,
                  max_node_score: float = 10.
@@ -215,7 +213,7 @@ class HierBAR(LeastUsedBAR):
         log.log(TRACE, '[Filter2] -> nodes_names=[%s]', ','.join(node_names))
 
         # TODO: Optimize - this context should be calculated earlier (add passed for every node)
-        node_capacities, assigned_apps_counts, apps_spec, _ = data_provider_queried
+        node_capacities, _, apps_spec, _ = data_provider_queried
 
         node_shapes = _create_shapes_from_nodes(node_capacities)
         shapes_to_nodes = reverse_node_shapes(node_shapes)

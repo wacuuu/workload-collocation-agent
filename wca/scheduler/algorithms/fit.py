@@ -38,11 +38,11 @@ def enough_resources_on_node(capacity, used, membw_read_write_ratio):
 
 
 def app_fits(node_name, app_name, dimensions, nodes_capacities,
-             assigned_apps_counts, apps_spec) -> Tuple[bool, str, List[Metric]]:
+             assigned_apps, apps_spec) -> Tuple[bool, str, List[Metric]]:
     # Current node context: used and free currently
     used, free, requested, capacity, membw_read_write_ratio, metrics = \
         used_free_requested(node_name, app_name, dimensions,
-                            nodes_capacities, assigned_apps_counts, apps_spec)
+                            nodes_capacities, assigned_apps, apps_spec)
     metrics.extend(metrics)
 
     # SUBTRACT: "free" after simulated assigment of requested
@@ -77,10 +77,10 @@ class Fit(BaseAlgorithm):
        Treats MEMBW_READ and MEMBW_WRITE differently than other dimensions."""
 
     def app_fit_node(self, node_name, app_name, data_provider_queried) -> Tuple[bool, str]:
-        nodes_capacities, assigned_apps_counts, apps_spec, _ = data_provider_queried
+        nodes_capacities, assigned_apps, apps_spec, _ = data_provider_queried
         fits, message, metrics = app_fits(
             node_name, app_name, self.dimensions,
-            nodes_capacities, assigned_apps_counts, apps_spec)
+            nodes_capacities, assigned_apps, apps_spec)
         self.metrics.extend(metrics)
         return fits, message
 
