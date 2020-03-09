@@ -54,8 +54,8 @@ class StaticAssigner(BaseAlgorithm):
                 self.targeted_assigned_apps_counts[node_name][app_name]:
             return True, ''
 
-        assert len(assigned_apps[node_name][app_name]) == \
-               self.targeted_assigned_apps_counts[node_name][app_name]
+        assert (len(assigned_apps[node_name][app_name]) ==
+                self.targeted_assigned_apps_counts[node_name][app_name])
         return (False,
                 'app {} count on node {} already matching '
                 'self.targeted_assigned_apps_counts'.format(app_name, node_name))

@@ -45,30 +45,22 @@ def run_until_first_failure(
     return simulator
 
 
-def task_creation_fun(identifier):
-    r = Resources({CPU: 8, MEM: 10})
-    t = Task('stress_ng_{}'.format(identifier), r)
-    return t
-
-
 def test_single_run():
     nodes = [Node('0', Resources({CPU: 96, MEM: 1000})),
              Node('1', Resources({CPU: 96, MEM: 320}))]
-    extra_simulator_args = {"allow_rough_assignment": False}
-    scheduler_class = Fit
-    extra_scheduler_kwargs = {'dimensions': {CPU, MEM}}
+    algorithm_class = Fit
+    algorithm_args = {'dimensions': {CPU, MEM}}
 
+    def task_creation_fun(identifier):
+        r = Resources({CPU: 8, MEM: 10})
+        t = Task('stress_ng_{}'.format(identifier), r)
+        return t
+
+    extra_simulator_args = {"allow_rough_assignment": False}
     simulator = run_until_first_failure(
         nodes, task_creation_fun, extra_simulator_args,
-        scheduler_class, extra_scheduler_kwargs)
+        algorithm_class, algorithm_args)
     assert len(simulator.tasks) == 25
-
-
-def task_creation_fun_aep(identifier):
-    r = Resources({CPU: 8, MEM: 10,
-                   MEMBW_WRITE: 5, MEMBW_READ: 5})
-    t = Task('stress_ng_{}'.format(identifier), r)
-    return t
 
 
 def test_single_run_membw_write_read():
@@ -76,11 +68,17 @@ def test_single_run_membw_write_read():
     dimensions = {CPU, MEM, MEMBW_READ, MEMBW_WRITE}
     nodes = [Node('0', Resources({CPU: 96, MEM: 1000, MEMBW_READ: 40, MEMBW_WRITE: 10})),
              Node('1', Resources({CPU: 96, MEM: 320, MEMBW_READ: 150, MEMBW_WRITE: 150}))]
-    extra_simulator_args = {"allow_rough_assignment": True}
 
-    extra_scheduler_kwargs = {}
+    algorithm_args = {'dimensions': dimensions}
+
+    def task_creation_fun_aep(identifier):
+        r = Resources({CPU: 8, MEM: 10, MEMBW_WRITE: 5, MEMBW_READ: 5})
+        t = Task('stress_ng_{}'.format(identifier), r)
+        return t
+
+    extra_simulator_args = {"allow_rough_assignment": True}
     for scheduler_class, expected_count in ((Fit, 14), (LeastUsedBAR, 14)):
         simulator = run_until_first_failure(
             nodes, task_creation_fun_aep, extra_simulator_args,
-            scheduler_class, extra_scheduler_kwargs)
+            scheduler_class, algorithm_args)
         assert len(simulator.tasks) == expected_count

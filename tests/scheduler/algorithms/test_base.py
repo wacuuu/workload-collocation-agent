@@ -70,9 +70,8 @@ def test_used_free_requested_and_requested_fraction():
     # Assuming app2 is already scheduled.
     apps_spec = {app_name: {rt.CPU: 2, rt.MEM: 2}, 'app2': {rt.CPU: 1, rt.MEM: 1}}
     node_capacities = {node_name: {rt.CPU: 20, rt.MEM: 20}}
-    assigned_apps: Dict[NodeName, Apps] = {node_name: {'app2':
-                                                           ['app2_0', 'app2_1', 'app2_2', 'app2_3',
-                                                            'app2_4', 'app2_5']}}
+    assigned_apps: Dict[NodeName, Apps] = {
+        node_name: {'app2': ['app2_0', 'app2_1', 'app2_2', 'app2_3', 'app2_4', 'app2_5']}}
     r = used_free_requested(node_name, app_name, dimensions, node_capacities, assigned_apps,
                             apps_spec)
     used, free, requested, capacity, membw_read_write_ratio, metrics = r

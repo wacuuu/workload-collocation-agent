@@ -309,7 +309,7 @@ class ClusterSimulator:
         else:
             unassigned_tasks = new_unassigned_tasks
 
-        assigned_count = 0 # required by tests
+        assigned_count = 0  # required by tests
         if unassigned_tasks:
             # Assignments
             assignments = {}
