@@ -80,7 +80,7 @@ class BaseAlgorithm(Algorithm):
         if log.getEffectiveLevel() <= TRACE:
             log.log(TRACE, '[Filter] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
 
-        # First pass (parallelizable, fast K8S style)
+        # First pass (parallelize-able, fast K8S style)
         accepted_node_names = []
         for node_name in nodes_names:
             # Gather individual failed

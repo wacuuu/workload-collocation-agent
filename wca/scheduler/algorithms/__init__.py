@@ -18,11 +18,11 @@ from typing import List, Optional, Dict
 
 from wca.scheduler.metrics import MetricRegistry
 from wca.scheduler.types import ExtenderArgs, HostPriority, NodeName, ExtenderFilterResult, \
-    AppsCount
+    Apps
 
 log = logging.getLogger(__name__)
 
-RescheduleResult = Dict[NodeName, AppsCount]
+RescheduleResult = Dict[NodeName, Apps]
 
 
 class DataMissingException(Exception):

@@ -97,17 +97,17 @@ class Fit(BaseAlgorithm):
         most multiple copies.
         """
 
-        nodes_capacities, assigned_apps_counts, apps_spec, unassigned_apps_count = data_provider_queried
+        nodes_capacities, assigned_apps, apps_spec, unassigned_apps_count = data_provider_queried
 
         reschedule_result: RescheduleResult = {}
 
         for node_name, capacity in nodes_capacities.items():
-            apps_count = assigned_apps_counts.get(node_name, {})
+            apps_count = assigned_apps.get(node_name, {})
             used = Resources.create_empty(self.dimensions).data
             if apps_count:
                 # sorted by count, last app_name will be the most assigned to node
-                app_name, app_count = None, 0
-                for app_name, app_count in sorted(apps_count.items(), key=lambda x: x[1]):
+                app_name, apps = None, {}
+                for app_name, apps in sorted(apps_count.items(), key=lambda x: x[1]):
                     app_resource = apps_spec[app_name]
                     used = sum_resources(used, app_resource)
 
@@ -117,8 +117,8 @@ class Fit(BaseAlgorithm):
 
                 if app_name and not fits:
                     # Try to remove last app from node (just one)
-                    reschedule_result[node_name] = {app_name: app_count}
+                    reschedule_result[node_name] = {app_name: apps}
                     log.debug('found app=%r (count=%d) to reschedule because of fit', app_name,
-                              app_count)
+                              apps)
 
         return reschedule_result, []

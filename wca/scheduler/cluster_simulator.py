@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from collections import defaultdict
 from typing import Dict, List, Optional
 
 from dataclasses import dataclass
@@ -310,10 +309,10 @@ class ClusterSimulator:
         else:
             unassigned_tasks = new_unassigned_tasks
 
+        assigned_count = 0 # required by tests
         if unassigned_tasks:
             # Assignments
             assignments = {}
-            assigned_count = 0
             for task in unassigned_tasks:
                 node = self.call_scheduler(task)
                 if node is not None:
@@ -326,23 +325,17 @@ class ClusterSimulator:
             reschedule_result: RescheduleResult = self.algorithm.reschedule()
 
             if reschedule_result:
-                log.debug('iteration: rescheduling: %s', reschedule_result)
-                # build a mapping from nodes to apps
-                d = defaultdict(lambda: defaultdict(list))
-                for task in self.tasks:
-                    if task.assignment:
-                        d[task.assignment.name][task.get_core_name()].append(task)
-
                 for node_name, apps_to_remove in reschedule_result.items():
-                    for app_name, apps_to_remove_count in apps_to_remove.items():
-                        for i in range(apps_to_remove_count):
-                            task: Task = d[node_name][app_name].pop()
+                    for app_name, task_names in apps_to_remove.items():
+                        for task_name in task_names:
+                            task = self.get_task_by_name(task_name)
                             task.assignment = None
 
         # Can unbind tasks if task lived long enough.
         self.update_tasks_life()
 
         log.debug("--- Iteration ends ---")
+        return assigned_count
 
     def iterate_single_task(self, new_task: Optional[Task]):
         """Try to assign new_task"""
@@ -353,4 +346,4 @@ class ClusterSimulator:
             assert new_task not in self.tasks, \
                 'Each Task must be separate object (deep copy)'
 
-        self.iterate(new_tasks=new_tasks)
+        return self.iterate(new_tasks=new_tasks)
