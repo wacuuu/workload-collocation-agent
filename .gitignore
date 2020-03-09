@@ -37,3 +37,4 @@ env
 /wca/scheduler/simulator_experiments/experiments_results/
 env
 Pipfile
+/experiments_results
