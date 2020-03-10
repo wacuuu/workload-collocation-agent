@@ -21,9 +21,9 @@ from flask import Flask, request, jsonify
 
 from wca.config import Numeric
 from wca.metrics import Metric, MetricType
-from wca.scheduler.algorithms import Algorithm
+from wca.scheduler.algorithms import Algorithm, RescheduleResult
 from wca.scheduler.metrics import MetricName
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, RescheduleResult
+from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult
 
 log = logging.getLogger(__name__)
 
