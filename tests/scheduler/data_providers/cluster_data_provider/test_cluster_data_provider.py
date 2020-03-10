@@ -17,9 +17,13 @@ import pytest
 
 from tests.testing import create_json_fixture_mock
 from wca.scheduler.data_providers.cluster_data_provider import (
-        ClusterDataProvider, MissingBasicResources, Kubeapi, Prometheus,
+        ClusterDataProvider, MissingBasicResources,
         Queries, WSSWithoutMemoryBandwidth)
+from wca.scheduler.kubeapi import Kubeapi
+from wca.scheduler.prometheus import Prometheus
 from wca.scheduler.types import ResourceType
+
+TEST_QUERIES = Queries()
 
 
 def get_mocked_cluster_data_provider():
@@ -29,9 +33,11 @@ def get_mocked_cluster_data_provider():
 
     mocked_prometheus = Mock(spec=Prometheus)
     mocked_prometheus.do_query.side_effect = do_query_side_effect
-    mocked_prometheus.queries = Queries()
 
-    cluster_dp = ClusterDataProvider(kubeapi=mocked_kubeapi, prometheus=mocked_prometheus)
+    cluster_dp = ClusterDataProvider(
+            kubeapi=mocked_kubeapi,
+            prometheus=mocked_prometheus,
+            queries=Queries())
 
     return cluster_dp
 
@@ -44,30 +50,30 @@ def request_kubeapi_side_effect(*args):
 
 
 def do_query_side_effect(*args):
-    if args[0] == Prometheus.queries.NODES_PMM_MEMORY_MODE:
+    if args[0] == TEST_QUERIES.NODES_PMM_MEMORY_MODE:
         return create_json_fixture_mock('prometheus_nodes_pmm_memory_mode').json()['data']['result']
-    elif args[0] == Prometheus.queries.MEMBW_CAPACITY_READ:
+    elif args[0] == TEST_QUERIES.MEMBW_CAPACITY_READ:
         return create_json_fixture_mock('prometheus_membw_capacity_read').json()['data']['result']
-    elif args[0] == Prometheus.queries.MEMBW_CAPACITY_WRITE:
+    elif args[0] == TEST_QUERIES.MEMBW_CAPACITY_WRITE:
         return create_json_fixture_mock('prometheus_membw_capacity_write').json()['data']['result']
-    elif args[0] == Prometheus.queries.NODE_CAPACITY_MEM_WSS:
+    elif args[0] == TEST_QUERIES.NODE_CAPACITY_MEM_WSS:
         return create_json_fixture_mock('prometheus_node_capacity_mem_wss').json()['data']['result']
-    elif args[0] == Prometheus.queries.NODE_CAPACITY_DRAM_MEMBW:
+    elif args[0] == TEST_QUERIES.NODE_CAPACITY_DRAM_MEMBW:
         return create_json_fixture_mock(
                 'prometheus_node_capacity_dram_membw').json()['data']['result']
-    elif args[0] == Prometheus.queries.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.CPU]:
+    elif args[0] == TEST_QUERIES.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.CPU]:
         return create_json_fixture_mock(
                 'prometheus_app_requested_cpu').json()['data']['result']
-    elif args[0] == Prometheus.queries.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.MEM]:
+    elif args[0] == TEST_QUERIES.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.MEM]:
         return create_json_fixture_mock(
                 'prometheus_app_requested_mem').json()['data']['result']
-    elif args[0] == Prometheus.queries.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.MEMBW_READ]:
+    elif args[0] == TEST_QUERIES.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.MEMBW_READ]:
         return create_json_fixture_mock(
                 'prometheus_app_requested_membw_read').json()['data']['result']
-    elif args[0] == Prometheus.queries.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.MEMBW_WRITE]:
+    elif args[0] == TEST_QUERIES.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.MEMBW_WRITE]:
         return create_json_fixture_mock(
                 'prometheus_app_requested_membw_write').json()['data']['result']
-    elif args[0] == Prometheus.queries.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.WSS]:
+    elif args[0] == TEST_QUERIES.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.WSS]:
         return create_json_fixture_mock(
                 'prometheus_app_requested_wss').json()['data']['result']
 
