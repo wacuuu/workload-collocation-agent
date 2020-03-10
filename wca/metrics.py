@@ -1392,3 +1392,8 @@ def export_metrics_from_measurements(measurements: Measurements) -> List[Metric]
                 value=metric_value,
             ))
     return all_metrics
+
+
+def add_metric(metric_name, metric_metadata):
+    setattr(MetricName, metric_name.upper(), metric_name)
+    METRICS_METADATA.update({metric_name: metric_metadata})

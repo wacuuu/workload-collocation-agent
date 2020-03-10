@@ -24,6 +24,7 @@ from wca.containers import Container
 from wca.detectors import TaskData
 from wca.mesos import MesosNode
 from wca.metrics import MissingMeasurementException, MetricName, Metric, METRICS_METADATA
+from wca.perf_uncore import UncoreEventConfigError, Event
 from wca.resctrl import ResGroup
 from wca.runners.measurement import (MeasurementRunner, _build_tasks_metrics,
                                      _prepare_tasks_data, TaskLabelRegexGenerator,
@@ -234,3 +235,52 @@ def test_append_additional_labels_to_tasks__overwriting_label(log_mock):
         [task1])
     assert task1.labels['source_key'] == '__val__'
     log_mock.debug.assert_called_once()
+
+
+@pytest.mark.parametrize('event, expected_output', [
+    ('some_event_name/uncore_imc/event=0x80,umask=3/',
+     ('some_event_name', 128, 'uncore_imc', 3, 0, 0)),
+    ('some_event_name/uncore_cha/event=0x80,umask=3,config1=0x1',
+     ('some_event_name', 128, 'uncore_cha', 3, 0, 1)),
+    ('some_event_name/uncore_upi/event=0x0/', ('some_event_name', 0, 'uncore_upi', 0, 0, 0)),
+    ('some_event_name/uncore_upi/config=0x80', ('some_event_name', 0, 'uncore_upi', 0, 128, 0))
+])
+def test_parse_uncore_event_input(event, expected_output):
+    assert MeasurementRunner._parse_uncore_event_input(event) == expected_output
+
+
+@pytest.mark.parametrize('event, exception', [
+    ('some_event', AssertionError),
+    ('some_event_name/uncore_imc/umask=3/', UncoreEventConfigError),
+    ('/uncore_imc/event=0x80,umask=3/', AssertionError),
+    ('some_event_name/uncore_imc/event=0x80,umask=3,config5=0x23/', UncoreEventConfigError)
+])
+def test_parse_uncore_event_input_fail(event, exception):
+    with pytest.raises(exception):
+        MeasurementRunner._parse_uncore_event_input(event)
+
+
+@pytest.mark.parametrize('event, expected_output', [
+    ('platform_rpq_occupancy',
+     (Event(name=MetricName.PLATFORM_RPQ_OCCUPANCY, event=0x80), 'uncore_imc')),
+    ('platform_rpq_occupancy/uncore_imc/event=0x80,umask=0/',
+     (Event(name=MetricName.PLATFORM_RPQ_OCCUPANCY, event=0x80), 'uncore_imc')),
+    ('some_unknown_event', (None, '')),
+    ('some_unknown_event/uncore_imc/event=0x80,umask=0', (None, '')),
+    ('platform_upi_rxl_flits',
+     (Event(name=MetricName.PLATFORM_UPI_RXL_FLITS, event=0x3, umask=0xf), 'uncore_upi'))
+])
+def test_get_event_if_known(event, expected_output):
+    assert MeasurementRunner._get_event_if_known(event) == expected_output
+
+
+@pytest.mark.parametrize('event_name, event_value, umask, config, config1, expected_output', [
+    ('some_metric', 128, 0, 0, 0,
+     Event(name='some_metric', event=128, umask=0, config=0, config1=0)),
+    ('some_metric', 0, 0, 0, 128,
+     Event(name='some_metric', event=0, umask=0, config=0, config1=128))
+])
+def test_get_unknown_event(event_name, event_value, umask, config, config1, expected_output):
+    assert MeasurementRunner._get_unknown_event(event_name, event_value,
+                                                umask, config, config1) == expected_output
+    assert event_name in METRICS_METADATA
