@@ -110,11 +110,31 @@ Perf subsystem with dynamic PMUs (uncore)
 Those metrics are collected from dynamic PMUs discovered and registered at boot time as described
 by `man perf_event_open <http://man7.org/linux/man-pages/man2/perf_event_open.2.html>`_ in dynamic PMU section.
 
-Only two types of PMU are currently support:
+Only two types of PMU are currently supported:
 - iMC - for integrated memory controller
 - UPI - for Ultra Path Interconnect
 
-Those metrics are collect by per-platform basis.
+Those metrics are collected by per-platform basis.
+
+There are two ways of collecting uncore based metrics. Some of them were predefined and can be found in
+`metrics documentation <metrics.rst#platform-s-metrics>`_ along with instruction how to enable them.
+There are more uncore metrics than implemented in WCA, therefore there is possibility to add user-defined
+uncore metrics.
+Correct configuration must be provided to define new metric. We support following formats:
+
+.. code-block:: shell
+
+    ${event_name}/${pmu_type}/event=M,umask=N,config1=K/
+
+    ${event_name}/${pmu_type}/config=M/
+
+where $event_name is name of newly defined metric, ${pmu_type} is one of supported PMU types(iMC, UPI or CHA),
+M, N, K are numbers **only** in hex format.
+
+Information how to encode metric can be found in `/sys/devices` directory e.g. `/sys/devices/uncore_cha_0/format/*`
+
+
+
 
 Resctrl filesystem
 -----------------------------

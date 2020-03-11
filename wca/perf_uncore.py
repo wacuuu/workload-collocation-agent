@@ -34,20 +34,24 @@ log = logging.getLogger(__name__)
 @dataclass
 class Event:
     """Similar to man perf list for pmu types unc_imc_0/event=0x,config1=0x/'"""
-    event: int
     name: str
+    event: int = 0
     umask: int = 0
+    config: int = 0
     config1: int = 0
 
-    @property
-    def config(self) -> int:
+    def __post_init__(self):
         """ head /sys/devices/uncore_imc_0/format/*
         ==> /sys/devices/uncore_imc_0/format/event <==
         config:0-7
         ==> /sys/devices/uncore_imc_0/format/umask <==
         config:8-15
         """
-        return self.event | (self.umask << 8)
+        if self.config:
+            assert self.event == 0 and self.umask == 0, \
+                'Event and umask should not be configured if config value is given'
+        if self.event:
+            self.config = self.event | (self.umask << 8)
 
 
 def _create_event_attributes(pmu_type, disabled, event: Event):
@@ -201,6 +205,10 @@ UNCORE_UPI_EVENTS = {
 
 
 class PMUNotAvailable(Exception):
+    pass
+
+
+class UncoreEventConfigError(Exception):
     pass
 
 

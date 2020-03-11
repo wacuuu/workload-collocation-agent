@@ -31,13 +31,13 @@ from wca.detectors import TaskData, TasksData, TaskResource
 from wca.logger import trace, get_logging_metrics, TRACE
 from wca.metrics import Metric, MetricName, MissingMeasurementException, \
     export_metrics_from_measurements, METRICS_METADATA, MetricSource, MetricType, MetricUnit, \
-    MetricGranularity, MetricMetadata
+    MetricGranularity, MetricMetadata, add_metric
 from wca.nodes import Node, Task
 from wca.nodes import TaskSynchronizationException
 from wca.perf import check_perf_event_count_limit, filter_out_event_names_for_cpu
 from wca.perf_uncore import UncorePerfCounters, _discover_pmu_uncore_config, \
     UNCORE_IMC_EVENTS, PMUNotAvailable, UncoreDerivedMetricsGenerator, \
-    UNCORE_UPI_EVENTS
+    UNCORE_UPI_EVENTS, Event, UncoreEventConfigError
 from wca.pmembw import get_bandwidth
 from wca.profiling import profiler
 from wca.runners import Runner
@@ -226,7 +226,7 @@ class MeasurementRunner(Runner):
                     metric_metadata.levels = ['cpu']
 
         self._enable_derived_metrics = enable_derived_metrics
-        self._uncore_event_names = uncore_event_names
+        self._uncore_events = uncore_event_names
 
         self._task_label_generators = task_label_generators or {}
 
@@ -260,9 +260,9 @@ class MeasurementRunner(Runner):
         Can return error code that should stop Runner.
 
         Flow:
-        - Conclude requirments based on configuration
+        - Conclude requirements based on configuration
         - Conclude required features based on auto discovery
-        - confront user expectactions from configuration file with resctrl fs and security access
+        - confront user expectations from configuration file with resctrl fs and security access
         - check RDT HW monitoring features availability
         """
         resctrl_available = resctrl.check_resctrl()
@@ -348,54 +348,141 @@ class MeasurementRunner(Runner):
             perf_aggregate_cpus=self._perf_aggregate_cpus
         )
 
-        self._init_uncore_pmu(self._enable_derived_metrics, self._uncore_event_names, platform)
+        self._init_uncore_pmu_events(self._enable_derived_metrics, self._uncore_events, platform)
 
         return None
 
-    def _init_uncore_pmu(self, enable_derived_metrics, uncore_event_names,
-                         platform: platforms.Platform):
-        _enable_perf_uncore = len(uncore_event_names) > 0
+    @staticmethod
+    def _parse_uncore_event_input(event):
+        available_types = ('uncore_imc', 'uncore_cha', 'uncore_upi')
+        available_keys = ('event', 'umask', 'config', 'config1')
+        event_value = 0
+        umask = 0
+        config = 0
+        config1 = 0
+
+        assert len(event) > 0, 'Uncore event must not be empty!'
+        configuration = event.split('/')
+        assert len(configuration) >= 3, 'Uncore event info is missing in configuration!'
+        if configuration[1] not in available_types:
+            raise UncoreEventConfigError('Used wrong PMU type: {}. '
+                                         'Please use one of the following: '
+                                         '{}'.format(configuration[1], available_types))
+
+        if 'event=' not in configuration[2] and 'config=' not in configuration[2]:
+            raise UncoreEventConfigError('Event or config value must be specified!')
+
+        event_name = configuration[0]
+        assert len(event_name) > 0, 'Uncore event name must not be empty!'
+        event_type = configuration[1]
+        for key_and_value in configuration[2].split(','):
+            separate = key_and_value.split('=')
+            key = separate[0]
+            value = separate[1]
+            if key == 'event':
+                event_value = int(value, 16)
+            elif key == 'umask':
+                umask = int(value, 16)
+            elif key == 'config':
+                config = int(value, 16)
+            elif key == 'config1':
+                config1 = int(value, 16)
+            else:
+                raise UncoreEventConfigError(
+                    'Used wrong configuration! Unknown parameter: '
+                    '{}. Please use following ones: '
+                    '{}'.format(key, available_keys))
+
+        return event_name, event_value, event_type, umask, config, config1
+
+    @staticmethod
+    def _get_event_if_known(event):
+        """Return event and type if event is known"""
+        assert len(event) > 0
+        # if metric name is known the rest of configuration will
+        # be ignored even if provided by user
+        name = event.split('/')[0]
+        if name in UNCORE_IMC_EVENTS:
+            return UNCORE_IMC_EVENTS[name], 'uncore_imc'
+        elif name in UNCORE_UPI_EVENTS:
+            return UNCORE_UPI_EVENTS[name], 'uncore_upi'
+
+        return None, ''
+
+    @staticmethod
+    def _get_unknown_event(event_name, event_value, umask, config, config1):
+        event = Event(name=event_name, event=event_value, umask=umask,
+                      config=config, config1=config1)
+        metric_metadata = MetricMetadata('Uncore metric provided by user',
+                                         MetricType.GAUGE,
+                                         MetricUnit.NUMERIC,
+                                         MetricSource.PERF_SUBSYSTEM_UNCORE,
+                                         MetricGranularity.PLATFORM,
+                                         ['socket', 'pmu_type'],
+                                         'yes')
+        add_metric(event_name, metric_metadata)
+        return event
+
+    def _prepare_events(self, uncore_events):
+        imc_events = []
+        upi_events = []
+        cha_events = []
+        for event in uncore_events:
+            e, event_type = self._get_event_if_known(event)
+            if not e:
+                event_name, event_value, event_type, umask, config, config1 = \
+                    self._parse_uncore_event_input(event)
+                e = self._get_unknown_event(event_name, event_value, umask,
+                                            config, config1)
+            if event_type == 'uncore_imc':
+                imc_events.append(e)
+            elif event_type == 'uncore_cha':
+                cha_events.append(e)
+            elif event_type == 'uncore_upi':
+                upi_events.append(e)
+        return imc_events, cha_events, upi_events
+
+    def _init_uncore_pmu_events(self, enable_derived_metrics, uncore_events,
+                                platform: platforms.Platform):
+        _enable_perf_uncore = len(uncore_events) > 0
         self._uncore_pmu = None
         self._uncore_get_measurements = lambda: {}
-        if _enable_perf_uncore:
-            pmu_events = {}
-            imc_events = []
-            upi_events = []
-            for event in uncore_event_names:
-                if event in UNCORE_IMC_EVENTS:
-                    imc_events.append(UNCORE_IMC_EVENTS[event])
-                elif event in UNCORE_UPI_EVENTS:
-                    upi_events.append(UNCORE_UPI_EVENTS[event])
-                else:
-                    raise Exception('Unknown event name: {}'.format(event))
-            try:
-                # Cpus and events for perf uncore imc
-                cpus_imc, pmu_events_imc = _discover_pmu_uncore_config(
-                    imc_events, 'uncore_imc_')
-                pmu_events.update(pmu_events_imc)
-                # Cpus and events for perf uncore upi
-                cpus_upi, pmu_events_upi = _discover_pmu_uncore_config(
-                    upi_events, 'uncore_upi_')
-                pmu_events.update(pmu_events_upi)
-                cpus = list(set(cpus_imc + cpus_upi))
-            except PMUNotAvailable:
-                log.error('PMU metrics requested but PMU not available!')
-                raise
+        if not _enable_perf_uncore:
+            return
+        pmu_events = {}
+        imc_events, cha_events, upi_events = self._prepare_events(uncore_events)
+        try:
+            # Cpus and events for perf uncore imc
+            cpus_imc, pmu_events_imc = _discover_pmu_uncore_config(
+                imc_events, 'uncore_imc_')
+            pmu_events.update(pmu_events_imc)
+            # Cpus and events for perf uncore upi
+            cpus_upi, pmu_events_upi = _discover_pmu_uncore_config(
+                upi_events, 'uncore_upi_')
+            pmu_events.update(pmu_events_upi)
+            # Cpus and events for perf uncore cha
+            cpus_cha, pmu_events_cha = _discover_pmu_uncore_config(
+                cha_events, 'uncore_cha_')
+            pmu_events.update(pmu_events_cha)
+            cpus = list(set(cpus_imc + cpus_upi))
+        except PMUNotAvailable:
+            log.error('PMU metrics requested but PMU not available!')
+            raise
 
-            # Prepare uncore object
-            self._uncore_pmu = UncorePerfCounters(
-                cpus=cpus,
-                pmu_events=pmu_events,
-                platform=platform,
-            )
+        # Prepare uncore object
+        self._uncore_pmu = UncorePerfCounters(
+            cpus=cpus,
+            pmu_events=pmu_events,
+            platform=platform,
+        )
 
-            # Wrap with derived..
-            if enable_derived_metrics:
-                self._uncore_derived_metrics = UncoreDerivedMetricsGenerator(
-                    self._uncore_pmu.get_measurements)
-                self._uncore_get_measurements = self._uncore_derived_metrics.get_measurements
-            else:
-                self._uncore_get_measurements = self._uncore_pmu.get_measurements
+        # Wrap with derived..
+        if enable_derived_metrics:
+            self._uncore_derived_metrics = UncoreDerivedMetricsGenerator(
+                self._uncore_pmu.get_measurements)
+            self._uncore_get_measurements = self._uncore_derived_metrics.get_measurements
+        else:
+            self._uncore_get_measurements = self._uncore_pmu.get_measurements
 
     def _iterate(self):
         iteration_start = time.time()

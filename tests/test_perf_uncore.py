@@ -13,6 +13,8 @@
 # limitations under the License.
 from unittest.mock import patch, MagicMock, mock_open
 
+import pytest
+
 from tests.testing import platform_mock
 from wca.perf_uncore import Event, UncorePerfCounters, MetricName
 
@@ -71,3 +73,11 @@ def test_cleanup(*args):
     reader.close.assert_called_once()
     for event_file in event_files:
         event_file.close.assert_called_once()
+
+
+@pytest.mark.parametrize('name, event, umask, config, config1, expected_error', [
+    ('some_metric', 123, 3, 12, 0, AssertionError)
+])
+def test_create_event_fail(name, event, umask, config, config1, expected_error):
+    with pytest.raises(expected_error):
+        Event(name, event, umask, config, config1)
