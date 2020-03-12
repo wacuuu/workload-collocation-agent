@@ -1,9 +1,7 @@
 loggers:
   wca.scheduler.server: INFO
   wca.scheduler.algorithms: TRACE
-algorithm: !HierBAR
-  merge_threshold: 1.
-# algorithm: !Fit
+algorithm: !Creatone
   max_node_score: 10000.
   dimensions:
     - mem
@@ -11,7 +9,7 @@ algorithm: !HierBAR
     - membw_write
     - membw_read
     - wss
-  data_provider: !ClusterDataProvider
+  data_provider: !ClusterCreatoneDataProvider
     kubeapi: !Kubeapi
       host: !Env KUBERNETES_SERVICE_HOST
       port: !Env KUBERNETES_SERVICE_PORT
@@ -19,6 +17,7 @@ algorithm: !HierBAR
       host: http://100.64.176.36
       port: 30900
       timeout: 5.0
+      time: "1583781306" 
     queries: !Queries
       APP_REQUESTED_RESOURCES_QUERY_MAP:
             cpu: 'ceil(max(max_over_time(task_requested_cpus[10m])) by (app))'
@@ -31,3 +30,5 @@ algorithm: !HierBAR
       NODES_PMM_MEMORY_MODE: 'sum(platform_mem_mode_size_bytes) by (nodename) != 0'
       NODE_CAPACITY_MEM_WSS: '(sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (nodename) / 1e9)*0.3'
       NODE_CAPACITY_DRAM_MEMBW: 'ceil(platform_dimm_speed_bytes_per_second / 1e9)'
+
+

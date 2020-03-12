@@ -1,0 +1,76 @@
+# Copyright (c) 2020 Intel Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+import logging
+from typing import Tuple, Optional, List
+
+from wca.scheduler.algorithms.base import (
+        BaseAlgorithm, QueryDataProviderInfo, DEFAULT_DIMENSIONS)
+from wca.scheduler.algorithms.fit import app_fits
+from wca.scheduler.data_providers.creatone import CreatoneDataProvider, NodeType
+from wca.scheduler.types import (AppName, NodeName, ResourceType)
+
+log = logging.getLogger(__name__)
+
+
+MIN_APP_PROFILES = 2
+
+
+def _get_app_node_type(app_profiles: List[AppName], app_name: AppName) -> NodeType:
+    if app_name == app_profiles[0]:
+        return NodeType.PMEM
+    else:
+        return NodeType.DRAM
+
+
+class Creatone(BaseAlgorithm):
+
+    def __init__(self, data_provider: CreatoneDataProvider,
+                 dimensions: List[ResourceType] = DEFAULT_DIMENSIONS,
+                 max_node_score: float = 10.,
+                 alias: str = None
+                 ):
+        super().__init__(data_provider, dimensions, max_node_score, alias)
+
+    def app_fit_node_type(self, app_name: AppName, node_name: NodeName) -> Tuple[bool, str]:
+        app_profiles = list(self.data_provider.get_app_profiles().keys())
+
+        if len(app_profiles) > MIN_APP_PROFILES:
+            node_profiles = self.data_provider.get_nodes_profiles()
+            node_type = node_profiles[node_name]
+            app_type = _get_app_node_type(app_profiles, app_name)
+
+            if node_type != app_type:
+                return False, '%r not prefered for %r type of node' % (app_name, node_type)
+
+        return True, ''
+
+    def app_fit_node(self, node_name: NodeName, app_name: str,
+                     data_provider_queried: QueryDataProviderInfo) -> Tuple[bool, str]:
+        log.info('Trying to filter node %r for %r ', node_name, app_name)
+        nodes_capacities, assigned_apps, apps_spec, _ = data_provider_queried
+
+        fits, message, metrics = app_fits(
+            node_name, app_name, self.dimensions,
+            nodes_capacities, assigned_apps, apps_spec)
+
+        self.metrics.extend(metrics)
+
+        if fits:
+            fits, message = self.app_fit_node_type(app_name, node_name)
+
+        return fits, message
+
+    def priority_for_node(self, node_name: str, app_name: str,
+                          data_provider_queried: QueryDataProviderInfo) -> float:
+        return 0.0

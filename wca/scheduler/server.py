@@ -37,9 +37,10 @@ class Server:
             time.sleep(interval)
             reschedule_result: RescheduleResult = self.algorithm.reschedule()
 
-            for node in reschedule_result:
+            #for node in reschedule_result:
                 # TODO: kubeapi delete task
-                pass
+                #for app in node:
+                #pass
 
     def __init__(self, configuration: Dict[str, str]):
         self.app = Flask('k8s scheduler extender')

@@ -21,7 +21,9 @@ from wca.resources import _MEMORY_UNITS
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.kubeapi import Kubeapi
 from wca.scheduler.prometheus import Prometheus
-from wca.scheduler.types import Resources, ResourceType, NodeName, AppName, NodeCapacities
+from wca.scheduler.types import (
+        Resources, ResourceType, NodeName, AppName,
+        NodeCapacities, AppsCount, Apps)
 
 log = logging.getLogger(__name__)
 
@@ -181,8 +183,7 @@ class ClusterDataProvider(DataProvider):
 
         return node_capacities
 
-    def get_apps_counts(self) \
-            -> Tuple[Dict[NodeName, Dict[AppName, int]], Dict[AppName, int]]:
+    def get_apps_counts(self) -> Tuple[Dict[NodeName, Apps], AppsCount]:
 
         unassigned_apps = defaultdict(int)
 
@@ -191,7 +192,7 @@ class ClusterDataProvider(DataProvider):
 
         assigned_apps = {}
         for node_name in node_names:
-            assigned_apps[node_name] = defaultdict(int)
+            assigned_apps[node_name] = {}
 
         for namespace in self.kubeapi.monitored_namespaces:
             pods_data = list(self.kubeapi.request_kubeapi(
@@ -212,7 +213,10 @@ class ClusterDataProvider(DataProvider):
                 if not (node and host_ip):
                     unassigned_apps[app] += 1
                 else:
-                    assigned_apps[node][app] += 1
+                    if app not in assigned_apps[node]:
+                        assigned_apps[node][app] = []
+
+                    assigned_apps[node][app].append(name)
 
         # remove default dicts
         assigned_apps = {k: dict(v) for k, v in assigned_apps.items()}
