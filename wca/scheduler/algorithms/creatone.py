@@ -17,7 +17,7 @@ from typing import Tuple, Optional, List
 from wca.scheduler.algorithms.base import (
         BaseAlgorithm, QueryDataProviderInfo, DEFAULT_DIMENSIONS)
 from wca.scheduler.algorithms.fit import app_fits
-from wca.scheduler.data_providers.creatone import CreatoneDataProvider, NodeType
+from wca.scheduler.data_providers.creatone import CreatoneDataProvider, NodeType, AppsProfile
 from wca.scheduler.types import (AppName, NodeName, ResourceType)
 
 log = logging.getLogger(__name__)
@@ -26,11 +26,20 @@ log = logging.getLogger(__name__)
 MIN_APP_PROFILES = 2
 
 
-def _get_app_node_type(app_profiles: List[AppName], app_name: AppName) -> NodeType:
-    if app_name == app_profiles[0]:
-        return NodeType.PMEM
-    else:
-        return NodeType.DRAM
+def _get_app_node_type(
+        apps_profile: AppsProfile, app_name: AppName,
+        score_target: Optional[float] = None) -> NodeType:
+
+    if len(apps_profile) > MIN_APP_PROFILES:
+        if score_target:
+            if app_name in apps_profile and apps_profile[app_name] >= score_target:
+                return NodeType.PMEM
+        else:
+            sorted_apps_profile = sorted(apps_profile.items(), key=lambda x: x[1], reverse=True)
+            if app_name == sorted_apps_profile[0][0]:
+                return NodeType.PMEM
+
+    return NodeType.DRAM
 
 
 class Creatone(BaseAlgorithm):
@@ -38,20 +47,21 @@ class Creatone(BaseAlgorithm):
     def __init__(self, data_provider: CreatoneDataProvider,
                  dimensions: List[ResourceType] = DEFAULT_DIMENSIONS,
                  max_node_score: float = 10.,
-                 alias: str = None
+                 alias: str = None,
+                 score_target: Optional[float] = None
                  ):
         super().__init__(data_provider, dimensions, max_node_score, alias)
+        self.score_target = score_target
 
     def app_fit_node_type(self, app_name: AppName, node_name: NodeName) -> Tuple[bool, str]:
-        app_profiles = list(self.data_provider.get_app_profiles().keys())
+        apps_profile = self.data_provider.get_apps_profile()
+        nodes_type = self.data_provider.get_nodes_type()
 
-        if len(app_profiles) > MIN_APP_PROFILES:
-            node_profiles = self.data_provider.get_nodes_profiles()
-            node_type = node_profiles[node_name]
-            app_type = _get_app_node_type(app_profiles, app_name)
+        node_type = nodes_type[node_name]
+        app_type = _get_app_node_type(apps_profile, app_name, self.score_target)
 
-            if node_type != app_type:
-                return False, '%r not prefered for %r type of node' % (app_name, node_type)
+        if node_type != app_type:
+            return False, '%r not prefered for %r type of node' % (app_name, node_type)
 
         return True, ''
 

@@ -12,27 +12,24 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from dataclasses import dataclass
-from typing import Dict
 
 from wca.scheduler.data_providers.cluster_data_provider import ClusterDataProvider
-from wca.scheduler.data_providers.creatone import CreatoneDataProvider, NodeType
-
-from wca.scheduler.types import AppName, NodeName
+from wca.scheduler.data_providers.creatone import CreatoneDataProvider, AppsProfile, NodesType
 
 
 @dataclass
 class ClusterCreatoneDataProvider(ClusterDataProvider, CreatoneDataProvider):
-    app_profiles_query = 'sort_desc(profile_app_2lm_score_max)'
-    node_profiles_query = 'node_type'
+    app_profiles_query = 'app_profile'
+    node_type_query = 'node_type'
 
-    def get_app_profiles(self) -> Dict[AppName, float]:
-        query_result = self.prometheus.do_query(self.app_profiles_query)
+    def get_apps_profile(self) -> AppsProfile:
+        query_result = self.prometheus.do_query(self.app_profiles_query, False)
 
-        return {row['metric']['app']: row['value']
+        return {row['metric']['app']: float(row['value'][1])
                 for row in query_result}
 
-    def get_nodes_profiles(self) -> Dict[NodeName, NodeType]:
-        query_result = self.prometheus.do_query(self.node_profiles_query)
+    def get_nodes_type(self) -> NodesType:
+        query_result = self.prometheus.do_query(self.node_type_query, False)
 
         return {row['metric']['nodename']: row['metric']['nodetype']
                 for row in query_result}

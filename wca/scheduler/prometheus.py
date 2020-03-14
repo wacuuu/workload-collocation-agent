@@ -36,14 +36,14 @@ class Prometheus:
     ssl: Optional[SSL] = None
     time: Optional[str] = None  # Evaluation timestamp.
 
-    def do_query(self, query: str):
+    def do_query(self, query: str, use_time: bool = True):
         """ Implements: https://prometheus.io/docs/prometheus/2.16/querying/api/#instant-queries"""
         url = URL_TPL.format(
                 prometheus_ip='{}:{}'.format(self.host, str(self.port)),
                 path=QUERY_PATH,
                 name=query)
 
-        if self.time:
+        if self.time and use_time:
             url += '&time={}'.format(self.time)
 
         try:

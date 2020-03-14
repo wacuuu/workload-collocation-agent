@@ -2,6 +2,7 @@ loggers:
   wca.scheduler.server: INFO
   wca.scheduler.algorithms: TRACE
 algorithm: !Creatone
+  score_target: -2.0
   max_node_score: 10000.
   dimensions:
     - mem

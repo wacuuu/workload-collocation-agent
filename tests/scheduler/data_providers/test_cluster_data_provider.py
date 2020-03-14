@@ -147,15 +147,15 @@ def test_get_nodes_capacities(resources, nodes_capacities):
 
 
 CLUSTER_APP_COUNT = (
-        {'node200': {'memcached-mutilate-big-wss': 1},
-         'node201': {'memcached-mutilate-big-wss': 1},
-         'node202': {'memcached-mutilate-big-wss': 1},
-         'node203': {'memcached-mutilate-big-wss': 1},
+        {'node200': {'memcached-mutilate-big-wss': ['memcached-mutilate-big-wss-6']},
+         'node201': {'memcached-mutilate-big-wss': ['memcached-mutilate-big-wss-7']},
+         'node202': {'memcached-mutilate-big-wss': ['memcached-mutilate-big-wss-5']},
+         'node203': {'memcached-mutilate-big-wss': ['memcached-mutilate-big-wss-4']},
          'node36': {},
          'node37': {},
          'node38': {},
-         'node39': {'memcached-mutilate-big-wss': 1},
-         'node40': {'memcached-mutilate-big-wss': 1}},
+         'node39': {'memcached-mutilate-big-wss': ['memcached-mutilate-big-wss-2']},
+         'node40': {'memcached-mutilate-big-wss': ['memcached-mutilate-big-wss-1']}},
         {'memcached-mutilate-big-wss': 2})
 
 

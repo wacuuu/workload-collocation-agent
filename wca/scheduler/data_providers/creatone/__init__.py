@@ -28,11 +28,15 @@ class NodeType(str, Enum):
         return self.value
 
 
+AppsProfile = Dict[AppName, float]
+NodesType = Dict[NodeName, NodeType]
+
+
 class CreatoneDataProvider(DataProvider):
     @abstractmethod
-    def get_app_profiles(self, profile_query: str) -> Dict[AppName, float]:
+    def get_apps_profile(self) -> AppsProfile:
         pass
 
     @abstractmethod
-    def get_nodes_profiles(self) -> Dict[NodeName, NodeType]:
+    def get_nodes_type(self) -> NodesType:
         pass
