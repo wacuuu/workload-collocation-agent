@@ -18,7 +18,7 @@ algorithm: !Creatone
       host: http://100.64.176.36
       port: 30900
       timeout: 5.0
-      time: "1583781306" 
+      time: "1584400577"  # Date and time (GMT): Monday, 16 March 2020 23:16:17
     queries: !Queries
       APP_REQUESTED_RESOURCES_QUERY_MAP:
             cpu: 'ceil(max(max_over_time(task_requested_cpus[10m])) by (app))'
@@ -31,5 +31,3 @@ algorithm: !Creatone
       NODES_PMM_MEMORY_MODE: 'sum(platform_mem_mode_size_bytes) by (nodename) != 0'
       NODE_CAPACITY_MEM_WSS: '(sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (nodename) / 1e9)*0.3'
       NODE_CAPACITY_DRAM_MEMBW: 'ceil(platform_dimm_speed_bytes_per_second / 1e9)'
-
-
