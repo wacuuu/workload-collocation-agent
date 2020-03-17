@@ -11,9 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pytest
 from unittest.mock import MagicMock, Mock
 
 from tests.testing import create_json_fixture_mock
+from wca.scheduler.data_providers.creatone import NodeType
 from wca.scheduler.data_providers.creatone.cluster import ClusterCreatoneDataProvider
 from wca.scheduler.kubeapi import Kubeapi
 from wca.scheduler.prometheus import Prometheus
@@ -31,11 +33,13 @@ def get_mocked_cluster_data_provider():
     return cluster_dp
 
 
-def do_query_side_effect(*args):
+def do_query_side_effect(*args, **kwargs):
     if args[0] == ClusterCreatoneDataProvider.app_profiles_query:
         return create_json_fixture_mock('prometheus_app_profile').json()['data']['result']
-    elif args[0] == ClusterCreatoneDataProvider.node_type_query:
-        return create_json_fixture_mock('prometheus_node_type').json()['data']['result']
+    elif args[0] == ClusterCreatoneDataProvider.node_type_query % 'node101':
+        return create_json_fixture_mock('prometheus_node_type_node101').json()['data']['result']
+    elif args[0] == ClusterCreatoneDataProvider.node_type_query % 'node40':
+        return create_json_fixture_mock('prometheus_node_type_node40').json()['data']['result']
 
 
 APPS_PROFILE = {
@@ -82,6 +86,10 @@ NODE_TYPES = {
 }
 
 
-def test_get_nodes_profiles(expected_nodes_type=NODE_TYPES):
+@pytest.mark.parametrize('node, expected_type', [
+        ('node101', NodeType.PMEM),
+        ('node40', NodeType.DRAM),
+        ])
+def test_get_nodes_profiles(node, expected_type):
     dp = get_mocked_cluster_data_provider()
-    assert dp.get_nodes_type() == expected_nodes_type
+    assert dp.get_node_type(node) == expected_type

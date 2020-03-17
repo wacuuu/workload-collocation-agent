@@ -57,13 +57,12 @@ class Creatone(BaseAlgorithm):
 
     def app_fit_node_type(self, app_name: AppName, node_name: NodeName) -> Tuple[bool, str]:
         apps_profile = self.data_provider.get_apps_profile()
-        nodes_type = self.data_provider.get_nodes_type()
+        node_type = self.data_provider.get_node_type(node_name)
 
         if log.getEffectiveLevel() <= TRACE:
             log.log(TRACE, '[Filter:PMEM specific] apps_profile: \n%s', str(apps_profile))
-            log.log(TRACE, '[Filter:PMEM specific] nodes_type: \n%s', str(nodes_type))
+            log.log(TRACE, '[Filter:PMEM specific] node_type: \n%s', str(node_type))
 
-        node_type = nodes_type[node_name]
         app_type = _get_app_node_type(apps_profile, app_name, self.score_target)
 
         if node_type != app_type:
