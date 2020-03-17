@@ -1,7 +1,7 @@
 loggers:
   wca.scheduler.server: INFO
   wca.scheduler.algorithms: TRACE
-algorithm: !Creatone
+algorithm: !Score
   score_target: -2.0
   max_node_score: 10000.
   dimensions:
@@ -10,7 +10,7 @@ algorithm: !Creatone
     - membw_write
     - membw_read
     - wss
-  data_provider: !ClusterCreatoneDataProvider
+  data_provider: !ClusterScoreDataProvider
     kubeapi: !Kubeapi
       host: !Env KUBERNETES_SERVICE_HOST
       port: !Env KUBERNETES_SERVICE_PORT

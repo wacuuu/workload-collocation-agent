@@ -15,8 +15,8 @@ import pytest
 from unittest.mock import MagicMock, Mock
 
 from tests.testing import create_json_fixture_mock
-from wca.scheduler.data_providers.creatone import NodeType
-from wca.scheduler.data_providers.creatone.cluster import ClusterCreatoneDataProvider
+from wca.scheduler.data_providers.score import NodeType
+from wca.scheduler.data_providers.score.cluster import ClusterScoreDataProvider
 from wca.scheduler.kubeapi import Kubeapi
 from wca.scheduler.prometheus import Prometheus
 
@@ -26,7 +26,7 @@ def get_mocked_cluster_data_provider():
     mocked_prometheus = Mock(spec=Prometheus)
     mocked_prometheus.do_query.side_effect = do_query_side_effect
 
-    cluster_dp = ClusterCreatoneDataProvider(
+    cluster_dp = ClusterScoreDataProvider(
             kubeapi=mocked_kubeapi,
             prometheus=mocked_prometheus)
 
@@ -34,11 +34,11 @@ def get_mocked_cluster_data_provider():
 
 
 def do_query_side_effect(*args, **kwargs):
-    if args[0] == ClusterCreatoneDataProvider.app_profiles_query:
+    if args[0] == ClusterScoreDataProvider.app_profiles_query:
         return create_json_fixture_mock('prometheus_app_profile').json()['data']['result']
-    elif args[0] == ClusterCreatoneDataProvider.node_type_query % 'node101':
+    elif args[0] == ClusterScoreDataProvider.node_type_query % 'node101':
         return create_json_fixture_mock('prometheus_node_type_node101').json()['data']['result']
-    elif args[0] == ClusterCreatoneDataProvider.node_type_query % 'node40':
+    elif args[0] == ClusterScoreDataProvider.node_type_query % 'node40':
         return create_json_fixture_mock('prometheus_node_type_node40').json()['data']['result']
 
 

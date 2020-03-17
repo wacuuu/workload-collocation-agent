@@ -12,10 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pytest
-from tests.scheduler.data_providers.test_creatone_cluster_data_provider import APPS_PROFILE
+from tests.scheduler.data_providers.test_cluster_score_data_provider import APPS_PROFILE
 
-from wca.scheduler.algorithms.creatone import _get_app_node_type
-from wca.scheduler.data_providers.creatone import NodeType
+from wca.scheduler.algorithms.score import _get_app_node_type
+from wca.scheduler.data_providers.score import NodeType
 
 SCORE_TARGET = -2.0
 

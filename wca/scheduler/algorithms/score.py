@@ -19,7 +19,7 @@ from wca.scheduler.algorithms import RescheduleResult
 from wca.scheduler.algorithms.base import (
         BaseAlgorithm, QueryDataProviderInfo, DEFAULT_DIMENSIONS)
 from wca.scheduler.algorithms.fit import app_fits
-from wca.scheduler.data_providers.creatone import CreatoneDataProvider, NodeType, AppsProfile
+from wca.scheduler.data_providers.score import ScoreDataProvider, NodeType, AppsProfile
 from wca.scheduler.types import (AppName, NodeName, ResourceType)
 
 log = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ def _get_app_node_type(
 
 class Creatone(BaseAlgorithm):
 
-    def __init__(self, data_provider: CreatoneDataProvider,
+    def __init__(self, data_provider: ScoreDataProvider,
                  dimensions: List[ResourceType] = DEFAULT_DIMENSIONS,
                  max_node_score: float = 10.,
                  alias: str = None,

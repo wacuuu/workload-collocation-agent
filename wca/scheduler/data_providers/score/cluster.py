@@ -14,11 +14,11 @@
 from dataclasses import dataclass
 
 from wca.scheduler.data_providers.cluster_data_provider import ClusterDataProvider
-from wca.scheduler.data_providers.creatone import CreatoneDataProvider, AppsProfile, NodeType
+from wca.scheduler.data_providers.score import ScoreDataProvider, AppsProfile, NodeType
 
 
 @dataclass
-class ClusterCreatoneDataProvider(ClusterDataProvider, CreatoneDataProvider):
+class ClusterScoreDataProvider(ClusterDataProvider, ScoreDataProvider):
     app_profiles_query = 'app_profile'
     node_type_query = 'node_type{nodename=%r}'
 

@@ -32,7 +32,7 @@ AppsProfile = Dict[AppName, float]
 NodesType = Dict[NodeName, NodeType]
 
 
-class CreatoneDataProvider(DataProvider):
+class ScoreDataProvider(DataProvider):
     @abstractmethod
     def get_apps_profile(self) -> AppsProfile:
         pass
