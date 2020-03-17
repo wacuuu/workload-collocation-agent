@@ -23,13 +23,13 @@ class ClusterCreatoneDataProvider(ClusterDataProvider, CreatoneDataProvider):
     node_type_query = 'node_type'
 
     def get_apps_profile(self) -> AppsProfile:
-        query_result = self.prometheus.do_query(self.app_profiles_query, False)
+        query_result = self.prometheus.do_query(self.app_profiles_query, use_time=True)
 
         return {row['metric']['app']: float(row['value'][1])
                 for row in query_result}
 
     def get_nodes_type(self) -> NodesType:
-        query_result = self.prometheus.do_query(self.node_type_query, False)
+        query_result = self.prometheus.do_query(self.node_type_query, use_time=True)
 
         return {row['metric']['nodename']: row['metric']['nodetype']
                 for row in query_result}

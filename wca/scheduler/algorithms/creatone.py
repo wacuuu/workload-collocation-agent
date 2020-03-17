@@ -12,8 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from typing import Tuple, Optional, List
+from typing import Tuple, Optional, List, Dict
 
+from wca.logger import TRACE
 from wca.scheduler.algorithms import RescheduleResult
 from wca.scheduler.algorithms.base import (
         BaseAlgorithm, QueryDataProviderInfo, DEFAULT_DIMENSIONS)
@@ -58,6 +59,10 @@ class Creatone(BaseAlgorithm):
         apps_profile = self.data_provider.get_apps_profile()
         nodes_type = self.data_provider.get_nodes_type()
 
+        if log.getEffectiveLevel() <= TRACE:
+            log.log(TRACE, '[Filter:PMEM specific] apps_profile: \n%s', str(apps_profile))
+            log.log(TRACE, '[Filter:PMEM specific] nodes_type: \n%s', str(nodes_type))
+
         node_type = nodes_type[node_name]
         app_type = _get_app_node_type(apps_profile, app_name, self.score_target)
 
@@ -77,10 +82,27 @@ class Creatone(BaseAlgorithm):
 
         self.metrics.extend(metrics)
 
-        if fits:
-            fits, message = self.app_fit_node_type(app_name, node_name)
+        # @TODO moved to app_fit_nodes
+        # if fits:
+        #     fits, message = self.app_fit_node_type(app_name, node_name)
 
         return fits, message
+
+    def app_fit_nodes(self, node_names: List[NodeName], app_name: str,
+                      data_provider_queried: QueryDataProviderInfo) -> \
+            Tuple[List[NodeName], Dict[NodeName, str]]:
+        """
+        Return accepted and failed nodes.
+        """
+
+        # @TODO make it generic
+        # if fitting node type and that node type is passed inside node_names
+        if 'node101' in node_names and self.app_fit_node_type(app_name, 'node101')[0]:
+            return ['node101'], {node_name: 'App match PMEM and PMEM available!'
+                                 for node_name in node_names
+                                 if node_name != 'node101'}
+
+        return node_names, {}
 
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: QueryDataProviderInfo) -> float:
