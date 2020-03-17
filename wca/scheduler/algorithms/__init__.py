@@ -14,15 +14,14 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Optional, Dict
+from typing import List, Optional
 
 from wca.scheduler.metrics import MetricRegistry
-from wca.scheduler.types import ExtenderArgs, HostPriority, NodeName, ExtenderFilterResult, \
-    Apps
+from wca.scheduler.types import ExtenderArgs, HostPriority, ExtenderFilterResult, TaskName
 
 log = logging.getLogger(__name__)
 
-RescheduleResult = Dict[NodeName, Apps]
+RescheduleResult = List[TaskName]
 
 
 class DataMissingException(Exception):

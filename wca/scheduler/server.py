@@ -22,6 +22,7 @@ from flask import Flask, request, jsonify
 from wca.config import Numeric
 from wca.metrics import Metric, MetricType
 from wca.scheduler.algorithms import Algorithm, RescheduleResult
+from wca.scheduler.kubeapi import Kubeapi
 from wca.scheduler.metrics import MetricName
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult
 
@@ -29,27 +30,43 @@ log = logging.getLogger(__name__)
 
 DEFAULT_NAMESPACE = 'default'
 DEFAULT_METRIC_LABELS = {}
+KUBEAPI_DELETE_POD_QUERY = '/api/v1/namespaces/%s/pods/%s'
 
 
 class Server:
-    def reschedule(self, interval: Numeric(0, 60)):
-        while True:
-            time.sleep(interval)
-            reschedule_result: RescheduleResult = self.algorithm.reschedule()
 
-            #for node in reschedule_result:
-                # TODO: kubeapi delete task
-                #for app in node:
-                #pass
+    def reschedule(self):
+        # Decide which tasks should be rescheduled.
+        reschedule_result: RescheduleResult = self.algorithm.reschedule()
+
+        if len(reschedule_result) > 0:
+            log.info('[Rescheduling] %r', reschedule_result)
+
+            # Delete them.
+            for task in reschedule_result:
+                self.kubeapi.delete(KUBEAPI_DELETE_POD_QUERY % (DEFAULT_NAMESPACE, task))
+
+    def reschedule_interval(self, interval: Numeric(0, 60)):
+        while True:
+            self.reschedule()
+            time.sleep(interval)
 
     def __init__(self, configuration: Dict[str, str]):
         self.app = Flask('k8s scheduler extender')
         self.algorithm: Algorithm = configuration['algorithm']
+        self.kubeapi: Kubeapi = configuration['kubeapi']
 
-        interval = configuration.get('reschedule_interval', 5)
+        reschedule_interval = configuration.get('reschedule_interval')
 
-        reschedule_thread = threading.Thread(target=self.reschedule, args=[interval])
-        reschedule_thread.start()
+        if reschedule_interval:
+            reschedule_thread = threading.Thread(
+                    target=self.reschedule_interval,
+                    args=[reschedule_interval])
+            reschedule_thread.start()
+
+        @self.app.route('/reschedule')
+        def reschedule():
+            self.reschedule()
 
         @self.app.route('/status')
         def status():

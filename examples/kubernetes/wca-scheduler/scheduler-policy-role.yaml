@@ -22,4 +22,3 @@ roleRef:
   kind: ClusterRole
   name: scheduler-policy
   apiGroup: rbac.authorization.k8s.io
-

@@ -1,6 +1,10 @@
 loggers:
   wca.scheduler.server: INFO
   wca.scheduler.algorithms: TRACE
+kubeapi: &kubeapi !Kubeapi
+  host: !Env KUBERNETES_SERVICE_HOST
+  port: !Env KUBERNETES_SERVICE_PORT
+reschedule_interval: 5
 algorithm: !Score
   score_target: -2.0
   max_node_score: 10000.
@@ -11,9 +15,7 @@ algorithm: !Score
     - membw_read
     - wss
   data_provider: !ClusterScoreDataProvider
-    kubeapi: !Kubeapi
-      host: !Env KUBERNETES_SERVICE_HOST
-      port: !Env KUBERNETES_SERVICE_PORT
+    kubeapi: *kubeapi
     prometheus: !Prometheus
       host: http://100.64.176.36
       port: 30900

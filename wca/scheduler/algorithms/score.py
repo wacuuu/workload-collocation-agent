@@ -44,7 +44,7 @@ def _get_app_node_type(
     return NodeType.DRAM
 
 
-class Creatone(BaseAlgorithm):
+class Score(BaseAlgorithm):
 
     def __init__(self, data_provider: ScoreDataProvider,
                  dimensions: List[ResourceType] = DEFAULT_DIMENSIONS,
@@ -110,14 +110,12 @@ class Creatone(BaseAlgorithm):
     def reschedule(self) -> RescheduleResult:
         apps_on_node, _ = self.data_provider.get_apps_counts()
 
-        result = {}
+        result = []
 
         for node in apps_on_node:
-            result[node] = []
             for app in apps_on_node[node]:
-                if not self.app_fit_node_type(app, node):
-                    result[node].append(apps_on_node[node][app])
-
-        log.info('[Rescheduling] %r', result)
-
+                app_correct_placement, _ = self.app_fit_node_type(app, node)
+                if not app_correct_placement:
+                    for task in apps_on_node[node][app]:
+                        result.append(task)
         return result

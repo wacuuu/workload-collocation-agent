@@ -66,3 +66,23 @@ class Kubeapi:
         r.raise_for_status()
 
         return r.json()
+
+    def delete(self, target):
+        full_url = urljoin(
+                self.endpoint,
+                target)
+
+        r = requests.delete(
+                full_url,
+                headers={
+                    "Authorization": "Bearer {}".format(self.service_token),
+                    },
+                timeout=self.timeout,
+                verify=self.server_cert_ca_path)
+
+        if not r.ok:
+            log.error('An unexpected error occurred for target "%s": %i %s - %s',
+                      target, r.status_code, r.reason, r.raw)
+        r.raise_for_status()
+
+        return r.json()
