@@ -37,6 +37,7 @@ class CreatoneDataProvider(DataProvider):
     def get_apps_profile(self) -> AppsProfile:
         pass
 
+    # TODO: Consider passing parameter and return NodeType.
     @abstractmethod
     def get_nodes_type(self) -> NodesType:
         pass
