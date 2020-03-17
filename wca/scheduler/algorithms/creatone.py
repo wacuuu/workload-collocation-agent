@@ -14,6 +14,7 @@
 import logging
 from typing import Tuple, Optional, List
 
+from wca.scheduler.algorithms import RescheduleResult
 from wca.scheduler.algorithms.base import (
         BaseAlgorithm, QueryDataProviderInfo, DEFAULT_DIMENSIONS)
 from wca.scheduler.algorithms.fit import app_fits
@@ -84,3 +85,18 @@ class Creatone(BaseAlgorithm):
     def priority_for_node(self, node_name: str, app_name: str,
                           data_provider_queried: QueryDataProviderInfo) -> float:
         return 0.0
+
+    def reschedule(self) -> RescheduleResult:
+        apps_on_node, _ = self.data_provider.get_apps_counts()
+
+        result = {}
+
+        for node in apps_on_node:
+            result[node] = []
+            for app in apps_on_node[node]:
+                if not self.app_fit_node_type(app, node):
+                    result[node].append(apps_on_node[node][app])
+
+        log.info('[Rescheduling] %r', result)
+
+        return result
