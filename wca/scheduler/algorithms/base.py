@@ -78,7 +78,7 @@ class BaseAlgorithm(Algorithm):
 
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
         if log.getEffectiveLevel() <= TRACE:
-            log.log(TRACE, '[Filter] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
+            log.log(TRACE, '[Filter] data_queried: \n%s', str(data_provider_queried))
 
         # First pass (parallelize-able, fast K8S style)
         accepted_node_names = []
@@ -92,8 +92,8 @@ class BaseAlgorithm(Algorithm):
             else:
                 accepted_node_names.append(node_name)
 
-        # Second pass (choose best among) but filter with context of each node
-        # only if we have something to filter at all.
+        # Second pass (choose best among). Filter with context of all other nodes which passed
+        # first stage. Only if we have something to filter at all.
         if accepted_node_names:
             accepted_node_names, failed = self.app_fit_nodes(accepted_node_names, app_name,
                                                              data_provider_queried)
@@ -112,8 +112,7 @@ class BaseAlgorithm(Algorithm):
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
         if log.getEffectiveLevel() <= TRACE:
-            log.log(TRACE,
-                    '[Prioritize] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
+            log.log(TRACE, '[Filter] data_queried: \n%s', str(data_provider_queried))
 
         priorities = []
         for node_name in sorted(nodes_names):
@@ -155,7 +154,7 @@ class BaseAlgorithm(Algorithm):
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
         if log.getEffectiveLevel() <= TRACE:
             log.log(TRACE,
-                    '[Reschedule] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
+                    '[Reschedule] data_queried: \n%s\n', str(data_provider_queried))
         apps_to_reschedule, metrics = self.reschedule_with_metrics(data_provider_queried)
         self.metrics.extend(metrics)
         log.debug('[Reschedule] <- Remove: %r', ','.join(apps_to_reschedule))
