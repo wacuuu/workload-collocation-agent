@@ -162,7 +162,7 @@ class BaseAlgorithm(Algorithm):
 
     def reschedule_with_metrics(self, data_provider_queried: QueryDataProviderInfo
                                 ) -> Tuple[RescheduleResult, List[Metric]]:
-        return {}, []
+        return [], []
 
 
 def used_resources_on_node(
