@@ -168,7 +168,7 @@ class BaseAlgorithm(Algorithm):
 def used_resources_on_node(
         dimensions: Set[ResourceType],
         assigned_apps_counts: AppsCount,
-        apps_spec: [Dict[AppName, Resources]]) -> Resources:
+        apps_spec: Dict[AppName, Resources]) -> Resources:
     """Calculate used resources on a given node using data returned by data provider."""
     used = {dim: 0 for dim in dimensions}
     for app, count in assigned_apps_counts.items():
@@ -348,3 +348,22 @@ def get_requested_fraction(app_name, apps_spec, assigned_apps, node_name,
                    value=fraction, labels=dict(app=app_name, resource=resource),
                    type=MetricType.GAUGE))
     return requested_fraction, metrics
+
+
+def get_nodes_used_resources(
+        dimensions: Set[ResourceType],
+        apps_on_node: Dict[NodeName, Apps],
+        apps_spec: Dict[AppName, Resources]):
+    """Returns used resources on nodes."""
+    nodes_used_resources = {}
+
+    for node in apps_on_node:
+        appscount = {
+                app: len(tasks)
+                for app, tasks in apps_on_node[node].items()
+        }
+
+        nodes_used_resources[node] = used_resources_on_node(
+                dimensions, appscount, apps_spec)
+
+    return nodes_used_resources

@@ -11,11 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import pytest
 from typing import Dict
 
-from wca.scheduler.algorithms.base import used_resources_on_node, sum_resources, \
-    subtract_resources, flat_membw_read_write, divide_resources, used_free_requested, \
-    get_requested_fraction
+from wca.scheduler.algorithms.base import (
+        used_resources_on_node, sum_resources,
+        subtract_resources, flat_membw_read_write,
+        divide_resources, used_free_requested, get_requested_fraction,
+        get_nodes_used_resources)
 from wca.scheduler.types import ResourceType as rt, Apps, NodeName
 
 
@@ -54,15 +57,6 @@ def test_divide_resources():
     assert c[rt.MEMBW_FLAT] == 0.5
 
 
-def test_used_resources_on_node():
-    dimensions = {rt.CPU, rt.MEM}
-    assigned_apps_counts = {'stress_ng': 8}
-    apps_spec = {'stress_ng': {rt.CPU: 8, rt.MEM: 10}}
-    r = used_resources_on_node(dimensions, assigned_apps_counts, apps_spec)
-    assert r[rt.CPU] == 64
-    assert r[rt.MEM] == 80
-
-
 def test_used_free_requested_and_requested_fraction():
     dimensions = {rt.CPU, rt.MEM}
     app_name = 'app1'
@@ -87,3 +81,81 @@ def test_used_free_requested_and_requested_fraction():
                                                    node_capacities, dimensions)
     #
     assert requested_fraction == {'cpu': 0.4, 'mem': 0.4}
+
+
+TEST_DIMENSIONS = set([
+    rt.CPU,
+    rt.MEM,
+    rt.MEMBW_READ,
+    rt.MEMBW_WRITE
+])
+
+TEST_APP_SPEC = {
+        'memcached-mutilate-big': {
+            rt.CPU: 4.,
+            rt.MEM: 40.,
+            rt.MEMBW_READ: 4.,
+            rt.MEMBW_WRITE: 2.
+            },
+        'memcached-mutilate-medium': {
+            rt.CPU: 2.,
+            rt.MEM: 20,
+            rt.MEMBW_READ: 2.,
+            rt.MEMBW_WRITE: 1.
+        },
+        'memcached-mutilate-small': {
+            rt.CPU: 1.,
+            rt.MEM: 10.,
+            rt.MEMBW_READ: 1.,
+            rt.MEMBW_WRITE: .5
+            }
+}
+
+
+@pytest.mark.parametrize('dimensions, assigned_apps, apps_spec, expected', [
+    (TEST_DIMENSIONS, {}, TEST_APP_SPEC, {'cpu': 0, 'mem': 0, 'membw_read': 0, 'membw_write': 0}),
+    (TEST_DIMENSIONS, {'memcached-mutilate-big': 1}, TEST_APP_SPEC,
+        {'cpu': 4.0, 'mem': 40.0, 'membw_read': 4.0, 'membw_write': 2.0}),
+    (TEST_DIMENSIONS, {'memcached-mutilate-big': 4, 'memcached-mutilate-small': 2}, TEST_APP_SPEC,
+        {'cpu': 18.0, 'mem': 180.0, 'membw_read': 18.0, 'membw_write': 9.0}),
+])
+def test_used_resources_on_node(dimensions, assigned_apps, apps_spec, expected):
+    assert used_resources_on_node(dimensions, assigned_apps, apps_spec) == expected
+
+
+@pytest.mark.parametrize('dimensions, apps_on_node, apps_spec, expected', [
+    (TEST_DIMENSIONS, {}, TEST_APP_SPEC, {}),
+    (TEST_DIMENSIONS, {
+        'node101': {}
+        },
+        TEST_APP_SPEC, {
+        'node101': {'cpu': 0, 'mem': 0, 'membw_read': 0, 'membw_write': 0}
+        }),
+    (TEST_DIMENSIONS, {
+        'node101': {},
+        'node102': {'memcached-mutilate-big': ['memcached-mutilate-big-0']}
+        },
+        TEST_APP_SPEC, {
+        'node101': {'cpu': 0, 'mem': 0, 'membw_read': 0, 'membw_write': 0},
+        'node102': {'cpu': 4.0, 'mem': 40.0, 'membw_read': 4.0, 'membw_write': 2.0}
+        }),
+    (TEST_DIMENSIONS, {
+        'node101': {},
+        'node102': {
+            'memcached-mutilate-big': [
+                'memcached-mutilate-big-0',
+                'memcached-mutilate-big-1',
+                'memcached-mutilate-big-2',
+                'memcached-mutilate-big-3'],
+            'memcached-mutilate-small': [
+                'memcached-mutilate-small-0',
+                'memcached-mutilate-small-1'],
+            }
+        },
+        TEST_APP_SPEC, {
+        'node101': {'cpu': 0, 'mem': 0, 'membw_read': 0, 'membw_write': 0},
+        'node102': {'cpu': 18.0, 'mem': 180.0, 'membw_read': 18.0, 'membw_write': 9.0}
+        }),
+    ])
+def test_get_nodes_used_resources(dimensions, apps_on_node, apps_spec, expected):
+    assert get_nodes_used_resources(dimensions, apps_on_node, apps_spec) == expected
