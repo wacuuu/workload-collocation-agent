@@ -1,4 +1,4 @@
-# Copyright (c) 2019 Intel Corporation
+# Copyright (c) 2020 Intel Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,9 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from wca.scheduler.types import ExtenderArgs, TaskName, AppName, NodeName
+from wca.scheduler.types import (
+        ExtenderArgs, TaskName, AppName,
+        NodeName, Resources, ResourceType, AppsCount, Apps)
 
-from typing import Tuple, List
+from typing import Tuple, List, Set, Dict
 
 
 def extract_common_input(extender_args: ExtenderArgs) \
@@ -25,3 +27,34 @@ def extract_common_input(extender_args: ExtenderArgs) \
     namespace = metadata.get('namespace', '')
     app = labels.get('app', None)
     return app, nodes, namespace, name
+
+
+def calculate_used_node_resources(
+        dimensions: Set[ResourceType],
+        assigned_app_count: AppsCount,
+        apps_spec: Dict[AppName, Resources]) -> Resources:
+    """Calculate node used resources."""
+    used = {dim: 0 for dim in dimensions}
+    for app, count in assigned_app_count.items():
+        for dim in dimensions:
+            used[dim] += apps_spec[app][dim] * count
+    return used
+
+
+def get_nodes_used_resources(
+        dimensions: Set[ResourceType],
+        apps_on_node: Dict[NodeName, Apps],
+        apps_spec: Dict[AppName, Resources]):
+    """Returns used resources on nodes."""
+    nodes_used_resources = {}
+
+    for node in apps_on_node:
+        appscount = {
+                app: len(tasks)
+                for app, tasks in apps_on_node[node].items()
+        }
+
+        nodes_used_resources[node] = calculate_used_node_resources(
+                dimensions, appscount, apps_spec)
+
+    return nodes_used_resources
