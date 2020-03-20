@@ -36,7 +36,7 @@ class Fit(BaseAlgorithm):
                                 nodes_capacities, assigned_apps_counts, apps_spec)
         self.metrics.extend(metrics)
 
-        # SUBTRACT: "free" after simulated assigment of requested
+        # SUBTRACT: "free" after simulated assignment of requested
         try:
             requested_and_used = sum_resources(requested, used)
         except ValueError as e:

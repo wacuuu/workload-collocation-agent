@@ -44,6 +44,7 @@ class Queries:
     MEMBW_CAPACITY_READ: str = 'sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename)'
     MEMBW_CAPACITY_WRITE: str =\
         'sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename)'
+    NODES_DRAM_HIT_RATIO: str = 'platform_dram_hit_ratio'
 
     NODE_CAPACITY_MEM_WSS: str =\
         'sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (nodename)'
@@ -312,7 +313,6 @@ class ClusterDataProvider(DataProvider):
 
     def get_apps_requested_resources(self, resources: Iterable[ResourceType]) \
             -> Dict[AppName, Resources]:
-
         app_requested_resources = defaultdict(lambda: defaultdict(float))
 
         for resource in resources:
@@ -326,5 +326,12 @@ class ClusterDataProvider(DataProvider):
 
         app_requested_resources = {k: dict(v) for k, v in app_requested_resources.items()}
         log.debug('Resources requested by apps: %r' % app_requested_resources)
-
         return app_requested_resources
+
+    def get_dram_hit_ratio(self) -> Dict[NodeName, float]:
+        query_result = self.prometheus.do_query(self.prometheus.queries.NODES_DRAM_HIT_RATIO)
+        dram_hit_ratio_per_node = {}
+        for row in query_result:
+            dram_hit_ratio_per_node[row['metric']['nodename']] = float(row['value'][1])
+
+        return dram_hit_ratio_per_node

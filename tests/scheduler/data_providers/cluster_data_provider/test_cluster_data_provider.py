@@ -70,6 +70,8 @@ def do_query_side_effect(*args):
     elif args[0] == Prometheus.queries.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.WSS]:
         return create_json_fixture_mock(
                 'prometheus_app_requested_wss').json()['data']['result']
+    elif args[0] == Prometheus.queries.NODES_DRAM_HIT_RATIO:
+        return create_json_fixture_mock('prometheus_nodes_dram_hit_ratio').json()['data']['result']
 
 
 @pytest.mark.parametrize('resources', [
@@ -221,3 +223,10 @@ APP_REQUESTED_ALL_RESOURCES = {app: {**APP_REQUESTED_CPU_MEM_MEMBW[app], **APP_R
 def test_get_apps_requested_resources(resource_types, resources):
     cluster_dp = get_mocked_cluster_data_provider()
     assert resources == cluster_dp.get_apps_requested_resources(resource_types)
+
+
+def test_get_dram_hit_ratio():
+    cluster_dp = get_mocked_cluster_data_provider()
+    expected_output = {'node37': 0.9663167325496853, 'node101': 0.9850065180264695,
+                       'node102': 0.989695331322444, 'node103': 1, 'node39': 0.9401047494771465}
+    assert cluster_dp.get_dram_hit_ratio() == expected_output

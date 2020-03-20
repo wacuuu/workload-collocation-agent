@@ -25,7 +25,7 @@ class DataProvider(ABC):
 
     @abstractmethod
     def get_apps_counts(self) -> Tuple[Dict[NodeName, AppsCount], AppsCount]:
-        """Return apps assigned to nodes and usassigned yet.
+        """Return apps assigned to nodes and unassigned yet.
         e.g. {'node_0': {'memcached_small': 3, 'stress_ng': 5}}, {'memcached_big': 8}
         """
         raise Exception('PROPOSAL FOR NEW API')
@@ -34,4 +34,9 @@ class DataProvider(ABC):
     def get_apps_requested_resources(self, resources: Iterable[ResourceType]) \
             -> Dict[AppName, Resources]:
         """Returns all apps definitions on the cluster"""
+        pass
+
+    @abstractmethod
+    def get_dram_hit_ratio(self) -> Dict[NodeName, float]:
+        """Returns dram hit ratio for each node"""
         pass
