@@ -35,7 +35,7 @@ KUBEAPI_DELETE_POD_QUERY = '/api/v1/namespaces/%s/pods/%s'
 
 class Server:
 
-    def reschedule(self):
+    def reschedule_once(self):
         # Decide which tasks should be rescheduled.
         reschedule_result: RescheduleResult = self.algorithm.reschedule()
 
@@ -45,6 +45,8 @@ class Server:
             # Delete them.
             for task in reschedule_result:
                 self.kubeapi.delete(KUBEAPI_DELETE_POD_QUERY % (DEFAULT_NAMESPACE, task))
+
+        return jsonify(True)
 
     def reschedule_interval(self, interval: Numeric(0, 60)):
         while True:
@@ -66,7 +68,7 @@ class Server:
 
         @self.app.route('/reschedule')
         def reschedule():
-            self.reschedule()
+            return self.reschedule_once()
 
         @self.app.route('/status')
         def status():
