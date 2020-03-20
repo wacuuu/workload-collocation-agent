@@ -31,10 +31,11 @@ class ClusterScoreDataProvider(ClusterDataProvider, ScoreDataProvider):
     def get_node_type(self, node) -> NodeType:
         query = self.node_type_query % node
         query_result = self.prometheus.do_query(query, use_time=True)
-
-        node_type = query_result[0]['metric']['nodetype']
-
-        if node_type == NodeType.DRAM:
-            return NodeType.DRAM
-        elif node_type == NodeType.PMEM:
-            return NodeType.PMEM
+        if len(query_result) > 0:
+            node_type = query_result[0]['metric']['nodetype']
+            if node_type == NodeType.DRAM:
+                return NodeType.DRAM
+            elif node_type == NodeType.PMEM:
+                return NodeType.PMEM
+        else:
+            return NodeType.UNKNOWN
