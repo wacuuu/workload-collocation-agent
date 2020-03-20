@@ -45,3 +45,10 @@ SCORE_TARGET = -2.0
     ])
 def test_get_app_node_type(apps_profile, app_name, score_target, result):
     assert _get_app_node_type(apps_profile, app_name, score_target) == result
+
+
+@pytest.mark.parametrize('', [
+    (),
+    ])
+def test_reschedule():
+    pass

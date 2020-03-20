@@ -41,6 +41,9 @@ def do_query_side_effect(*args, **kwargs):
     elif args[0] == ClusterScoreDataProvider.node_type_query % 'node40':
         return create_json_fixture_mock('prometheus_node_type_node40').json()['data']['result']
 
+    else:
+        return []
+
 
 APPS_PROFILE = {
         'memcached-mutilate-big': -0.15827586206896552,
@@ -89,6 +92,7 @@ NODE_TYPES = {
 @pytest.mark.parametrize('node, expected_type', [
         ('node101', NodeType.PMEM),
         ('node40', NodeType.DRAM),
+        ('node36', NodeType.UNKNOWN),
         ])
 def test_get_nodes_profiles(node, expected_type):
     dp = get_mocked_cluster_data_provider()

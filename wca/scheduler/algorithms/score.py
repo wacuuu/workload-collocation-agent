@@ -17,15 +17,20 @@ from typing import Tuple, Optional, List, Dict
 from wca.logger import TRACE
 from wca.scheduler.algorithms import RescheduleResult
 from wca.scheduler.algorithms.base import (
-        BaseAlgorithm, QueryDataProviderInfo, DEFAULT_DIMENSIONS)
+        BaseAlgorithm, QueryDataProviderInfo, DEFAULT_DIMENSIONS, subtract_resources,
+        sum_resources, calculate_read_write_ratio, enough_resources_on_node,
+        get_nodes_used_resources)
 from wca.scheduler.algorithms.fit import app_fits
 from wca.scheduler.data_providers.score import ScoreDataProvider, NodeType, AppsProfile
-from wca.scheduler.types import (AppName, NodeName, ResourceType)
+from wca.scheduler.types import (AppName, NodeName, ResourceType, TaskName)
 
 log = logging.getLogger(__name__)
 
 
 MIN_APP_PROFILES = 2
+
+RescheduleApps = Dict[AppName, Dict[NodeName, List[TaskName]]]
+ConsiderApps = Dict[AppName, List[TaskName]]
 
 
 def _get_app_node_type(
@@ -110,12 +115,119 @@ class Score(BaseAlgorithm):
     def reschedule(self) -> RescheduleResult:
         apps_on_node, _ = self.data_provider.get_apps_counts()
 
-        result = []
+        reschedule: RescheduleApps = {}
+        consider: RescheduleApps = {}
 
         for node in apps_on_node:
+            node_type = self.data_provider.get_node_type(node)
             for app in apps_on_node[node]:
+
                 app_correct_placement, _ = self.app_fit_node_type(app, node)
+
                 if not app_correct_placement:
-                    for task in apps_on_node[node][app]:
+
+                    # Apps, that no matching PMEM node, should be deleted.
+                    if node_type == NodeType.PMEM:
+                        if app not in reschedule:
+                            reschedule[app] = {}
+                        if node not in reschedule[app]:
+                            reschedule[app][node] = []
+
+                        reschedule[app][node] = apps_on_node[node][app]
+
+                    # Apps, that matching PMEM but are in DRAM, should be considered to reschedule.
+                    elif node_type == NodeType.DRAM:
+                        if app not in consider:
+                            consider[app] = {}
+                        if node not in consider[app]:
+                            consider[app][node] = []
+
+                        consider[app][node] = apps_on_node[node][app]
+
+        result = self.get_tasks_to_reschedule(reschedule, consider)
+
+        return result
+
+    def get_tasks_to_reschedule(self, reschedule: RescheduleApps,
+                                consider: RescheduleApps) -> RescheduleResult:
+        apps_spec = self.data_provider.get_apps_requested_resources(self.dimensions)
+
+        apps_on_node, _ = self.data_provider.get_apps_counts()
+
+        apps_on_pmem_nodes = {
+                node: apps
+                for node, apps in apps_on_node.items()
+                if self.data_provider.get_node_type(node) == NodeType.PMEM
+                }
+
+        pmem_nodes_used_resources = get_nodes_used_resources(
+                self.dimensions, apps_on_pmem_nodes, apps_spec)
+
+        result: RescheduleResult = []
+
+        # Free PMEM nodes resources.
+        for app in reschedule:
+            for node in reschedule[app]:
+
+                if node in pmem_nodes_used_resources:
+                    for task in reschedule[app][node]:
+
+                        pmem_nodes_used_resources[node] =\
+                            subtract_resources(
+                                    pmem_nodes_used_resources[node],
+                                    apps_spec[app])
+
                         result.append(task)
+                else:
+                    raise RuntimeError('Capacities of %r not available!', node)
+
+        apps_profile = self.data_provider.get_apps_profile()
+        sorted_apps_profile = sorted(apps_profile.items(), key=lambda x: x[1], reverse=True)
+
+        # Start from the newest tasks.
+        sorted_consider = {}
+        for app, _ in sorted_apps_profile:
+            if app in consider:
+                sorted_consider[app] = []
+                for node in consider[app]:
+                    sorted_consider[app].extend(consider[app][node])
+                sorted_consider[app] = sorted(sorted_consider[app], reverse=True)
+
+        nodes_capacities = self.data_provider.get_nodes_capacities(self.dimensions)
+        pmem_nodes_capacities = {
+                node: capacities
+                for node, capacities in nodes_capacities.items()
+                if self.data_provider.get_node_type(node) == NodeType.PMEM
+        }
+
+        pmem_nodes_membw_ratio = {
+                node: calculate_read_write_ratio(capacities)
+                for node, capacities in pmem_nodes_capacities.items()
+        }
+
+        for app, _ in sorted_apps_profile:
+            if app in sorted_consider:
+                for task in sorted_consider[app]:
+                    can_be_rescheduled = False
+                    for node in pmem_nodes_used_resources:
+                        # If app fit on add task to reschedule and continue with next.
+                        requested_and_used = sum_resources(
+                                pmem_nodes_used_resources[node], apps_spec[app])
+
+                        enough_resources, _, _ = enough_resources_on_node(
+                                nodes_capacities[node],
+                                requested_and_used,
+                                pmem_nodes_membw_ratio[node])
+
+                        if enough_resources:
+                            can_be_rescheduled = True
+                            result.append(task)
+                            pmem_nodes_used_resources[node] = requested_and_used
+                            continue
+
+                    if not can_be_rescheduled:
+                        # TODO: Add metric.
+                        log.warning('[Reschedule] %r cannot be rescheduled to PMEm node: '
+                                    'There is no more space!', task)
+
         return result
