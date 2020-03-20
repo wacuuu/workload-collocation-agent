@@ -17,24 +17,13 @@ from typing import Tuple, List
 
 from wca.metrics import Metric
 from wca.scheduler.algorithms import DataMissingException, RescheduleResult
-from wca.scheduler.algorithms.base import BaseAlgorithm, sum_resources, subtract_resources, \
-    used_free_requested, QueryDataProviderInfo, calculate_read_write_ratio
+from wca.scheduler.algorithms.base import (
+        BaseAlgorithm, sum_resources, used_free_requested,
+        QueryDataProviderInfo, calculate_read_write_ratio,
+        enough_resources_on_node)
 from wca.scheduler.cluster_simulator import Resources
 
 log = logging.getLogger(__name__)
-
-
-def enough_resources_on_node(capacity, used, membw_read_write_ratio):
-    free = subtract_resources(
-        capacity,
-        used,
-        membw_read_write_ratio,
-    )
-
-    # CHECK
-    broken_capacities = {r: abs(v) for r, v in free.items() if v < 0}
-
-    return not bool(broken_capacities), broken_capacities, free
 
 
 def app_fits(node_name, app_name, dimensions, nodes_capacities,

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pprint
 from abc import abstractmethod
 from typing import Tuple, Dict, List, Optional, Set
 
@@ -367,3 +366,16 @@ def get_nodes_used_resources(
                 dimensions, appscount, apps_spec)
 
     return nodes_used_resources
+
+
+def enough_resources_on_node(capacity, used, membw_read_write_ratio):
+    free = subtract_resources(
+        capacity,
+        used,
+        membw_read_write_ratio,
+    )
+
+    # CHECK
+    broken_capacities = {r: abs(v) for r, v in free.items() if v < 0}
+
+    return not bool(broken_capacities), broken_capacities, free
