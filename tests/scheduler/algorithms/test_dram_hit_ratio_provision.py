@@ -16,14 +16,10 @@ import pytest
 
 from wca.metrics import Metric, MetricType
 from wca.scheduler.algorithms.base import DEFAULT_DIMENSIONS
-from tests.scheduler.data_providers.cluster_data_provider.test_cluster_data_provider import \
-    get_mocked_cluster_data_provider
+from tests.scheduler.data_providers.test_cluster_data_provider import (
+    get_mocked_cluster_data_provider)
 from wca.scheduler.algorithms.dram_hit_ratio_provision import DramHitRatioProvision
 from wca.scheduler.metrics import MetricName
-
-algorithm = DramHitRatioProvision(data_provider=get_mocked_cluster_data_provider(),
-                                  dimensions=DEFAULT_DIMENSIONS,
-                                  threshold=0.97)
 
 
 @pytest.mark.parametrize('node_name, app_name, expected_output', [
@@ -34,7 +30,7 @@ def test_app_fit_node(node_name, app_name, expected_output):
     algorithm = DramHitRatioProvision(data_provider=get_mocked_cluster_data_provider(),
                                       dimensions=DEFAULT_DIMENSIONS,
                                       threshold=0.97)
-    assert algorithm.app_fit_node(node_name, app_name, algorithm.data_provider) == expected_output
+    assert algorithm.app_fit_node(node_name, app_name, None) == expected_output
     assert algorithm.metrics._storage[MetricName.NODE_DRAM_HIT_RATIO_CAN_SCHEDULE] == \
         [Metric(name=MetricName.NODE_DRAM_HIT_RATIO_CAN_SCHEDULE,
                 value=int(expected_output[0]),

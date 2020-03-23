@@ -244,7 +244,7 @@ class ClusterDataProvider(DataProvider):
         return app_requested_resources
 
     def get_dram_hit_ratio(self) -> Dict[NodeName, float]:
-        query_result = self.prometheus.do_query(self.prometheus.queries.NODES_DRAM_HIT_RATIO)
+        query_result = self.prometheus.do_query(self.queries.NODES_DRAM_HIT_RATIO)
         dram_hit_ratio_per_node = {}
         for row in query_result:
             dram_hit_ratio_per_node[row['metric']['nodename']] = float(row['value'][1])

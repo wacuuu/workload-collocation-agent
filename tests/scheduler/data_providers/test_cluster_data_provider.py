@@ -76,7 +76,7 @@ def do_query_side_effect(*args):
     elif args[0] == TEST_QUERIES.APP_REQUESTED_RESOURCES_QUERY_MAP[ResourceType.WSS]:
         return create_json_fixture_mock(
                 'prometheus_app_requested_wss').json()['data']['result']
-    elif args[0] == Prometheus.queries.NODES_DRAM_HIT_RATIO:
+    elif args[0] == TEST_QUERIES.NODES_DRAM_HIT_RATIO:
         return create_json_fixture_mock('prometheus_nodes_dram_hit_ratio').json()['data']['result']
 
 
