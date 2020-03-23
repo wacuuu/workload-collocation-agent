@@ -53,7 +53,6 @@ class ClusterSimulatorDataProvider(DataProvider):
             node_name: dict(apps)
             for node_name, apps in apps_per_node.items()
         }
-
         return apps_per_node_dict, dict(unassigned_tasks)
 
     def get_apps_requested_resources(self, resources: Iterable[ResourceType]) \
@@ -65,3 +64,7 @@ class ClusterSimulatorDataProvider(DataProvider):
             apps_requested[app_name] = {r: task.requested.data[r] for r in resources}
 
         return apps_requested
+
+    def get_dram_hit_ratio(self) -> Dict[NodeName, float]:
+        """Returns dram_hit_ratio for node"""
+        return {}

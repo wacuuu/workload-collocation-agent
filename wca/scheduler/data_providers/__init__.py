@@ -35,3 +35,8 @@ class DataProvider(ABC):
             -> Dict[AppName, Resources]:
         """Returns all apps definitions on the cluster"""
         pass
+
+    @abstractmethod
+    def get_dram_hit_ratio(self) -> Dict[NodeName, float]:
+        """Returns dram hit ratio for each node"""
+        pass
