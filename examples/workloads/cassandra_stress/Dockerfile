@@ -13,7 +13,11 @@
 # limitations under the License.
 
 
-FROM cassandra
+FROM cassandra:3.11
+
+# library tzdata start interactive dialog, in docker this must be turned off
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN ln -sfn /usr/bin/python2 /usr/bin/python
 RUN apt-get update && apt-get -y upgrade
 RUN apt -y install build-essential
