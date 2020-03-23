@@ -79,7 +79,7 @@ class Score(Fit):
                       data_provider_queried: QueryDataProviderInfo) -> \
             Tuple[List[NodeName], Dict[NodeName, str]]:
         """
-        Return accepted and failed nodes.
+        Returns accepted and failed nodes.
         """
         fit_nodes = []
         for node in node_names:
