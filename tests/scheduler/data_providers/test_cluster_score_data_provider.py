@@ -15,6 +15,9 @@ import pytest
 from unittest.mock import MagicMock, Mock
 
 from tests.testing import create_json_fixture_mock
+from tests.scheduler.data_providers.test_cluster_data_provider import (
+        do_query_side_effect as do_query_side_effect_cluster_dp)
+
 from wca.scheduler.data_providers.score import NodeType
 from wca.scheduler.data_providers.score.cluster import ClusterScoreDataProvider
 from wca.scheduler.kubeapi import Kubeapi
@@ -23,6 +26,8 @@ from wca.scheduler.prometheus import Prometheus
 
 def get_mocked_cluster_data_provider():
     mocked_kubeapi = MagicMock(spec=Kubeapi)
+    mocked_kubeapi.monitored_namespaces = ['default']
+
     mocked_prometheus = Mock(spec=Prometheus)
     mocked_prometheus.do_query.side_effect = do_query_side_effect
 
@@ -42,7 +47,7 @@ def do_query_side_effect(*args, **kwargs):
         return create_json_fixture_mock('prometheus_node_type_node40').json()['data']['result']
 
     else:
-        return []
+        return do_query_side_effect_cluster_dp(args)
 
 
 APPS_PROFILE = {

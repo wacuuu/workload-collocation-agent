@@ -12,9 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import pytest
-from tests.scheduler.data_providers.test_cluster_score_data_provider import APPS_PROFILE
+from tests.scheduler.data_providers.test_cluster_score_data_provider import (
+        APPS_PROFILE, get_mocked_cluster_data_provider)
 
-from wca.scheduler.algorithms.score import _get_app_node_type
+from wca.scheduler.algorithms.score import _get_app_node_type, Score
 from wca.scheduler.data_providers.score import NodeType
 
 SCORE_TARGET = -2.0
@@ -47,8 +48,28 @@ def test_get_app_node_type(apps_profile, app_name, score_target, result):
     assert _get_app_node_type(apps_profile, app_name, score_target) == result
 
 
-@pytest.mark.parametrize('', [
-    (),
+@pytest.mark.parametrize('algorithm, expected', [
+    (Score(data_provider=get_mocked_cluster_data_provider()),
+        (False, "'mysql-hammerdb-small' not prefered for pmem type of node")),
+    (Score(
+        data_provider=get_mocked_cluster_data_provider(),
+        score_target=SCORE_TARGET),
+        ((True, ""))),
     ])
-def test_reschedule():
+def test_app_fit_node_type(algorithm, expected):
+    assert algorithm._app_fit_node_type('mysql-hammerdb-small', 'node101') == expected
+
+
+@pytest.mark.parametrize('node_names, app_name, expected', [
+    (['node37', 'node38'], 'memcached-mutilate-big', ['node37', 'node38'])
+    ])
+def test_app_fit_nodes(node_names, app_name, expected):
+    algorithm = Score(
+            data_provider=get_mocked_cluster_data_provider(),
+            score_target=SCORE_TARGET)
+    assert algorithm.app_fit_nodes(node_names, app_name, None) == (expected, {})
+
+
+def test_rescheduling():
+    # TODO: Do it.
     pass

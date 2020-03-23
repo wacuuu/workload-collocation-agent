@@ -17,10 +17,10 @@ from typing import Tuple, Optional, List, Dict
 from wca.logger import TRACE
 from wca.scheduler.algorithms import RescheduleResult
 from wca.scheduler.algorithms.base import (
-        BaseAlgorithm, QueryDataProviderInfo, DEFAULT_DIMENSIONS, subtract_resources,
+        QueryDataProviderInfo, DEFAULT_DIMENSIONS, subtract_resources,
         sum_resources, calculate_read_write_ratio, enough_resources_on_node,
         get_nodes_used_resources)
-from wca.scheduler.algorithms.fit import app_fits
+from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.data_providers.score import ScoreDataProvider, NodeType, AppsProfile
 from wca.scheduler.types import (AppName, NodeName, ResourceType, TaskName)
 
@@ -49,7 +49,7 @@ def _get_app_node_type(
     return NodeType.DRAM
 
 
-class Score(BaseAlgorithm):
+class Score(Fit):
 
     def __init__(self, data_provider: ScoreDataProvider,
                  dimensions: List[ResourceType] = DEFAULT_DIMENSIONS,
@@ -60,7 +60,7 @@ class Score(BaseAlgorithm):
         super().__init__(data_provider, dimensions, max_node_score, alias)
         self.score_target = score_target
 
-    def app_fit_node_type(self, app_name: AppName, node_name: NodeName) -> Tuple[bool, str]:
+    def _app_fit_node_type(self, app_name: AppName, node_name: NodeName) -> Tuple[bool, str]:
         apps_profile = self.data_provider.get_apps_profile()
         node_type = self.data_provider.get_node_type(node_name)
 
@@ -75,42 +75,22 @@ class Score(BaseAlgorithm):
 
         return True, ''
 
-    def app_fit_node(self, node_name: NodeName, app_name: str,
-                     data_provider_queried: QueryDataProviderInfo) -> Tuple[bool, str]:
-        log.info('Trying to filter node %r for %r ', node_name, app_name)
-        nodes_capacities, assigned_apps, apps_spec, _ = data_provider_queried
-
-        fits, message, metrics = app_fits(
-            node_name, app_name, self.dimensions,
-            nodes_capacities, assigned_apps, apps_spec)
-
-        self.metrics.extend(metrics)
-
-        # @TODO moved to app_fit_nodes
-        # if fits:
-        #     fits, message = self.app_fit_node_type(app_name, node_name)
-
-        return fits, message
-
     def app_fit_nodes(self, node_names: List[NodeName], app_name: str,
                       data_provider_queried: QueryDataProviderInfo) -> \
             Tuple[List[NodeName], Dict[NodeName, str]]:
         """
         Return accepted and failed nodes.
         """
+        fit_nodes = []
+        for node in node_names:
+            fit, _ = self._app_fit_node_type(app_name, node)
+            if fit:
+                fit_nodes.append(node)
 
-        # @TODO make it generic
-        # if fitting node type and that node type is passed inside node_names
-        if 'node101' in node_names and self.app_fit_node_type(app_name, 'node101')[0]:
-            return ['node101'], {node_name: 'App match PMEM and PMEM available!'
-                                 for node_name in node_names
-                                 if node_name != 'node101'}
-
-        return node_names, {}
-
-    def priority_for_node(self, node_name: str, app_name: str,
-                          data_provider_queried: QueryDataProviderInfo) -> float:
-        return 0.0
+        if len(fit_nodes) == 0:
+            return node_names, {}
+        else:
+            return fit_nodes, {}
 
     def reschedule(self) -> RescheduleResult:
         apps_on_node, _ = self.data_provider.get_apps_counts()
@@ -126,7 +106,7 @@ class Score(BaseAlgorithm):
 
                 if not app_correct_placement:
 
-                    # Apps, that no matching PMEM node, should be deleted.
+                    # Apps, that not matching PMEM node, should be deleted.
                     if node_type == NodeType.PMEM:
                         if app not in reschedule:
                             reschedule[app] = {}
@@ -135,7 +115,7 @@ class Score(BaseAlgorithm):
 
                         reschedule[app][node] = apps_on_node[node][app]
 
-                    # Apps, that matching PMEM but are in DRAM, should be considered to reschedule.
+                    # Apps, that matching PMEM but are on DRAM, should be considered to reschedule.
                     elif node_type == NodeType.DRAM:
                         if app not in consider:
                             consider[app] = {}
@@ -144,12 +124,12 @@ class Score(BaseAlgorithm):
 
                         consider[app][node] = apps_on_node[node][app]
 
-        result = self.get_tasks_to_reschedule(reschedule, consider)
+        result = self._get_tasks_to_reschedule(reschedule, consider)
 
         return result
 
-    def get_tasks_to_reschedule(self, reschedule: RescheduleApps,
-                                consider: RescheduleApps) -> RescheduleResult:
+    def _get_tasks_to_reschedule(self, reschedule: RescheduleApps,
+                                 consider: RescheduleApps) -> RescheduleResult:
         apps_spec = self.data_provider.get_apps_requested_resources(self.dimensions)
 
         apps_on_node, _ = self.data_provider.get_apps_counts()
@@ -226,7 +206,6 @@ class Score(BaseAlgorithm):
                             continue
 
                     if not can_be_rescheduled:
-                        # TODO: Add metric.
                         log.warning('[Reschedule] %r cannot be rescheduled to PMEm node: '
                                     'There is no more space!', task)
 

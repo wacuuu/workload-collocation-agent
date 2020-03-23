@@ -78,6 +78,8 @@ def do_query_side_effect(*args):
                 'prometheus_app_requested_wss').json()['data']['result']
     elif args[0] == TEST_QUERIES.NODES_DRAM_HIT_RATIO:
         return create_json_fixture_mock('prometheus_nodes_dram_hit_ratio').json()['data']['result']
+    else:
+        return []
 
 
 @pytest.mark.parametrize('resources', [
