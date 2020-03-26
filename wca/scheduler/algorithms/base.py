@@ -40,7 +40,6 @@ DEFAULT_DIMENSIONS: List[ResourceType] = [
 
 # Convert data provider to common tuple.
 def query_data_provider(data_provider, dimensions) -> QueryDataProviderInfo:
-    """Should be overwritten if one needs more data from DataProvider."""
     assigned_apps, apps_unassigned = data_provider.get_apps_counts()
     nodes_capacities = data_provider.get_nodes_capacities(dimensions)
     apps_spec = data_provider.get_apps_requested_resources(dimensions)
