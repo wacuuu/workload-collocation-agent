@@ -17,8 +17,8 @@ from typing import Iterable, Dict, Tuple
 from dataclasses import dataclass
 
 from wca.scheduler.cluster_simulator import ClusterSimulator
-from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.types import Resources, NodeName, AppsCount, ResourceType, AppName, Apps
+from wca.scheduler.data_providers import DataProvider, AppsOnNode
+from wca.scheduler.types import Resources, NodeName, AppsCount, ResourceType, AppName
 
 
 @dataclass
@@ -36,7 +36,7 @@ class ClusterSimulatorDataProvider(DataProvider):
 
         return r
 
-    def get_apps_counts(self) -> Tuple[Dict[NodeName, Apps], AppsCount]:
+    def get_apps_counts(self) -> Tuple[AppsOnNode, AppsCount]:
         apps_per_node = {node.name: defaultdict(list) for node in
                          self.simulator.nodes}
         unassigned_tasks = defaultdict(int)
