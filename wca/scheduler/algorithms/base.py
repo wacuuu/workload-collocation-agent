@@ -154,10 +154,10 @@ class BaseAlgorithm(Algorithm):
         if log.getEffectiveLevel() <= TRACE:
             log.log(TRACE,
                     '[Reschedule] data_queried: \n%s\n', str(data_provider_queried))
-        apps_to_reschedule, metrics = self.reschedule_with_metrics(data_provider_queried)
+        tasks_to_reschedule, metrics = self.reschedule_with_metrics(data_provider_queried)
         self.metrics.extend(metrics)
-        log.debug('[Reschedule] <- Remove: %r', ','.join(apps_to_reschedule))
-        return apps_to_reschedule
+        log.debug('[Reschedule] <- Remove: %r', ','.join(tasks_to_reschedule))
+        return tasks_to_reschedule
 
     def reschedule_with_metrics(self, data_provider_queried: QueryDataProviderInfo
                                 ) -> Tuple[RescheduleResult, List[Metric]]:
