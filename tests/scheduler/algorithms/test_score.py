@@ -74,7 +74,9 @@ def test_app_fit_nodes(node_names, app_name, expected):
 
 def test_reschedule():
     algorithm = Score(data_provider=get_mocked_cluster_data_provider())
-    assert algorithm.reschedule() == []
+
+    assert algorithm.reschedule() == ['memcached-mutilate-big-wss-1', 'redis-memtier-big-0',
+                                      'redis-memtier-big-wss-0', 'specjbb-preset-big-120-0']
 
 
 @pytest.mark.parametrize('strict_mode, nodes, expected', [
