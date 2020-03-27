@@ -96,10 +96,11 @@ MEM = ResourceType.MEM
 CPU = ResourceType.CPU
 MEMBW_WRITE = ResourceType.MEMBW_WRITE
 MEMBW_READ = ResourceType.MEMBW_READ
-WSS = ResourceType.CPU
-MEMBW = ResourceType.MEMBW
+WSS = ResourceType.WSS
+# MEMBW = ResourceType.MEMBW
 MEMBW_FLAT = ResourceType.MEMBW_FLAT
 
+Apps = Dict[AppName, List[TaskName]]
 AppsCount = Dict[AppName, int]
 Resources = Dict[ResourceType, float]
 NodeCapacities = Dict[NodeName, Resources]

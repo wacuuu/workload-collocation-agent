@@ -14,13 +14,14 @@
 
 import logging
 from abc import ABC, abstractmethod
-from typing import List, Tuple, Optional
+from typing import List, Optional
 
-from wca.metrics import Metric
 from wca.scheduler.metrics import MetricRegistry
-from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult, HostPriority
+from wca.scheduler.types import ExtenderArgs, HostPriority, ExtenderFilterResult, TaskName
 
 log = logging.getLogger(__name__)
+
+RescheduleResult = List[TaskName]
 
 
 class DataMissingException(Exception):
@@ -29,12 +30,16 @@ class DataMissingException(Exception):
 
 class Algorithm(ABC):
     @abstractmethod
-    def filter(self, extender_args: ExtenderArgs) -> Tuple[ExtenderFilterResult, List[Metric]]:
+    def filter(self, extender_args: ExtenderArgs) -> ExtenderFilterResult:
         pass
 
     @abstractmethod
-    def prioritize(self, extender_args: ExtenderArgs) -> Tuple[List[HostPriority], List[Metric]]:
+    def prioritize(self, extender_args: ExtenderArgs) -> List[HostPriority]:
         pass
+
+    @abstractmethod
+    def reschedule(self) -> RescheduleResult:
+        """ Returns lists of pods to reschedule (remove from cluster from given nodes) """
 
     @abstractmethod
     def get_metrics_registry(self) -> Optional[MetricRegistry]:

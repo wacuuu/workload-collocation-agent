@@ -21,7 +21,11 @@ from wca.scheduler.algorithms.fit import Fit
 from wca.scheduler.algorithms.hierbar import HierBAR
 from wca.scheduler.algorithms.static_assigner import StaticAssigner
 from wca.scheduler.data_providers.cluster_data_provider import (
-    ClusterDataProvider, Kubeapi, Prometheus, Queries)
+    ClusterDataProvider, Queries)
+from wca.scheduler.algorithms.score import Score
+from wca.scheduler.data_providers.score.cluster import ClusterScoreDataProvider
+from wca.scheduler.kubeapi import Kubeapi
+from wca.scheduler.prometheus import Prometheus
 
 
 def register_algorithms():
@@ -31,6 +35,7 @@ def register_algorithms():
     register(BAR)
     register(HierBAR)
     register(StaticAssigner)
+    register(Score)
     register(DramHitRatioProvision)
 
 
@@ -39,3 +44,4 @@ def register_dataproviders():
     register(Prometheus)
     register(Queries)
     register(ClusterDataProvider)
+    register(ClusterScoreDataProvider)

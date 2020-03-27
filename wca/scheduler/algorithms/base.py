@@ -11,43 +11,43 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import pprint
 from abc import abstractmethod
 from typing import Tuple, Dict, List, Optional, Set
 
 from wca.logger import TRACE
 from wca.metrics import Metric, MetricType
-from wca.scheduler.algorithms import Algorithm, log, DataMissingException
+from wca.scheduler.algorithms import Algorithm, log, DataMissingException, RescheduleResult
 from wca.scheduler.data_providers import DataProvider
 from wca.scheduler.metrics import MetricRegistry, MetricName
 from wca.scheduler.types import NodeName, Resources, AppsCount, AppName, ResourceType, \
-    ExtenderArgs, ExtenderFilterResult, HostPriority
+    ExtenderArgs, ExtenderFilterResult, HostPriority, Apps
 from wca.scheduler.utils import extract_common_input
 
 QueryDataProviderInfo = Tuple[
     Dict[NodeName, Resources],  # nodes_capacities
-    Dict[NodeName, AppsCount],  # assigned_apps_counts
+    Dict[NodeName, Apps],  # assigned_app count
     Dict[AppName, Resources],  # apps_spec
-    AppsCount
+    AppsCount  # unassigend apps cout
 ]
 
 DEFAULT_DIMENSIONS: List[ResourceType] = [
-    ResourceType.CPU, ResourceType.MEM,
-    ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE
+    ResourceType.CPU,
+    ResourceType.MEM,
+    ResourceType.MEMBW_READ,
+    ResourceType.MEMBW_WRITE
 ]
 
 
 # Convert data provider to common tuple.
 def query_data_provider(data_provider, dimensions) -> QueryDataProviderInfo:
-    """Should be overwritten if one needs more data from DataProvider."""
-    assigned_apps_counts, apps_unassigned = data_provider.get_apps_counts()
+    assigned_apps, apps_unassigned = data_provider.get_apps_counts()
     nodes_capacities = data_provider.get_nodes_capacities(dimensions)
     apps_spec = data_provider.get_apps_requested_resources(dimensions)
-    return nodes_capacities, assigned_apps_counts, apps_spec, apps_unassigned
+    return nodes_capacities, assigned_apps, apps_spec, apps_unassigned
 
 
 class BaseAlgorithm(Algorithm):
-    """Implementing some basic functionalities which probably
+    """Implementing some basic functionalists which probably
        each Algorithm subclass will need to do. However forcing
        some way of implementing filtering and prioritizing which may
        not match everybody needs."""
@@ -59,13 +59,9 @@ class BaseAlgorithm(Algorithm):
                  ):
         self.data_provider = data_provider
         self.dimensions = dimensions
-        self.metrics: MetricRegistry = None
+        self.metrics: MetricRegistry = MetricRegistry()
         self.alias = alias
-        self.reinit_metrics()
         self.max_node_score = max_node_score
-
-    def reinit_metrics(self):
-        self.metrics = MetricRegistry()
 
     def __str__(self):
         if self.alias:
@@ -80,9 +76,9 @@ class BaseAlgorithm(Algorithm):
 
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
         if log.getEffectiveLevel() <= TRACE:
-            log.log(TRACE, '[Filter] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
+            log.log(TRACE, '[Filter] data_queried: \n%s', str(data_provider_queried))
 
-        # First pass (parallelizable, fast K8S style)
+        # First pass (parallelize-able, fast K8S style)
         accepted_node_names = []
         for node_name in nodes_names:
             # Gather individual failed
@@ -94,8 +90,8 @@ class BaseAlgorithm(Algorithm):
             else:
                 accepted_node_names.append(node_name)
 
-        # Second pass (choose best among) but filter with context of each node
-        # only if we have something to filter at all.
+        # Second pass (choose best among). Filter with context of all other nodes which passed
+        # first stage. Only if we have something to filter at all.
         if accepted_node_names:
             accepted_node_names, failed = self.app_fit_nodes(accepted_node_names, app_name,
                                                              data_provider_queried)
@@ -114,8 +110,7 @@ class BaseAlgorithm(Algorithm):
         app_name, nodes_names, namespace, name = extract_common_input(extender_args)
         data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
         if log.getEffectiveLevel() <= TRACE:
-            log.log(TRACE,
-                    '[Prioritize] data_queried: \n%s\n', pprint.pformat(data_provider_queried))
+            log.log(TRACE, '[Filter] data_queried: \n%s', str(data_provider_queried))
 
         priorities = []
         for node_name in sorted(nodes_names):
@@ -153,11 +148,25 @@ class BaseAlgorithm(Algorithm):
         """
         return node_names, {}
 
+    def reschedule(self) -> RescheduleResult:
+        data_provider_queried = query_data_provider(self.data_provider, self.dimensions)
+        if log.getEffectiveLevel() <= TRACE:
+            log.log(TRACE,
+                    '[Reschedule] data_queried: \n%s\n', str(data_provider_queried))
+        tasks_to_reschedule, metrics = self.reschedule_with_metrics(data_provider_queried)
+        self.metrics.extend(metrics)
+        log.debug('[Reschedule] <- Remove: %r', ','.join(tasks_to_reschedule))
+        return tasks_to_reschedule
+
+    def reschedule_with_metrics(self, data_provider_queried: QueryDataProviderInfo
+                                ) -> Tuple[RescheduleResult, List[Metric]]:
+        return [], []
+
 
 def used_resources_on_node(
         dimensions: Set[ResourceType],
-        assigned_apps_counts: Dict[AppName, int],
-        apps_spec: [Dict[AppName, Resources]]) -> Resources:
+        assigned_apps_counts: AppsCount,
+        apps_spec: Dict[AppName, Resources]) -> Resources:
     """Calculate used resources on a given node using data returned by data provider."""
     used = {dim: 0 for dim in dimensions}
     for app, count in assigned_apps_counts.items():
@@ -246,7 +255,7 @@ def divide_resources(a: Resources, b: Resources,
 
 def used_free_requested(
         node_name, app_name, dimensions,
-        nodes_capacities, assigned_apps_counts, apps_spec,
+        nodes_capacities, assigned_apps, apps_spec,
 ) -> Tuple[dict, dict, dict, dict, float, List[Metric]]:
     """Helper function not making any new calculations.
     All three values are returned in context of
@@ -258,8 +267,9 @@ def used_free_requested(
 
     capacity = nodes_capacities[node_name]
     membw_read_write_ratio = calculate_read_write_ratio(capacity)
-    node_apps_count = assigned_apps_counts[node_name]
-    used = used_resources_on_node(dimensions, node_apps_count, apps_spec)
+    apps = assigned_apps[node_name]
+    appscount = {app: len(tasks) for app, tasks in apps.items()}
+    used = used_resources_on_node(dimensions, appscount, apps_spec)
     requested = apps_spec[app_name]
 
     # currently used and free currently
@@ -306,7 +316,7 @@ def used_free_requested(
     return used, free, requested, capacity, membw_read_write_ratio, metrics
 
 
-def get_requested_fraction(app_name, apps_spec, assigned_apps_counts, node_name,
+def get_requested_fraction(app_name, apps_spec, assigned_apps, node_name,
                            nodes_capacities, dimensions) -> Tuple[Resources, List[Metric]]:
     """
     returns requested_fraction, metrics
@@ -314,7 +324,7 @@ def get_requested_fraction(app_name, apps_spec, assigned_apps_counts, node_name,
     # Current node context: used and free currently
     used, free, requested, capacity, membw_read_write_ratio, metrics = \
         used_free_requested(node_name, app_name, dimensions,
-                            nodes_capacities, assigned_apps_counts, apps_spec)
+                            nodes_capacities, assigned_apps, apps_spec)
 
     # SUM requested by app and already used on node
     try:
@@ -336,3 +346,35 @@ def get_requested_fraction(app_name, apps_spec, assigned_apps_counts, node_name,
                    value=fraction, labels=dict(app=app_name, resource=resource),
                    type=MetricType.GAUGE))
     return requested_fraction, metrics
+
+
+def get_nodes_used_resources(
+        dimensions: Set[ResourceType],
+        apps_on_node: Dict[NodeName, Apps],
+        apps_spec: Dict[AppName, Resources]):
+    """Returns used resources on nodes."""
+    nodes_used_resources = {}
+
+    for node in apps_on_node:
+        appscount = {
+                app: len(tasks)
+                for app, tasks in apps_on_node[node].items()
+        }
+
+        nodes_used_resources[node] = used_resources_on_node(
+                dimensions, appscount, apps_spec)
+
+    return nodes_used_resources
+
+
+def enough_resources_on_node(capacity, used, membw_read_write_ratio):
+    free = subtract_resources(
+        capacity,
+        used,
+        membw_read_write_ratio,
+    )
+
+    # CHECK
+    broken_capacities = {r: abs(v) for r, v in free.items() if v < 0}
+
+    return not bool(broken_capacities), broken_capacities, free

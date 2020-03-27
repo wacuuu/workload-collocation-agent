@@ -12,11 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-from dataclasses import asdict
-from flask import Flask, request, jsonify
+import time
+import threading
 from typing import Dict
 
+from dataclasses import asdict
+from flask import Flask, request, jsonify
+
+from wca.config import Numeric
 from wca.metrics import Metric, MetricType
+from wca.scheduler.algorithms import Algorithm, RescheduleResult
+from wca.scheduler.kubeapi import Kubeapi
 from wca.scheduler.metrics import MetricName
 from wca.scheduler.types import ExtenderArgs, ExtenderFilterResult
 
@@ -24,12 +30,45 @@ log = logging.getLogger(__name__)
 
 DEFAULT_NAMESPACE = 'default'
 DEFAULT_METRIC_LABELS = {}
+KUBEAPI_DELETE_POD_QUERY = '/api/v1/namespaces/%s/pods/%s'
 
 
 class Server:
+
+    def reschedule_once(self):
+        # Decide which tasks should be rescheduled.
+        reschedule_result: RescheduleResult = self.algorithm.reschedule()
+
+        if len(reschedule_result) > 0:
+            log.info('[Rescheduling] %r', reschedule_result)
+
+            # Delete them.
+            for task in reschedule_result:
+                self.kubeapi.delete(KUBEAPI_DELETE_POD_QUERY % (DEFAULT_NAMESPACE, task))
+
+        return jsonify(True)
+
+    def reschedule_interval(self, interval: Numeric(0, 60)):
+        while True:
+            self.reschedule()
+            time.sleep(interval)
+
     def __init__(self, configuration: Dict[str, str]):
         self.app = Flask('k8s scheduler extender')
-        self.algorithm = configuration['algorithm']
+        self.algorithm: Algorithm = configuration['algorithm']
+        self.kubeapi: Kubeapi = configuration['kubeapi']
+
+        reschedule_interval = configuration.get('reschedule_interval')
+
+        if reschedule_interval:
+            reschedule_thread = threading.Thread(
+                    target=self.reschedule_interval,
+                    args=[reschedule_interval])
+            reschedule_thread.start()
+
+        @self.app.route('/reschedule')
+        def reschedule():
+            return self.reschedule_once()
 
         @self.app.route('/status')
         def status():
@@ -50,6 +89,7 @@ class Server:
             pod_name = extender_args.Pod['metadata']['name']
 
             log.debug('[Filter] %r ' % extender_args)
+            metrics_registry = self.algorithm.get_metrics_registry()
 
             if DEFAULT_NAMESPACE == pod_namespace:
                 log.info('[Filter] Trying to filter nodes for Pod %r' % pod_name)
@@ -58,22 +98,24 @@ class Server:
 
                 log.info('[Filter] Result: %r' % result)
 
-                self.algorithm.metrics.add(Metric(
-                    name=MetricName.FILTER,
-                    value=1,
-                    labels=DEFAULT_METRIC_LABELS,
-                    type=MetricType.COUNTER))
+                if metrics_registry:
+                    metrics_registry.add(Metric(
+                        name=MetricName.FILTER,
+                        value=1,
+                        labels=DEFAULT_METRIC_LABELS,
+                        type=MetricType.COUNTER))
 
                 return jsonify(asdict(result))
             else:
                 log.info('[Filter] Ignoring Pod %r : Different namespace!' %
                          pod_name)
 
-                self.algorithm.metrics.add(Metric(
-                    name=MetricName.POD_IGNORE_FILTER,
-                    value=1,
-                    labels=DEFAULT_METRIC_LABELS,
-                    type=MetricType.COUNTER))
+                if metrics_registry:
+                    metrics_registry.add(Metric(
+                        name=MetricName.POD_IGNORE_FILTER,
+                        value=1,
+                        labels=DEFAULT_METRIC_LABELS,
+                        type=MetricType.COUNTER))
 
                 return jsonify(ExtenderFilterResult(NodeNames=extender_args.NodeNames))
 
@@ -83,6 +125,7 @@ class Server:
             pod_namespace = extender_args.Pod['metadata']['namespace']
             pod_name = extender_args.Pod['metadata']['name']
 
+            metrics_registry = self.algorithm.get_metrics_registry()
             log.debug('[Prioritize-server] %r ' % extender_args)
 
             if DEFAULT_NAMESPACE == pod_namespace:
@@ -95,21 +138,23 @@ class Server:
 
                 log.info('[Prioritize-server] Result: %r ' % priorities)
 
-                self.algorithm.metrics.add(Metric(
-                    name=MetricName.PRIORITIZE,
-                    value=1,
-                    labels=DEFAULT_METRIC_LABELS,
-                    type=MetricType.COUNTER))
+                if metrics_registry:
+                    metrics_registry.add(Metric(
+                        name=MetricName.PRIORITIZE,
+                        value=1,
+                        labels=DEFAULT_METRIC_LABELS,
+                        type=MetricType.COUNTER))
 
                 return jsonify(priorities)
             else:
                 log.info('[Prioritize-server] Ignoring Pod %r : Different namespace!' %
                          pod_name)
 
-                self.algorithm.metrics.add(Metric(
-                    name=MetricName.POD_IGNORE_PRIORITIZE,
-                    value=1,
-                    labels=DEFAULT_METRIC_LABELS,
-                    type=MetricType.COUNTER))
+                if metrics_registry:
+                    metrics_registry.add(Metric(
+                        name=MetricName.POD_IGNORE_PRIORITIZE,
+                        value=1,
+                        labels=DEFAULT_METRIC_LABELS,
+                        type=MetricType.COUNTER))
 
                 return jsonify([])

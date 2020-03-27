@@ -15,8 +15,9 @@ from collections import defaultdict
 from typing import Iterable, Dict, Tuple
 
 from dataclasses import dataclass
+
 from wca.scheduler.cluster_simulator import ClusterSimulator
-from wca.scheduler.data_providers import DataProvider
+from wca.scheduler.data_providers import DataProvider, AppsOnNode
 from wca.scheduler.types import Resources, NodeName, AppsCount, ResourceType, AppName
 
 
@@ -29,27 +30,28 @@ class ClusterSimulatorDataProvider(DataProvider):
         r = {}
         for node in self.simulator.nodes:
             r[node.name] = {
-                    r: node.initial.data[r]
-                    for r in resources
+                r: node.initial.data[r]
+                for r in resources
             }
 
         return r
 
-    def get_apps_counts(self) -> Tuple[Dict[NodeName, AppsCount], AppsCount]:
-        apps_per_node = {node.name: defaultdict(int) for node in self.simulator.nodes}
+    def get_apps_counts(self) -> Tuple[AppsOnNode, AppsCount]:
+        apps_per_node = {node.name: defaultdict(list) for node in
+                         self.simulator.nodes}
         unassigned_tasks = defaultdict(int)
         for task in self.simulator.tasks:
             app_name = task.get_core_name()
             if task.assignment is not None:
                 node = task.assignment
-                apps_per_node[node.name][app_name] += 1
+                apps_per_node[node.name][app_name].append(task.name)
             else:
                 unassigned_tasks[app_name] += 1
 
         # remove defaultdicts
         apps_per_node_dict = {
-                node_name: dict(apps_count)
-                for node_name, apps_count in apps_per_node.items()
+            node_name: dict(apps)
+            for node_name, apps in apps_per_node.items()
         }
         return apps_per_node_dict, dict(unassigned_tasks)
 

@@ -12,30 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 import logging
-import pathlib
-import requests
-import os
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from urllib.parse import urljoin
 from typing import Iterable, Dict, Optional, List, Tuple
 
-from wca.config import Numeric, Str, Path
-from wca.kubernetes import SERVICE_TOKEN_FILENAME, SERVICE_CERT_FILENAME
 from wca.resources import _MEMORY_UNITS
-from wca.scheduler.data_providers import DataProvider
-from wca.scheduler.types import Resources, ResourceType, NodeName, AppName, NodeCapacities
-from wca.security import SSL, HTTPSAdapter
+from wca.scheduler.data_providers import DataProvider, AppsOnNode
+from wca.scheduler.kubeapi import Kubeapi
+from wca.scheduler.prometheus import Prometheus
+from wca.scheduler.types import (
+        Resources, ResourceType, NodeName, AppName,
+        NodeCapacities, AppsCount)
 
 log = logging.getLogger(__name__)
-
-QUERY_PATH = "/api/v1/query"
-URL_TPL = '{prometheus_ip}{path}?query={name}'
-
-
-class PrometheusDataProviderException(Exception):
-    pass
 
 
 @dataclass
@@ -61,84 +51,6 @@ class Queries:
     })
 
 
-@dataclass
-class Prometheus:
-    host: str
-    port: int
-    timeout: Optional[Numeric(1, 60)] = 1.0
-    ssl: Optional[SSL] = None
-    queries: Optional[Queries] = Queries()
-    time: Optional[str] = None  # Evaluation timestamp.
-
-    def do_query(self, query: str):
-        """ Implements: https://prometheus.io/docs/prometheus/2.16/querying/api/#instant-queries"""
-        url = URL_TPL.format(
-                prometheus_ip='{}:{}'.format(self.host, str(self.port)),
-                path=QUERY_PATH,
-                name=query)
-
-        if self.time:
-            url += '&time={}'.format(self.time)
-
-        try:
-            if self.ssl:
-                s = requests.Session()
-                s.mount(self.ip, HTTPSAdapter())
-                response = s.get(
-                        url,
-                        timeout=self.timeout,
-                        verify=self.ssl.server_verify,
-                        cert=self.ssl.get_client_certs())
-            else:
-                response = requests.get(url, timeout=self.timeout)
-                response.raise_for_status()
-        except requests.exceptions.RequestException as e:
-            raise PrometheusDataProviderException(e)
-
-        return response.json()['data']['result']
-
-
-@dataclass
-class Kubeapi:
-    host: Str = None
-    port: Str = None  # Because !Env is String and another type cast might be problematic
-
-    client_token_path: Optional[Path(absolute=True, mode=os.R_OK)] = SERVICE_TOKEN_FILENAME
-    server_cert_ca_path: Optional[Path(absolute=True, mode=os.R_OK)] = SERVICE_CERT_FILENAME
-
-    timeout: Numeric(1, 60) = 5  # [s]
-    monitored_namespaces: List[Str] = field(default_factory=lambda: ["default"])
-
-    def __post_init__(self):
-        self.endpoint = "https://{}:{}".format(self.host, self.port)
-
-        log.debug("Created kubeapi endpoint %s", self.endpoint)
-
-        with pathlib.Path(self.client_token_path).open() as f:
-            self.service_token = f.read()
-
-    def request_kubeapi(self, target):
-
-        full_url = urljoin(
-                self.endpoint,
-                target)
-
-        r = requests.get(
-                full_url,
-                headers={
-                    "Authorization": "Bearer {}".format(self.service_token),
-                    },
-                timeout=self.timeout,
-                verify=self.server_cert_ca_path)
-
-        if not r.ok:
-            log.error('An unexpected error occurred for target "%s": %i %s - %s',
-                      target, r.status_code, r.reason, r.raw)
-        r.raise_for_status()
-
-        return r.json()
-
-
 def _convert_k8s_memory_capacity(memory: str) -> float:
     """ return as GB """
     # TODO: Consider if K8s return memory only in 'Ki' unit.
@@ -158,6 +70,7 @@ class WSSWithoutMemoryBandwidth(Exception):
 class ClusterDataProvider(DataProvider):
     kubeapi: Kubeapi
     prometheus: Prometheus
+    queries: Optional[Queries] = Queries()
 
     def _get_nodes_capacities_from_query(
             self, nodes: List[NodeName],
@@ -182,7 +95,7 @@ class ClusterDataProvider(DataProvider):
             gather_wss: bool) -> NodeCapacities:
 
         # Check which nodes have PMem (Memory Mode).
-        query_result = self.prometheus.do_query(self.prometheus.queries.NODES_PMM_MEMORY_MODE)
+        query_result = self.prometheus.do_query(self.queries.NODES_PMM_MEMORY_MODE)
         nodes_with_pmm = []
         for row in query_result:
             nodes_with_pmm.append(row['metric']['nodename'])
@@ -197,11 +110,11 @@ class ClusterDataProvider(DataProvider):
 
             membw_read_capacities = self._get_nodes_capacities_from_query(
                     nodes_with_pmm, [ResourceType.MEMBW_READ],
-                    self.prometheus.queries.MEMBW_CAPACITY_READ)
+                    self.queries.MEMBW_CAPACITY_READ)
 
             membw_write_capacities = self._get_nodes_capacities_from_query(
                     nodes_with_pmm, [ResourceType.MEMBW_WRITE],
-                    self.prometheus.queries.MEMBW_CAPACITY_WRITE)
+                    self.queries.MEMBW_CAPACITY_WRITE)
 
             for node in nodes_with_pmm:
                 node_capacities[node] = {
@@ -210,7 +123,7 @@ class ClusterDataProvider(DataProvider):
             if gather_wss:
                 wss_capacities = self._get_nodes_capacities_from_query(
                         nodes_with_pmm, [ResourceType.WSS],
-                        self.prometheus.queries.NODE_CAPACITY_MEM_WSS)
+                        self.queries.NODE_CAPACITY_MEM_WSS)
 
                 for node in nodes_with_pmm:
                     node_capacities[node] = {
@@ -220,7 +133,7 @@ class ClusterDataProvider(DataProvider):
         if len(nodes_with_dram) > 0:
             membw_dram_capacities = self._get_nodes_capacities_from_query(
                 nodes_with_dram, [ResourceType.MEMBW_READ, ResourceType.MEMBW_WRITE],
-                self.prometheus.queries.NODE_CAPACITY_DRAM_MEMBW)
+                self.queries.NODE_CAPACITY_DRAM_MEMBW)
 
             for node in nodes_with_dram:
                 node_capacities[node] = {**node_capacities[node], **membw_dram_capacities[node]}
@@ -247,6 +160,7 @@ class ClusterDataProvider(DataProvider):
                         node['status']['capacity']['memory']),
                     }
                 for node in kubeapi_nodes_data
+                if 'node-role.kubernetes.io/master' not in node['metadata']['labels']
         }
 
         nodes = node_capacities.keys()
@@ -271,17 +185,18 @@ class ClusterDataProvider(DataProvider):
 
         return node_capacities
 
-    def get_apps_counts(self) \
-            -> Tuple[Dict[NodeName, Dict[AppName, int]], Dict[AppName, int]]:
+    def get_apps_counts(self) -> Tuple[AppsOnNode, AppsCount]:
 
         unassigned_apps = defaultdict(int)
 
         nodes_data = list(self.kubeapi.request_kubeapi('/api/v1/nodes')['items'])
-        node_names = [node['metadata']['name']for node in nodes_data]
+        node_names = [
+            node['metadata']['name']for node in nodes_data
+            if 'node-role.kubernetes.io/master' not in node['metadata']['labels']]
 
         assigned_apps = {}
         for node_name in node_names:
-            assigned_apps[node_name] = defaultdict(int)
+            assigned_apps[node_name] = {}
 
         for namespace in self.kubeapi.monitored_namespaces:
             pods_data = list(self.kubeapi.request_kubeapi(
@@ -302,7 +217,10 @@ class ClusterDataProvider(DataProvider):
                 if not (node and host_ip):
                     unassigned_apps[app] += 1
                 else:
-                    assigned_apps[node][app] += 1
+                    if app not in assigned_apps[node]:
+                        assigned_apps[node][app] = []
+
+                    assigned_apps[node][app].append(name)
 
         # remove default dicts
         assigned_apps = {k: dict(v) for k, v in assigned_apps.items()}
@@ -317,7 +235,7 @@ class ClusterDataProvider(DataProvider):
 
         for resource in resources:
             query_result = self.prometheus.do_query(
-                    self.prometheus.queries.APP_REQUESTED_RESOURCES_QUERY_MAP[resource])
+                    self.queries.APP_REQUESTED_RESOURCES_QUERY_MAP[resource])
             for result in query_result:
                 app = result['metric'].get('app')
                 value = float(result['value'][1])
@@ -329,7 +247,7 @@ class ClusterDataProvider(DataProvider):
         return app_requested_resources
 
     def get_dram_hit_ratio(self) -> Dict[NodeName, float]:
-        query_result = self.prometheus.do_query(self.prometheus.queries.NODES_DRAM_HIT_RATIO)
+        query_result = self.prometheus.do_query(self.queries.NODES_DRAM_HIT_RATIO)
         dram_hit_ratio_per_node = {}
         for row in query_result:
             dram_hit_ratio_per_node[row['metric']['nodename']] = float(row['value'][1])

@@ -53,10 +53,10 @@ class LeastUsed(Fit):
 
     def priority_for_node(self, node_name, app_name, data_provider_queried) -> float:
         """ Least used """
-        nodes_capacities, assigned_apps_counts, apps_spec, unassigned_apps_counts = \
+        nodes_capacities, assigned_apps, apps_spec, unassigned_apps_counts = \
             data_provider_queried
         requested_fraction, metrics = get_requested_fraction(
-            app_name, apps_spec, assigned_apps_counts, node_name, nodes_capacities, self.dimensions)
+            app_name, apps_spec, assigned_apps, node_name, nodes_capacities, self.dimensions)
         self.metrics.extend(metrics)
 
         log.log(TRACE,

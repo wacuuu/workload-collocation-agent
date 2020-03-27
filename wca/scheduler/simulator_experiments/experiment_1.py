@@ -27,11 +27,10 @@ from wca.scheduler.simulator_experiments.nodes_generators import prepare_nodes
 from wca.scheduler.simulator_experiments.nodesets import (
     NODES_DEFINITIONS_2TYPES, NODES_DEFINITIONS_3TYPES)
 from wca.scheduler.simulator_experiments.task_generators import TaskGeneratorEqual, \
-    TaskGeneratorClasses
-from wca.scheduler.simulator_experiments.tasksets import TASK_DEFINITIONS__ARTIFICIAL_2, \
-    taskset_dimensions
-from wca.scheduler.simulator_experiments.tasksets import TASK_DEFINITIONS__ARTIFICIAL_3TYPES
-from wca.scheduler.types import WSS, MEM, CPU, MEMBW_WRITE, MEMBW_READ, MEMBW
+    TaskGeneratorClasses, taskset_dimensions
+from wca.scheduler.simulator_experiments.tasksets import TASKS_3TYPES, TASKS_2TYPES
+from wca.scheduler.simulator_experiments.tasksets import TASKS_6TYPES
+from wca.scheduler.types import WSS, MEM, CPU, MEMBW_WRITE, MEMBW_READ
 
 x = DEBUG, TRACE  # to not be auto removed during import cleanup
 
@@ -42,21 +41,51 @@ DIM4 = {CPU, MEM, MEMBW_READ, MEMBW_WRITE}
 DIM2 = {CPU, MEM}
 
 
+def experiment_mini():
+    dim = DIM2
+    experiments_iterator(
+        'mini',
+        dict(retry_scheduling=True),  # Simulator configuration
+        [10],
+        [
+            (TaskGeneratorEqual,
+             dict(task_definitions=TASKS_2TYPES, dimensions=dim, replicas=3,
+                  duration=None, node_name='dram_0')),
+        ],
+        [
+            prepare_nodes(NODES_DEFINITIONS_2TYPES, dict(aep=1, dram=1), dim),
+        ],
+        [
+            (Fit, dict(dimensions=dim)),
+        ],
+        rmtree=False,
+        charts=False,
+        metrics=False, # can be as list of metric names
+    )
+
+
 def experiment_debug():
     task_scale = 1
     cluster_scale = 1
-    nodes_dimensions = DIM4
+    dim = DIM4
+    length = 90
     experiments_iterator(
-        'debug',
-        [30 * task_scale],
+        'debug', dict(retry_scheduling=True),
+        [length * task_scale],
         [
             (TaskGeneratorEqual,
-             dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES, replicas=10 * task_scale)),
+             dict(task_definitions=TASKS_3TYPES, replicas=10 * task_scale, duration=30,
+                  alias='long', dimensions=dim)),
+            (TaskGeneratorEqual,
+             dict(task_definitions=TASKS_3TYPES, replicas=10 * task_scale, duration=5,
+                  alias='short', dimensions=dim)),
+            (TaskGeneratorEqual,
+             dict(task_definitions=TASKS_3TYPES, replicas=10 * task_scale, duration=None,
+                  dimensions=dim)),
         ],
         [
             prepare_nodes(NODES_DEFINITIONS_2TYPES,
-                          dict(aep=2 * cluster_scale, dram=6 * cluster_scale),
-                          nodes_dimensions, ),
+                          dict(aep=2 * cluster_scale, dram=6 * cluster_scale), dim),
         ],
         [
             (LeastUsedBAR, dict(alias='BAR__LU_OFF', dimensions=DIM4, least_used_weight=0)),
@@ -70,11 +99,11 @@ def experiment_bar():
     nodes_dimensions = DIM4
 
     experiments_iterator(
-        'bar_weights',
+        'bar_weights', {},
         [30 * task_scale, ],
         [
             (TaskGeneratorClasses, dict(task_definitions=taskset_dimensions(nodes_dimensions,
-                                                                            TASK_DEFINITIONS__ARTIFICIAL_2),
+                                                                            TASKS_6TYPES),
                                         counts=dict(mbw=20 * task_scale, cpu=5 * task_scale,
                                                     mem=5 * task_scale))),
         ],
@@ -96,35 +125,35 @@ def experiment_bar():
 
 
 def experiment_full(task_scale=1, cluster_scale=1):
-    nodes_dimensions = DIM4
+    dim = DIM4
     experiments_iterator(
-        'intel_demo_local',
+        'intel_demo_local', {},
         [30 * task_scale],
         [
             (TaskGeneratorEqual,
-             dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES, replicas=10 * task_scale)),
-            (TaskGeneratorClasses, dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES,
+             dict(task_definitions=TASKS_3TYPES, replicas=10 * task_scale, dimensions=dim)),
+            (TaskGeneratorClasses, dict(task_definitions=TASKS_3TYPES,
                                         counts=dict(mbw=3 * task_scale, cpu=12 * task_scale,
-                                                    mem=15 * task_scale))),
-            (TaskGeneratorClasses, dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES,
+                                                    mem=15 * task_scale), dimensions=dim)),
+            (TaskGeneratorClasses, dict(task_definitions=TASKS_3TYPES,
                                         counts=dict(mbw=20 * task_scale, cpu=5 * task_scale,
-                                                    mem=5 * task_scale))),
-            (TaskGeneratorClasses, dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES,
+                                                    mem=5 * task_scale), dimensions=dim)),
+            (TaskGeneratorClasses, dict(task_definitions=TASKS_3TYPES,
                                         counts=dict(mbw=30 * task_scale, cpu=0 * task_scale,
-                                                    mem=0 * task_scale))),
-            (TaskGeneratorClasses, dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES,
+                                                    mem=0 * task_scale), dimensions=dim)),
+            (TaskGeneratorClasses, dict(task_definitions=TASKS_3TYPES,
                                         counts=dict(mbw=0 * task_scale, cpu=0 * task_scale,
-                                                    mem=30 * task_scale))),
+                                                    mem=30 * task_scale), dimensions=dim)),
         ],
         [
             prepare_nodes(NODES_DEFINITIONS_2TYPES, dict(aep=0, dram=6 * cluster_scale),
-                          nodes_dimensions),
+                          dim),
             prepare_nodes(NODES_DEFINITIONS_2TYPES,
-                          dict(aep=2 * cluster_scale, dram=6 * cluster_scale), nodes_dimensions),
+                          dict(aep=2 * cluster_scale, dram=6 * cluster_scale), dim),
             prepare_nodes(NODES_DEFINITIONS_2TYPES, dict(aep=0, dram=8 * cluster_scale),
-                          nodes_dimensions),
+                          dim),
             prepare_nodes(NODES_DEFINITIONS_2TYPES, dict(aep=cluster_scale, dram=cluster_scale),
-                          nodes_dimensions, ),
+                          dim, ),
         ],
         [
             (NOPAlgorithm, {}),
@@ -147,63 +176,59 @@ def experiment_full(task_scale=1, cluster_scale=1):
 
 
 def experiment_static_assigner():
-    nodes_dimensions = DIM4
+    dim = DIM2
     targeted_assigned_apps_counts = \
-        {'aep_0': {CPU: 1, MEM: 2, MEMBW: 2},
-         'dram_0': {CPU: 1, MEM: 0, MEMBW: 0}}
+        {'aep_0': {'cputask': 1, 'memtask': 2},
+         'dram_0': {'cputask': 1, 'memtask': 0}}
 
     experiments_iterator(
-        'static_assigner',
+        'static_assigner', {},
         [6],
         [
             (TaskGeneratorClasses,
-             dict(task_definitions=taskset_dimensions(nodes_dimensions,
-                                                      TASK_DEFINITIONS__ARTIFICIAL_2),
-                  counts=dict(mbw=2, cpu=2, mem=2))),
+             dict(task_definitions=TASKS_2TYPES,
+                  counts=dict(cputask=2, memtask=2), dimensions=dim)),
         ],
         [
-            prepare_nodes(NODES_DEFINITIONS_2TYPES,
-                          dict(aep=1, dram=1),
-                          nodes_dimensions,
-                          ),
+            prepare_nodes(NODES_DEFINITIONS_2TYPES, dict(aep=1, dram=1), dim),
         ],
         [
             (StaticAssigner,
              dict(alias='StaticAssigner',
-                  targeted_assigned_apps_counts=targeted_assigned_apps_counts)),
+                  targeted_assigned_apps_counts=targeted_assigned_apps_counts,
+                  dimensions=dim
+                  )
+             ),
         ],
     )
 
 
 def experiment_hierbar():
-    nodes_dimensions = DIM4
+    dim = DIM4
     iterations = 60
     experiments_iterator(
-        'hierbar',
+        'hierbar', {},
         [iterations],
         [
-            (TaskGeneratorEqual,
-             dict(task_definitions=TASK_DEFINITIONS__ARTIFICIAL_3TYPES, replicas=10)),
-            (TaskGeneratorClasses, dict(task_definitions=taskset_dimensions(nodes_dimensions,
-                                                                            TASK_DEFINITIONS__ARTIFICIAL_3TYPES),
-                                        counts=dict(mem=30))),  # AEP
-            (TaskGeneratorClasses, dict(task_definitions=taskset_dimensions(nodes_dimensions,
-                                                                            TASK_DEFINITIONS__ARTIFICIAL_3TYPES),
-                                        counts=dict(mbw=30))),  # no AEP
-            (TaskGeneratorClasses, dict(task_definitions=taskset_dimensions(nodes_dimensions,
-                                                                            TASK_DEFINITIONS__ARTIFICIAL_3TYPES),
-                                        counts=dict(cpu=5, mem=5, mbw=20))),
-            (TaskGeneratorClasses, dict(task_definitions=taskset_dimensions(nodes_dimensions,
-                                                                            TASK_DEFINITIONS__ARTIFICIAL_3TYPES),
-                                        counts=dict(cpu=5, mem=20, mbw=5))),
+            (TaskGeneratorEqual, dict(task_definitions=TASKS_3TYPES, replicas=10, dimensions=dim)),
+            (TaskGeneratorClasses,
+             dict(task_definitions=TASKS_3TYPES, counts=dict(mem=30), dimensions=dim)),  # AEP
+            (TaskGeneratorClasses,
+             dict(task_definitions=TASKS_3TYPES, counts=dict(mbw=30), dimensions=dim)),  # no AEP
+            (TaskGeneratorClasses,
+             dict(task_definitions=TASKS_3TYPES, counts=dict(cpu=5, mem=5, mbw=20),
+                  dimensions=dim)),
+            (TaskGeneratorClasses,
+             dict(task_definitions=TASKS_3TYPES, counts=dict(cpu=5, mem=20, mbw=5),
+                  dimensions=dim)),
         ],
         [
-            prepare_nodes(NODES_DEFINITIONS_3TYPES, dict(aep=2, sml=4, big=2), nodes_dimensions)
+            prepare_nodes(NODES_DEFINITIONS_3TYPES, dict(aep=2, sml=4, big=2), dim)
         ],
         [
             (LeastUsedBAR, dict(dimensions=DIM2, alias='native')),
-            (HierBAR, dict(dimensions=nodes_dimensions)),
-            (HierBAR, dict(dimensions=nodes_dimensions, merge_threshold=1, alias='extender')),
+            (HierBAR, dict(dimensions=dim)),
+            (HierBAR, dict(dimensions=dim, merge_threshold=1, alias='extender')),
         ],
     )
 
@@ -211,10 +236,11 @@ def experiment_hierbar():
 if __name__ == "__main__":
     logging.basicConfig(
         level=logging.WARN, format='%(levelname)s:%(module)s:%(funcName)s:%(lineno)d %(message)s')
-    logging.getLogger('wca.algorithms').setLevel(logging.INFO)
-    # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(logging.DEBUG)
+    # logging.getLogger('wca.algorithms').setLevel(logging.INFO)
+    # logging.getLogger('wca.scheduler.cluster_simulator').setLevel(TRACE)
+    experiment_mini()
+    experiment_debug()
     experiment_bar()
     experiment_hierbar()
-    experiment_debug()
     experiment_static_assigner()
-    # experiment_full() # takes about 30 seconds
+    experiment_full()  # takes about 30 seconds

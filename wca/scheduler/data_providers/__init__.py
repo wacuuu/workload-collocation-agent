@@ -14,7 +14,9 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Iterable, Tuple
 
-from wca.scheduler.types import ResourceType, NodeName, Resources, AppName, AppsCount
+from wca.scheduler.types import ResourceType, NodeName, Resources, AppName, AppsCount, Apps
+
+AppsOnNode = Dict[NodeName, Apps]
 
 
 class DataProvider(ABC):
@@ -24,8 +26,8 @@ class DataProvider(ABC):
         pass
 
     @abstractmethod
-    def get_apps_counts(self) -> Tuple[Dict[NodeName, AppsCount], AppsCount]:
-        """Return apps assigned to nodes and unassigned yet.
+    def get_apps_counts(self) -> Tuple[AppsOnNode, AppsCount]:
+        """Return apps assigned to nodes and usassigned yet.
         e.g. {'node_0': {'memcached_small': 3, 'stress_ng': 5}}, {'memcached_big': 8}
         """
         raise Exception('PROPOSAL FOR NEW API')

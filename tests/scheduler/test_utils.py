@@ -11,18 +11,3 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from wca.scheduler.types import (
-        ExtenderArgs, TaskName, AppName, NodeName)
-
-from typing import Tuple, List
-
-
-def extract_common_input(extender_args: ExtenderArgs) \
-        -> Tuple[AppName, List[NodeName], str, TaskName]:
-    nodes = extender_args.NodeNames
-    metadata = extender_args.Pod.get('metadata', {})
-    labels = metadata.get('labels', {})
-    name = metadata.get('name', '')
-    namespace = metadata.get('namespace', '')
-    app = labels.get('app', None)
-    return app, nodes, namespace, name

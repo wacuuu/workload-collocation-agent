@@ -22,7 +22,7 @@ spec:
     # app_count
     # low level:
     #
-    # WARNING all level metrics take an average of 1d for tasks
+    # WARNING all level metrics take an average of 10m for tasks
     # app_cpu, app_cpu_usage -> app_cpu_util
     # app_mem, app_mem_usage -> app_mem_util
     # app_req with dim=[cpu, mem, wss, mbw_write, mbw_read]
@@ -118,26 +118,26 @@ spec:
 
     # very low metric
     - record: task_memory_rw_ratio
-      expr: rate(task_offcore_requests_demand_data_rd[1d]) / (rate(task_offcore_requests_demand_data_rd[1d]) + rate(task_offcore_requests_demand_rfo[1d]))
+      expr: rate(task_offcore_requests_demand_data_rd[10m]) / (rate(task_offcore_requests_demand_data_rd[10m]) + rate(task_offcore_requests_demand_rfo[10m]))
 
-    # ---- low level metrics for apps [1d]
+    # ---- low level metrics for apps [10m]
     - record: app_cpu
-      expr: avg(max_over_time(task_requested_cpus[1d])) by (app)
+      expr: avg(max_over_time(task_requested_cpus[10m])) by (app)
     - record: app_cpu_usage
-      expr: ceil(avg(rate(task_cpu_usage_seconds[1d])) by (app))
+      expr: ceil(avg(rate(task_cpu_usage_seconds[10m])) by (app))
     - record: app_cpu_util
       expr: app_cpu_usage/app_cpu
 
     - record: app_mem
-      expr: avg(max_over_time(task_requested_mem_bytes[1d])) by (app) / 1e9
+      expr: avg(max_over_time(task_requested_mem_bytes[10m])) by (app) / 1e9
     - record: app_mem_usage
-      expr: avg(avg_over_time(task_mem_usage_bytes[1d])) by(app) / 1e9
+      expr: avg(avg_over_time(task_mem_usage_bytes[10m])) by(app) / 1e9
     - record: app_mem_util
       expr: app_mem_usage/app_mem
 
     # ---- mem bandwidth [gb/s]
     - record: app_mbw
-      expr: max(irate(task_mem_bandwidth_bytes[1d])) by (app) / 1e9
+      expr: max(irate(task_mem_bandwidth_bytes[10m])) by (app) / 1e9
     # ---- r/w and read/write bandwidth
     - record: app_mbw_rw
       expr: avg(task_memory_rw_ratio) by (app)
@@ -147,7 +147,7 @@ spec:
       expr: ceil(app_mbw * (1-app_mbw_rw))
     # --- wss [gb]
     - record: app_wss   # gb collected over 15s
-      expr: ceil((avg(avg_over_time(task_wss_referenced_bytes[1d])) by (app)) / 1e9)
+      expr: ceil((avg(avg_over_time(task_wss_referenced_bytes[10m])) by (app)) / 1e9)
 
     # just a mapping app_req to use labels: cpu, mem, mbw_read, mbw_write, wss
     - record: app_req
@@ -208,6 +208,29 @@ spec:
       expr: max(profile_app_by_cpu_norm{index=~"mem_intensity_read|mem_intensity_write|mem_utilization"}) by (app)
 
     - record: profile_app_2lm_score_max # higher is better for 2lm
-      expr: profile_app_2lm_score_positive - on(app) profile_app_2lm_score_negative_max
+      expr: profile_app_2lm_score_positive - on(app) group_left() profile_app_2lm_score_negative_max
     - record: profile_app_2lm_score_sum # higher is better for 2lm
-      expr: profile_app_2lm_score_positive - on(app) profile_app_2lm_score_negative_sum
+      expr: profile_app_2lm_score_positive - on(app) group_left() profile_app_2lm_score_negative_sum
+
+    - record: drozdzan_test # higher is better for 2lm
+      expr: profile_app_by_cpu
+
+  - name: cluster-score-data-provider
+    rules:
+      - record: node_type
+        expr: 'platform_mem_mode_size_bytes > 0'
+        labels:
+          nodetype: pmem
+
+      - record: node_type
+        expr: 'platform_mem_mode_size_bytes == 0'
+        labels:
+          nodetype: dram
+
+      - record: node_type
+        expr: 'platform_mem_mode_size_bytes < 0'
+        labels:
+          nodetype: unknown
+      
+      - record: app_profile
+        expr: 'profile_app_2lm_score_max'
