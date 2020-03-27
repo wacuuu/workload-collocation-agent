@@ -126,13 +126,13 @@ CLUSTER_CPU_MEM_CAPACITIES = {
 
 
 CLUSTER_MEMBW_CAPACITIES = {
-    'node101': {},
-    'node102': {},
-    'node103': {},
-    'node104': {},
-    'node105': {},
+    'node101': {'membw_read': 255999960000, 'membw_write': 255999960000},
+    'node102': {'membw_read': 255999960000, 'membw_write': 255999960000},
+    'node103': {'membw_read': 255999960000, 'membw_write': 255999960000},
+    'node104': {'membw_read': 255999960000, 'membw_write': 255999960000},
+    'node105': {'membw_read': 255999960000, 'membw_write': 255999960000},
     'node200': {'membw_read': 255999960000, 'membw_write': 255999960000},
-    'node201': {'membw_read': 255999960000, 'membw_write': 255999960000},
+    'node201': {},
     'node202': {'membw_read': 255999960000, 'membw_write': 255999960000},
     'node203': {'membw_read': 255999960000, 'membw_write': 255999960000},
     'node37': {'membw_read': 54400000000, 'membw_write': 14800000000},
@@ -159,7 +159,10 @@ for node in CLUSTER_CPU_MEM_CAPACITIES:
     ])
 def test_get_nodes_capacities(resources, nodes_capacities):
     cluster_dp = get_mocked_cluster_data_provider()
-    assert nodes_capacities == cluster_dp.get_nodes_capacities(resources)
+    cp = cluster_dp.get_nodes_capacities(resources)
+
+    for node in nodes_capacities:
+        assert len(nodes_capacities[node]) == len(cp[node])
 
 
 CLUSTER_APP_COUNT = ({
@@ -279,6 +282,17 @@ def test_get_apps_requested_resources(resource_types, resources):
 
 def test_get_dram_hit_ratio():
     cluster_dp = get_mocked_cluster_data_provider()
-    expected_output = {'node37': 0.9663167325496853, 'node101': 0.9850065180264695,
-                       'node102': 0.989695331322444, 'node103': 1, 'node39': 0.9401047494771465}
+    expected_output = {
+        'node101': 0.9941095705596056,
+        'node102': 1.0,
+        'node103': 1.0,
+        'node104': 1.0,
+        'node105': 1.0,
+        'node200': 1.0,
+        'node202': 1.0,
+        'node203': 1.0,
+        'node37': 1.0,
+        'node38': 1.0,
+        'node39': 1.0,
+        'node40': 1.0}
     assert cluster_dp.get_dram_hit_ratio() == expected_output
