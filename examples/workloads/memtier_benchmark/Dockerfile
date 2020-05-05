@@ -13,12 +13,15 @@
 # limitations under the License.
 
 FROM centos:7 as base
+
+WORKDIR /
 RUN yum update -y
 RUN yum install -y wget \
     libtool libevent libevent-devel openssl-devel \
     autoconf automake make gcc-c++
 
 
+# hadolint ignore=SC2039
 RUN wget https://github.com/downloads/libevent/libevent/libevent-2.0.21-stable.tar.gz && \
     tar xfz libevent-2.0.21-stable.tar.gz && \
     pushd libevent-2.0.21-stable && \
@@ -31,17 +34,18 @@ RUN wget https://github.com/downloads/libevent/libevent/libevent-2.0.21-stable.t
 FROM base as builder
 RUN yum install -y pcre-devel zlib-devel libmemcached-devel libjemalloc1 libjemalloc-dev gcc
 RUN wget https://github.com/RedisLabs/memtier_benchmark/archive/1.2.17.tar.gz && \
-    tar xfz 1.2.17.tar.gz && \
-    cd ./memtier_benchmark-1.2.17 && \
-    autoreconf -ivf && \
+    tar xfz 1.2.17.tar.gz
+WORKDIR /memtier_benchmark-1.2.17
+RUN autoreconf -ivf && \
     ./configure && \
     make && \
     make install
 
+WORKDIR /
 RUN wget http://download.redis.io/redis-stable.tar.gz && \
-    tar xvzf redis-stable.tar.gz && \
-    cd redis-stable && \
-    make
+    tar xvzf redis-stable.tar.gz
+WORKDIR /redis-stable
+RUN make
 
 FROM base
 RUN yum install -y epel-release && \

@@ -37,8 +37,7 @@ define execute_in_venv
 	source env/bin/activate && $(1) && deactivate
 endef
 
-
-# Do not really on artifacts created by make for all targets.
+# Do not rely on artifacts created by make for all targets.
 .PHONY: all venv flake8 unit wca_package bandit_pex wrapper_package clean tests check dist
 
 all: venv check dist generate_docs
@@ -201,3 +200,10 @@ tester:
 generate_docs:
 	@echo Generate documentation.
 	$(call execute_in_venv, env PYTHONPATH=. python util/docs.py)
+
+hadolint_check:
+	@echo Hadolint check
+	for line in `find . -name Dockerfile`; do \
+        echo "Checking $$line" && \
+        sudo docker run --rm -i hadolint/hadolint < $$line; \
+    done

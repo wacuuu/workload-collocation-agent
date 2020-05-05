@@ -120,22 +120,6 @@ pipeline {
                      '''
                      }
                  }
-                // Redis
-                stage("Build and push Redis Docker image") {
-                    when {expression{return params.BUILD_IMAGES}}
-                    steps {
-                    sh '''
-                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/redis:${GIT_COMMIT}
-                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/redis:${GIT_BRANCH}
-                    IMAGE_DIR=${WORKSPACE}/examples/workloads/redis
-                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile ${IMAGE_DIR}
-                    docker push ${IMAGE_NAME}
-                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
-                    docker push ${BRANCH_IMAGE_NAME}
-                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
-                    '''
-                    }
-                }
                 // memtier_benchmark
                 stage("Build and push memtier_benchmark Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
@@ -439,12 +423,12 @@ def wca_and_workloads_check() {
     image_check("wca")
     image_check("wca/stress_ng")
     image_check("wca/rpc_perf")
-    image_check("wca/redis")
     image_check("wca/twemcache")
     image_check("wca/mutilate")
     image_check("wca/specjbb")
     sh "make venv"
     sh "make wca_package_in_docker_with_kafka"
+    sh "make hadolint_check"
     print('Reconfiguring wca...')
     copy_files("${WORKSPACE}/tests/e2e/demo_scenarios/common/${CONFIG}", "${WORKSPACE}/tests/e2e/demo_scenarios/common/wca_config.yml.tmp")
     replace_in_config(CERT)

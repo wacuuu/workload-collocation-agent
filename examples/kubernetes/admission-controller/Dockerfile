@@ -24,7 +24,8 @@ COPY requirements.txt requirements.txt
 ENV LANG=en_US.UTF-8
 ENV LC_ALL=en_US.UTF-8
 RUN make venv
-RUN source env/bin/activate && pip install jsonpatch && deactivate
+# hadolint ignore=SC2039,SC1091
+RUN source env/bin/activate && pip install jsonpatch=1.25 && deactivate
 ENV PYTHONPATH=/admission-controller
 
 # Prepare admission-controller files
