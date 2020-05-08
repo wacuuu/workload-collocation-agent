@@ -63,6 +63,10 @@ In Certificate Signing Request the key ``hosts`` has two values.
 ``100.64.176.36`` is example IP address, where wca-scheduler will be deployed.
 You should change this IP address to address, where the wca-scheduler will be deployed.
 
+Recommended parameters for key generations are:
+- ECDSA at least 256 bits
+- NIST p-256 curve for 256 bits
+
 .. code-block:: shell
 
     # Download the cfssl tools
@@ -90,6 +94,7 @@ It contains previously created CSR.
 Created Kubernetes CertificateSigningRequest must be approved.
 It can be done by an automated approval process or by a cluster administrator.
 Below script uses example certificate approved by the administrator.
+It is recommended to create a certificate with an expiry date of 3 years.
 
 .. code-block:: shell
 
