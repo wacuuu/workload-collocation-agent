@@ -126,3 +126,12 @@ The Secret will be forwarded to wca-scheduler.
 
     # Create Secret with the certificate and the private key
     kubectl create secret generic wca-scheduler-cert --from-file server.crt --from-file server-key.pem --namespace wca-scheduler
+
+mTLS connection
+---------------
+
+Implementing mTLS is easiest when there is a service mesh on the cluster.
+This is due to the complicated exchange of certificates and the service mesh enables automation.
+We checked (June, 2020) that Istio (version 1.6.2) does not support the use of sidecars in Pod
+from Control Plane. Check out new versions of Istio,
+because it is possible that feature will be added.
