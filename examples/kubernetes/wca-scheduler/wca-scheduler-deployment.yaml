@@ -48,10 +48,14 @@ spec:
 
         - name: nginx
           image: nginx:latest
+          imagePullPolicy: Always
           ports:
             - name: wca-scheduler
               containerPort: 30180
               hostPort: 30180
+            - name: scheduler-http
+              containerPort: 30181
+              hostPort: 30181
           volumeMounts:
             - name: wca-scheduler-socket
               mountPath: /var/run/wca
@@ -65,8 +69,9 @@ spec:
         - name: wca-scheduler-socket
           emptyDir: {}
         - name: wca-scheduler-server
-          configMap:
-            name: wca-scheduler-server 
+          secret:
+            secretName: wca-scheduler-server-conf
+            defaultMode: 0640
         - name: wca-scheduler-config
           configMap:
             name: wca-scheduler-config
