@@ -36,7 +36,8 @@ As specified in `official build instruction <https://github.com/google/cadvisor/
   cd cadvisor
   GO_FLAGS="-tags=libipmctl,libpfm,netgo" make build
   # To test if the binary has compiled properly
-  sudo ./cadvisor
+  # Assuming that variable CONFIG_DIR is set to point to the directory in which this README is located
+  sudo ./cadvisor --perf_events_config=$CONFIG_DIR/perf-prm-skylake.json
 
 Then, to check if cadvisor is responding, from other terminal on the same machine execute
 
@@ -44,11 +45,15 @@ Then, to check if cadvisor is responding, from other terminal on the same machin
 
   curl localhost:8080/metrics
 
+If there is any output it means, that cadvisor succesfuly binded to port 8080. If output contains ``container_perf_events_total`` metric with any event from perf-prm-skylake.json it means that perf support has been compiled correctly. If output contains ``machine_nvm_avg_power_budget_watts`` it means that ipmctl support has been compiled correctly.
+
 If there is a response it means, that cadvisor was succesfuly compiled and is running properly.
 The advantage of running cAdvisor as standalone after compiling it with presented steps, is that it the provides additional information about Intel® Optane™ DC Persistent memory. As of today, docker image built with official Dockerfile is not providing such capabilities.
 
 cAdvisor in docker container
 ============================
+
+**[WIP]**
 
 Go to cAdvisor repo root directory and run
 
@@ -78,18 +83,18 @@ Two types can be distinguished:
 
 - container_perf_events_total, which is the value of the metric
 
-- container_perf_events_scaling_ratio, which is an information on how to scale the value to get estimated total number. The requirement to scale the number comes from the fact, that the measurements are by limited number of hardware counters, thus system is multiplexing them and the information on this multiplexing proportion is required to get good estimation of counter value. To get the approximated value of a counter one should divide the counter value by scaling ratio.
+- container_perf_events_scaling_ratio, which is an information on how to scale the value to get estimated total number. The requirement to scale the number comes from the fact, that the measurements are by limited number of hardware counters, thus system is multiplexing them and the information on this multiplexing proportion is required to get good estimation of counter value. **To get the approximated value of a counter one should divide the counter value by scaling ratio.** For example if the counter value is 40 and scaling ratio is 0.5, the reale value is somewhere around 80
 
 All perf metrics will have those two entries. Besides that, all perf metrics are the same entry differing by the tag event, which in this case looks like this: event="CYCLE_ACTIVITY.STALLS_MEM_ANY".
 
 By design cAdvisor is not doing any processing like aggregation, so you will see a lot of entries regarding the same container. Couple of tags useful to sum by in Prometheus are:
 
-- `container_label_io_kubernetes_container_name`
-- `container_label_io_kubernetes_pod_name`
-- `container_label_io_kubernetes_pod_namespace`
-- `container_label_io_kubernetes_pod_uid`
-- `id` it identifies the continer by mix of pod id and docker container id
-- `name` it identifies the container by container name asigned by k8s
+- ``container_label_io_kubernetes_container_name``
+- ``container_label_io_kubernetes_pod_name``
+- ``container_label_io_kubernetes_pod_namespace``
+- ``container_label_io_kubernetes_pod_uid``
+- ``id`` it identifies the continer by mix of pod id and docker container id
+- ``name`` it identifies the container by container name asigned by k8s
 
 As perf is under heavy development, be advised, that more types will soon be added, but they will follow the same rules.
 
@@ -97,7 +102,7 @@ As perf is under heavy development, be advised, that more types will soon be add
 Running cAdvisor in docker
 ==========================
 
-Assuming that command is executed from this directory(in which `perf-prm-skylake.json` is located) and previous step was executed to obtain container image named cadvisor, which contains cAdvisor with perf, a way to run cAdvisor with perf measuremente is
+Assuming that command is executed from this directory(in which ``perf-prm-skylake.json`` is located) and previous step was executed to obtain container image named cadvisor, which contains cAdvisor with perf, a way to run cAdvisor with perf measuremente is
 
 .. code-block:: shell
 
