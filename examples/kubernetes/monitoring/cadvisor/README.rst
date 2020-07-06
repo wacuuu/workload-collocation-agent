@@ -81,9 +81,9 @@ Let's take PRM Skylake configuration as an example. One of the metrics is CYCLE_
 
 Two types can be distinguished:
 
-- container_perf_events_total, which is the value of the metric
+- ``container_perf_events_total``, which is the value of the metric
 
-- container_perf_events_scaling_ratio, which is an information on how to scale the value to get estimated total number. The requirement to scale the number comes from the fact, that the measurements are by limited number of hardware counters, thus system is multiplexing them and the information on this multiplexing proportion is required to get good estimation of counter value. **To get the approximated value of a counter one should divide the counter value by scaling ratio.** For example if the counter value is 40 and scaling ratio is 0.5, the reale value is somewhere around 80
+- ``container_perf_events_scaling_ratio``, which is an information on how long in proportion to other active counters, given value had been measured. The requirement to scale the number comes from the fact, that the measurements are by limited number of hardware counters, thus system is multiplexing them and the information on this multiplexing proportion is required to get good estimation of counter accuarcy. The value from ``container_perf_events_total`` is already scaled, so this number only informs about proportion.
 
 All perf metrics will have those two entries. Besides that, all perf metrics are the same entry differing by the tag event, which in this case looks like this: event="CYCLE_ACTIVITY.STALLS_MEM_ANY".
 
