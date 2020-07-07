@@ -21,6 +21,7 @@ pipeline {
       booleanParam defaultValue: true, description: 'E2E for Mesos.', name: 'E2E_MESOS'
       booleanParam defaultValue: true, description: 'E2E for Kubernetes.', name: 'E2E_K8S'
       booleanParam defaultValue: true, description: 'E2E for Kubernetes as Daemonset.', name: 'E2E_K8S_DS'
+      booleanParam defaultValue: true, description: 'E2E for wca-scheduler', name: 'E2E_WCA_SCHEDULER'
       string defaultValue: '300', description: 'Sleep time for E2E tests', name: 'SLEEP_TIME'
     }
     environment {
@@ -410,6 +411,59 @@ pipeline {
                 }
             }
         }
+        stage('E2E wca-scheduler') {
+                when {expression{return params.E2E_WCA_SCHEDULER}}
+                agent { label 'kubernetes' }
+                environment {
+                    PROMETHEUS='http://100.64.176.18:30900'
+                    KUBERNETES_HOST='100.64.176.18'
+                    PORT_WCA_SCHEDULER=32180
+                    KUBECONFIG="${HOME}/.kube/admin.conf"
+                    KUSTOMIZATION_MONITORING='examples/kubernetes/monitoring/'
+                    KUSTOMIZATION_WORKLOAD='examples/kubernetes/workloads/'
+                    WCA_SCHEDULER_PATH='examples/kubernetes/wca-scheduler/'
+                }
+                steps {
+
+                    print('Set configs wca-wcheduler...')
+                    sh "sed -i 's#/var/run/secrets/kubernetes.io/serviceaccount/ca.crt;#/var/run/secrets/kubernetes.io/cert/CA.crt;#g' ${WORKSPACE}/${WCA_SCHEDULER_PATH}wca-scheduler-server.conf"
+                    sh "sed -i 's/node36/node18/g' ${WORKSPACE}/${WCA_SCHEDULER_PATH}wca-scheduler-deployment.yaml"
+                    sh "sed -i 's/100.64.176.36/${KUBERNETES_HOST}/g' ${WORKSPACE}/${WCA_SCHEDULER_PATH}config.yaml"
+
+                    sh "kubectl --namespace wca-scheduler create secret generic wca-scheduler-cert \
+                        --from-file ${WORKSPACE}/tests/e2e/nginx/server.crt \
+                        --from-file ${WORKSPACE}/tests/e2e/nginx/server-key.pem \
+                        --from-file ${WORKSPACE}/tests/e2e/nginx/CA.crt"
+
+                    print('Starting prometheus...')
+                    sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_MONITORING}prometheus/"
+
+                    print('Starting wca-wcheduler...')
+                    sh "kubectl apply -k ${WORKSPACE}/${WCA_SCHEDULER_PATH}"
+
+                    print('Create Service for wca-scheduler, for E2E only')
+                    sh "kubectl expose deployment wca-scheduler --type=NodePort --port=30180 --name=wca-scheduler-nodeport-service --namespace wca-scheduler && \
+                        kubectl patch service wca-scheduler-nodeport-service --namespace=wca-scheduler --type='json' --patch='[ \
+                        {\"op\": \"replace\", \"path\": \"/spec/ports/0/nodePort\", \"value\":32180}]'"
+
+                    wait_for_wca_wcheduler()
+
+                    sh "make venv; source env/bin/activate && \
+                        pytest ${WORKSPACE}/tests/e2e/nginx/test_wca_nginx_ssl.py::test_wca_nginx_ssl_incorrect_cert --junitxml=unit_results.xml --log-level=debug --log-cli-level=debug -v && \
+                        deactivate"
+
+                }
+                post {
+                    always {
+                        print('Cleaning wca-scheduler...')
+                        sh "kubectl delete -k ${WORKSPACE}/${WCA_SCHEDULER_PATH} --wait=false"
+                        sh "kubectl delete secret  wca-scheduler-cert -n wca-scheduler"
+                        sh "kubectl delete svc wca-scheduler-nodeport-service --namespace wca-scheduler"
+                        print('Asserting unit tests status...')
+                        junit 'unit_results.xml'
+                    }
+                }
+            }
     }
 }
 
@@ -666,4 +720,18 @@ def generate_docs() {
           diff docs/metrics.rst docs/metrics.tmp.rst
           rm docs/metrics.tmp.rst
           rm docs/metrics.tmp.csv'''
+}
+
+def wait_for_wca_wcheduler() {
+    def count = 1
+    while(count <= 15) {
+        check_image = sh(script: "kubectl -n wca-scheduler get pod | grep wca-scheduler | awk '{ print \$3 }'", returnStdout: true).trim()
+        if (check_image == 'Running') {
+            print("wca-scheduler is running")
+            break
+        }
+        echo "Attempt $count. Sleeping for 1 second..."
+        sleep(1)
+        count++
+    }
 }
