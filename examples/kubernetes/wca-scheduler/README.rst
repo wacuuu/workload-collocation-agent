@@ -18,6 +18,8 @@ Give access to read configmaps for kube-scheduler:
 ``kubectl apply -f scheduler-policy-role.yaml``
 
 Edit kube-scheduler pod manifest on master node (``/etc/kubernetes/manifests/kube-scheduler.yaml``) to use policy with external scheduler.
+For that, add in command `--policy-configmap=scheduler-policy` and `--policy-configmap-namespace=kube-system`.
+Add to spec extra parametr `dnsPolicy: ClusterFirstWithHostNet`
 
 .. code-block:: yaml
 
@@ -27,6 +29,8 @@ Edit kube-scheduler pod manifest on master node (``/etc/kubernetes/manifests/kub
             ...
             - --policy-configmap=scheduler-policy
             - --policy-configmap-namespace=kube-system
+          ...
+          dnsPolicy: ClusterFirstWithHostNet
    
 
 wca-scheduler deployment

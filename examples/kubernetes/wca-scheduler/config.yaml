@@ -18,8 +18,9 @@ algorithm: !Score
   data_provider: !ClusterScoreDataProvider
     kubeapi: *kubeapi
     prometheus: !Prometheus
-      host: http://100.64.176.36
-      port: 30900
+      # Note: our internal cluster address.
+      host: http://prometheus.prometheus.svc.cluster.local
+      port: 9090
       timeout: 5.0
     queries: !Queries
       APP_REQUESTED_RESOURCES_QUERY_MAP:
