@@ -26,6 +26,7 @@ pipeline {
     }
     environment {
         DOCKER_REPOSITORY_URL = '100.64.176.12:80'
+        CADVISOR_REVISION = 'master'
     }
     stages{
         stage("Flake8 formatting scan") {
@@ -121,6 +122,30 @@ pipeline {
                      '''
                      }
                  }
+                // cadvisor
+                stage("Build and push cAdvisor Docker image") {
+                    when {expression{return params.BUILD_IMAGES}}
+                    steps {
+                    sh '''
+                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/cadvisor:${CADVISOR_REVISION}
+                    IMAGE_DIR=${WORKSPACE}/cadvisor
+                    if [ -d cadvisor ]; then
+                        rm -fr cadvisor
+                    fi
+                    mkdir cadvisor
+                    pushd cadvisor
+                    git init .
+                    git remote add origin https://github.com/google/cadvisor.git
+                    git fetch origin ${CADVISOR_REVISION} --depth=1
+                    git checkout FETCH_HEAD
+
+                    docker build -t ${IMAGE_NAME} -f ../Dockerfile.cadvisor .
+                    docker push ${IMAGE_NAME}
+                    popd
+                    rm -fr cadvisor
+                    '''
+                    }
+                }
                 // memtier_benchmark
                 stage("Build and push memtier_benchmark Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
