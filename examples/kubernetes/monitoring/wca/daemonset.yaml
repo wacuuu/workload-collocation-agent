@@ -17,6 +17,16 @@ spec:
         prometheus.io/port: "9100"
     spec:
       priorityClassName: high-priority
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                - key: monitoring
+                  operator: In
+                  values:
+                  - wca
+                  - wca_cadvisor
       # nodeSelector:
       #   #kubernetes.io/hostname: node11
       #   # kubectl get nodes --show-labels

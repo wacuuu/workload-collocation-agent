@@ -139,7 +139,7 @@ pipeline {
                     git fetch origin ${CADVISOR_REVISION} --depth=1
                     git checkout FETCH_HEAD
 
-                    docker build -t ${IMAGE_NAME} -f ../Dockerfile.cadvisor .
+                    docker build -t ${IMAGE_NAME} -f ../examples/kubernetes/monitoring/cadvisor/Dockerfile.cadvisor .
                     docker push ${IMAGE_NAME}
                     popd
                     rm -fr cadvisor
