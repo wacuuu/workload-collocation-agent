@@ -461,9 +461,6 @@ pipeline {
                         --from-file ${WORKSPACE}/tests/e2e/nginx/server-key.pem \
                         --from-file ${WORKSPACE}/tests/e2e/nginx/CA.crt"
 
-                    print('Starting prometheus...')
-                    sh "kubectl apply -k ${WORKSPACE}/${KUSTOMIZATION_MONITORING}prometheus/"
-
                     print('Starting wca-wcheduler...')
                     sh "kubectl apply -k ${WORKSPACE}/${WCA_SCHEDULER_PATH}"
 
