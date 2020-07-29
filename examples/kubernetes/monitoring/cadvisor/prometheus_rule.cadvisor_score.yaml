@@ -10,7 +10,25 @@ spec:
 
   - name: score
     rules:
+# TODO spójny eksporter prometheusowy który pozwala wyciągać task initial cpu    https://github.com/kubernetes/kube-state-metrics i to załatwia sprawe
 
+# TODO nvdimm jest wyliczane w owcy machine_nvm_avg_power_budget_watts ale nie ma liczenia interleave sets
+
+
+    # bandwidth per NVDIMM type:  10W, 12W, 15W, 18W
+    # zeroes are where there is no data available
+    # power_set = (10, 12, 15, 18)
+    # read_sdp = (2.4, 4.3, 6.8, 0)
+    # write_sdp = (0.88, 1.48, 1.85, 0)
+    # read_ddp = (0, 4.1, 6.8, 8.3)
+    # write_ddp = (0, 1.45, 2.3, 3.0)
+    # read_qdp = (0, 2.65, 5.3, 7.8)
+    # write_qdp = (0, 1.02, 1.89, 2.68)
+
+
+
+
+# TODO platform_mem_mode_size_bytes -> machine_dimm_capacity_bytes type=~"RAM|ram"
     # ============================ node ===================================
     # cpu
     - record: node_capacity_unsafe
@@ -21,13 +39,11 @@ spec:
 
   #   # mem
     - record: node_capacity_unsafe
-    # TODO platform_mem_mode_size_bytes do zrobienia
-      expr: 'ceil((sum(platform_mem_mode_size_bytes) by (node) / 1e9)) and on(node) platform_mem_mode_size_bytes!=0'
+      expr: 'ceil((sum(machine_dimm_capacity_bytes) by (machine_id) / 1e9)) and on(machine_id) machine_dimm_capacity_bytes!=0'
       labels:
         dim: mem
     - record: node_capacity_unsafe
-      # TODO platform_mem_mode_size_bytes do zrobienia
-      expr: 'ceil(sum(machine_dimm_capacity_bytes) by (machine_id) / 1e9) and on(machine_id) platform_mem_mode_size_bytes==0'
+      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (machine_id) / 1e9) and on(machine_id) machine_dimm_capacity_bytes==0'
       labels:
         dim: mem
 
@@ -36,26 +52,24 @@ spec:
 
   #   #mbw
       # TODO nie ma tej metryki chyba
-      # TODO platform_mem_mode_size_bytes do zrobienia
     - record: node_capacity_unsafe
-      expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes!=0'
+      expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (node) / 1e9) and on(node) machine_dimm_capacity_bytes!=0'
       labels:
         dim: mbw_flat
     - record: node_capacity_unsafe
-      expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes==0'
+      expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (node) / 1e9) and on(node) machine_dimm_capacity_bytes==0'
       labels:
         dim: mbw_flat
 
   #   # wss
   #   # -- wss on 2lm is devaulated to 30% because of direct mapping (that is approximated by us unsafe maximum)
-  # TODO platform_mem_mode_size_bytes do zrobienia
     - record: node_capacity_unsafe
-      expr: 'ceil(sum(machine_dimm_capacity_bytes) by (machine_id) * 0.3 / 1e9) and on(machine_id) platform_mem_mode_size_bytes!=0'
+      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (machine_id) * 0.3 / 1e9) and on(machine_id) machine_dimm_capacity_bytes!=0'
       labels:
         dim: wss
       # -- ws on 1lm nodes is just capacity of ram
     - record: node_capacity_unsafe
-      expr: 'ceil(sum(machine_dimm_capacity_bytes) by (machine_id) / 1e9) and on(machine_id) platform_mem_mode_size_bytes==0'
+      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (machine_id) / 1e9) and on(machine_id) machine_dimm_capacity_bytes==0'
       labels:
         dim: wss
 
