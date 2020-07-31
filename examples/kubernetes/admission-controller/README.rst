@@ -21,28 +21,78 @@ Edit `/etc/kubernetes/manifests/kube-apiserver.yaml` file on master node:
 Prepare cluster
 ---------------
 
-    ``cd examples/kubernetes/admission-controller/keys``
-    ``openssl genrsa -out server-key.pem 2048``
-    ``openssl req -new -key server-key.pem -subj "/CN=webhook.webhook.svc" -out server.csr -config csr.conf``
+TLS connection
+++++++++++++++
 
-Execute command below and copy its output use to replace ${REQUEST} field in cert_sign_request.yaml:
-    ``cat server.csr | base64 | tr -d '\n'``
+TLS is required to secure a connection.
 
-Create certificate signing request:
-    ``kubectl apply -f cert_sign_request.yaml``
-it will be pending until approved by command:
-    ``kubectl certificate approve webhook.webhook``
+Instructions are based on https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/
 
-Generate webhook secret:
-    ``serverCert=$(kubectl get csr webhook.webhook -o jsonpath='{.status.certificate}')``
-    ``echo ${serverCert} | openssl base64 -d -A -out server-cert.pem``
-    ``kubectl create secret generic webhook-secret --from-file=server-key.pem --from-file=server-cert.pem -n webhook``
+You must generate a private key and Certificate Signing Request based on the private key.
+Openssl is used below as a tool, but you can use another tools to generate CSR, for example cfssl.
+In Certificate Signing Request the key ``subjectAltName`` has two values.
+``webhook.webhook.svc`` is SVC's DNS name.
+``100.64.176.36`` is example IP address, where wca-scheduler will be deployed.
+You should change this IP address to address, where the wca-scheduler will be deployed.
 
-Enter parent directory:
-    ``cd ..``
+Recommended parameters for key generations are:
+- ECDSA at least 256 bits
+- NIST p-256 curve for 256 bits
+
+.. code-block:: shell
+
+    # Generate a private key
+    openssl ecparam -out key.pem -name prime256v1 -genkey
+
+    # Generate a CSR. Change IP address to wca-scheduler node address!
+    openssl req -new -key key.pem \
+    -subj "/CN=webhook.webhook.svc" \
+    -addext "subjectAltName=DNSwebhook.webhook.svc,IP:100.64.176.36" \
+    -out server.csr \
+
+The next step is to create CSR Kubernetes object and send it to apiserver.
+It contains previously created CSR.
+Created Kubernetes CertificateSigningRequest must be approved.
+It can be done by an automated approval process or by a cluster administrator.
+Below script uses example certificate approved by the administrator.
+It is recommended to create a certificate with an expiry date of 3 years.
+
+.. code-block:: shell
+
+    # Create CSR K8S object
+    cat <<EOF | kubectl apply -f -
+    apiVersion: certificates.k8s.io/v1beta1
+    kind: CertificateSigningRequest
+    metadata:
+      name: webhook.webhook
+    spec:
+      request: $(cat server.csr | base64 | tr -d '\n')
+      usages:
+      - digital signature
+      - key encipherment
+      - server auth
+    EOF
+
+    # The CSR must be approved by administrator (or automated approval process)
+    kubectl certificate approve webhook.webhook
+
+Now, you can download the signed certificate.
+When you have a set of the certificate and the private key, you can create Secret using them.
+The Secret will be forwarded to wca-scheduler.
+
+.. code-block:: shell
+
+    # Download the Certificate
+    kubectl get csr webhook.webhook -o jsonpath='{.status.certificate}' | base64 --decode > server.crt
+
+    # Create Secret with the certificate and the private key
+    kubectl create secret generic webhook-secret --from-file server.crt --from-file server-key.pem --namespace webhook
+
+Create MutatingWebhookConfiguration
++++++++++++++++++++++++++++++++++++
 
 Execute command below and copy its output use to replace ${CA_BUNDLE} field in mutating-webhook.yaml:
-    ``kubectl get configmap -n kube-system extension-apiserver-authentication -o=jsonpath='{.data.client-ca-file}' | base64 | tr -d '\n'``
+``kubectl get configmap -n kube-system extension-apiserver-authentication -o=jsonpath='{.data.client-ca-file}' | base64 | tr -d '\n'``
 
 Replace ${HOST} field in webhook-deployment.yaml file with name of the node where deployment will run.
 
