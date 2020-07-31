@@ -7,43 +7,67 @@ metadata:
   namespace: prometheus
 spec:
   groups:
+  - name: pmem
+    rules:
+    # ======================== example node pmem ===============================
+    # Xeon Gold 6230R, 26 core;
+    # 2-2-1, 8x128GB, 1T; 192 DRAM;
+    # wss 192 * 0.3 = 57.6;
+    # mbw_read 54.4, mbw_write 14.8;
+    - record: node_capacity_unsafe
+      expr: '104'
+      labels:
+        dim: cpu
+        nodename: 'virtual_node_pmem'
+    - record: node_capacity_unsafe
+      expr: '1024'
+      labels:
+        dim: mem
+        nodename: 'virtual_node_pmem'
+    - record: node_capacity_unsafe
+      expr: '58'
+      labels:
+        dim: wss
+        nodename: 'virtual_node_pmem'
+    - record: node_capacity_unsafe
+      expr: '54'
+      labels:
+        dim: mbw_flat
+        nodename: 'virtual_node_pmem'
+    - record: platform_mem_mode_size_bytes
+      expr: '1085958258688'
+      labels:
+        nodename: 'virtual_node_pmem'
+    - record: platform_nvdimm_write_bandwidth_bytes_per_second
+      expr: '14800000000'
+      labels:
+        nodename: 'virtual_node_pmem'
+    - record: platform_nvdimm_read_bandwidth_bytes_per_second
+      expr: '54400000000'
+      labels:
+        nodename: 'virtual_node_pmem'
+
 
   - name: score
     rules:
-# TODO spójny eksporter prometheusowy który pozwala wyciągać task initial cpu    https://github.com/kubernetes/kube-state-metrics i to załatwia sprawe
 
-# TODO nvdimm jest wyliczane w owcy machine_nvm_avg_power_budget_watts ale nie ma liczenia interleave sets
+      # TODO spójny eksporter prometheusowy który pozwala wyciągać task initial cpu    https://github.com/kubernetes/kube-state-metrics i to załatwia sprawe
 
-
-    # bandwidth per NVDIMM type:  10W, 12W, 15W, 18W
-    # zeroes are where there is no data available
-    # power_set = (10, 12, 15, 18)
-    # read_sdp = (2.4, 4.3, 6.8, 0)
-    # write_sdp = (0.88, 1.48, 1.85, 0)
-    # read_ddp = (0, 4.1, 6.8, 8.3)
-    # write_ddp = (0, 1.45, 2.3, 3.0)
-    # read_qdp = (0, 2.65, 5.3, 7.8)
-    # write_qdp = (0, 1.02, 1.89, 2.68)
-
-
-
-
-# TODO platform_mem_mode_size_bytes -> machine_dimm_capacity_bytes type=~"RAM|ram"
     # ============================ node ===================================
     # cpu
     - record: node_capacity_unsafe
-      expr: 'sum(machine_cpu_cores) by (machine_id)'
+      expr: 'sum(machine_cpu_cores) by (nodename)'
       labels:
         dim: cpu
 
 
   #   # mem
     - record: node_capacity_unsafe
-      expr: 'ceil((sum(machine_dimm_capacity_bytes) by (machine_id) / 1e9)) and on(machine_id) machine_dimm_capacity_bytes!=0'
+      expr: 'ceil((sum(platform_mem_mode_size_bytes) by (nodename) / 1e9)) and on(nodename) platform_mem_mode_size_bytes!=0'
       labels:
         dim: mem
     - record: node_capacity_unsafe
-      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (machine_id) / 1e9) and on(machine_id) machine_dimm_capacity_bytes==0'
+      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (nodename) / 1e9) and on(nodename) platform_mem_mode_size_bytes==0'
       labels:
         dim: mem
 
@@ -53,23 +77,23 @@ spec:
   #   #mbw
       # TODO nie ma tej metryki chyba
     - record: node_capacity_unsafe
-      expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (node) / 1e9) and on(node) machine_dimm_capacity_bytes!=0'
+      expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes!=0'
       labels:
         dim: mbw_flat
     - record: node_capacity_unsafe
-      expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (node) / 1e9) and on(node) machine_dimm_capacity_bytes==0'
+      expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes==0'
       labels:
         dim: mbw_flat
 
   #   # wss
   #   # -- wss on 2lm is devaulated to 30% because of direct mapping (that is approximated by us unsafe maximum)
     - record: node_capacity_unsafe
-      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (machine_id) * 0.3 / 1e9) and on(machine_id) machine_dimm_capacity_bytes!=0'
+      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (nodename) * 0.3 / 1e9) and on(nodename) platform_mem_mode_size_bytes!=0'
       labels:
         dim: wss
       # -- ws on 1lm nodes is just capacity of ram
     - record: node_capacity_unsafe
-      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (machine_id) / 1e9) and on(machine_id) machine_dimm_capacity_bytes==0'
+      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (nodename) / 1e9) and on(nodename) platform_mem_mode_size_bytes==0'
       labels:
         dim: wss
 
@@ -98,30 +122,30 @@ spec:
 
   #   # Profile by mem
     - record: profile_node_by_mem
-      expr: 'node_capacity{dim="cpu"} / on (machine_id) node_capacity{dim="mem"}'
+      expr: 'node_capacity{dim="cpu"} / on (nodename) node_capacity{dim="mem"}'
       labels:
         index: cpu
     - record: profile_node_by_mem
-      expr: 'node_capacity{dim="mbw_flat"} / on (machine_id) node_capacity{dim="mem"}'
+      expr: 'node_capacity{dim="mbw_flat"} / on (nodename) node_capacity{dim="mem"}'
       labels:
         index: mbw_flat
     - record: profile_node_by_mem
-      expr: 'node_capacity{dim="wss"} / on (machine_id) node_capacity{dim="mem"}'
+      expr: 'node_capacity{dim="wss"} / on (nodename) node_capacity{dim="mem"}'
       labels:
         index: wss
 
   #   # Note: average (avg) all PMEM nodes
   # TODO platform_mem_mode_size_bytes do zrobienia
     - record: profile_nodes_by_mem
-      expr: 'avg(profile_node_by_mem and on(machine_id) platform_mem_mode_size_bytes != 0) by (index)'
+      expr: 'avg(profile_node_by_mem and on(nodename) platform_mem_mode_size_bytes != 0) by (index)'
       labels:
         memory: 2lm
 
   #   # Additional metric: read/write assymetry ratio (on 1lm equal to 1, on 2lm ~= 4)
     - record: node_mbw_write_weight
     # nie ma tej metryki
-      expr: '(avg(ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second)  by (machine_id)) and on(machine_id) platform_mem_mode_size_bytes!=0) by (machine_id)) /
-             (avg(ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (machine_id)) and on(machine_id) platform_mem_mode_size_bytes!=0) by (machine_id))'
+      expr: '(avg(ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second)  by (nodename)) and on(nodename) platform_mem_mode_size_bytes!=0) by (nodename)) /
+             (avg(ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename)) and on(nodename) platform_mem_mode_size_bytes!=0) by (nodename))'
       labels:
         memory: 2lm
   #   # ============================ apps ===================================

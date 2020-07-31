@@ -27,6 +27,15 @@ spec:
                   - cadvisor
                   - wca_cadvisor
       containers:
+      - name: kube-state-metrics
+        image: quay.io/coreos/kube-state-metrics:v1.9.7
+        imagePullPolicy: IfNotPresent
+        ports:
+          - containerPort: 8080
+            hostPort: 8080
+            protocol: TCP
+        args:
+          - --resources='pods'
       - name: cadvisor
         image: cadvisor
         imagePullPolicy: Always

@@ -12,3 +12,18 @@ spec:
     - name: cadvisor
       port: 9101
       targetPort: 9101
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kube-state-metrics
+  namespace: cadvisor
+  labels:
+    name: kube-state-metrics
+spec:
+  selector:
+    name: cadvisor
+  ports:
+    - name: kube-state-metrics
+      port: 8080
+      targetPort: 8080
