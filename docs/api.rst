@@ -80,6 +80,11 @@ and store them in metrics_storage component.
     (defaults to 0, which means that metric is not collected, e.g. when set to 1
     ``clear_refs`` will be reset every measurement iteration defined by ``interval`` option.)
 
+- ``wss_stable_duration``: **int** = *30*
+
+    Number of stable cycles after which wss is considered stable. Will not have any impact
+    unless wss_reset_interval is greater than 0
+
 - ``include_optional_labels``: **bool** = *False*
 
     Attach following labels to all metrics:
