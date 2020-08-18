@@ -1,0 +1,12 @@
+bases:
+- big
+
+commonLabels:
+  fit: 1lm
+  workload: pmbench
+
+images:
+- name: pmbench
+  newName: 100.64.176.12:80/wca/pmbench
+  newTag: master
+ 

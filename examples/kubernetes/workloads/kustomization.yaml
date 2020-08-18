@@ -5,3 +5,5 @@ bases:
 - memcached-mutilate
 - sysbench-memory
 - specjbb
+- pmbench
+

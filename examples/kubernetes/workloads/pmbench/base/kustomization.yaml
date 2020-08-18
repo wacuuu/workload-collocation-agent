@@ -1,0 +1,5 @@
+resources:
+  - pmbench.yaml
+
+patchesStrategicMerge:
+  - resources.yaml

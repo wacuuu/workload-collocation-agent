@@ -1,0 +1,15 @@
+nameSuffix: -big
+bases:
+- ../base
+
+commonLabels:
+  app: pmbench-big
+  size: big
+
+configMapGenerator:
+- name: pmbench
+  literals:
+    - extra='--setsize 50000 --mapsize 75000 200000 --initialize -a touch -j 8'
+
+patchesStrategicMerge:
+  - resources.yaml
