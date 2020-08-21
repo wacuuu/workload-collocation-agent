@@ -115,6 +115,8 @@ class MetricName(str, Enum):
     PLATFORM_VMSTAT_NUMA_HINT_FAULTS = 'platform_vmstat_numa_hint_faults'
     PLATFORM_VMSTAT_NUMA_HINT_FAULTS_LOCAL = 'platform_vmstat_numa_hint_faults_local'
     PLATFORM_VMSTAT_PGFAULTS = 'platform_vmstat_pgfaults'
+    PLATFORM_VMSTAT = 'platform_vmstat'
+    PLATFORM_NODE_VMSTAT = 'platform_node_vmstat'
 
     # Perf event based from uncore PMU and derived
     PLATFORM_PMM_BANDWIDTH_READS = 'platform_pmm_bandwidth_reads'
@@ -866,6 +868,27 @@ METRICS_METADATA: Dict[MetricName, MetricMetadata] = {
             MetricGranularity.PLATFORM,
             [],
             'yes'
+        ),
+    MetricName.PLATFORM_VMSTAT:
+        MetricMetadata(
+            'Virtual Memory stats based on /proc/vmstat - all possible keys or matching regexp',
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC,
+            MetricSource.PROCFS,
+            MetricGranularity.PLATFORM,
+            ['key'],
+            'yes (vmstat)'
+        ),
+    MetricName.PLATFORM_NODE_VMSTAT:
+        MetricMetadata(
+            'Virtual Memory stats based on /sys/devices/system/node/nodeX/vmstat'
+            ' all keys or matching regexp',
+            MetricType.COUNTER,
+            MetricUnit.NUMERIC,
+            MetricSource.PROCFS,
+            MetricGranularity.PLATFORM,
+            ['numa_node', 'key'],
+            'yes (vmstat)'
         ),
     # Perf uncore
     MetricName.PLATFORM_PMM_BANDWIDTH_READS:
