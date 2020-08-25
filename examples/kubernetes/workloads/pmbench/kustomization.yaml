@@ -1,5 +1,6 @@
 bases:
 - big
+- big-manually-crirm-annotated
 
 commonLabels:
   fit: 1lm

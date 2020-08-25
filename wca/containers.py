@@ -288,7 +288,7 @@ class Container(ContainerInterface):
             platform=platform,
             allocation_configuration=allocation_configuration)
 
-        if wss_reset_interval > 0:
+        if wss_reset_interval != 0:
             self.wss = wss.WSS(interval, self.get_pids, wss_reset_interval, wss_stable_duration)
         else:
             self.wss = None
