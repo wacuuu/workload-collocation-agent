@@ -31,11 +31,11 @@ spec:
       effect: NoSchedule
   nodeSelector:
     node-role.kubernetes.io/master: ""
-  storage:
-    volumeClaimTemplate:
-      spec:
-        storageClassName: manual
-        resources:
-          requests:
-            storage: 10Gi
+  # storage:
+  #   volumeClaimTemplate:
+  #     spec:
+  #       storageClassName: manual
+  #       resources:
+  #         requests:
+  #           storage: 10Gi
 

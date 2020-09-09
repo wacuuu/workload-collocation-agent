@@ -1,0 +1,251 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    role: prometheus-cadvisor-rules
+  name: prometheus-cadvisor-score
+  namespace: prometheus
+spec:
+  groups:
+  - name: pmem
+    rules:
+    # ======================== example node pmem ===============================
+    # Xeon Gold 6230R, 26 core;
+    # 2-2-1, 8x128GB, 1T; 192 DRAM;
+    # wss 192 * 0.3 = 57.6;
+    # mbw_read 54.4, mbw_write 14.8;
+    - record: node_capacity_unsafe
+      expr: '104'
+      labels:
+        dim: cpu
+        nodename: 'virtual_node_pmem'
+    - record: node_capacity_unsafe
+      expr: '1024'
+      labels:
+        dim: mem
+        nodename: 'virtual_node_pmem'
+    - record: node_capacity_unsafe
+      expr: '58'
+      labels:
+        dim: wss
+        nodename: 'virtual_node_pmem'
+    - record: node_capacity_unsafe
+      expr: '54'
+      labels:
+        dim: mbw_flat
+        nodename: 'virtual_node_pmem'
+    - record: platform_mem_mode_size_bytes
+      expr: '1085958258688'
+      labels:
+        nodename: 'virtual_node_pmem'
+    - record: platform_nvdimm_write_bandwidth_bytes_per_second
+      expr: '14800000000'
+      labels:
+        nodename: 'virtual_node_pmem'
+    - record: platform_nvdimm_read_bandwidth_bytes_per_second
+      expr: '54400000000'
+      labels:
+        nodename: 'virtual_node_pmem'
+
+  - name: aggregates
+    rules:
+      - record: cpu_offcore_requests_demand_data_rd
+        expr: 'sum by (id,nodename,container_label_io_kubernetes_pod_name,container_label_name,container_label_io_kubernetes_pod_namespace,container_label_annotation_io_kubernetes_container_hash,container_label_io_kubernetes_container_name,container_label_io_kubernetes_pod_uid,name) (container_perf_events_total{event="offcore_requests.demand_data_rd",container_label_io_kubernetes_container_name!="POD"})'
+
+      - record: cpu_offcore_requests_demand_rfo
+        expr: 'sum by (id,nodename,container_label_io_kubernetes_pod_name,container_label_name,container_label_io_kubernetes_pod_namespace,container_label_annotation_io_kubernetes_container_hash,container_label_io_kubernetes_container_name,container_label_io_kubernetes_pod_uid,name) (container_perf_events_total{event="offcore_requests.demand_rfo",container_label_io_kubernetes_container_name!="POD"})'
+
+      - record: pod_offcore_requests_demand_data_rd
+        expr: sum by(nodename,container_label_io_kubernetes_pod_name) (cpu_offcore_requests_demand_data_rd{container_label_io_kubernetes_pod_name=~".*"})
+
+      - record: pod_offcore_requests_demand_rfo
+        expr: sum by(nodename,container_label_io_kubernetes_pod_name) (cpu_offcore_requests_demand_rfo{container_label_io_kubernetes_pod_name=~".*"})
+
+      - record: pod_offcore_requests_demand_rfo
+        expr: label_replace(pod_offcore_requests_demand_rfo, "app_name", "$1", "container_label_io_kubernetes_pod_name", "(.*)-[a-zA-Z0-9]+$")
+
+      - record: pod_offcore_requests_demand_data_rd
+        expr: label_replace(pod_offcore_requests_demand_data_rd, "app_name", "$1", "container_label_io_kubernetes_pod_name", "(.*)-[a-zA-Z0-9]+$")
+
+      - record: memory_bandwidth_bytes
+        expr: label_replace(container_memory_bandwidth_bytes, "app_name", "$1", "container_label_io_kubernetes_pod_name", "(.*)-[a-zA-Z0-9]+$")
+
+  - name: score
+    rules:
+      # ============================ node ===================================
+      # cpu
+      - record: node_capacity_unsafe
+        expr: 'sum(machine_cpu_cores) by (nodename)'
+        labels:
+          dim: cpu
+      # mem
+      - record: node_capacity_unsafe
+        expr: 'ceil((sum(platform_mem_mode_size_bytes) by (nodename) / 1e9)) and on(nodename) platform_mem_mode_size_bytes!=0'
+        labels:
+          dim: mem
+      - record: node_capacity_unsafe
+        expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (nodename) / 1e9) and on(nodename) platform_mem_mode_size_bytes==0'
+        labels:
+          dim: mem
+      #mbw
+      - record: node_capacity_unsafe
+        expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (nodename) / 1e9) and on(nodename) platform_mem_mode_size_bytes!=0'
+        labels:
+          dim: mbw_flat
+      - record: node_capacity_unsafe
+        expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (nodename) / 1e9) and on(nodename) platform_mem_mode_size_bytes==0'
+        labels:
+          dim: mbw_flat
+      # wss
+      # -- wss on 2lm is devaulated to 30% because of direct mapping (that is approximated by us unsafe maximum)
+      - record: node_capacity_unsafe
+        expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (nodename) * 0.3 / 1e9) and on(nodename) platform_mem_mode_size_bytes!=0'
+        labels:
+          dim: wss
+        # -- ws on 1lm nodes is just capacity of ram
+      - record: node_capacity_unsafe
+        expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~"RAM|ram"}) by (nodename) / 1e9) and on(nodename) platform_mem_mode_size_bytes==0'
+        labels:
+          dim: wss
+
+      # safety weights: we don't want to fill any resource to it limit;
+      - record: safety_weights
+        expr: '0.7'
+        labels:
+          dim: cpu
+      - record: safety_weights
+        expr: '0.9'
+        labels:
+          dim: mem
+      - record: safety_weights
+        expr: '0.7'
+        labels:
+          dim: mbw_flat
+      - record: safety_weights
+        expr: '0.66'
+        labels:
+          dim: wss
+
+      - record: node_capacity
+        expr: node_capacity_unsafe * on(dim) group_left safety_weights
+
+      # ---------------------------- node PMEM profile -----------------------------------------
+
+      # Profile by mem
+      - record: profile_node_by_mem
+        expr: 'node_capacity{dim="cpu"} / on (nodename) node_capacity{dim="mem"}'
+        labels:
+          index: cpu
+      - record: profile_node_by_mem
+        expr: 'node_capacity{dim="mbw_flat"} / on (nodename) node_capacity{dim="mem"}'
+        labels:
+          index: mbw_flat
+      - record: profile_node_by_mem
+        expr: 'node_capacity{dim="wss"} / on (nodename) node_capacity{dim="mem"}'
+        labels:
+          index: wss
+
+      # Note: average (avg) all PMEM nodes
+      - record: profile_nodes_by_mem
+        expr: 'avg(profile_node_by_mem and on(nodename) platform_mem_mode_size_bytes != 0) by (index)'
+        labels:
+          memory: 2lm
+
+      # Additional metric: read/write assymetry ratio (on 1lm equal to 1, on 2lm ~= 4)
+      - record: node_mbw_write_weight
+        expr: '(avg(ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second)  by (nodename)) and on(nodename) platform_mem_mode_size_bytes!=0) by (nodename)) /
+               (avg(ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (nodename)) and on(nodename) platform_mem_mode_size_bytes!=0) by (nodename))'
+        labels:
+          memory: 2lm
+
+          # ============================ apps ===================================
+
+    # Helper metrics
+    # Note: heuristic for approximation of R/W ratio for a task; 30s set to be sure to have in each range at least 2 points;
+      - record: task_memory_rw_ratio
+        expr: '(rate(pod_offcore_requests_demand_data_rd[30s]) + rate(pod_offcore_requests_demand_rfo[30s])) /
+              (rate(pod_offcore_requests_demand_data_rd[30s]) + 2*rate(pod_offcore_requests_demand_rfo[30s]))'
+
+      - record: task_mbw
+        expr: 'rate(memory_bandwidth_bytes[30s]) / 1e9'
+      - record: task_memory_rw_ratio_
+        expr: 'task_memory_rw_ratio'
+        labels:
+          memory: 2lm
+      - record: task_mbw_
+        expr: 'task_mbw'
+        labels:
+          memory: 2lm
+      - record: task_mbw_read
+        expr: 'task_mbw_ * task_memory_rw_ratio_'
+      - record: task_mbw_write
+        expr: '(1 - task_memory_rw_ratio_) * task_mbw_ * on(memory) group_left node_mbw_write_weight'
+      - record: task_mbw_flat
+        expr: 'task_mbw_read + task_mbw_write'
+
+      - record: app_cpu
+        expr: 'max(max_over_time(task_requested_cpus[7d])) by (app_name)'
+      - record: app_mem
+        expr: 'max(max_over_time(task_requested_mem_bytes[7d])) by (app_name) / 1e9'
+      - record: app_mbw_flat
+        expr: 'max(quantile_over_time(0.95, task_mbw_flat[7d:2m])) by (app_name)'
+      - record: app_wss
+        expr: 'max(quantile_over_time(0.95, task_wss_referenced_bytes[7d:2m])) by (app_name) / 1e9'
+
+      - record: app_req
+        expr: 'app_cpu'
+        labels:
+          dim: cpu
+      - record: app_req
+        expr: 'app_mem'
+        labels:
+          dim: mem
+      - record: app_req
+        expr: 'app_mbw_flat'
+        labels:
+          dim: mbw_flat
+      - record: app_req
+        expr: 'app_wss'
+        labels:
+          dim: wss
+
+      # --------------------- Profiles APP -----------------------
+      #
+      # app profile by mem
+      - record: profile_app_by_mem
+        expr: 'app_req{dim="cpu"} / on(app_name) app_req{dim="mem"}'
+        labels:
+          index: cpu
+      - record: profile_app_by_mem
+        expr: 'app_req{dim="mbw_flat"} / on(app_name) app_req{dim="mem"}'
+        labels:
+          index: mbw_flat
+      - record: profile_app_by_mem
+        expr: 'app_req{dim="wss"} / on(app_name) app_req{dim="mem"}'
+        labels:
+          index: wss
+
+      # ======================== normalization profile ========================
+      - record: profile_app_by_mem_norm
+        expr: 'profile_app_by_mem / on (index) group_left profile_nodes_by_mem{memory="2lm"}'
+
+      # ======================== SCORE calculation ==========================
+      - record: profile_app_2lm_score_max # lower is better for 2lm
+        expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss"}) by (app_name)'
+
+  - name: cluster-score-data-provider
+    rules:
+      - record: node_type
+        expr: 'platform_mem_mode_size_bytes > 0'
+        labels:
+          nodetype: pmem
+      - record: node_type
+        expr: 'platform_mem_mode_size_bytes == 0'
+        labels:
+          nodetype: dram
+      - record: node_type
+        expr: 'platform_mem_mode_size_bytes < 0'
+        labels:
+          nodetype: unknown
+      - record: app_profile
+        expr: 'profile_app_2lm_score_max'

@@ -8,6 +8,7 @@ metadata:
     kubernetes.io/cluster-service: "true"
     kubernetes.io/name: prometheus
 spec:
+  type: NodePort
   ports:
     - name: web
       port: 9090

@@ -15,6 +15,8 @@ spec:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9101"
     spec:
+      hostNetwork: true
+      hostPID: true
       serviceAccountName: cadvisor
       affinity:
         nodeAffinity:
@@ -35,10 +37,11 @@ spec:
             hostPort: 8080
             protocol: TCP
         args:
-          - --resources='pods'
+          - '--collectors=pods'
+        # automountServiceAccountToken: true
       - name: cadvisor
-        image: cadvisor
-        imagePullPolicy: Always
+        image: cadvisor:resctrl-3
+        imagePullPolicy: Never
         securityContext:
           privileged: true
         resources:
@@ -48,7 +51,8 @@ spec:
           - --perf_events_config=/etc/config/perf-hmem-cascadelake.json
           - --v=5
           # below are metrics disabled by default + metric aggregation over CPU + some metrics not required to limit amount of data
-          - --disable_metrics=referenced_memory,advtcp,process,sched,hugetlb,cpu_topology,resctrl,tcp,udp,percpu,accelerator,disk,diskIO,network
+          - --disable_metrics=tcp,udp,advtcp,sched,process,hugetlb
+          - --whitelisted_container_labels=app
         volumeMounts:
         - name: rootfs
           mountPath: /rootfs
@@ -66,7 +70,7 @@ spec:
           - containerPort: 9101
             hostPort: 9101
             protocol: TCP
-      automountServiceAccountToken: false
+      # automountServiceAccountToken: false
       volumes:
       - name: rootfs
         hostPath:

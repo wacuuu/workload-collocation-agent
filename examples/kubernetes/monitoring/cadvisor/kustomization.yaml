@@ -12,6 +12,7 @@ resources:
 - daemonset.yaml
 - service.yaml
 - service_monitor.yaml
+# - prometheus_rule.cadvisor_score.yaml
 
 configMapGenerator:
   - name: cadvisor-config

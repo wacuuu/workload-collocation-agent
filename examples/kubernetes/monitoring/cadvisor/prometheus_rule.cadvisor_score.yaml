@@ -2,7 +2,7 @@ apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
   labels:
-    role: prometheus-rules
+    role: prometheus-cadvisor-rules
   name: prometheus-cadvisor-score
   namespace: prometheus
 spec:
@@ -51,16 +51,12 @@ spec:
   - name: score
     rules:
 
-      # TODO spójny eksporter prometheusowy który pozwala wyciągać task initial cpu    https://github.com/kubernetes/kube-state-metrics i to załatwia sprawe
-
     # ============================ node ===================================
     # cpu
     - record: node_capacity_unsafe
       expr: 'sum(machine_cpu_cores) by (nodename)'
       labels:
         dim: cpu
-
-
   #   # mem
     - record: node_capacity_unsafe
       expr: 'ceil((sum(platform_mem_mode_size_bytes) by (nodename) / 1e9)) and on(nodename) platform_mem_mode_size_bytes!=0'
@@ -152,17 +148,33 @@ spec:
 
   #   # Helper metrics
   #   # Note: heuristic for approximation of R/W ratio for a task; 30s set to be sure to have in each range at least 2 points;
+    - record: aggr_offcore_requests_demand_data_rd
+      expr: 'sum by (id,container_label_io_kubernetes_pod_name,container_label_name,container_label_io_kubernetes_pod_namespace,container_label_annotation_io_kubernetes_container_hash,container_label_io_kubernetes_container_name,container_label_io_kubernetes_pod_uid,name) (container_perf_events_total{event="offcore_requests.demand_data_rd"})'
+
+    - record: offcore_requests_demand_data_rd
+      expr: label_replace(aggr_offcore_requests_demand_data_rd, "app_name", "$1", "container_label_io_kubernetes_pod_name", "(.*)-[0-9]+$")
+
+    - record: aggr_offcore_requests_demand_rfo
+      expr: 'sum by (id,container_label_io_kubernetes_pod_name,container_label_name,container_label_io_kubernetes_pod_namespace,container_label_annotation_io_kubernetes_container_hash,container_label_io_kubernetes_container_name,container_label_io_kubernetes_pod_uid,name) (container_perf_events_total{event="offcore_requests.demand_rfo"})'
+
+    - record: offcore_requests_demand_rfo
+      expr: label_replace(aggr_offcore_requests_demand_rfo, "app_name", "$1", "container_label_io_kubernetes_pod_name", "(.*)-[0-9]+$")
+
     - record: task_memory_rw_ratio
-      expr: '(rate(container_perf_events_total{event="offcore_requests.demand_data_rd"}[30s]) + rate(container_perf_events_total{event="offcore_requests.demand_rfo"}[30s])) /
-             (rate(container_perf_events_total{event="offcore_requests.demand_data_rd"}[30s]) + 2*rate(container_perf_events_total{event="offcore_requests.demand_rfo"}[30s]))'
+      expr: '(rate(offcore_requests_demand_data_rd[30s]) + rate(offcore_requests_demand_rfo[30s])) /
+             (rate(offcore_requests_demand_data_rd[30s]) + 2*rate(offcore_requests_demand_rfo[30s]))'
+
+    - record: memory_bandwidth_bytes
+      expr: label_replace(container_memory_bandwidth_bytes, "app_name", "$1", "container_label_io_kubernetes_pod_name", "(.*)-[0-9]+$")
+
     - record: task_mbw
-      expr: 'rate(task_mem_bandwidth_bytes[30s]) / 1e9'
+      expr: 'rate(memory_bandwidth_bytes[30s]) / 1e9'
     - record: task_memory_rw_ratio_
-      expr: 'task_memory_rw_ratio'
+      expr: 'sum by(app_name) (task_memory_rw_ratio >= 0)'
       labels:
         memory: 2lm
     - record: task_mbw_
-      expr: 'task_mbw'
+      expr: 'sum by(app_name) (task_mbw)'
       labels:
         memory: 2lm
     - record: task_mbw_read
@@ -172,16 +184,28 @@ spec:
     - record: task_mbw_flat
       expr: 'task_mbw_read + task_mbw_write'
 
-    - record: app_cpu
+    - record: app_cpu_
     # TODO co to task_requested_cpus
-      expr: 'max(max_over_time(task_requested_cpus[7d])) by (app)'
-    - record: app_mem
+      expr: 'max(sum by(exported_pod,node) (max_over_time(kube_pod_container_resource_requests_cpu_cores[7d]))) by (exported_pod,node) / 1e9'
+    # - record: app_cpu_
+    #   expr: label_replace(app_cpu_, "app_name", "$1", "exported_pod", "(.*)-[0-9]+$")
+    - record: app_cpu
+      expr: max (app_cpu_) by (app_name)
+
     # TODO task_requested_mem_bytes
-      expr: 'max(max_over_time(task_requested_mem_bytes[7d])) by (app) / 1e9'
+    - record: app_mem_
+      expr: 'max(sum by(exported_pod,node) (max_over_time(kube_pod_container_resource_requests_memory_bytes[7d]))) by (exported_pod,node) / 1e9'
+    # - record: app_mem_
+    #   expr: label_replace(app_mem_, "app_name", "$1", "exported_pod", "(.*)-[0-9]+$")
+    - record: app_mem
+      expr: max (app_mem_) by (app_name)
+
     - record: app_mbw_flat
-      expr: 'max(quantile_over_time(0.95, task_mbw_flat[7d:2m])) by (app)'
+      expr: 'max(quantile_over_time(0.95, task_mbw_flat[7d:2m])) by (app_name)'
+    - record: container_referenced_bytes
+      expr: label_replace(container_referenced_bytes, "app_name", "$1", "container_label_io_kubernetes_pod_name", "(.*)-[0-9]+$")
     - record: app_wss
-      expr: 'max(quantile_over_time(0.95, task_wss_referenced_bytes[7d:2m])) by (app) / 1e9'
+      expr: 'max(quantile_over_time(0.95, container_referenced_bytes[7d:2m])) by (app_name) / 1e9'
 
     - record: app_req
       expr: 'app_cpu'
@@ -199,20 +223,22 @@ spec:
       expr: 'app_wss'
       labels:
         dim: wss
+    # - record: app_req
+    #   expr: label_replace(app_req, "app_name", "$1", "container_label_io_kubernetes_pod_name", "(.*)-[0-9]+$")
 
   #   # --------------------- Profiles APP -----------------------
   #   #
   #   # app profile by mem
     - record: profile_app_by_mem
-      expr: 'app_req{dim="cpu"} / on(app) app_req{dim="mem"}'
+      expr: 'app_req{dim="cpu"} / on(container_label_io_kubernetes_container_name) app_req{dim="mem"}'
       labels:
         index: cpu
     - record: profile_app_by_mem
-      expr: 'app_req{dim="mbw_flat"} / on(app) app_req{dim="mem"}'
+      expr: 'app_req{dim="mbw_flat"} / on(container_label_io_kubernetes_container_name) app_req{dim="mem"}'
       labels:
         index: mbw_flat
     - record: profile_app_by_mem
-      expr: 'app_req{dim="wss"} / on(app) app_req{dim="mem"}'
+      expr: 'app_req{dim="wss"} / on(container_label_io_kubernetes_container_name) app_req{dim="mem"}'
       labels:
         index: wss
 
@@ -222,7 +248,7 @@ spec:
 
   #   # ======================== SCORE calculation ==========================
     - record: profile_app_2lm_score_max # lower is better for 2lm
-      expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss"}) by (app)'
+      expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss"}) by (container_label_io_kubernetes_container_name)'
 
   - name: cluster-score-data-provider
     rules:

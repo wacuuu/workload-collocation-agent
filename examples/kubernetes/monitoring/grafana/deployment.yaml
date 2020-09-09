@@ -12,6 +12,7 @@ spec:
       labels:
         name: grafana
     spec:
+      hostNetwork: true
       tolerations:
         - key: master
           operator: Exists
