@@ -1,0 +1,248 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  labels:
+    role: prometheus-rules
+  name: prometheus-cadvisor-score
+  namespace: prometheus
+spec:
+  groups:
+  - name: reference-node-scoring
+    rules:
+
+
+# ASUMPTIONS:
+# 1. app label is common for all pods with the same workload
+# 2. platform_nvdimm_read_bandwidth_bytes_per_second this value is set in prometheus_rule.pmem.yaml
+# TODO: zawezic do regexa na ddr
+
+
+    # ============================ node ===================================
+    # cpu
+    - record: cadvisor_node_capacity_unsafe
+      expr: 'sum(machine_cpu_cores) by (node)' # czy to naprawde ma byc suma wszystkich corow na clustrze
+      labels:
+        dim: cpu
+    # mem
+    - record: cadvisor_node_capacity_unsafe
+      expr: 'ceil((sum(machine_nvm_capacity{mode="memory_mode"}) by (node) / 1e9)) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
+      labels:
+        dim: mem
+    - record: cadvisor_node_capacity_unsafe
+      expr: 'ceil(sum(machine_dimm_capacity_bytes) by (node) / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}==0' # to jest riski bo nie gwarantuje ze to ram
+      labels:
+        dim: mem
+    #mbw flat zostawiam jak jest, bo tego i tak nie ma w cadvisorze
+    - record: cadvisor_node_capacity_unsafe
+      expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes!=0'
+      labels:
+        dim: mbw_flat
+    - record: cadvisor_node_capacity_unsafe
+      expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes==0'
+      labels:
+        dim: mbw_flat
+    # wss ponownie problem z brakiem gwarancji ze to ram
+    # -- wss on 2lm is devaulated to 30% because of direct mapping (that is approximated by us unsafe maximum)
+    - record: cadvisor_node_capacity_unsafe
+      expr: 'ceil(sum(machine_dimm_capacity_bytes) by (node) * 0.3 / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
+      labels:
+        dim: wss
+      # -- ws on 1lm nodes is just capacity of ram
+    - record: cadvisor_node_capacity_unsafe
+      expr: 'ceil(sum(machine_dimm_capacity_bytes) by (node) / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}==0'
+      labels:
+        dim: wss
+
+    # safety weights: we don't want to fill any resource to it limit;
+    - record: cadvisor_safety_weights
+      expr: '0.7'
+      labels:
+        dim: cpu
+    - record: cadvisor_safety_weights
+      expr: '0.9'
+      labels:
+        dim: mem
+    - record: cadvisor_safety_weights
+      expr: '0.7'
+      labels:
+        dim: mbw_flat
+    - record: cadvisor_safety_weights
+      expr: '0.66'
+      labels:
+        dim: wss
+
+    - record: cadvisor_node_capacity
+      expr: cadvisor_node_capacity_unsafe * on(dim) group_left cadvisor_safety_weights
+
+    # ---------------------------- node PMEM profile -----------------------------------------
+
+    # Profile by mem
+    - record: cadvisor_profile_node_by_mem
+      expr: 'cadvisor_node_capacity{dim="cpu"} / on (node) cadvisor_node_capacity{dim="mem"}'
+      labels:
+        index: cpu
+    - record: cadvisor_profile_node_by_mem
+      expr: 'cadvisor_node_capacity{dim="mbw_flat"} / on (node) cadvisor_node_capacity{dim="mem"}'
+      labels:
+        index: mbw_flat
+    - record: cadvisor_profile_node_by_mem
+      expr: 'cadvisor_node_capacity{dim="wss"} / on (node) cadvisor_node_capacity{dim="mem"}'
+      labels:
+        index: wss
+
+    # Note: average (avg) all PMEM nodes
+    - record: cadvisor_profile_nodes_by_mem
+      expr: 'avg(cadvisor_profile_node_by_mem and on(node) machine_nvm_capacity{mode="memory_mode"} != 0) by (index)'
+      labels:
+        memory: 2lm
+
+    # Additional metric: read/write assymetry ratio (on 1lm equal to 1, on 2lm ~= 4)
+    - record: cadvisor_node_mbw_write_weight
+      expr: '(avg(ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second)  by (node)) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0) by (node)) /
+             (avg(ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (node)) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0) by (node))'
+      labels:
+        memory: 2lm
+
+  - name: app-data-gathering
+    rules:
+    # ============================ bogaloo with app =======================
+    - record: container_perf_events_total_relabeled
+      expr: label_replace(container_perf_events_total, "exported_pod", "$1", "container_label_io_kubernetes_pod_name", "(.*)+$")
+    - record: container_perf_events_total_extended
+      expr: container_perf_events_total_relabeled * on(exported_pod) group_left(label_app) kube_pod_labels
+
+    - record: container_memory_bandwidth_bytes_relabeled
+      expr: label_replace(container_memory_bandwidth_bytes, "exported_pod", "$1", "container_label_io_kubernetes_pod_name", "(.*)+$")
+    - record: container_memory_bandwidth_bytes_extended
+      expr: container_memory_bandwidth_bytes_relabeled * on(exported_pod) group_left(label_app) kube_pod_labels
+
+    - record: container_referenced_bytes_relabeled
+      expr: label_replace(container_referenced_bytes, "exported_pod", "$1", "container_label_io_kubernetes_pod_name", "(.*)+$")
+    - record: container_referenced_bytes_extended
+      expr: container_referenced_bytes_relabeled * on(exported_pod) group_left(label_app) kube_pod_labels
+
+
+    # ============================ aggregate by pod =======================
+    - record: pod_offcore_requests_demand_data_rd
+      expr: sum(container_perf_events_total_extended{event="offcore_requests.demand_data_rd",container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app)
+    - record: pod_offcore_requests_demand_rfo
+      expr: sum(container_perf_events_total_extended{event="offcore_requests.demand_rfo",container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app)
+    - record: pod_mbw
+      expr: sum(container_memory_bandwidth_bytes_extended{container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app)
+    - record: pod_wss
+      expr: sum(container_referenced_bytes_extended{container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app)
+    # ============================ apps ===================================
+    # Helper metrics
+    # Note: heuristic for approximation of R/W ratio for a task; 30s set to be sure to have in each range at least 2 points;
+    - record: task_memory_rw_ratio
+      expr: '(rate(pod_offcore_requests_demand_data_rd[30s]) + rate(pod_offcore_requests_demand_rfo[30s])) / (rate(pod_offcore_requests_demand_data_rd[30s]) + 2*rate(pod_offcore_requests_demand_rfo[30s]))'
+    - record: task_mbw
+      expr: 'rate(pod_mbw[30s])'
+      # expr: 'rate(pod_mbw[30s]) / 1e9'
+    - record: task_memory_rw_ratio_
+      expr: 'task_memory_rw_ratio'
+      labels:
+        memory: 2lm # te labelki nie robia problemu?
+    - record: task_mbw_
+      expr: 'task_mbw'
+      labels:
+        memory: 2lm
+    - record: task_mbw_read
+      expr: 'task_mbw_ * task_memory_rw_ratio_'
+    - record: task_mbw_write
+      expr: '(1 - task_memory_rw_ratio_) * task_mbw_ * on(memory) group_left cadvisor_node_mbw_write_weight'
+    - record: task_mbw_flat
+      expr: 'task_mbw_read + task_mbw_write'
+
+  - name: app-requirements
+    rules:
+    # ============================ app requests ===================================
+    - record: app_limits_cpu
+      expr: kube_pod_container_resource_limits_cpu_cores * on(exported_pod,exported_namespace) group_left(label_app) kube_pod_labels
+    - record: app_requests_cpu
+      expr: kube_pod_container_resource_requests_cpu_cores * on(exported_pod,exported_namespace) group_left(label_app) kube_pod_labels
+    - record: app_requests_memory
+      expr: kube_pod_container_resource_requests_memory_bytes * on(exported_pod,exported_namespace) group_left(label_app) kube_pod_labels
+
+    - record: app_cpu_
+      expr: 'max(max_over_time(app_requests_cpu{label_app=~".+"}[7d])) by (label_app)'
+    - record: app_mem_
+      expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app) / 1e9'
+    - record: app_mbw_flat_
+      expr: 'max(quantile_over_time(0.95, task_mbw_flat{label_app=~".+"}[7d:2m])) by (label_app)'
+    - record: app_wss_
+      expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app) / 1e9'
+
+    - expr: label_replace(app_cpu_, "app", "$1", "label_app", "(.*)+$")
+      record: app_cpu
+    - expr: label_replace(app_mem_, "app", "$1", "label_app", "(.*)+$")
+      record: app_mem
+    - expr: label_replace(app_mbw_flat_, "app", "$1", "label_app", "(.*)+$")
+      record: app_mbw_flat
+    - expr: label_replace(app_wss_, "app", "$1", "label_app", "(.*)+$")
+      record: app_wss
+
+  - name: profiling
+    rules:
+    - record: app_req
+      expr: 'app_cpu'
+      labels:
+        dim: cpu
+    - record: app_req
+      expr: 'app_mem'
+      labels:
+        dim: mem
+    - record: app_req
+      expr: 'app_mbw_flat'
+      labels:
+        dim: mbw_flat
+    - record: app_req
+      expr: 'app_wss'
+      labels:
+        dim: wss
+
+    # --------------------- Profiles APP -----------------------
+    #
+    # app profile by mem
+    - record: profile_app_by_mem
+      expr: 'app_req{dim="cpu"} / on(app) app_req{dim="mem"}'
+      labels:
+        index: cpu
+    - record: profile_app_by_mem
+      expr: 'app_req{dim="mbw_flat"} / on(app) app_req{dim="mem"}'
+      labels:
+        index: mbw_flat
+    - record: profile_app_by_mem
+      expr: 'app_req{dim="wss"} / on(app) app_req{dim="mem"}'
+      labels:
+        index: wss
+
+  - name: score
+    rules:
+    # ======================== normalization profile ========================
+    - record: profile_app_by_mem_norm
+      expr: 'profile_app_by_mem / on (index) group_left cadvisor_profile_nodes_by_mem{memory="2lm"}'
+
+    # ======================== SCORE calculation ==========================
+    - record: profile_app_2lm_score_max # lower is better for 2lm
+      expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss"}) by (app)'
+
+  - name: cluster-score-data-provider
+    rules:
+      - record: node_type
+        expr: 'platform_mem_mode_size_bytes > 0'
+        labels:
+          nodetype: pmem
+
+      - record: node_type
+        expr: 'platform_mem_mode_size_bytes == 0'
+        labels:
+          nodetype: dram
+
+      - record: node_type
+        expr: 'platform_mem_mode_size_bytes < 0'
+        labels:
+          nodetype: unknown
+
+      - record: app_profile
+        expr: 'profile_app_2lm_score_max'
