@@ -23,12 +23,12 @@ spec:
         dim: cpu
         node: 'virtual_node_pmem'
     - record: cadvisor_node_capacity_unsafe
-      expr: '1024'
+      expr: '1024000000000'
       labels:
         dim: mem
         node: 'virtual_node_pmem'
     - record: cadvisor_node_capacity_unsafe
-      expr: '58'
+      expr: '58000000000'
       labels:
         dim: wss
         node: 'virtual_node_pmem'
@@ -39,19 +39,19 @@ spec:
         node: 'virtual_node_pmem'
 
     - record: platform_mem_mode_size_bytes
-      expr: '1085958258688'
+      expr: '1085958258688000000000'
       labels:
         node: 'virtual_node_pmem'
     - record: platform_nvdimm_write_bandwidth_bytes_per_second
-      expr: '14800000000'
+      expr: '14800000000000000000'
       labels:
         node: 'virtual_node_pmem'
     - record: platform_nvdimm_read_bandwidth_bytes_per_second
-      expr: '54400000000'
+      expr: '54400000000000000000'
       labels:
         node: 'virtual_node_pmem'
     - record: machine_nvm_capacity
-      expr: '1024000'
+      expr: '1024000000000'
       labels:
         node: 'virtual_node_pmem'
         mode: "memory_mode"
