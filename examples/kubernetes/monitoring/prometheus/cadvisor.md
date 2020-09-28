@@ -37,7 +37,7 @@ The answer takes form of ratio how many times faster will the other resource(cpu
 
 | Score | Interpretation|
 | -----| --------------|
-|0 | workload only allocates memory but doesn't use it or any cpu (perfect candidate) |
+|0 | workload which almost do not use any resources apart from allocating memory, perfect match for 2lm |
 | <1| node filled with such workloads, memory will be 100% utilized when constrained by other resource|
 | <3 | not perfect but still worth considering as good candidate for 2LM node|
 |>>3 | memory utilization will be low because of saturation on other resources|
@@ -53,7 +53,7 @@ Score computation depends on couple of parameters describing applications access
 
 1. *How much memory does it require?* (the more the better)
 2. *How much of this memory is actually used most of the time(what is the WSS(working set size))?* (the smaller the better)
-3. *What bandwidth can we guarantee for an app in communication between CPU cache and memory?* (the bigger the better)
+3. *What bandwidth does the app require in communication between CPU cache and memory?* (the bigger the better)
 4. *How often does the app reach to memory outside the CPU cache?*
 
 *NOTE*: In the case of the algorithm, the scope of data is the whole application, not a certain container or a certain pod.
@@ -77,7 +77,7 @@ The algorithm assumes that it is used in production or production-like environme
 
 #### Workload identification
 
-The algorithm requires that there will be a way to identify all instances of a workload. That is there has to be for example a common label on all pods identifying the workload they belong to(see how "app" label is handled in example).
+The algorithm requires that there will be a way to identify all instances of a workload. E.g. a common label on all pods identifying the workload they belong to(see how "app" label is handled in example).
 
 #### Behavior measurement
 
@@ -99,7 +99,7 @@ Example consists of example workloads and monitoring setup.
 
 ##### Workloads
 
-Example workloads are in [this directory](../../workloads). Those are just reference applications used to test the solution. Only thing important for further explanation is the app label with value set to workload name. It is used to identify the workload in rules.
+Workloads used by us in internal testing are located in [this directory](../../workloads). Only thing important for notice is the **app** label with value set to workload name. It is used to identify the workload in rules as mentioned in introduction.
 
 ##### Monitoring
 
@@ -113,7 +113,7 @@ Nothing particularly important in this part of deployment. All the details are [
 
 Deployment as daemonset is defined in [cadvisor directory](../cadvisor). As suggested before, this is using a custom stitched cadvisor docker image, so one must provide it. Two aspects stand out: perf config and binary arguments. As for the perf config, [perf-hmem-cascadelake.json](../cadvisor/perf-hmem-cascadelake.json) is used. Although it contains a bit more than required, it is good for this deployment. On the arguments:
 
-- `--perf_events_config=/etc/config/perf-hmem-cascadelake.json` is an argument pointing to perf config
+- `--perf_events_config=/etc/config/perf-hmem-cascadelake.json` is an argument pointing to perf config, listing needed perf events
 - `--v=6` increases verbosity in logs. Especially useful when deploying for the first time, as it will for example make understanding why some perf events don't work
 - `--disable_metrics=advtcp,process,sched,hugetlb,cpu_topology,tcp,udp,percpu,accelerator,disk,diskIO,network` overwrite the default value for this parameter to include referenced memory
 - `--port=9101` port to expose the metric, has to be consistent with the rest of deployment definition
