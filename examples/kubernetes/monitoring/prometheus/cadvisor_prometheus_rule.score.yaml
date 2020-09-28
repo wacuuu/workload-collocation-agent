@@ -12,34 +12,40 @@ spec:
     # ============================ node ===================================
     # cpu
     - record: cadvisor_node_capacity_unsafe
-      expr: 'sum(machine_cpu_cores) by (node)' # czy to naprawde ma byc suma wszystkich corow na clustrze
+      expr: 'sum(machine_cpu_cores) by (node)'
       labels:
         dim: cpu
     # mem
     - record: cadvisor_node_capacity_unsafe
-      expr: 'ceil((sum(machine_nvm_capacity{mode="memory_mode"}) by (node) / 1e9)) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
+      # expr: 'ceil((sum(machine_nvm_capacity{mode="memory_mode"}) by (node) / 1e9)) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
+      expr: 'ceil((sum(machine_nvm_capacity{mode="memory_mode"}) by (node))) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
       labels:
         dim: mem
     - record: cadvisor_node_capacity_unsafe
-      expr: 'ceil(sum(machine_dimm_capacity_bytes) by (node) / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}==0' # to jest riski bo nie gwarantuje ze to ram
+      # expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}==0'
+      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node)) and on(node) machine_nvm_capacity{mode="memory_mode"}==0'
       labels:
         dim: mem
     - record: cadvisor_node_capacity_unsafe
-      expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes!=0'
+      # expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes!=0'
+      expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (node)) and on(node) platform_mem_mode_size_bytes!=0'
       labels:
         dim: mbw_flat
     - record: cadvisor_node_capacity_unsafe
-      expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes==0'
+      # expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes==0'
+      expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (node)) and on(node) platform_mem_mode_size_bytes==0'
       labels:
         dim: mbw_flat
     # -- wss on 2lm is devaulated to 30% because of direct mapping (that is approximated by us unsafe maximum)
     - record: cadvisor_node_capacity_unsafe
-      expr: 'ceil(sum(machine_dimm_capacity_bytes) by (node) * 0.3 / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
+      # expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) * 0.3 / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
+      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) * 0.3) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
       labels:
         dim: wss
       # -- ws on 1lm nodes is just capacity of ram
     - record: cadvisor_node_capacity_unsafe
-      expr: 'ceil(sum(machine_dimm_capacity_bytes) by (node) / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}==0'
+      # expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}==0'
+      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node)) and on(node) machine_nvm_capacity{mode="memory_mode"}==0'
       labels:
         dim: wss
 
@@ -127,7 +133,7 @@ spec:
     - record: task_memory_rw_ratio
       expr: '(rate(pod_offcore_requests_demand_data_rd[30s]) + rate(pod_offcore_requests_demand_rfo[30s])) / (rate(pod_offcore_requests_demand_data_rd[30s]) + 2*rate(pod_offcore_requests_demand_rfo[30s]))'
     - record: task_mbw
-      expr: 'rate(pod_mbw[30s])'
+      expr: 'rate(pod_mbw[30s]) * 1e3'
       # expr: 'rate(pod_mbw[30s]) / 1e9'
     - record: task_memory_rw_ratio_
       expr: 'task_memory_rw_ratio'
@@ -157,11 +163,13 @@ spec:
     - record: app_cpu_
       expr: 'max(max_over_time(app_requests_cpu{label_app=~".+"}[7d])) by (label_app)'
     - record: app_mem_
-      expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app) / 1e6'
+      # expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app) / 1e6'
+      expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app)'
     - record: app_mbw_flat_
       expr: 'max(quantile_over_time(0.95, task_mbw_flat{label_app=~".+"}[7d:2m])) by (label_app)'
     - record: app_wss_
-      expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app) / 1e6'
+      # expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app) / 1e6'
+      expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app)'
 
     - expr: label_replace(app_cpu_, "app", "$1", "label_app", "(.*)+$")
       record: app_cpu
