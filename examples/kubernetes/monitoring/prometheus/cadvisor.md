@@ -25,11 +25,11 @@ As good as Workload Collocation Agent is, it is a PoC project with small maintai
 
 ## How
 
-The description provided is based on prometheus, but the algorithm and part of requirements apply to any system.
+The description provided is based on Prometheus, but the algorithm and part of requirements apply to any system.
 
 ### Algorithm
 
-As mentioned in the beginning, the overall goal of the process is to determine if a workload is fit for 2lm node with Intel memory. In general, it answers the question:
+As mentioned in the beginning, the overall goal of the process is to determine if a workload is a good fit for 2LM (Memory mode) node with Intel memory. In general, it answers the question:
 
 *Which will be saturated first on a node with Intel memory dice: memory or any other resource?*
 
@@ -37,7 +37,7 @@ The answer takes form of ratio how many times faster will the other resource(cpu
 
 | Score | Interpretation|
 | -----| --------------|
-|0 | workload which almost do not use any resources apart from allocating memory, perfect match for 2lm |
+|0 | workload which almost do not use any resources apart from allocating memory, perfect match for 2LM (Memory mode) |
 | <1| node filled with such workloads, memory will be 100% utilized when constrained by other resource|
 | <3 | not perfect but still worth considering as good candidate for 2LM node|
 |>>3 | memory utilization will be low because of saturation on other resources|
@@ -73,11 +73,11 @@ List of concepts and requirements to know before implementation explanation.
 
 #### Deployed workloads
 
-The algorithm assumes that it is used in production or production-like environment. Input shouldn't be a synthetic workload, but a normal aplication.
+The algorithm assumes that it is used in production or production-like environment. For the best results input shouldn't be a synthetic workload, but a normal aplication.
 
 #### Workload identification
 
-The algorithm requires that there will be a way to identify all instances of a workload. E.g. a common label on all pods identifying the workload they belong to(see how "app" label is handled in example).
+The algorithm requires that there will be a way to identify all instances of a workload. E.g. a common label on all pods identifying the workload they belong to(see how "app" label is handled in example). In the case, that there is no uniform, common label available across many workloads, one can use built-in controllers labels as described [here.](https://github.com/kubernetes/kubernetes/issues/47554)
 
 #### Behavior measurement
 
@@ -103,11 +103,11 @@ Workloads used by us in internal testing are located in [this directory](../../w
 
 ##### Monitoring
 
-Deployment consist of 3 independent parts: cadvisor, prometheus and kube-state-metrics.
+Deployment consist of 3 independent parts: cadvisor, Prometheus and kube-state-metrics.
 
 ###### kube-state-metrics
 
-Nothing particularly important in this part of deployment. All the details are [here](../kube-state-metrics). It is set up in such a way that it is accessible for prometheus deployed as operator.
+Nothing particularly important in this part of deployment. All the details are [here](../kube-state-metrics). It is set up in such a way that it is accessible for Prometheus deployed as operator.
 
 ###### cadvisor
 
@@ -121,7 +121,7 @@ Deployment as daemonset is defined in [cadvisor directory](../cadvisor). As sugg
 - `--referenced_reset_interval=120s` the interval with which the referenced bytes are restored to 0 state. This is required to assess how big the working set is over time of application operation
 - `--store_container_labels=true` this is required to be able to later identify which container belongs to which.
 
-Besides that, deployment adds service monitoring to prometheus.
+Besides that, deployment adds service monitoring to Prometheus.
 
 #### Rules
 

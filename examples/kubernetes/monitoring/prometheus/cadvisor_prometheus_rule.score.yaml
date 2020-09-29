@@ -166,7 +166,7 @@ spec:
       # expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app) / 1e6'
       expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app)'
     - record: app_mbw_flat_
-      expr: 'max(quantile_over_time(0.95, task_mbw_flat{label_app=~".+"}[7d:2m])) by (label_app)'
+      expr: 'max(quantile_over_time(0.95, task_mbw_flat{label_app=~".+"}[1h:2m])) by (label_app)'
     - record: app_wss_
       # expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app) / 1e6'
       expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app)'
