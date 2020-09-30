@@ -17,42 +17,53 @@ spec:
     # 2-2-1, 8x128GB, 1T; 192 DRAM;
     # wss 192 * 0.3 = 57.6;
     # mbw_read 54.4, mbw_write 14.8;
-    - record: cadvisor_node_capacity_unsafe
+    - record: node_capacity_unsafe
       expr: '104'
       labels:
         dim: cpu
         node: 'virtual_node_pmem'
-    - record: cadvisor_node_capacity_unsafe
+        source: 'cadvisor'
+    - record: node_capacity_unsafe
       expr: '1024000000000'
       labels:
         dim: mem
         node: 'virtual_node_pmem'
-    - record: cadvisor_node_capacity_unsafe
+        source: 'cadvisor'
+    - record: node_capacity_unsafe
       expr: '58000000000'
       labels:
         dim: wss
         node: 'virtual_node_pmem'
-    - record: cadvisor_node_capacity_unsafe
+        source: 'cadvisor'
+    - record: node_capacity_unsafe
       expr: '54'
       labels:
         dim: mbw_flat
         node: 'virtual_node_pmem'
-
+        source: 'cadvisor'
     - record: platform_mem_mode_size_bytes
       expr: '1085958258688'
       labels:
         node: 'virtual_node_pmem'
+        source: 'cadvisor'
     - record: platform_nvdimm_write_bandwidth_bytes_per_second
       expr: '14800000000'
       labels:
         node: 'virtual_node_pmem'
+        source: 'cadvisor'
     - record: platform_nvdimm_read_bandwidth_bytes_per_second
       expr: '54400000000'
       labels:
         node: 'virtual_node_pmem'
+        source: 'cadvisor'
     - record: machine_nvm_capacity
       expr: '1024000000000'
       labels:
         node: 'virtual_node_pmem'
         mode: "memory_mode"
+        source: 'cadvisor'
+    - record: metric_source
+      expr: '1'
+      labels:
+        source: cadvisor
 
