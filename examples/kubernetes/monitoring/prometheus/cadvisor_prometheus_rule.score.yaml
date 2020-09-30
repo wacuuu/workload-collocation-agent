@@ -9,6 +9,9 @@ spec:
   groups:
   - name: reference-node-scoring
     rules:
+      # TODO: labelak na source
+      # labelki są bardziej kanoniczne
+
     # ============================ node ===================================
     # cpu
     - record: cadvisor_node_capacity_unsafe
@@ -50,105 +53,130 @@ spec:
         dim: wss
 
     # safety weights: we don't want to fill any resource to it limit;
-    - record: cadvisor_safety_weights
+    - record: safety_weights
       expr: '0.7'
       labels:
         dim: cpu
-    - record: cadvisor_safety_weights
+    - record: safety_weights
       expr: '0.9'
       labels:
         dim: mem
-    - record: cadvisor_safety_weights
+    - record: safety_weights
       expr: '0.7'
       labels:
         dim: mbw_flat
-    - record: cadvisor_safety_weights
+    - record: safety_weights
       expr: '0.66'
       labels:
         dim: wss
 
-    - record: cadvisor_node_capacity
-      expr: cadvisor_node_capacity_unsafe * on(dim) group_left cadvisor_safety_weights
+    - record: node_capacity
+      expr: node_capacity_unsafe * on(dim) group_left safety_weights
+      labels:
+        source: cadvisor
 
     # ---------------------------- node PMEM profile -----------------------------------------
 
     # Profile by mem
-    - record: cadvisor_profile_node_by_mem
-      expr: 'cadvisor_node_capacity{dim="cpu"} / on (node) cadvisor_node_capacity{dim="mem"}'
+    - record: profile_node_by_mem
+      expr: 'node_capacity{dim="cpu",source="cadvisor"} / on (node) node_capacity{dim="mem",source="cadvisor"}'
       labels:
         index: cpu
-    - record: cadvisor_profile_node_by_mem
-      expr: 'cadvisor_node_capacity{dim="mbw_flat"} / on (node) cadvisor_node_capacity{dim="mem"}'
+        source: cadvisor
+    - record: profile_node_by_mem
+      expr: 'node_capacity{dim="mbw_flat",source="cadvisor"} / on (node) node_capacity{dim="mem",source="cadvisor"}'
       labels:
         index: mbw_flat
-    - record: cadvisor_profile_node_by_mem
-      expr: 'cadvisor_node_capacity{dim="wss"} / on (node) cadvisor_node_capacity{dim="mem"}'
+        source: cadvisor
+    - record: profile_node_by_mem
+      expr: 'node_capacity{dim="wss",source="cadvisor"} / on (node) node_capacity{dim="mem",source="cadvisor"}'
       labels:
         index: wss
+        source: cadvisor
 
     # Note: average (avg) all PMEM nodes
-    - record: cadvisor_profile_nodes_by_mem
-      expr: 'avg(cadvisor_profile_node_by_mem and on(node) machine_nvm_capacity{mode="memory_mode"} != 0) by (index)'
+    - record: profile_nodes_by_mem
+      expr: 'avg(profile_node_by_mem{source="cadvisor"} and on(node) machine_nvm_capacity{mode="memory_mode",source="cadvisor"} != 0) by (index)'
       labels:
         memory: 2lm
+        source: cadvisor
 
     # Additional metric: read/write assymetry ratio (on 1lm equal to 1, on 2lm ~= 4)
-    - record: cadvisor_node_mbw_write_weight
-      expr: '(avg(ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second)  by (node)) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0) by (node)) /
-             (avg(ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (node)) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0) by (node))'
+    - record: node_mbw_write_weight
+      expr: '(avg(ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second{source="cadvisor"})  by (node)) and on(node) machine_nvm_capacity{mode="memory_mode",source="cadvisor"}!=0) by (node)) /
+             (avg(ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second{source="cadvisor"}) by (node)) and on(node) machine_nvm_capacity{mode="memory_mode",source="cadvisor"}!=0) by (node))'
       labels:
         memory: 2lm
+        source: cadvisor
 
   - name: app-data-gathering
     rules:
     # ============================ workload identification =======================
     - record: container_perf_events_total_relabeled
       expr: label_replace(container_perf_events_total, "exported_pod", "$1", "container_label_io_kubernetes_pod_name", "(.*)+$")
-    - record: container_perf_events_total_extended
+    - record: container_perf_events_total_extended_
       expr: container_perf_events_total_relabeled * on(exported_pod) group_left(label_app) kube_pod_labels
+    - record: container_perf_events_total_extended
+      expr: container_perf_events_total_extended_ * on() group_left(source) metric_source{source="cadvisor"}
 
     - record: container_memory_bandwidth_bytes_relabeled
       expr: label_replace(container_memory_bandwidth_bytes, "exported_pod", "$1", "container_label_io_kubernetes_pod_name", "(.*)+$")
-    - record: container_memory_bandwidth_bytes_extended
+    - record: container_memory_bandwidth_bytes_extended_
       expr: container_memory_bandwidth_bytes_relabeled * on(exported_pod) group_left(label_app) kube_pod_labels
+    - record: container_memory_bandwidth_bytes_extended
+      expr: container_memory_bandwidth_bytes_extended_ * on() group_left(source) metric_source{source="cadvisor"}
 
     - record: container_referenced_bytes_relabeled
       expr: label_replace(container_referenced_bytes, "exported_pod", "$1", "container_label_io_kubernetes_pod_name", "(.*)+$")
-    - record: container_referenced_bytes_extended
+    - record: container_referenced_bytes_extended_
       expr: container_referenced_bytes_relabeled * on(exported_pod) group_left(label_app) kube_pod_labels
+    - record: container_referenced_bytes_extended
+      expr: container_referenced_bytes_extended_ * on() group_left(source) metric_source{source="cadvisor"}
 
 
     # ============================ aggregate by pod =======================
     - record: pod_offcore_requests_demand_data_rd
-      expr: sum(container_perf_events_total_extended{event="offcore_requests.demand_data_rd",container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app)
+      expr: sum(container_perf_events_total_extended{event="offcore_requests.demand_data_rd",container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+",source="cadvisor"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app,source)
     - record: pod_offcore_requests_demand_rfo
-      expr: sum(container_perf_events_total_extended{event="offcore_requests.demand_rfo",container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app)
+      expr: sum(container_perf_events_total_extended{event="offcore_requests.demand_rfo",container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+",source="cadvisor"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app,source)
     - record: pod_mbw
-      expr: sum(container_memory_bandwidth_bytes_extended{container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app)
+      expr: sum(container_memory_bandwidth_bytes_extended{container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+",source="cadvisor"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app,source)
     - record: pod_wss
-      expr: sum(container_referenced_bytes_extended{container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app)
+      expr: sum(container_referenced_bytes_extended{container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+",source="cadvisor"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app,source)
     # ============================ apps ===================================
     # Helper metrics
     # Note: heuristic for approximation of R/W ratio for a task; 30s set to be sure to have in each range at least 2 points;
     - record: task_memory_rw_ratio
-      expr: '(rate(pod_offcore_requests_demand_data_rd[30s]) + rate(pod_offcore_requests_demand_rfo[30s])) / (rate(pod_offcore_requests_demand_data_rd[30s]) + 2*rate(pod_offcore_requests_demand_rfo[30s]))'
+      expr: '(rate(pod_offcore_requests_demand_data_rd{source="cadvisor"}[30s]) + rate(pod_offcore_requests_demand_rfo{source="cadvisor"}[30s])) / (rate(pod_offcore_requests_demand_data_rd{source="cadvisor"}[30s]) + 2*rate(pod_offcore_requests_demand_rfo{source="cadvisor"}[30s]))'
+      labels:
+        source: cadvisor
     - record: task_mbw
       expr: 'rate(pod_mbw[30s]) * 1e3'
+      labels:
+        source: cadvisor
       # expr: 'rate(pod_mbw[30s]) / 1e9'
     - record: task_memory_rw_ratio_
       expr: 'task_memory_rw_ratio'
       labels:
         memory: 2lm
+        source: cadvisor
     - record: task_mbw_
       expr: 'task_mbw'
       labels:
         memory: 2lm
+        source: cadvisor
     - record: task_mbw_read
-      expr: 'task_mbw_ * task_memory_rw_ratio_'
+      expr: 'task_mbw_{source="cadvisor"} * task_memory_rw_ratio_{source="cadvisor"}'
+      labels:
+        source: cadvisor
     - record: task_mbw_write
-      expr: '(1 - task_memory_rw_ratio_) * task_mbw_ * on(memory) group_left cadvisor_node_mbw_write_weight'
+      expr: '(1 - task_memory_rw_ratio_{source="cadvisor"}) * task_mbw_{source="cadvisor"} * on(memory) group_left node_mbw_write_weight{source="cadvisor"}'
+      labels:
+        source: cadvisor
     - record: task_mbw_flat
-      expr: 'task_mbw_read + task_mbw_write'
+      expr: 'task_mbw_read{source="cadvisor"} + task_mbw_write{source="cadvisor"}'
+      labels:
+        source: cadvisor
 
   - name: app-requirements
     rules:
@@ -162,23 +190,39 @@ spec:
 
     - record: app_cpu_
       expr: 'max(max_over_time(app_requests_cpu{label_app=~".+"}[7d])) by (label_app)'
+      labels:
+        source: cadvisor
     - record: app_mem_
       # expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app) / 1e6'
       expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app)'
+      labels:
+        source: cadvisor
     - record: app_mbw_flat_
       expr: 'max(quantile_over_time(0.95, task_mbw_flat{label_app=~".+"}[1h:2m])) by (label_app)'
+      labels:
+        source: cadvisor
     - record: app_wss_
       # expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app) / 1e6'
       expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app)'
+      labels:
+        source: cadvisor
 
     - expr: label_replace(app_cpu_, "app", "$1", "label_app", "(.*)+$")
       record: app_cpu
+      labels:
+        source: cadvisor
     - expr: label_replace(app_mem_, "app", "$1", "label_app", "(.*)+$")
       record: app_mem
+      labels:
+        source: cadvisor
     - expr: label_replace(app_mbw_flat_, "app", "$1", "label_app", "(.*)+$")
       record: app_mbw_flat
+      labels:
+        source: cadvisor
     - expr: label_replace(app_wss_, "app", "$1", "label_app", "(.*)+$")
       record: app_wss
+      labels:
+        source: cadvisor
 
   - name: profiling
     rules:
@@ -186,61 +230,72 @@ spec:
       expr: 'app_cpu'
       labels:
         dim: cpu
+        source: cadvisor
     - record: app_req
       expr: 'app_mem'
       labels:
         dim: mem
+        source: cadvisor
     - record: app_req
       expr: 'app_mbw_flat'
       labels:
         dim: mbw_flat
+        source: cadvisor
     - record: app_req
       expr: 'app_wss'
       labels:
         dim: wss
+        source: cadvisor
 
     # --------------------- Profiles APP -----------------------
     #
     # app profile by mem
     - record: profile_app_by_mem
-      expr: 'app_req{dim="cpu"} / on(app) app_req{dim="mem"}'
+      expr: 'app_req{dim="cpu",source="cadvisor"} / on(app) app_req{dim="mem",source="cadvisor"}'
       labels:
         index: cpu
+        source: cadvisor
     - record: profile_app_by_mem
-      expr: 'app_req{dim="mbw_flat"} / on(app) app_req{dim="mem"}'
+      expr: 'app_req{dim="mbw_flat",source="cadvisor"} / on(app) app_req{dim="mem",source="cadvisor"}'
       labels:
         index: mbw_flat
+        source: cadvisor
     - record: profile_app_by_mem
-      expr: 'app_req{dim="wss"} / on(app) app_req{dim="mem"}'
+      expr: 'app_req{dim="wss",source="cadvisor"} / on(app) app_req{dim="mem",source="cadvisor"}'
       labels:
         index: wss
+        source: cadvisor
 
   - name: score
     rules:
     # ======================== normalization profile ========================
     - record: profile_app_by_mem_norm
-      expr: 'profile_app_by_mem / on (index) group_left cadvisor_profile_nodes_by_mem{memory="2lm"}'
+      expr: 'profile_app_by_mem{source="cadvisor"} / on (index) group_left profile_nodes_by_mem{memory="2lm"}'
+      labels:
+        source: cadvisor
 
     # ======================== SCORE calculation ==========================
     - record: profile_app_2lm_score_max # lower is better for 2lm
-      expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss"}) by (app)'
+      expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss",source="cadvisor"}) by (app)'
+      labels:
+        source: cadvisor
 
-  - name: cluster-score-data-provider
-    rules:
-      - record: node_type
-        expr: 'platform_mem_mode_size_bytes > 0'
-        labels:
-          nodetype: pmem
+  # - name: cluster-score-data-provider
+  #   rules:
+  #     - record: node_type
+  #       expr: 'platform_mem_mode_size_bytes > 0'
+  #       labels:
+  #         nodetype: pmem
 
-      - record: node_type
-        expr: 'platform_mem_mode_size_bytes == 0'
-        labels:
-          nodetype: dram
+  #     - record: node_type
+  #       expr: 'platform_mem_mode_size_bytes == 0'
+  #       labels:
+  #         nodetype: dram
 
-      - record: node_type
-        expr: 'platform_mem_mode_size_bytes < 0'
-        labels:
-          nodetype: unknown
+  #     - record: node_type
+  #       expr: 'platform_mem_mode_size_bytes < 0'
+  #       labels:
+  #         nodetype: unknown
 
-      - record: app_profile
-        expr: 'profile_app_2lm_score_max'
+  #     - record: app_profile
+  #       expr: 'profile_app_2lm_score_max'
