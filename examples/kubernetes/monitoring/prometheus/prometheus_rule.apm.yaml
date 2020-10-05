@@ -55,6 +55,26 @@ spec:
         - record: apm_latency          # average milliseconds to perform one bogus operation (ms)
           expr: 1e3 / apm_stress_bogo_ops_per_task
 
+    - name: pmbench
+      rules:
+        # intermediary
+        - record: apm_pmbench_alive
+          expr: ceil(rate(apm_pmbench_stdout_lines[30s])>0)
+        - record: apm_pmbench_page_access_per_thread
+          expr: avg_over_time(apm_pmbench_page_access_delta[1m]) and ignoring(thread) apm_pmbench_alive
+        - record: apm_pmbench_avg_page_latency_per_thread
+          expr: avg_over_time(apm_pmbench_avg_page_latency[1m]) and ignoring(thread) apm_pmbench_alive
+        # common apm metrics
+        - record: apm_pmbench_ops # group threads by avg
+          expr: avg by (app, endpoint, exported_namespace, instance, job, namespace, node, pod, podname, service, task_name) (apm_pmbench_page_access_per_thread)  * on(task_name) group_right() task_up
+        - record: apm_pmbench_latency # msec latency  # group threads by avg
+          expr: avg by (app, endpoint, exported_namespace, instance, job, namespace, node, pod, podname, service, task_name) (apm_pmbench_avg_page_latency_per_thread) * on(task_name) group_right() task_up / 1e3
+        # T & L per app
+        - record: apm_throughput
+          expr: apm_pmbench_ops
+        - record: apm_latency
+          expr: apm_pmbench_latency
+
     - name: sysbench-memory
       rules:
         - record: apm_sysbench_alive
