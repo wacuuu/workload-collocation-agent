@@ -42,8 +42,8 @@ spec:
           # below are metrics disabled by default + metric aggregation over CPU + some metrics not required to limit amount of data
           - --disable_metrics=advtcp,process,sched,hugetlb,cpu_topology,tcp,udp,percpu,accelerator,disk,diskIO,network
           - --port=9101
-          - --referenced_read_interval=20s
-          - --referenced_reset_interval=300s
+          - --referenced_read_interval=15s
+          - --referenced_reset_interval=600s
           - --store_container_labels=true
         volumeMounts:
         - name: rootfs

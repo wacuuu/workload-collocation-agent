@@ -71,7 +71,7 @@ spec:
         dim: wss
 
     - record: node_capacity
-      expr: node_capacity_unsafe * on(dim) group_left safety_weights
+      expr: cadvisor_node_capacity_unsafe * on(dim) group_left safety_weights
       labels:
         source: cadvisor
 
@@ -151,7 +151,7 @@ spec:
       labels:
         source: cadvisor
     - record: task_mbw
-      expr: 'rate(pod_mbw[30s]) * 1e3'
+      expr: 'rate(pod_mbw[30s])'
       labels:
         source: cadvisor
       # expr: 'rate(pod_mbw[30s]) / 1e9'
@@ -189,21 +189,21 @@ spec:
       expr: kube_pod_container_resource_requests_memory_bytes * on(exported_pod,exported_namespace) group_left(label_app) kube_pod_labels
 
     - record: app_cpu_
-      expr: 'max(max_over_time(app_requests_cpu{label_app=~".+"}[7d])) by (label_app)'
+      expr: 'max(max_over_time(app_requests_cpu{label_app=~".+"}[2m])) by (label_app)'
       labels:
         source: cadvisor
     - record: app_mem_
       # expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app) / 1e6'
-      expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app)'
+      expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[2m])) by (label_app)'
       labels:
         source: cadvisor
     - record: app_mbw_flat_
-      expr: 'max(quantile_over_time(0.95, task_mbw_flat{label_app=~".+"}[1h:2m])) by (label_app)'
+      expr: 'max(quantile_over_time(0.95, task_mbw_flat{label_app=~".+"}[2m:10s])) by (label_app)'
       labels:
         source: cadvisor
     - record: app_wss_
       # expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app) / 1e6'
-      expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app)'
+      expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[2m:10s])) by (label_app)'
       labels:
         source: cadvisor
 
@@ -251,17 +251,17 @@ spec:
     #
     # app profile by mem
     - record: profile_app_by_mem
-      expr: 'app_req{dim="cpu",source="cadvisor"} / on(app) app_req{dim="mem",source="cadvisor"}'
+      expr: 'app_req{dim="cpu",source="cadvisor"} / on(label_app) app_req{dim="mem",source="cadvisor"}'
       labels:
         index: cpu
         source: cadvisor
     - record: profile_app_by_mem
-      expr: 'app_req{dim="mbw_flat",source="cadvisor"} / on(app) app_req{dim="mem",source="cadvisor"}'
+      expr: 'app_req{dim="mbw_flat",source="cadvisor"} / on(label_app) app_req{dim="mem",source="cadvisor"}'
       labels:
         index: mbw_flat
         source: cadvisor
     - record: profile_app_by_mem
-      expr: 'app_req{dim="wss",source="cadvisor"} / on(app) app_req{dim="mem",source="cadvisor"}'
+      expr: 'app_req{dim="wss",source="cadvisor"} / on(label_app) app_req{dim="mem",source="cadvisor"}'
       labels:
         index: wss
         source: cadvisor
@@ -270,13 +270,13 @@ spec:
     rules:
     # ======================== normalization profile ========================
     - record: profile_app_by_mem_norm
-      expr: 'profile_app_by_mem{source="cadvisor"} / on (index) group_left profile_nodes_by_mem{memory="2lm"}'
+      expr: 'profile_app_by_mem{source="cadvisor"} / on (index) group_left profile_nodes_by_mem{memory="2lm",source="cadvisor"}'
       labels:
         source: cadvisor
 
     # ======================== SCORE calculation ==========================
     - record: profile_app_2lm_score_max # lower is better for 2lm
-      expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss",source="cadvisor"}) by (app)'
+      expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss",source="cadvisor"}) by (label_app)'
       labels:
         source: cadvisor
 

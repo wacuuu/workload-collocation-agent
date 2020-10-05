@@ -33,7 +33,7 @@ As mentioned in the beginning, the overall goal of the process is to determine i
 
 *Which will be saturated first on a node with Intel memory dice: memory or any other resource?*
 
-The answer takes form of ratio how many times faster will the other resource(cpu, memory bandwidth or working set size) be saturated than the memory, for example if score is 1.25 it means that one of the resources will saturate 1.25 times faster than memory. Therefore score interpretation is the following:
+The answer takes form of ratio how many times faster will the other resource (cpu, memory bandwidth or working set size) be saturated than the memory, for example if score is 1.25 it means that one of the resources will saturate 1.25 times faster than memory. Therefore score interpretation is the following:
 
 | Score | Interpretation|
 | -----| --------------|
@@ -52,7 +52,7 @@ As mentioned, algorithm looks at 4 different parameters:
 Score computation depends on couple of parameters describing applications access to memory:
 
 1. *How much memory does it require?* (the more the better)
-2. *How much of this memory is actually used most of the time(what is the WSS(working set size))?* (the smaller the better)
+2. *How much of this memory is actually used most of the time (what is the WSS (working set size))?* (the smaller the better)
 3. *What bandwidth does the app require in communication between CPU cache and memory?* (the bigger the better)
 4. *How often does the app reach to memory outside the CPU cache?*
 
@@ -65,7 +65,7 @@ Based on the data gathered answering those questions, algorithm works as follows
 3. Aggregate data to represent overall application behavior
 4. Assess the most problematic limitation that will be returned as the score
 
-The whole point of the implementation provided as example later on is to prepare all the data required by 5 operations: 3 to get ratio of requirements of cpu, bandwidth and wss in relation to memory, then normalizing it based on the mock pmem node and returnig the max(so the worst possible) score.
+The whole point of the implementation provided as example later on is to prepare all the data required by 5 operations: 3 to get ratio of requirements of cpu, bandwidth and wss in relation to memory, then normalizing it based on the mock pmem node and returnig the max (so the worst possible) score.
 
 ### Prerequisites
 
@@ -77,7 +77,7 @@ The algorithm assumes that it is used in production or production-like environme
 
 #### Workload identification
 
-The algorithm requires that there will be a way to identify all instances of a workload. E.g. a common label on all pods identifying the workload they belong to(see how "app" label is handled in example). In the case, that there is no uniform, common label available across many workloads, one can use built-in controllers labels as described [here.](https://github.com/kubernetes/kubernetes/issues/47554)
+The algorithm requires that there will be a way to identify all instances of a workload. E.g. a common label on all pods identifying the workload they belong to (see how "app" label is handled in example). In the case, that there is no uniform, common label available across many workloads, one can use built-in controllers labels as described [here.](https://github.com/kubernetes/kubernetes/issues/47554)
 
 #### Behavior measurement
 
