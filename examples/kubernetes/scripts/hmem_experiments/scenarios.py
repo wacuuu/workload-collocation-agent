@@ -13,9 +13,18 @@
 # limitations under the License.
 
 from dataclasses import dataclass
+from enum import Enum
 from typing import List, Dict
 
-from workload_runner import ExperimentType
+
+class ExperimentType(Enum):
+    DRAM = 'dram'
+    PMEM = 'pmem'
+    HMEM_NUMA_BALANCING = 'hmem_numa_balancing'
+    HMEM_NO_NUMA_BALANCING = 'hmem_no_numa_balancig'
+    COLD_START = 'cold_start'
+    TOPTIER = 'toptier'
+    TOPTIER_WITH_COLDSTART = 'toptier_with_coldstart'
 
 
 @dataclass
@@ -27,59 +36,66 @@ class Scenario:
     workloads_count: List[Dict[str, int]]
     sleep_duration: int
     experiment_type: ExperimentType
+    # If for some reason you do not want to scale workloads to 0 replicas
+    # after each step set this flag to false
+    reset_workloads_between_steps: bool = True
 
 
+# ----------------- REDIS WORKLOADS --------------------------
+#     ----------------- BIG ----------------
+REDIS_MEMTIER_BIG_DRAM = 'redis-memtier-big-dram'
+REDIS_MEMTIER_BIG_PMEM = 'redis-memtier-big-pmem'
+REDIS_MEMTIER_BIG_DRAM_PMEM = 'redis-memtier-big-dram-pmem'
+REDIS_MEMTIER_BIG_COLDSTART_TOPTIER = 'redis-memtier-big-coldstart-toptier'
+REDIS_MEMTIER_BIG_TOPTIER = 'redis-memtier-big-toptier'
+#     --------------- BIG WSS --------------
+REDIS_MEMTIER_BIG_WSS_DRAM = 'redis-memtier-big-wss-dram'
+REDIS_MEMTIER_BIG_WSS_PMEM = 'redis-memtier-big-wss-pmem'
+REDIS_MEMTIER_BIG_WSS_DRAM_PMEM = 'redis-memtier-big-wss-dram-pmem'
+REDIS_MEMTIER_BIG_WSS_COLDSTART_TOPTIER = 'redis-memtier-big-wss-coldstart-toptier'
+REDIS_MEMTIER_BIG_WSS_TOPTIER = 'redis-memtier-big-wss-toptier'
+#     --------------- MEDIUM ---------------
+REDIS_MEMTIER_MEDIUM_COLDSTART_TOPTIER = 'redis-memtier-medium-coldstart-toptier'
+REDIS_MEMTIER_MEDIUM_DRAM = 'redis-memtier-medium-dram'
+REDIS_MEMTIER_MEDIUM_DRAM_PMEM = 'redis-memtier-medium-dram-pmem'
+REDIS_MEMTIER_MEDIUM_PMEM = 'redis-memtier-medium-pmem'
+REDIS_MEMTIER_MEDIUM_TOPTIER = 'redis-memtier-medium-toptier'
+#     ------------- MEDIUM WSS -------------
+REDIS_MEMTIER_MEDIUM_WSS_COLDSTART_TOPTIER = 'redis-memtier-medium-wss-coldstart-toptier'
+REDIS_MEMTIER_MEDIUM_WSS_DRAM = 'redis-memtier-medium-wss-dram'
+REDIS_MEMTIER_MEDIUM_WSS_DRAM_PMEM = 'redis-memtier-medium-wss-dram-pmem'
+REDIS_MEMTIER_MEDIUM_WSS_PMEM = 'redis-memtier-medium-wss-pmem'
+REDIS_MEMTIER_MEDIUM_WSS_TOPTIER = 'redis-memtier-medium-wss-toptier'
 # ----------------- REDIS SCENARIOS --------------------------
-DRAM_REDIS_MEMTIER = 'redis-memtier-big-wss-dram'
-PMEM_REDIS_MEMTIER = 'redis-memtier-big-wss-pmem'
-DRAM_PMEM_REDIS_MEMTIER = 'redis-memtier-big-wss-dram-pmem'
-DRAM_PMEM_COLDSTART_REDIS_MEMTIER = 'redis-memtier-big-wss-coldstart-toptier'
-DRAM_PMEM_TOPTIER_REDIS_MEMTIER = 'redis-memtier-big-wss-toptier'
-
 SLEEP_DURATION = 900
+WORKLOAD_COUNT = 1
 REDIS_SCENARIOS = [
-    # Dram redis memtier scenario
-    Scenario(name='redis-memtier-dram',
-             workloads_count=[{DRAM_REDIS_MEMTIER: x} for x in range(2, 6, 2)],
-             sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.DRAM),
-    # PMEM redis memtier scenario
-    Scenario(name='redis-memtier-pmem',
-             workloads_count=[{PMEM_REDIS_MEMTIER: x} for x in range(2, 6, 2)],
-             sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.PMEM),
-    # Mixed redis memtier scenario with numa balancing
-    Scenario(name='redis-memtier-hmem-numa-balancing',
-             workloads_count=[{DRAM_PMEM_REDIS_MEMTIER: x} for x in range(2, 6, 2)],
+    # Dram redis memtier big
+    Scenario(name='redis-memtier-big-dram',
+             workloads_count=[{REDIS_MEMTIER_BIG_DRAM: 1}, {REDIS_MEMTIER_BIG_DRAM: 2}],
+             sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.DRAM,
+             reset_workloads_between_steps=False),
+    # Pmem redis memtier big
+    Scenario(name='redis-memtier-big-pmem',
+             workloads_count=[{REDIS_MEMTIER_BIG_PMEM: 1}, {REDIS_MEMTIER_BIG_PMEM: 2}],
+             sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.PMEM,
+             reset_workloads_between_steps=False),
+    # First touch policy redis memtier big
+    Scenario(name='redis-memtier-big-first-touch-policy',
+             workloads_count=[{REDIS_MEMTIER_BIG_DRAM_PMEM: 1}, {REDIS_MEMTIER_BIG_DRAM_PMEM: 2},
+                              {REDIS_MEMTIER_BIG_DRAM_PMEM: 3}, {REDIS_MEMTIER_BIG_DRAM_PMEM: 4}],
+             sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.HMEM_NO_NUMA_BALANCING,
+             reset_workloads_between_steps=False),
+    # Numa balancing redis memtier big
+    Scenario(name='redis-memtier-big-numa-balancing',
+             workloads_count=[{REDIS_MEMTIER_BIG_DRAM_PMEM: 4}],
              sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.HMEM_NUMA_BALANCING),
-    # Mixed redis memtier scenario without numa balancing
-    Scenario(name='redis-memtier-hmem-no-numa-balancing',
-             workloads_count=[{DRAM_PMEM_REDIS_MEMTIER: x} for x in range(2, 6, 2)],
-             sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.HMEM_NO_NUMA_BALANCING),
-    # Mixed toptier redis memier scenario
-    Scenario(name='redis-memtier-toptier',
-             workloads_count=[{DRAM_PMEM_TOPTIER_REDIS_MEMTIER: x} for x in range(2, 6, 2)],
+    # Toptier limit redis memtier big
+    Scenario(name='redis-memtier-big-toptier-limit',
+             workloads_count=[{REDIS_MEMTIER_BIG_TOPTIER: 4}],
              sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.TOPTIER),
-    # Mixed coldstart-toptier redis memtier scenario
-    Scenario(name='redis-memtier-coldstart-toptier',
-             workloads_count=[{DRAM_PMEM_COLDSTART_REDIS_MEMTIER: x} for x in range(2, 6, 2)],
+    # Toptier with coldstart redis memtier big
+    Scenario(name='redis-memtier-toptier-coldstart',
+             workloads_count=[{REDIS_MEMTIER_BIG_COLDSTART_TOPTIER: 4}],
              sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.TOPTIER_WITH_COLDSTART)
-]
-
-# ----------------- MEMCACHED SCENARIOS --------------------------
-DRAM_MEMCACHED_MUTILATE = 'h-dram-memcached-mutilate-big'
-PMEM_MEMCACHED_MUTILATE = 'h-pmem-memcached-mutilate-big'
-DRAM_PMEM_MEMCACHED_MUTILATE = 'h-mix-memcached-mutilate-big'
-
-MEMCACHED_SCENARIOS = [
-    # dram scenario
-    Scenario(name='memcached-mutilate-dram',
-             workloads_count=[{DRAM_MEMCACHED_MUTILATE: x} for x in range(2, 6, 2)],
-             sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.DRAM),
-    # pmem scenario
-    Scenario(name='memcached-mutilate-pmem',
-             workloads_count=[{PMEM_MEMCACHED_MUTILATE: x} for x in range(2, 6, 2)],
-             sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.PMEM),
-    # Mixed scenario
-    Scenario(name='memcached-mutilate-hmem-numa-balancing',
-             workloads_count=[{DRAM_PMEM_MEMCACHED_MUTILATE: x} for x in range(2, 6, 2)],
-             sleep_duration=SLEEP_DURATION, experiment_type=ExperimentType.HMEM_NUMA_BALANCING)
 ]
