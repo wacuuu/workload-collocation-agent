@@ -15,15 +15,15 @@ Overview of the main algorithm
 ##############################
 
 We constructed a heuristic for automatic assessment of how well a workload match a node with
-Intel PMEM memory installed ran in 2LM (or HMEM) mode. The heuristic is trying to reach two goals:
+Intel PMEM memory installed ran in 2LM (Memory Mode) or HMEM also known as memory tiering mode. The heuristic is trying to reach two goals:
 
-- use as much of memory as possible on PMEM nodes
+- use as much of memory as possible on PMEM nodes,
 - minimize a chance of worsening workloads performance (comparing to DRAM).
 
 The second is approached with idea that performance can be degraded mostly when any of:
 
 - memory bandwidth,
-- L4 cache (in 2LM mode DRAM runs as a next level cache)
+- DRAM capacity (in 2LM mode DRAM is used as a next level cache or is used as faster tier in HMEM)   
 
 is saturated on a node.
 
@@ -91,9 +91,9 @@ Workloads characterization
 
 For each workload the heuristic approximates (among others):
 
-- **memory bandwidth** requirement (traffic from caches to RAM memory) with division on read/write,
-  **what must be noted Intel RDT** is required to be enabled on the node for this to work,
-- **working set size** requirement (number of touched memory pages in a period of time).
+- **memory bandwidth** requirement (traffic from caches to RAM memory) with division on read/write (note that 
+  **Intel RDT Memory Bandwidth Monitoring feature** is required to be enabled on the node for this to work),
+- **working set size** requirement (also known as hot memory reqion size or memory footprint).
 
 All this is calculated based on historical data (as default history window is set to 7 days).
 Please refer to `prometheus_rule.score.yaml <../examples/kubernetes/monitoring/prometheus/prometheus_rule.score.yaml>`_.
@@ -124,7 +124,7 @@ The score is calculated based on the metrics provided by `WCA` or `cAdvisor`.
 WCA
 ***
 For calculating Score some metrics provided by WCA agent are needed.
-File `wca-config <../examples/kubernetes/monitoring/wca/wca-config.yaml>` defines proper
+File `wca-config <../examples/kubernetes/monitoring/wca/wca-config.yaml>`_ defines proper
 configuration for defined in this file usage.
 
 ``node`` and ``metrics_storage`` should not be changed. Node is responsible for communication with the Kubernetes API,
@@ -149,7 +149,7 @@ Future work. It’s not yet fully supported.
 Prometheus rules
 ################
 
-The score algorithm is implemented as `a set of Prometheus rules <../examples/kubernetes/monitoring/prometheus/prometheus_rule.score.yaml>`_.
+The score algorithm is implemented as `a set of Prometheus rules <../examples/kubernetes/monitoring/prometheus/prometheus_rule.score.yaml>`_ .
 
 Configuring the Prometheus
 **************************
@@ -184,7 +184,7 @@ Configuring the Score
 #####################
 
 2LM or HMEM mode
-****************
+*******************************
 
 A little changes must be done to adjust the rules for **HMEM** PMEM mode. By default the rules file is
 adjusted for 2LM mode.
@@ -195,6 +195,7 @@ If score are targeted at **HMEM** mode please run replace commands:
     perl -i -pe "s/expr: \'0.5\' # pmem_mode_wss_weight/expr: \'1.0\' # pmem_mode_wss_weight/g" examples/kubernetes/monitoring/prometheus/prometheus_rule.score.yaml
     perl -i -pe "s/expr: \'96\' # pmem_mode_wss_weight/expr: \'192\' # pmem_mode_wss_weight/g" examples/kubernetes/monitoring/prometheus/prometheus_rule.pmem.yaml
 
+This changes is required because DRAM in memory tiered software solution has different usage characteristics (data is not repliacated, but moved) than in hardware based 2LM/Memory mode (direct mapping cache).
 
 History window length
 *********************
@@ -209,7 +210,7 @@ We approximate workloads resource requirements by using
     - record: app_wss
       expr: 'quantile(0.95, quantile_over_time(0.95, task_wss_ignore_initialization[7d])) by (app, source) / 1e9'
 
-We use **0.95-quntile** to get rid off outliers and fit requirements to peak traffic.
+We use **0.95-quantile** to get rid off outliers and fit requirements to peak traffic.
 
 By default the period length is set to **7 days**, but can be changed using
 commands (by filling proper value instead of `NEW_WINDOW_LENGTH`):
@@ -239,7 +240,8 @@ Please use Prometheus query to list potential candidates (those with smaller val
 Grafana dashboard
 #################
 
-We prepared Grafana dashboard `graphana dashboard <../examples/kubernetes/monitoring/grafana/2lm_dashboards/2lm_score_dashboard.yaml>`_
+We prepared Grafana dashboard `grafana dashboard <../examples/kubernetes/monitoring/grafana/2lm_dashboards/2lm_score_dashboard.json>`_
+
 for visualization of the results mentioned in `Scores for our testing workloads`_.
 The dashboard requires Grafana with `boom table plugin <https://grafana.com/grafana/plugins/yesoreyeram-boomtable-panel>`_.
 
@@ -250,12 +252,12 @@ Limitations and notes
 
 There are few limitations of our solution, which depending on usage can constitute a problem:
 
-- requires automatic method of assigning tasks to workloads
-- we support only workloads with defined CPU/MEM requirements,
+- requires automatic method of assigning tasks to workloads (in Kubernetes terms, requires to use controlles like StatefulSet and Deployments to organize individual pods in abstract application/workload)
+- we support only workloads with defined CPU/MEM requirements (in Kubernetes terms Kubernetes resourcse requiresments for CPU and memory must be specified),
 - our method of estimating WSS (working set size) uses /proc/{pid}/smaps kernel API,
   which may have non negligible overhead (the overhead is tried to be mitigated
-  by long sampling and resets interval - 60s/15minutes),
-- not detecting workloads where all workloads tasks are short-lived.
+  by long sampling and resets interval - 60s/15minutes) and it can significant overestimate hot size when used with huge pages (including THP) - was tested only without explicit huge pages with THP disabled,
+- not detecting (ignorees) workloads where all workloads tasks are short-lived (or containers are unstable thus restaring again and again). 
 
 Ignoring tasks first N minutes of execution
 ###########################################
@@ -267,12 +269,14 @@ There two reasons why such approach was implemented:
 - ignore short living tasks, as our method of calculating WSS needs at least few minutes for observing a task,
 - ignore wrongly configured tasks.
 
-Drawback of the approach is that we will not characterize workloads with only short living tasks.
+Drawback of the approach is that we will not characterize unstable short-living workloads.
 
 Workload identification
 #######################
 
 The algorithm requires that there will be a way to identify all instances of a workload. In the simplest case a common
-label on all pods identifying the workload they belong to exists (e.g. following
+label on all pods identifying the workload they belong must exists (e.g. following
 `kubernetes recommended scheme of labelling <https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels>`_ 
 provides needed common label).
+
+Above solution based on "Prometheus rules" assumes that Kubernetes controllers will use **app** label as match selector for DaemonSet/StatefulSet or Deployment. 
