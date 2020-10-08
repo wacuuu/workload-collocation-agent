@@ -77,7 +77,7 @@ spec:
 
     - record: node_capacity
       expr: node_capacity_unsafe * on(dim) group_left safety_weights
-    
+
     # ---------------------------- node PMEM profile -----------------------------------------
 
       # Profile by mem
@@ -208,6 +208,6 @@ spec:
         expr: 'platform_mem_mode_size_bytes < 0'
         labels:
           nodetype: unknown
-      
+
       - record: app_profile
         expr: 'profile_app_2lm_score_max'

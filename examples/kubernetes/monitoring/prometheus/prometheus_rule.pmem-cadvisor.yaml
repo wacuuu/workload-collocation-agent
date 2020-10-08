@@ -6,11 +6,11 @@ kind: PrometheusRule
 metadata:
   labels:
     role: prometheus-rules
-  name: mock-pmem-node
+  name: prometheus-cadvisor-pmem
   namespace: prometheus
 spec:
   groups:
-  - name: pmem-node
+  - name: pmem
     rules:
     # ======================== example node pmem ===============================
     # Xeon Gold 6230R, 26 core;
@@ -24,13 +24,13 @@ spec:
         node: 'virtual_node_pmem'
         source: 'cadvisor'
     - record: node_capacity_unsafe
-      expr: '1024000000000'
+      expr: '1024'
       labels:
         dim: mem
         node: 'virtual_node_pmem'
         source: 'cadvisor'
     - record: node_capacity_unsafe
-      expr: '58000000000'
+      expr: '193'
       labels:
         dim: wss
         node: 'virtual_node_pmem'
@@ -56,14 +56,14 @@ spec:
       labels:
         node: 'virtual_node_pmem'
         source: 'cadvisor'
-    - record: machine_nvm_capacity
-      expr: '1024000000000'
-      labels:
-        node: 'virtual_node_pmem'
-        mode: "memory_mode"
-        source: 'cadvisor'
     - record: metric_source
       expr: '1'
       labels:
         source: cadvisor
+    - record: machine_nvm_capacity
+      expr: '1085958258688'
+      labels:
+        node: 'virtual_node_pmem'
+        mode: "memory_mode"
+        source: 'cadvisor'
 
