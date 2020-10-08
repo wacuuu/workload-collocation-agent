@@ -1,3 +1,9 @@
+# The rules are adjusted for parameters of monitoring tool WCA defined in
+# examples/kubernetes/monitoring/wca/wca-config.yaml
+# Especially:
+# interval=60.0 [seconds],
+# wss_membw_threshold=0.01.
+
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -40,14 +46,17 @@ spec:
       labels:
         dim: mbw_flat
         source: wca
+    # -- 2LM:  0.5, NOTE: wss devaluated to 50% because of direct mapping (that is approximated by us unsafe maximum)
+    # -- HMEM: 1.0, NOTE: kernel based managing of DRAM memory
+    - record: pmem_mode_wss_weight
+      expr: '0.5' # pmem_mode_wss_weight
     # wss
-    # -- wss on 2lm is devaulated to 30% because of direct mapping (that is approximated by us unsafe maximum)
     - record: node_capacity_unsafe
-      expr: 'ceil(sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (node) * 0.3 / 1e9) and on(node) platform_mem_mode_size_bytes!=0'
+      expr: 'ceil(sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (node) * on() group_left pmem_mode_wss_weight / 1e9) and on(node) platform_mem_mode_size_bytes!=0'
       labels:
         dim: wss
         source: wca
-      # -- ws on 1lm nodes is just capacity of ram
+    # wss on 1lm nodes is just capacity of ram
     - record: node_capacity_unsafe
       expr: 'ceil(sum(platform_dimm_total_size_bytes{dimm_type="ram"}) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes==0'
       labels:
@@ -71,7 +80,7 @@ spec:
         dim: mbw_flat
         source: wca
     - record: safety_weights
-      expr: '0.66'
+      expr: '0.9'
       labels:
         dim: wss
 
@@ -80,7 +89,7 @@ spec:
     
     # ---------------------------- node PMEM profile -----------------------------------------
 
-      # Profile by mem
+    # Profile by mem
     - record: profile_node_by_mem
       expr: 'node_capacity{dim="cpu"} / on (node, source) node_capacity{dim="mem"}'
       labels:
@@ -106,17 +115,18 @@ spec:
              (avg(ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (node)) and on(node) platform_mem_mode_size_bytes!=0) by (node))'
       labels:
         memory: 2lm
-    # ============================ apps ===================================
+
+    # ============================ tasks ===================================
 
     # Helper metrics
-    # Note: heuristic for approximation of R/W ratio for a task; 30s set to be sure to have in each range at least 2 points;
+    # Note: heuristic for approximation of R/W ratio for a task; 3m set to be sure to have in each range at least 2 points;
     - record: task_memory_rw_ratio
-      expr: '(rate(task_offcore_requests_demand_data_rd[30s]) + rate(task_offcore_requests_demand_rfo[30s])) /
-             (rate(task_offcore_requests_demand_data_rd[30s]) + 2*rate(task_offcore_requests_demand_rfo[30s]))'
+      expr: '(rate(task_offcore_requests_demand_data_rd[3m]) + rate(task_offcore_requests_demand_rfo[3m])) /
+             (rate(task_offcore_requests_demand_data_rd[3m]) + 2*rate(task_offcore_requests_demand_rfo[3m]))'
       labels:
         source: wca
     - record: task_mbw
-      expr: 'rate(task_mem_bandwidth_bytes[30s]) / 1e9'
+      expr: 'rate(task_mem_bandwidth_bytes[3m]) / 1e9'
       labels:
         source: wca
     - record: task_memory_rw_ratio_ # just added 2lm label
@@ -134,6 +144,18 @@ spec:
     - record: task_mbw_flat
       expr: 'task_mbw_read + task_mbw_write'
 
+    # Ignore first 30m=3m*10=30m of run of each task for WSS, MBW.
+    - record: task_mbw_flat_ignore_initialization
+      expr: 'task_mbw_flat and count_over_time(task_mbw_flat[30m:3m]) >= 9'
+      labels:
+        source: wca
+    - record: task_wss_ignore_initialization
+      expr: 'task_working_set_size_bytes and count_over_time(task_working_set_size_bytes[30m:3m]) >= 9'
+      labels:
+        source: wca
+
+    # ============================ apps ===================================
+
     - record: app_cpu
       expr: 'max(max_over_time(task_requested_cpus[7d])) by (app)'
       labels:
@@ -143,13 +165,9 @@ spec:
       labels:
         source: wca
     - record: app_mbw_flat
-      expr: 'max(quantile_over_time(0.95, task_mbw_flat[7d:2m])) by (app)'
-      labels:
-        source: wca
+      expr: 'quantile(0.95, quantile_over_time(0.95, task_mbw_flat_ignore_initialization[7d])) by (app, source)'
     - record: app_wss
-      expr: 'max(quantile_over_time(0.95, task_wss_referenced_bytes[7d:2m])) by (app) / 1e9'
-      labels:
-        source: wca
+      expr: 'quantile(0.95, quantile_over_time(0.95, task_wss_ignore_initialization[7d])) by (app, source) / 1e9'
 
     - record: app_req
       expr: 'app_cpu'
@@ -188,8 +206,12 @@ spec:
     - record: profile_app_by_mem_norm
       expr: 'profile_app_by_mem / on (index, source) group_left profile_nodes_by_mem{memory="2lm"}'
 
+    # Must contains all 3 dimensions: cpu, wss, membw.
+    - record: profile_app_by_mem_norm_3dim
+      expr: profile_app_by_mem_norm and on(app, source) count(profile_app_by_mem_norm) by (app, source) == 3
+
     # ======================== SCORE calculation ==========================
-    - record: profile_app_2lm_score_max # lower is better for 2lm
+    - record: profile_app_score_max # lower is better for 2lm
       expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss"}) by (app, source)'
 
   - name: cluster-score-data-provider
