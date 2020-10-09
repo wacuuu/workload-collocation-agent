@@ -30,7 +30,7 @@ spec:
         node: 'virtual_node_pmem'
         source: 'cadvisor'
     - record: node_capacity_unsafe
-      expr: '193'
+      expr: '96'
       labels:
         dim: wss
         node: 'virtual_node_pmem'

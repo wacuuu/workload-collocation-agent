@@ -66,7 +66,7 @@ spec:
       labels:
         dim: mbw_flat
     - record: safety_weights
-      expr: '0.66'
+      expr: '0.9'
       labels:
         dim: wss
 
@@ -150,10 +150,10 @@ spec:
     - record: container_mbw_rate
       expr: rate(container_memory_bandwidth_bytes_extended{container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+",source="cadvisor"}[30s])
     - record: pod_mbw
-      expr: sum(container_mbw_rate) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app,source)
+      expr: sum(container_mbw_rate) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app,source) / 1e9
 
     - record: pod_wss
-      expr: sum(container_referenced_bytes_extended{container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+",source="cadvisor"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app,source)
+      expr: sum(container_referenced_bytes_extended{container_label_io_kubernetes_pod_uid=~".+",node=~".+",label_app=~".+",source="cadvisor"}) by(container_label_io_kubernetes_pod_uid,container_label_io_kubernetes_pod_name,node,label_app,source) / 1e9
     # ============================ apps ===================================
     # Helper metrics
     # Note: heuristic for approximation of R/W ratio for a task; 30s set to be sure to have in each range at least 2 points;
@@ -165,7 +165,6 @@ spec:
       expr: 'pod_mbw'
       labels:
         source: cadvisor
-      # expr: 'rate(pod_mbw[30s]) / 1e9'
     - record: task_memory_rw_ratio_
       expr: 'task_memory_rw_ratio'
       labels:
@@ -196,27 +195,26 @@ spec:
       expr: kube_pod_container_resource_limits_cpu_cores * on(exported_pod,exported_namespace) group_left(label_app) kube_pod_labels
     - record: app_requests_cpu
       expr: kube_pod_container_resource_requests_cpu_cores * on(exported_pod,exported_namespace) group_left(label_app) kube_pod_labels
-    - record: app_requests_cpu
+    - record: app_requests_cpu_
       expr: sum(app_requests_cpu) by (label_app,exported_pod)
-    - record: app_requests_memory
+    - record: app_requests_memory_bytes
       expr: kube_pod_container_resource_requests_memory_bytes * on(exported_pod,exported_namespace) group_left(label_app) kube_pod_labels
-    - record: app_requests_memory
-      expr: sum(app_requests_memory) by (label_app,exported_pod)
+    - record: app_requests_memory_bytes_
+      expr: sum(app_requests_memory_bytes) by (label_app,exported_pod)
+
     - record: app_cpu_
-      expr: 'max(max_over_time(app_requests_cpu{label_app=~".+"}[2m])) by (label_app)'
+      expr: 'max(max_over_time(app_requests_cpu_{label_app=~".+"}[2m])) by (label_app)'
       labels:
         source: cadvisor
     - record: app_mem_
-      # expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[7d])) by (label_app) / 1e6'
-      expr: 'max(max_over_time(app_requests_memory{label_app=~".+"}[2m])) by (label_app) / 1e6'
+      expr: 'max(max_over_time(app_requests_memory_bytes_{label_app=~".+"}[2m])) by (label_app) / 1e9'
       labels:
         source: cadvisor
     - record: app_mbw_flat_
-      expr: 'max(quantile_over_time(0.99, task_mbw_flat{label_app=~".+"}[2m:10s])) by (label_app) / 1e6'
+      expr: 'max(quantile_over_time(0.99, task_mbw_flat{label_app=~".+"}[2m:10s])) by (label_app)'
       labels:
         source: cadvisor
     - record: app_wss_
-      # expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[7d:2m])) by (label_app) / 1e6'
       expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[2m:10s])) by (label_app)'
       labels:
         source: cadvisor
@@ -246,17 +244,17 @@ spec:
         dim: cpu
         source: cadvisor
     - record: app_req
-      expr: 'app_mem / 1e9'
+      expr: 'app_mem'
       labels:
         dim: mem
         source: cadvisor
     - record: app_req
-      expr: 'app_mbw_flat / 1e9'
+      expr: 'app_mbw_flat'
       labels:
         dim: mbw_flat
         source: cadvisor
     - record: app_req
-      expr: 'app_wss / 1e9'
+      expr: 'app_wss'
       labels:
         dim: wss
         source: cadvisor
@@ -289,7 +287,7 @@ spec:
         source: cadvisor
 
     # ======================== SCORE calculation ==========================
-    - record: profile_app_2lm_score_max # lower is better for 2lm
+    - record: profile_app_score_max # lower is better for 2lm
       expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss",source="cadvisor"}) by (label_app)'
       labels:
         source: cadvisor
