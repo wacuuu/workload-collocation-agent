@@ -22,6 +22,9 @@ Resource usage can be increased by:
 - collocating best effort and high priority tasks to exploit resources that are underutilized by high priority applications,
 - collocating tasks that do not compete for shared resources on the platform.
 
+WCA can be also used solely as **fully-featured monitoring agent** to **characterize workloads** and their resource usage patterns. This information can be used then 
+to find or schedule best workloads that fit nodes equiped with Intel PMEM memory modules. More about characterization and **score algorithm**  `here <docs/score_algorithm.rst>`_.  
+
 .. image:: docs/overview.png
 
 WCA abstracts compute node, workloads, monitoring and resource allocation.
@@ -258,6 +261,7 @@ Further reading
 - `Measurement API <docs/measurement.rst>`_
 - `Detection API <docs/detection.rst>`_
 - `Allocation API <docs/allocation.rst>`_
+- `Score algorithm <docs/score_algorithm.rst>`_
 - `Metrics list <docs/metrics.rst>`_
 - `Metrics sources <docs/metrics_sources.rst>`_
 - `Development guide <docs/development.rst>`_
