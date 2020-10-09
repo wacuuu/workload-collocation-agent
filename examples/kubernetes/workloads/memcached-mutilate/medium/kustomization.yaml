@@ -1,5 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
 nameSuffix: -medium
-bases:
+
+resources:
 - ../base
 
 commonLabels:
@@ -9,9 +13,37 @@ configMapGenerator:
 - name: mutilate
   behavior: merge
   literals:
-  - records=10000           # 100k
-  - value=40000     # 40kB * 1M <= 50G
-  - qps=40000      # 40k
+  - threads=6
+  - load_records=35150000 # 35.1M
+  - records=17575000      # 17.5M
+  - value=1000            # ( keys 30B + value 1000B ) * 35.1M <= 40GB
+  - qps=140000            # MAX QPS. For max number workloads (8 small): 140000.  For single instance: 200000.
 
-patchesStrategicMerge:
-  - resources.yaml
+patches:
+- target:
+    kind: StatefulSet
+  patch: |-
+    apiVersion: foo
+    kind: foo
+    metadata:
+      name: foo
+    spec:
+      template:
+        spec:
+          containers:
+          - name: service
+            resources:
+              requests:
+                cpu: 2
+                memory: 45G
+              limits:
+                cpu: 2
+                memory: 45G
+          - name: generator
+            resources:
+              requests:
+                cpu: 6
+                memory: 1G
+              limits:
+                cpu: 6
+                memory: 1G
