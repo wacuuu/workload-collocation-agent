@@ -24,7 +24,6 @@ pipeline {
     }
     environment {
         DOCKER_REPOSITORY_URL = '100.64.176.12:80'
-        CADVISOR_REVISION = 'master'
     }
     stages{
         stage("Flake8 formatting scan") {
@@ -113,22 +112,11 @@ pipeline {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
                     sh '''
+                    CADVISOR_REVISION=$(git ls-remote git://github.com/wacuuu/cadvisor.git jwalecki/merged-features | cut -c -7)
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca/cadvisor:${CADVISOR_REVISION}
-                    IMAGE_DIR=${WORKSPACE}/cadvisor
-                    if [ -d cadvisor ]; then
-                        rm -fr cadvisor
-                    fi
-                    mkdir cadvisor
-                    pushd cadvisor
-                    git init .
-                    git remote add origin https://github.com/google/cadvisor.git
-                    git fetch origin ${CADVISOR_REVISION} --depth=1
-                    git checkout FETCH_HEAD
-
-                    docker build -t ${IMAGE_NAME} -f ../examples/kubernetes/monitoring/cadvisor/Dockerfile.cadvisor .
+                    IMAGE_DIR=${WORKSPACE}/examples/kubernetes/monitoring/cadvisor
+                    docker build --no-cache -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile.cadvisor ${IMAGE_DIR}
                     docker push ${IMAGE_NAME}
-                    popd
-                    rm -fr cadvisor
                     '''
                     }
                 }

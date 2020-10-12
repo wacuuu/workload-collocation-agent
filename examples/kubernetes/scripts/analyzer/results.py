@@ -77,6 +77,31 @@ class ExperimentResults:
         stripped_task_name = stripped_task_name.replace('-{}'.format(index), '')
         return stripped_task_name
 
+    @staticmethod
+    def get_metrics(task):
+        average_latency = round(float(
+            task.performance_metrics[Metric.TASK_LATENCY][AVG]), 3)
+        average_throughput = round(float(
+            task.performance_metrics[Metric.TASK_THROUGHPUT][AVG]), 3)
+        q09_latency = round(float(
+            task.performance_metrics[Metric.TASK_LATENCY][Q09]), 3)
+        q09_throughput = round(float(
+            task.performance_metrics[Metric.TASK_THROUGHPUT][Q09]), 3)
+        return average_latency, average_throughput, q09_latency, q09_throughput
+
+    @staticmethod
+    def create_table():
+        name = 'name'
+        avg_latency = 'avg latency'
+        avg_throughput = 'avg throughput'
+        q09_latency = 'q0.9 latency'
+        q09_throughput = 'q0.9 throughput'
+        table = Tabular('|c|c|c|c|c|')
+        table.add_hline()
+        table.add_row((name, avg_latency, avg_throughput, q09_latency, q09_throughput))
+        table.add_hline()
+        return table
+
     def discover_experiment_data(self, experiment_name, experiment_type,
                                  tasks, task_counts, description):
         if experiment_name not in self.sections.keys():
@@ -84,39 +109,28 @@ class ExperimentResults:
             self.sections[experiment_name].append(description)
         if experiment_type not in self.experiment_types:
             self.experiment_types.append(experiment_type)
-
         workloads_results = Subsection('')
         # create table with results
-        table = Tabular('|c|c|c|c|c|')
-        table.add_hline()
-        table.add_row(('name', 'avg latency', 'avg throughput', 'q0.9 latency', 'q0.9 throughput'))
-        table.add_hline()
-
+        table = self.create_table()
         for task in tasks:
             task_name = self._strip_task_name(task)
-            task_count = task_counts[task_name]
-            average_latency = round(float(
-                tasks[task].performance_metrics[Metric.TASK_LATENCY][AVG]), 3)
-            average_throughput = round(float(
-                tasks[task].performance_metrics[Metric.TASK_THROUGHPUT][AVG]), 3)
-            q09_latency = round(float(
-                tasks[task].performance_metrics[Metric.TASK_LATENCY][Q09]), 3)
-            q09_throughput = round(float(
-                tasks[task].performance_metrics[Metric.TASK_THROUGHPUT][Q09]), 3)
+            if task_name in task_counts:
+                task_count = task_counts[task_name]
+            else:
+                task_count = 0
+            average_latency, average_throughput, q09_latency, q09_throughput = \
+                self.get_metrics(tasks[task])
             table.add_row(
                 (tasks[task].name.replace('default/', ''), average_latency,
                  average_throughput, q09_latency, q09_throughput)
             )
             table.add_hline()
-
             task_metrics = {AVG_LATENCY: average_latency,
                             AVG_THROUGHPUT: average_throughput,
                             Q09_LATENCY: q09_latency,
                             Q09_THROUGHPUT: q09_throughput}
-
             task_index = self._get_task_index(task)
-            task_name_with_index = task_name + '-' + task_index
-            task_name_with_index = self._strip_memory_suffix(task_name_with_index)
+            task_name_with_index = self._strip_memory_suffix(task_name + '-' + task_index)
             for metric_name, metric_value in task_metrics.items():
                 if task_count in self.metric_values[metric_name]:
                     if task_name_with_index in self.metric_values[metric_name][task_count]:
@@ -154,6 +168,8 @@ class ExperimentResults:
                     if label in workload:
                         data_per_workload[i].append(workload[label])
                         workload_names.append(workload_name)
+                    else:
+                        data_per_workload[i].append(0)
                     i += 1
 
             for i in range(len(data_per_workload)):

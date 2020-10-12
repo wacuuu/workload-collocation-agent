@@ -1,22 +1,22 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-nameSuffix: -big-wss
+nameSuffix: -medium-wss
 
 resources:
 - ../base
 
 commonLabels:
-  app: memcached-mutilate-big-wss
+  app: memcached-mutilate-medium-wss
 
 configMapGenerator:
 - name: mutilate
   behavior: merge
   literals:
   - threads=6
-  - load_records=70300000 # 70.3M
-  - records=70300000      # 70.3M
-  - value=1000            # ( keys 30B + value 1000B ) * 70.3M <= 80GB
+  - load_records=35150000 # 35.1M
+  - records=35150000      # 35.1M
+  - value=1000            # ( keys 30B + value 1000B ) * 35.1M <= 40GB
   - qps=140000            # MAX QPS. For max number workloads (8 small): 140000.  For single instance: 200000.
 
 patches:
@@ -35,10 +35,10 @@ patches:
             resources:
               requests:
                 cpu: 2
-                memory: 85G
+                memory: 45G
               limits:
                 cpu: 2
-                memory: 85G
+                memory: 45G
           - name: generator
             resources:
               requests:
