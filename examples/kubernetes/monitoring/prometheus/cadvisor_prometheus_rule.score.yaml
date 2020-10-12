@@ -298,7 +298,7 @@ spec:
 
     # ======================== SCORE calculation ==========================
     - record: profile_app_score_max # lower is better for 2lm
-      expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss",source="cadvisor"}) by (label_app, source)'
+      expr: 'max(profile_app_by_mem_norm_3dim{index=~"cpu|mbw_flat|wss",source="cadvisor"}) by (label_app, source)'
 
   # - name: cluster-score-data-provider
   #   rules:
