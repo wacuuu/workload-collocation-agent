@@ -294,7 +294,7 @@ spec:
 
     # Must contains all 3 dimensions: cpu, wss, membw.
     - record: profile_app_by_mem_norm_3dim
-      expr: profile_app_by_mem_norm and on(app, source) count(profile_app_by_mem_norm) by (app, source) == 3
+      expr: 'profile_app_by_mem_norm and on(label_app, source) count(profile_app_by_mem_norm) by (label_app, source) == 3'
 
     # ======================== SCORE calculation ==========================
     - record: profile_app_score_max # lower is better for 2lm
