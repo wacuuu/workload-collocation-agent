@@ -77,7 +77,7 @@ The algorithm assumes that it is used in production or production-like environme
 
 #### Workload identification
 
-The algorithm requires that there will be a way to identify all instances of a workload. E.g. a common label on all pods identifying the workload they belong to (see how "app" label is handled in example). In the case, that there is no uniform, common label available across many workloads, one can use built-in controllers labels as described [here.](https://github.com/kubernetes/kubernetes/issues/47554)
+The algorithm requires that there will be a way to identify all instances of a workload. E.g. a common label on all pods identifying the workload they belong to (see how "app" label is handled in example). In the case, that there is no uniform, common label available across many workloads, one can use built-in controllers labels like controler hash revision. You can also relay on labels if you follow [recommended labels](https://kubernetes.io/docs/concepts/overview/working-with-objects/common-labels/#labels).
 
 #### Behavior measurement
 
