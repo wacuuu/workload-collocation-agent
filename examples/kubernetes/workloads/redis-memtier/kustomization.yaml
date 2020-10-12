@@ -24,8 +24,8 @@ commonAnnotations:
 
   # TOGETHER
   cri-resource-manager.intel.com/affinity: |
-    redis: [ memtier ]
-    memtier: [ redis ]
+    generator: [ service ]
+    service: [ generator ]
 
   # SEPARATE
   # cri-resource-manager.intel.com/anti-affinity: |
