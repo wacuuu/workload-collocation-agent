@@ -2,11 +2,10 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 namespace: cadvisor
 
-# TODO: cleanup testing image
 images:
   - name: cadvisor
-    newName: 100.64.176.12:80/cadvisor
-    newTag: magic-onion2
+    newName: 100.64.176.12:80/wca/cadvisor
+    newTag: master
 
 resources:
 - serviceaccount.yaml
