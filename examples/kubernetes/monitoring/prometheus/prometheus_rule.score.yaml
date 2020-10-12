@@ -86,7 +86,7 @@ spec:
         source: wca
 
     - record: node_capacity
-      expr: node_capacity_unsafe * on(dim) group_left safety_weights
+      expr: node_capacity_unsafe{source="wca"} * on(dim) group_left safety_weights{source="wca"}
 
     # ---------------------------- node PMEM profile -----------------------------------------
 
@@ -116,6 +116,7 @@ spec:
              (avg(ceil(sum(platform_nvdimm_write_bandwidth_bytes_per_second) by (node)) and on(node) platform_mem_mode_size_bytes!=0) by (node))'
       labels:
         memory: 2lm
+        source: wca
 
     # ============================ tasks ===================================
 
@@ -141,7 +142,7 @@ spec:
     - record: task_mbw_read
       expr: 'task_mbw_ * task_memory_rw_ratio_'
     - record: task_mbw_write
-      expr: '(1 - task_memory_rw_ratio_) * task_mbw_ * on(memory) group_left node_mbw_write_weight'
+      expr: '(1 - task_memory_rw_ratio_) * task_mbw_ * on(memory) group_left node_mbw_write_weight{source="wca"}'
     - record: task_mbw_flat
       expr: 'task_mbw_read + task_mbw_write'
 

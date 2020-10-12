@@ -7,7 +7,7 @@ metadata:
   namespace: prometheus
 spec:
   groups:
-  - name: reference-node-scoring
+  - name: reference-node-scoring-cadvisor-sourced
     rules:
 
     # ============================ node ===================================
@@ -78,7 +78,7 @@ spec:
         source: cadvisor
 
     - record: node_capacity
-      expr: node_capacity_unsafe * on(dim) group_left safety_weights
+      expr: node_capacity_unsafe{source="cadvisor"} * on(dim) group_left safety_weights{source="cadvisor"}
 
     # ---------------------------- node PMEM profile -----------------------------------------
 
@@ -114,7 +114,7 @@ spec:
         memory: 2lm
         source: cadvisor
 
-  - name: app-data-gathering
+  - name: app-data-gathering-cadvisor-sourced
     rules:
     # ============================ workload identification =======================
     - record: container_perf_events_total_relabeled
@@ -203,7 +203,7 @@ spec:
     - record: task_wss_ignore_initialization
       expr: 'task_working_set_size_bytes and count_over_time(task_working_set_size_bytes[30m:3m]) >= 9'
 
-  - name: app-requirements
+  - name: app-requirements-cadvisor-sourced
     rules:
     # ============================ app requests ===================================
     - record: app_limits_cpu
@@ -251,7 +251,7 @@ spec:
       labels:
         source: cadvisor
 
-  - name: profiling
+  - name: profiling-cadvisor-sourced
     rules:
     - record: app_req
       expr: 'app_cpu'
@@ -286,7 +286,7 @@ spec:
       labels:
         index: wss
 
-  - name: score
+  - name: score-cadvisor-sourced
     rules:
     # ======================== normalization profile ========================
     - record: profile_app_by_mem_norm
@@ -300,7 +300,7 @@ spec:
     - record: profile_app_score_max # lower is better for 2lm
       expr: 'max(profile_app_by_mem_norm_3dim{index=~"cpu|mbw_flat|wss",source="cadvisor"}) by (label_app, source)'
 
-  # - name: cluster-score-data-provider
+  # - name: cluster-score-data-provider-cadvisor-sourced
   #   rules:
   #     - record: node_type
   #       expr: 'platform_mem_mode_size_bytes > 0'
