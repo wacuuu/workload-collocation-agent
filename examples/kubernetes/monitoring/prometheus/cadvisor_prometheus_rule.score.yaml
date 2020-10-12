@@ -9,8 +9,6 @@ spec:
   groups:
   - name: reference-node-scoring
     rules:
-      # TODO: labelak na source
-      # labelki są bardziej kanoniczne
 
     # ============================ node ===================================
     # cpu
@@ -18,62 +16,69 @@ spec:
       expr: 'sum(machine_cpu_cores) by (node)'
       labels:
         dim: cpu
+        source: cadvisor
     # mem
     - record: node_capacity_unsafe
-      # expr: 'ceil((sum(machine_nvm_capacity{mode="memory_mode"}) by (node) / 1e9)) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
       expr: 'ceil((sum(machine_nvm_capacity{mode="memory_mode"}) by (node) / 1e9)) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
       labels:
         dim: mem
+        source: cadvisor
     - record: node_capacity_unsafe
-      # expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}==0'
       expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}==0'
       labels:
         dim: mem
+        source: cadvisor
     - record: node_capacity_unsafe
-      # expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes!=0'
       expr: 'ceil(sum(platform_nvdimm_read_bandwidth_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes!=0'
       labels:
         dim: mbw_flat
+        source: cadvisor
     - record: node_capacity_unsafe
-      # expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes==0'
       expr: 'ceil(sum(platform_dimm_speed_bytes_per_second) by (node) / 1e9) and on(node) platform_mem_mode_size_bytes==0'
       labels:
         dim: mbw_flat
+        source: cadvisor
+    # -- 2LM:  0.5, NOTE: wss devaluated to 50% because of direct mapping (that is approximated by us unsafe maximum)
+    # -- HMEM: 1.0, NOTE: kernel based managing of DRAM memory
+    - record: pmem_mode_wss_weight
+      expr: '0.5' # pmem_mode_wss_weight
     # -- wss on 2lm is devaulated to 30% because of direct mapping (that is approximated by us unsafe maximum)
     - record: node_capacity_unsafe
-      # expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) * 0.3 / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
-      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) * 0.3 / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
+      expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) * on() group_left pmem_mode_wss_weight / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}!=0'
       labels:
         dim: wss
-      # -- ws on 1lm nodes is just capacity of ram
+        source: cadvisor
+    # -- wss on 1lm nodes is just capacity of ram
     - record: node_capacity_unsafe
-      # expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}==0'
       expr: 'ceil(sum(machine_dimm_capacity_bytes{type=~".+DDR.+"}) by (node) / 1e9) and on(node) machine_nvm_capacity{mode="memory_mode"}==0'
       labels:
         dim: wss
+        source: cadvisor
 
     # safety weights: we don't want to fill any resource to it limit;
     - record: safety_weights
       expr: '0.7'
       labels:
         dim: cpu
+        source: cadvisor
     - record: safety_weights
       expr: '0.9'
       labels:
         dim: mem
+        source: cadvisor
     - record: safety_weights
       expr: '0.7'
       labels:
         dim: mbw_flat
+        source: cadvisor
     - record: safety_weights
       expr: '0.9'
       labels:
         dim: wss
+        source: cadvisor
 
     - record: node_capacity
       expr: node_capacity_unsafe * on(dim) group_left safety_weights
-      labels:
-        source: cadvisor
 
     # ---------------------------- node PMEM profile -----------------------------------------
 
@@ -188,6 +193,16 @@ spec:
       labels:
         source: cadvisor
 
+    # @TODO to be replaced by proper way of calculating WSS, similar to wca/wss.py
+    - record: task_working_set_size_bytes
+      expr: 'pod_wss'
+
+    # Ignore first 30m=3m*10=30m of run of each task for WSS, MBW.
+    - record: task_mbw_flat_ignore_initialization
+      expr: 'task_mbw_flat and count_over_time(task_mbw_flat[30m:3m]) >= 9'
+    - record: task_wss_ignore_initialization
+      expr: 'task_working_set_size_bytes and count_over_time(task_working_set_size_bytes[30m:3m]) >= 9'
+
   - name: app-requirements
     rules:
     # ============================ app requests ===================================
@@ -211,13 +226,13 @@ spec:
       labels:
         source: cadvisor
     - record: app_mbw_flat_
-      expr: 'max(quantile_over_time(0.99, task_mbw_flat{label_app=~".+"}[2m:10s])) by (label_app)'
-      labels:
-        source: cadvisor
+      expr: 'quantile(0.95, quantile_over_time(0.99, task_mbw_flat_ignore_initialization{label_app=~".+"}[2m:10s])) by (label_app, source)'
     - record: app_wss_
-      expr: 'max(quantile_over_time(0.95, pod_wss{label_app=~".+"}[2m:10s])) by (label_app)'
-      labels:
-        source: cadvisor
+      expr: 'quantile(0.95, quantile_over_time(0.95, task_wss_ignore_initialization{label_app=~".+"}[2m:10s])) by (label_app, source)'
+
+    # For graphana dashboard.
+    - record: app_count
+      expr: count(task_up) by (app)
 
     - expr: label_replace(app_cpu_, "app", "$1", "label_app", "(.*)+$")
       record: app_cpu
@@ -242,55 +257,48 @@ spec:
       expr: 'app_cpu'
       labels:
         dim: cpu
-        source: cadvisor
     - record: app_req
       expr: 'app_mem'
       labels:
         dim: mem
-        source: cadvisor
     - record: app_req
       expr: 'app_mbw_flat'
       labels:
         dim: mbw_flat
-        source: cadvisor
     - record: app_req
       expr: 'app_wss'
       labels:
         dim: wss
-        source: cadvisor
 
     # --------------------- Profiles APP -----------------------
     #
     # app profile by mem
     - record: profile_app_by_mem
-      expr: 'app_req{dim="cpu",source="cadvisor"} / on(label_app) app_req{dim="mem",source="cadvisor"}'
+      expr: 'app_req{dim="cpu"} / on(label_app, source) app_req{dim="mem"}'
       labels:
         index: cpu
-        source: cadvisor
     - record: profile_app_by_mem
-      expr: 'app_req{dim="mbw_flat",source="cadvisor"} / on(label_app) app_req{dim="mem",source="cadvisor"}'
+      expr: 'app_req{dim="mbw_flat"} / on(label_app, source) app_req{dim="mem"}'
       labels:
         index: mbw_flat
-        source: cadvisor
     - record: profile_app_by_mem
-      expr: 'app_req{dim="wss",source="cadvisor"} / on(label_app) app_req{dim="mem",source="cadvisor"}'
+      expr: 'app_req{dim="wss"} / on(label_app, source) app_req{dim="mem"}'
       labels:
         index: wss
-        source: cadvisor
 
   - name: score
     rules:
     # ======================== normalization profile ========================
     - record: profile_app_by_mem_norm
-      expr: 'profile_app_by_mem{source="cadvisor"} / on (index) group_left profile_nodes_by_mem{memory="2lm",source="cadvisor"}'
-      labels:
-        source: cadvisor
+      expr: 'profile_app_by_mem / on (index, source) group_left profile_nodes_by_mem{memory="2lm"}'
+
+    # Must contains all 3 dimensions: cpu, wss, membw.
+    - record: profile_app_by_mem_norm_3dim
+      expr: profile_app_by_mem_norm and on(app, source) count(profile_app_by_mem_norm) by (app, source) == 3
 
     # ======================== SCORE calculation ==========================
     - record: profile_app_score_max # lower is better for 2lm
-      expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss",source="cadvisor"}) by (label_app)'
-      labels:
-        source: cadvisor
+      expr: 'max(profile_app_by_mem_norm{index=~"cpu|mbw_flat|wss",source="cadvisor"}) by (label_app, source)'
 
   # - name: cluster-score-data-provider
   #   rules:

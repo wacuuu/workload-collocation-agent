@@ -83,6 +83,7 @@ spec:
       expr: '0.9'
       labels:
         dim: wss
+        source: wca
 
     - record: node_capacity
       expr: node_capacity_unsafe * on(dim) group_left safety_weights
