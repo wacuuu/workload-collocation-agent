@@ -120,6 +120,7 @@ Deployment as daemonset is defined in [cadvisor directory](../cadvisor). As sugg
 - `--referenced_read_interval=20s` the interval with which the referenced bytes are counted. As this is a CPU intensive operation due to kernel behavior, this may require prolonging
 - `--referenced_reset_interval=120s` the interval with which the referenced bytes are restored to 0 state. This is required to assess how big the working set is over time of application operation
 - `--store_container_labels=true` this is required to be able to later identify which container belongs to which.
+- `--raw_cgroup_prefix_whitelist=kubepods` this limits the amount of containers monitored by cadvisor
 
 Besides that, deployment adds service monitoring to Prometheus.
 
