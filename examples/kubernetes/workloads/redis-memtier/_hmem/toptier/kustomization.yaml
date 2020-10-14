@@ -16,3 +16,4 @@ resources:
 commonAnnotations:
   cri-resource-manager.intel.com/memory-type: |
     generator: dram,pmem
+    service: dram,pmem
