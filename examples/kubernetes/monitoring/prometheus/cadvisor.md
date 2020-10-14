@@ -1,7 +1,6 @@
 # Workload scoring for pmem with cadvisor
 
 - [Workload scoring for pmem with cadvisor](#workload-scoring-for-pmem-with-cadvisor)
-  - [Why](#why)
   - [How](#how)
     - [Algorithm](#algorithm)
     - [Prerequisites](#prerequisites)
@@ -18,10 +17,6 @@
       - [Rules](#rules)
 
 This document provides an overlook on how to benchmark an application to assess its possible performance gains using Intel® Optane™ DC Persistent memory. Although the implementation is based on Prometheus rules deployed as operator, concepts and algorithm should be translatable to other systems.
-
-## Why
-
-As good as Workload Collocation Agent is, it is a PoC project with small maintainer group and community. For production grade environments something more stable and proven is required, therefore a decision has been made to switch to [cAdvisor](https://github.com/google/cadvisor). Because the way the metrics are gathered and reported differs between the two, it was impossible to take score calculation based on WCA metrics and make it work 1:1 on cAdvisor metrics. Therefore rules has been rewritten to align with new data source.
 
 ## How
 

@@ -142,7 +142,7 @@ spec:
     - record: task_mbw_read
       expr: 'task_mbw_ * task_memory_rw_ratio_'
     - record: task_mbw_write
-      expr: '(1 - task_memory_rw_ratio_) * task_mbw_ * on(memory) group_left node_mbw_write_weight{source="wca"}'
+      expr: '(1 - task_memory_rw_ratio_) * task_mbw_ * on(memory,node) group_left node_mbw_write_weight{source="wca"}'
     - record: task_mbw_flat
       expr: 'task_mbw_read + task_mbw_write'
 
