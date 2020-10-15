@@ -16,6 +16,7 @@ spec:
         prometheus.io/port: "9101"
     spec:
       serviceAccountName: cadvisor
+      hostPID: true
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -39,7 +40,12 @@ spec:
           - --perf_events_config=/etc/config/perf-hmem-cascadelake.json
           - --v=5
           # below are metrics disabled by default + metric aggregation over CPU + some metrics not required to limit amount of data
-          - --disable_metrics=referenced_memory,advtcp,process,sched,hugetlb,cpu_topology,resctrl,tcp,udp,percpu,accelerator,disk,diskIO,network
+          - --disable_metrics=advtcp,process,sched,hugetlb,cpu_topology,tcp,udp,percpu,accelerator,disk,diskIO,network
+          - --port=9101
+          - --referenced_read_interval=15s
+          - --referenced_reset_interval=600s
+          - --store_container_labels=true
+          - --raw_cgroup_prefix_whitelist=kubepods
         volumeMounts:
         - name: rootfs
           mountPath: /rootfs
@@ -47,6 +53,8 @@ spec:
           mountPath: /var/run
         - name: sys
           mountPath: /sys
+        - name: proc
+          mountPath: /proc
         - name: docker
           mountPath: /var/lib/docker
         - name: disk
@@ -77,3 +85,6 @@ spec:
       - name: perf-volume
         configMap:
           name: cadvisor-config
+      - name: proc
+        hostPath:
+          path: /proc
