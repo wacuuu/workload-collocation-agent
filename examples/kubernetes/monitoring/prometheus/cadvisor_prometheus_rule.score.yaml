@@ -218,17 +218,17 @@ spec:
       expr: sum(app_requests_memory_bytes) by (label_app,exported_pod)
 
     - record: app_cpu_
-      expr: 'max(max_over_time(app_requests_cpu_{label_app=~".+"}[2m])) by (label_app)'
+      expr: 'max(max_over_time(app_requests_cpu_{label_app=~".+"}[7d])) by (label_app)'
       labels:
         source: cadvisor
     - record: app_mem_
-      expr: 'max(max_over_time(app_requests_memory_bytes_{label_app=~".+"}[2m])) by (label_app) / 1e9'
+      expr: 'max(max_over_time(app_requests_memory_bytes_{label_app=~".+"}[7d])) by (label_app) / 1e9'
       labels:
         source: cadvisor
     - record: app_mbw_flat_
-      expr: 'quantile(0.95, quantile_over_time(0.99, task_mbw_flat_ignore_initialization{label_app=~".+"}[2m:10s])) by (label_app, source)'
+      expr: 'quantile(0.95, quantile_over_time(0.99, task_mbw_flat_ignore_initialization{label_app=~".+"}[7d:10s])) by (label_app, source)'
     - record: app_wss_
-      expr: 'quantile(0.95, quantile_over_time(0.95, task_wss_ignore_initialization{label_app=~".+"}[2m:10s])) by (label_app, source)'
+      expr: 'quantile(0.95, quantile_over_time(0.95, task_wss_ignore_initialization{label_app=~".+"}[7d:10s])) by (label_app, source)'
 
     # For graphana dashboard.
     - record: app_count
