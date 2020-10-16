@@ -213,6 +213,16 @@ class MeasurementRunner(Runner):
         will be collected.  False means disable the collection.
 
         If string is provided it will be used as regexp to match key.
+
+    - ``sched``: **Union[Str, bool]** = *False*
+
+        Responsible for collecting data from /proc/PID/sched metric:
+        - task_sched_stat (lines with ':'),
+        - task_sched_stat_numa_faults (numa_faults field).
+        By default sched is enabled and all metrics (lines from /proc/PID/sched containg ':')
+        will be collected.  False means disable the collection.
+
+        If string is provided it will be used as regexp to match key (string before ':')
     """
 
     def __init__(
@@ -235,6 +245,7 @@ class MeasurementRunner(Runner):
             include_optional_labels: bool = False,
             zoneinfo: Union[Str, bool] = True,
             vmstat: Union[Str, bool] = True,
+            sched: Union[Str, bool] = False,
     ):
 
         self._node = node
@@ -327,6 +338,16 @@ class MeasurementRunner(Runner):
                 self._vmstat = re.compile(vmstat)
             except re.error as e:
                 raise ValidationError('vmstat_regexp_compile improper regexp: %s' % e)
+
+        # Validate config and sched regexp.
+        if sched in (True, False):
+            self._sched = sched
+        else:
+            # Got regexp - compile and check...
+            try:
+                self._sched = re.compile(sched)
+            except re.error as e:
+                raise ValidationError('sched regex compile improper regexp: %s' % e)
 
     def _set_initialize_rdt_callback(self, func):
         self._initialize_rdt_callback = func
@@ -439,7 +460,8 @@ class MeasurementRunner(Runner):
             wss_stable_cycles=self._wss_stable_cycles,
             wss_membw_threshold=self._wss_membw_threshold,
             perf_aggregate_cpus=self._perf_aggregate_cpus,
-            interval=self._interval
+            interval=self._interval,
+            sched=self._sched,
         )
         log.log(TRACE, 'container manager config: %s', self._containers_manager.__dict__)
 
@@ -615,7 +637,7 @@ class MeasurementRunner(Runner):
             extra_platform_measurements.update(
                 zoneinfo_module.get_zoneinfo_measurements(self._zoneinfo_regexp_compiled))
 
-        # Zoneinfo from /proc/zoneinfo
+        # vmstate from /proc/vmstat and /sys/devices/system/node
         if self._vmstat:
             _vmstat_regexp = None if self._vmstat in (True, False) else self._vmstat
             extra_platform_measurements.update(
