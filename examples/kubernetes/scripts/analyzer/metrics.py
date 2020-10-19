@@ -18,6 +18,10 @@ from enum import Enum
 class Metric(Enum):
     TASK_THROUGHPUT = 'task_throughput'
     TASK_LATENCY = 'task_latency'
+    TASK_MEM_BANDWIDTH_LOCAL = 'task_mem_bandwidth_local_bytes'
+    TASK_MEM_BANDWIDTH_REMOTE = 'task_mem_bandwidth_remote_bytes'
+    TASK_MEM_MBW_LOCAL = 'task_mem_bandwidth_local_bytes'
+    TASK_MEM_MBW_REMOTE = 'task_mem_bandwidth_remote_bytes'
 
     # platform
     TASK_UP = 'task_up'
@@ -37,6 +41,8 @@ class Metric(Enum):
 MetricsQueries = {
     Metric.TASK_THROUGHPUT: 'apm_sli2',
     Metric.TASK_LATENCY: 'apm_sli',
+    Metric.TASK_MEM_MBW_LOCAL: 'task_mem_bandwidth_local_bytes',
+    Metric.TASK_MEM_MBW_REMOTE: 'task_mem_bandwidth_remote_bytes',
 
     # platform
     Metric.TASK_UP: 'task_up',
@@ -63,10 +69,12 @@ class Function(Enum):
     AVG = 'avg_over_time'
     QUANTILE = 'quantile_over_time'
     STDEV = 'stddev_over_time'
+    RATE = 'rate'
 
 
 FunctionsDescription = {
     Function.AVG: 'avg',
     Function.QUANTILE: 'q',
     Function.STDEV: 'stdev',
+    Function.RATE: 'rate'
 }

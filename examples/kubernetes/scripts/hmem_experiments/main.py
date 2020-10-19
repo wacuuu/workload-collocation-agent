@@ -12,24 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 from time import time
 
 from runner import scale_down_all_workloads
 from workload_runner import run_experiment, experiment_to_json
-from scenarios import Scenario, REDIS_SCENARIOS
+from scenarios import Scenario, REDIS_SCENARIOS, BASE_REDIS_SCENARIOS
 
 
-def run_scenario(scenario: Scenario):
+def run_scenario(scenario: Scenario, save_dir):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+
+    scale_down_all_workloads(wait_time=10)
     for workload_count in scenario.workloads_count:
         experiment = run_experiment(scenario, workload_count)
-        experiment_to_json(experiment, 'results/{}-{}.json'.format(scenario.name, time()))
+        experiment_to_json(experiment, '{}/{}-{}.json'.format(save_dir, scenario.name, time()))
     scale_down_all_workloads(wait_time=10)
 
 
 def main():
     # redis
+    for scenario in BASE_REDIS_SCENARIOS:
+        run_scenario(scenario, 'base_results')
     for scenario in REDIS_SCENARIOS:
-        run_scenario(scenario)
+        run_scenario(scenario, 'advanced_results')
 
 
 if __name__ == '__main__':

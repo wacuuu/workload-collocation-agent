@@ -60,10 +60,11 @@ class ExperimentConfiguration:
 
 
 ONLY_NUMA_BALANCING_CONF = ExperimentConfiguration(numa_balancing=True)
+NUMA_BALANCING_OFF_CONF = ExperimentConfiguration(numa_balancing=False)
 TOPTIER_CONF = ExperimentConfiguration(numa_balancing=True, toptier_scale_factor='10000')
 
-EXPERIMENT_CONFS = {ExperimentType.DRAM: ONLY_NUMA_BALANCING_CONF,
-                    ExperimentType.PMEM: ONLY_NUMA_BALANCING_CONF,
+EXPERIMENT_CONFS = {ExperimentType.DRAM: NUMA_BALANCING_OFF_CONF,
+                    ExperimentType.PMEM: NUMA_BALANCING_OFF_CONF,
                     ExperimentType.HMEM_NUMA_BALANCING: ONLY_NUMA_BALANCING_CONF,
                     ExperimentType.HMEM_NO_NUMA_BALANCING: ExperimentConfiguration(
                        numa_balancing=False),

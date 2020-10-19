@@ -19,6 +19,8 @@
 # https://jeltef.github.io/PyLaTeX/current/examples/multirow.html
 
 from pylatex import Document, Section, Subsection, Tabular, Figure
+from pylatex.utils import bold
+from datetime import datetime
 
 from metrics import Metric
 
@@ -27,6 +29,7 @@ import numpy as np
 
 AVG = 'avg'
 Q09 = 'q0.9,'
+RATE = 'rate'
 
 NAME = 'name'
 UNIT = 'unit'
@@ -36,22 +39,37 @@ AVG_LATENCY = 'avg_latency'
 AVG_THROUGHPUT = 'avg_throughput'
 Q09_LATENCY = 'q09_latency'
 Q09_THROUGHPUT = 'q09_throughput'
+MBW_LOCAL = 'mbw_local'
+MBW_REMOTE = 'mbw_remote'
+NUMA_NODE_0 = 'node0'
+NUMA_NODE_1 = 'node1'
+NUMA_NODE_2 = 'node2'
+NUMA_NODE_3 = 'node3'
+NUMA_PAGES = 'numa_pages'
 
-METRIC_METADATA = {AVG_LATENCY: {NAME: 'Average latency', UNIT: 'ms'},
-                   AVG_THROUGHPUT: {NAME: 'Average throughput', UNIT: 'ops'},
-                   Q09_LATENCY: {NAME: 'quantile 0.9 latency', UNIT: 'ms'},
-                   Q09_THROUGHPUT: {NAME: 'quantile 0.9 throughput', UNIT: 'ops'}}
+
+RESULTS_METADATA = {AVG_LATENCY: {NAME: 'Average latency', UNIT: 'ms'},
+                    AVG_THROUGHPUT: {NAME: 'Average throughput', UNIT: 'ops'},
+                    Q09_LATENCY: {NAME: 'quantile 0.9 latency', UNIT: 'ms'},
+                    Q09_THROUGHPUT: {NAME: 'quantile 0.9 throughput', UNIT: 'ops'},
+                    NUMA_PAGES: {NAME: 'task numa pages', UNIT: 'GB'},
+                    MBW_LOCAL: {NAME: 'memory mbw local', UNIT: 'GB/s'},
+                    MBW_REMOTE: {NAME: 'memory mbw remote', UNIT: 'GB/s'}}
 
 MEMORY_SUFFIXES = ['-dram', '-pmem', '-dram-pmem', '-coldstart-toptier', '-toptier', '-coldstart']
 
 
 class ExperimentResults:
     def __init__(self, name):
-        geometry_options = {"margin": "0.7in"}
-        self.doc = Document(name, geometry_options=geometry_options)
+        geometry_options = {"margin": "0.2in", "landscape": True}
+        self.doc = Document(name, geometry_options=geometry_options,
+                            font_size='small')
         self.sections = {}
-        self.metric_values = {AVG_LATENCY: {}, AVG_THROUGHPUT: {},
-                              Q09_LATENCY: {}, Q09_THROUGHPUT: {}}
+        self.results_values = {AVG_LATENCY: {}, AVG_THROUGHPUT: {},
+                               Q09_LATENCY: {}, Q09_THROUGHPUT: {},
+                               NUMA_NODE_0: {}, NUMA_NODE_1: {},
+                               NUMA_NODE_2: {}, NUMA_NODE_3: {}, MBW_LOCAL: {},
+                               MBW_REMOTE: {}}
         self.experiment_types = []
 
     @staticmethod
@@ -78,16 +96,31 @@ class ExperimentResults:
         return stripped_task_name
 
     @staticmethod
-    def get_metrics(task):
-        average_latency = round(float(
-            task.performance_metrics[Metric.TASK_LATENCY][AVG]), 3)
-        average_throughput = round(float(
-            task.performance_metrics[Metric.TASK_THROUGHPUT][AVG]), 3)
-        q09_latency = round(float(
-            task.performance_metrics[Metric.TASK_LATENCY][Q09]), 3)
-        q09_throughput = round(float(
-            task.performance_metrics[Metric.TASK_THROUGHPUT][Q09]), 3)
-        return average_latency, average_throughput, q09_latency, q09_throughput
+    def round_metric(metric):
+        rounded_metric = round(metric, 3)
+        if metric > rounded_metric == 0:
+            rounded_metric = '> 0'
+        return rounded_metric
+
+    def get_metrics(self, task):
+        average_latency = self.round_metric(
+            float(task.performance_metrics[Metric.TASK_LATENCY][AVG]))
+        average_throughput = self.round_metric(
+            float(task.performance_metrics[Metric.TASK_THROUGHPUT][AVG]))
+        q09_latency = self.round_metric(float(task.performance_metrics[Metric.TASK_LATENCY][Q09]))
+        q09_throughput = self.round_metric(float(
+            task.performance_metrics[Metric.TASK_THROUGHPUT][Q09]))
+        numa_nodes = []
+        for i in range(0, 4):
+            value = float(task.performance_metrics[Metric.TASK_MEM_NUMA_PAGES][str(i)]) * 4096 / 1e9
+            rounded_value = self.round_metric(value)
+            numa_nodes.append(rounded_value)
+        mbw_local = self.round_metric(
+            float(task.performance_metrics[Metric.TASK_MEM_MBW_LOCAL][RATE]) / 1e9)
+        mbw_remote = self.round_metric(
+            float(task.performance_metrics[Metric.TASK_MEM_MBW_REMOTE][RATE]) / 1e9)
+        return average_latency, average_throughput, q09_latency, q09_throughput, \
+            numa_nodes, mbw_local, mbw_remote
 
     @staticmethod
     def create_table():
@@ -96,17 +129,42 @@ class ExperimentResults:
         avg_throughput = 'avg throughput'
         q09_latency = 'q0.9 latency'
         q09_throughput = 'q0.9 throughput'
-        table = Tabular('|c|c|c|c|c|')
+        mbw_local = 'mbw local'
+        mbw_remote = 'mbw remote'
+        table = Tabular('|c|c|c|c|c|c|c|c|c|c|c|')
         table.add_hline()
-        table.add_row((name, avg_latency, avg_throughput, q09_latency, q09_throughput))
+        table.add_row((name, avg_latency, avg_throughput, q09_latency, q09_throughput,
+                       NUMA_NODE_0, NUMA_NODE_1, NUMA_NODE_2, NUMA_NODE_3, mbw_local, mbw_remote))
         table.add_hline()
         return table
 
+    def _keep_task_results(self, task, task_name, task_count, experiment_type,
+                           average_latency, average_throughput, q09_latency, q09_throughput):
+        task_results = {AVG_LATENCY: average_latency,
+                        AVG_THROUGHPUT: average_throughput,
+                        Q09_LATENCY: q09_latency,
+                        Q09_THROUGHPUT: q09_throughput}
+        task_index = self._get_task_index(task)
+        task_name_with_index = self._strip_memory_suffix(task_name + '-' + task_index)
+        for metric_name, metric_value in task_results.items():
+            if task_count in self.results_values[metric_name]:
+                if task_name_with_index in self.results_values[metric_name][task_count]:
+                    self.results_values[metric_name][task_count][task_name_with_index].update(
+                        {experiment_type: metric_value})
+                else:
+                    self.results_values[metric_name][task_count][task_name_with_index] = \
+                        {experiment_type: metric_value}
+            else:
+                self.results_values[metric_name][task_count] = \
+                    {task_name_with_index: {experiment_type: metric_value}}
+
     def discover_experiment_data(self, experiment_name, experiment_type,
-                                 tasks, task_counts, description):
+                                 tasks, task_counts, description, start_time):
         if experiment_name not in self.sections.keys():
             self.sections[experiment_name] = Section(experiment_name)
             self.sections[experiment_name].append(description)
+            self.sections[experiment_name].append('\nExperiment start time: {}'.format(
+                datetime.fromtimestamp(start_time)))
         if experiment_type not in self.experiment_types:
             self.experiment_types.append(experiment_type)
         workloads_results = Subsection('')
@@ -114,39 +172,24 @@ class ExperimentResults:
         table = self.create_table()
         for task in tasks:
             task_name = self._strip_task_name(task)
-            if task_name in task_counts:
-                task_count = task_counts[task_name]
-            else:
-                task_count = 0
-            average_latency, average_throughput, q09_latency, q09_throughput = \
-                self.get_metrics(tasks[task])
+            task_count = task_counts[task_name]
+            average_latency, average_throughput, q09_latency, q09_throughput,\
+                numa_nodes, mbw_local, mbw_remote = self.get_metrics(tasks[task])
             table.add_row(
                 (tasks[task].name.replace('default/', ''), average_latency,
-                 average_throughput, q09_latency, q09_throughput)
+                 average_throughput, q09_latency, q09_throughput, numa_nodes[0],
+                 numa_nodes[1], numa_nodes[2], numa_nodes[3], mbw_local, mbw_remote)
             )
             table.add_hline()
-            task_metrics = {AVG_LATENCY: average_latency,
-                            AVG_THROUGHPUT: average_throughput,
-                            Q09_LATENCY: q09_latency,
-                            Q09_THROUGHPUT: q09_throughput}
-            task_index = self._get_task_index(task)
-            task_name_with_index = self._strip_memory_suffix(task_name + '-' + task_index)
-            for metric_name, metric_value in task_metrics.items():
-                if task_count in self.metric_values[metric_name]:
-                    if task_name_with_index in self.metric_values[metric_name][task_count]:
-                        self.metric_values[metric_name][task_count][task_name_with_index].update(
-                            {experiment_type: metric_value})
-                    else:
-                        self.metric_values[metric_name][task_count][task_name_with_index] = \
-                            {experiment_type: metric_value}
-                else:
-                    self.metric_values[metric_name][task_count] = \
-                        {task_name_with_index: {experiment_type: metric_value}}
+            self._keep_task_results(task, task_name, task_count, experiment_type, average_latency,
+                                    average_throughput, q09_latency, q09_throughput)
 
         workloads_results.append(table)
         self.sections[experiment_name].append(workloads_results)
 
     def _generate_document(self):
+        legend = self.create_unit_legend()
+        self.doc.append(legend)
         for section in self.sections.values():
             self.doc.append(section)
 
@@ -176,8 +219,8 @@ class ExperimentResults:
                 ax.bar(x - width + i * width, data_per_workload[i],
                        width, label=workload_names[i])
 
-            ax.set_ylabel('{} ({})'.format(METRIC_METADATA[metric_name][NAME],
-                                           METRIC_METADATA[metric_name][UNIT]))
+            ax.set_ylabel('{} ({})'.format(RESULTS_METADATA[metric_name][NAME],
+                                           RESULTS_METADATA[metric_name][UNIT]))
             ax.set_xticks(x)
             ax.set_xticklabels(labels)
             plt.legend(labels=workload_names, title='Legend',
@@ -188,8 +231,23 @@ class ExperimentResults:
                 caption = '{} workload(s)'.format(str(len(data_per_workload)))
                 plot.add_caption(caption)
 
+    def create_unit_legend(self):
+        rows = '|c|'
+        for _ in RESULTS_METADATA:
+            rows += 'c|'
+        table = Tabular(rows)
+        title_row = [bold('Metric')]
+        unit_row = [bold('Unit')]
+        for metric in RESULTS_METADATA.keys():
+            title_row.append(RESULTS_METADATA[metric][NAME])
+            unit_row.append(RESULTS_METADATA[metric][UNIT])
+        table.add_hline()
+        table.add_row(tuple(title_row))
+        table.add_hline()
+        table.add_row(tuple(unit_row))
+        table.add_hline()
+        return table
+
     def generate_pdf(self):
         self._generate_document()
-        for metric_name, metric_values in self.metric_values.items():
-            self.generate_bar_graph(metric_name, metric_values)
         self.doc.generate_pdf(clean_tex=True)

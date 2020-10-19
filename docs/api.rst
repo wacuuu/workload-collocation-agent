@@ -173,7 +173,7 @@ in anomalies_storage and all other measurements in metrics_storage.
 
 - ``rdt_mb_control_required``: **bool** = *False*
 
-    Indicates that MB control is required,
+    Indicates that MB control is required,
     if the platform does not support this feature the WCA will exit.
 
 - ``rdt_cache_control_required``: **bool** = *False*
