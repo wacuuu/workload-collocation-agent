@@ -102,7 +102,8 @@ As perf is under heavy development, be advised, that more types will soon be add
 Running cAdvisor in docker
 ==========================
 
-Assuming that command is executed from this directory(in which ``perf-prm-skylake.json`` is located) and previous step was executed to obtain container image named cadvisor, which contains cAdvisor with perf, a way to run cAdvisor with perf measuremente is
+Assuming that command is executed from this directory(in which ``perf-prm-skylake.json`` is located) and previous step was executed to obtain container image named cadvisor, 
+which contains cAdvisor with perf support, a way to run cAdvisor with perf events and referenced bytes measurements is
 
 .. code-block:: shell
 
@@ -116,9 +117,12 @@ Assuming that command is executed from this directory(in which ``perf-prm-skylak
   --volume=$PWD/perf-prm-skylake.json:/etc/configs/perf/perf-prm-skylake.json \
   --publish=8080:8080 \
   --device=/dev/kmsg \
+  --pid=host \
   --privileged \
   --name=cadvisor \
-  cadvisor:$CADVISOR_TAG --perf_events_config=/etc/configs/perf/perf-prm-skylake.json
+  cadvisor:$CADVISOR_TAG --perf_events_config=/etc/configs/perf/perf-prm-skylake.json \
+  --disable_metrics="cpu_topology,resctrl,udp,sched,hugetlb,node_vmstat,memory_numa,tcp,advtcp,percpu,process" \
+  --referenced_read_interval=300s
 
 Important note is that it should be run on Skylake platform, as some of the metrics in mentioned json are only available on Skylake. After this, command:
 
