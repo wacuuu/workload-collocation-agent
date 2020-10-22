@@ -122,7 +122,8 @@ class Workload:
 @dataclass
 class Node:
     name: str
-    performance_metrics: Dict[str, float] = field(default_factory=lambda: {})
+    # per socket performance_metrics [socket][metric_name]
+    performance_metrics: Dict[int, Dict[str, float]] = field(default_factory=lambda: {})
 
     def to_dict(self, nodes_capacities: Dict[str, Dict]) -> Dict:
         # @TODO should be taken from queries
