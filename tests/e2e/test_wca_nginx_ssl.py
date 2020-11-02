@@ -16,9 +16,9 @@ import requests
 import pytest
 import os
 
-_CERT_FILE_PATH = '{workspace}/tests/e2e/nginx/{case}/server.crt'
-_KEY_FILE_PATH = '{workspace}/tests/e2e/nginx/{case}/server.key'
-_CA_CERT_FILE_PATH = '{workspace}/tests/e2e/nginx/CA.crt'
+_CERT_FILE_PATH = '{pki_test_files_path}/{case}/server.crt'
+_KEY_FILE_PATH = '{pki_test_files_path}/{case}/server.key'
+_CA_CERT_FILE_PATH = '{pki_test_files_path}/CA.crt'
 _URL = 'https://{ip}:{port}/status'
 
 
@@ -28,14 +28,14 @@ _URL = 'https://{ip}:{port}/status'
 def test_wca_nginx_ssl_correct_cert(cert_name):
     assert 'KUBERNETES_HOST' in os.environ
     assert 'PORT_WCA_SCHEDULER' in os.environ
-    assert 'WORKSPACE' in os.environ
+    assert 'PKI_TEST_FILES_PATH' in os.environ
 
     ip = os.environ['KUBERNETES_HOST']
     port = os.environ['PORT_WCA_SCHEDULER']
-    workspace = os.environ['WORKSPACE']
+    pki_test_files_path = os.environ['PKI_TEST_FILES_PATH']
 
-    cert = (_CERT_FILE_PATH.format(workspace=workspace, case=cert_name),
-            _KEY_FILE_PATH.format(workspace=workspace, case=cert_name))
+    cert = (_CERT_FILE_PATH.format(pki_test_files_path=pki_test_files_path, case=cert_name),
+            _KEY_FILE_PATH.format(pki_test_files_path=pki_test_files_path, case=cert_name))
     r = requests.get(_URL.format(ip=ip, port=port), cert=cert, verify=False)
     assert "true" in r.text
 
@@ -50,13 +50,13 @@ def test_wca_nginx_ssl_correct_cert(cert_name):
 def test_wca_nginx_ssl_incorrect_cert(cert_name):
     assert 'KUBERNETES_HOST' in os.environ
     assert 'PORT_WCA_SCHEDULER' in os.environ
-    assert 'WORKSPACE' in os.environ
+    assert 'PKI_TEST_FILES_PATH' in os.environ
 
     ip = os.environ['KUBERNETES_HOST']
     port = os.environ['PORT_WCA_SCHEDULER']
-    workspace = os.environ['WORKSPACE']
+    pki_test_files_path = os.environ['PKI_TEST_FILES_PATH']
 
-    cert = (_CERT_FILE_PATH.format(workspace=workspace, case=cert_name),
-            _KEY_FILE_PATH.format(workspace=workspace, case=cert_name))
+    cert = (_CERT_FILE_PATH.format(pki_test_files_path=pki_test_files_path, case=cert_name),
+            _KEY_FILE_PATH.format(pki_test_files_path=pki_test_files_path, case=cert_name))
     r = requests.get(_URL.format(ip=ip, port=port), cert=cert, verify=False)
     assert "The SSL certificate error" in r.text
