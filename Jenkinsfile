@@ -120,6 +120,7 @@ pipeline {
                     '''
                     }
                 }
+                // wca scheduler
                 stage("Build and push wca_scheduler Docker image") {
                     when {expression{return params.BUILD_IMAGES}}
                     steps {
@@ -127,6 +128,21 @@ pipeline {
                     IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca-scheduler:${GIT_COMMIT}
                     BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/wca-scheduler:${GIT_BRANCH}
                     IMAGE_DIR=${WORKSPACE}/examples/kubernetes/wca-scheduler
+                    docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile .
+                    docker push ${IMAGE_NAME}
+                    docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    docker push ${BRANCH_IMAGE_NAME}
+                    docker rmi ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
+                    '''
+                    }
+                }
+                // admission controller
+                stage("Build and push webhook Docker image") {
+                    steps {
+                    sh '''
+                    IMAGE_NAME=${DOCKER_REPOSITORY_URL}/webhook:${GIT_COMMIT}
+                    BRANCH_IMAGE_NAME=${DOCKER_REPOSITORY_URL}/webhook:${GIT_BRANCH}
+                    IMAGE_DIR=${WORKSPACE}/examples/kubernetes/admission-controller
                     docker build -t ${IMAGE_NAME} -f ${IMAGE_DIR}/Dockerfile .
                     docker push ${IMAGE_NAME}
                     docker tag ${IMAGE_NAME} ${BRANCH_IMAGE_NAME}
