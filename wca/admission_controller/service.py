@@ -16,7 +16,7 @@ import base64
 import copy
 from enum import Enum
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import jsonpatch
 from flask import Flask, jsonify, request
@@ -27,11 +27,23 @@ log = logging.getLogger(__name__)
 
 
 class AnnotatingService:
+    """
+    """
     def __init__(self, configuration: Dict[str, str]):
+        """
+        self.dram_only_threshold - set to 100.0, to not use this functionality, otherwise it can
+            be decided that despite having wss/rss < 100% all memory will be allocated on DRAM.
+        self.cold_start_duration - whether to start the workload on PMEM memory, if memory type
+            for workload is DRAM,PMEM, duration of that period if set
+        self.if_toptier_limit - whether to add toptier_limit annotation
+        """
         self.data_provider: AppDataProvider = configuration['data_provider']
         self.app = Flask(__name__)
-        self.hmem_only_threshold: float = configuration.get('hmem_threshold', 20.0)
-        self.dram_only_threshold: float = configuration.get('dram_threshold', 80.0)
+
+        self.dram_only_threshold: float = configuration.get('dram_threshold', 100.0)
+        self.cold_start_duration: Optional[int] = None
+        self.if_toptier_limit: bool = True
+
         self.monitored_namespaces: List[str] = \
             configuration.get('monitored_namespaces', ['default'])
 
@@ -52,27 +64,27 @@ class AnnotatingService:
             }
         )
 
-    def _get_wss_to_mem_ratio(self, app_name):
-        ratio_per_app = self.data_provider.get_wss_to_mem_ratio()
-        if app_name in ratio_per_app:
-            return str(ratio_per_app[app_name])
+    def _get_wss(self, app_name) -> Optional[str]:
+        wss_per_app = self.data_provider.get_wss()
+        log.debug('wss={}, app={}'.format(wss_per_app, app_name))
+        if app_name in wss_per_app:
+            return str(wss_per_app[app_name])
         return None
 
-    def _get_wss_to_mem_ratio_annotation(self, wss_to_mem_ratio):
-        ratio_key = 'wss-to-mem-ratio'
-        if wss_to_mem_ratio:
-            return {ratio_key: wss_to_mem_ratio}
-        return {}
+    def _get_rss(self, app_name) -> Optional[str]:
+        rss_per_app = self.data_provider.get_rss()
+        log.debug('rss={}, app={}'.format(rss_per_app, app_name))
+        if app_name in rss_per_app:
+            return str(rss_per_app[app_name])
+        return None
 
-    def _get_memory_type_annotation(self, wss_to_mem_ratio: float):
-        memory_type_key = 'memory-type'
-        if wss_to_mem_ratio < self.hmem_only_threshold:
-            memory_type = MemoryType.HMEM
-        elif wss_to_mem_ratio > self.dram_only_threshold:
+    def _get_memory_type(self, wss: str, rss: str):
+        ratio = float(wss) / float(rss) * 100
+        if ratio > self.dram_only_threshold:
             memory_type = MemoryType.DRAM
         else:
-            memory_type = '{},{}'.format(MemoryType.HMEM, MemoryType.DRAM)
-        return {memory_type_key: memory_type}
+            memory_type = MemoryType.HMEM
+        return memory_type
 
     def _mutate_pod(self):
         annotations_key = "annotations"
@@ -86,16 +98,22 @@ class AnnotatingService:
         if request.json["request"]["namespace"] not in self.monitored_namespaces:
             return self._create_patch(spec, modified_spec)
 
-        app_name = modified_spec["metadata"]["labels"]["app"]
-        ratio = self._get_wss_to_mem_ratio(app_name)
-        ratio_annotation = self._get_wss_to_mem_ratio_annotation(ratio)
-        annotations.update(ratio_annotation)
+        app_name: str = modified_spec["metadata"]["labels"]["app"]
+        wss: Optional[str] = self._get_wss(app_name)
+        rss: Optional[str] = self._get_rss(app_name)
 
-        log.debug("Mutating pod of app={} with wss_to_mem_ratio={}".format(app_name, ratio))
+        if wss is not None:
+            if self.if_toptier_limit:
+                annotations.update({'toptierlimit.cri-resource-manager.intel.com/pod':
+                                    '{}G'.format(wss)})
 
-        if ratio:
-            memory_type_annotation = self._get_memory_type_annotation(float(ratio))
-            annotations.update(memory_type_annotation)
+        if wss is not None and rss is not None:
+            memory_type = self._get_memory_type(wss, rss)
+            annotations.update({'cri-resource-manager.intel.com/memory-type': memory_type})
+
+            if memory_type == MemoryType.HMEM and self.cold_start_duration is not None:
+                annotations.update({'cri-resource-manager.intel.com/cold-start':
+                                   {'duration': self.cold_start_duration}})
 
         if not modified_spec["metadata"].get(annotations_key) and annotations:
             modified_spec["metadata"].update({annotations_key: {}})
@@ -107,4 +125,4 @@ class AnnotatingService:
 
 class MemoryType(str, Enum):
     DRAM = 'dram'
-    HMEM = 'hmem'
+    HMEM = 'dram,pmem'

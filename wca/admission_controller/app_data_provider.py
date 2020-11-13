@@ -18,7 +18,8 @@ from wca.prometheus import Prometheus
 
 @dataclass
 class Queries:
-    APP_WSS_TO_MEM_RATIO = 'max(max_over_time(app_wss_to_mem_ratio[3h])) by (app)'
+    APP_WSS: str = 'app_req{dim="wss"}'
+    APP_RSS: str = 'app_req{dim="mem"}'
 
 
 class AppDataProvider:
@@ -27,10 +28,14 @@ class AppDataProvider:
         self.prometheus = prometheus
         self.queries = queries
 
-    def get_wss_to_mem_ratio(self):
-        return self._get_requested_app_metric(Queries.APP_WSS_TO_MEM_RATIO)
+    def get_wss(self):
+        return self._get_requested_app_metric(Queries.APP_WSS)
+
+    def get_rss(self):
+        return self._get_requested_app_metric(Queries.APP_RSS)
 
     def _get_requested_app_metric(self, query):
+        """Group by >>app<< label"""
         query_result = self.prometheus.do_query(query)
         app_metrics = {}
         for row in query_result:

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from wca.admission_controller.app_data_provider import AppDataProvider
+from wca.admission_controller.app_data_provider import AppDataProvider, Queries
 from wca.prometheus import Prometheus
 from wca.config import register
 
@@ -20,3 +20,4 @@ from wca.config import register
 def register_components():
     register(Prometheus)
     register(AppDataProvider)
+    register(Queries)
