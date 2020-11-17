@@ -32,9 +32,7 @@ QueryDataProviderInfo = Tuple[
 
 DEFAULT_DIMENSIONS: List[ResourceType] = [
     ResourceType.CPU,
-    ResourceType.MEM,
-    ResourceType.MEMBW_READ,
-    ResourceType.MEMBW_WRITE
+    ResourceType.MEM
 ]
 
 
